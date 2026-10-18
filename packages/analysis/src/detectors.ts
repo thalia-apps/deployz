@@ -2028,6 +2028,23 @@ function runtimeEngineSelectorDefault(tree: FileTree): boolean {
 }
 
 /**
+ * True when runtime Go source declares an in-memory store next to a PostgreSQL
+ * one (`TypeMemory Type = "memory"`, `TypePostgres Type = "postgres"`): the app
+ * runs without a database unless its configuration selects one.
+ */
+function goInMemoryStoreChoice(tree: FileTree): boolean {
+  return Object.entries(tree).some(
+    ([path, content]) =>
+      content &&
+      GO_SOURCE.test(path) &&
+      !/(?:^|\/)vendor\//.test(path) &&
+      isRuntimeSourcePath(path) &&
+      /^\s*\w+\s+\w*\s*=\s*"memory"/m.test(content) &&
+      /^\s*\w+\s+\w*\s*=\s*"postgres(?:ql)?"/m.test(content),
+  );
+}
+
+/**
  * True when a language-level driver signal comes from a manifest the
  * deployed app is built from (not a tool, test or docs manifest) and, for
  * Go, is a direct requirement rather than an `// indirect` one.
@@ -2040,7 +2057,8 @@ function languageDriverDeclaredAtRuntime(tree: FileTree, signal: string): boolea
     if (!isDependencyManifest(path) || !isRuntimeSourcePath(path)) return false;
     if (!GO_DEPENDENCY_FILES.test(path)) return true;
     const line = new RegExp(`^[^\\n]*${tokenPattern(token)}[^\\n]*$`, 'm').exec(tree[path] ?? '')?.[0] ?? '';
-    return !/\/\/\s*indirect/.test(line) && (goModuleImportedByRuntimeSource(tree, token) || runtimeEngineSelectorDefault(tree));
+    if (/\/\/\s*indirect/.test(line) || goInMemoryStoreChoice(tree)) return false;
+    return goModuleImportedByRuntimeSource(tree, token) || runtimeEngineSelectorDefault(tree);
   });
 }
 
