@@ -38,7 +38,7 @@ export function ApplicationTabs() {
         if (tab) router.push(tab.href);
       }}
     >
-      <TabsList variant="line" aria-label="Application sections" className="w-full justify-start gap-4 overflow-x-auto">
+      <TabsList variant="line" aria-label="Application sections" className="w-full justify-start gap-2 sm:gap-4">
         {tabs.map((tab) => (
           <TabsTrigger key={tab.value} value={tab.value} asChild className="flex-none">
             <Link href={tab.href}>{tab.label}</Link>

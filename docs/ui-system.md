@@ -164,7 +164,8 @@ plain links):
    image" is a final check and is never shown as the cause.
 3. **Configuration** — four secondary tabs (shadcn `Tabs`, default
    variant, under the route tabs): Resources, Size presets, Variables,
-   Settings. Resources opens by default. The selected tab is kept per
+   Settings ("Sizes" below the sm breakpoint, so the row fits a phone; the
+   tab rows never scroll). Resources opens by default. The selected tab is kept per
    application in `sessionStorage` (`deployz:config-tab:<id>`). A section
    anchor picks its tab: `#required-changes`, `#services` and
    `#config-row-*` open Resources; `#deployment-size` opens Size presets;
@@ -201,8 +202,9 @@ plain links):
      shows only when a size has a value). Each size's values and estimate
      come from that size's plan (`costEstimate`, "+ usage" when usage is
      excluded). The column header marks the saved Default and "Below
-     minimum". Under a divider, two selects change the defaults: Default
-     size (only sizes at or above the minimum) and Minimum allowed size
+     minimum". Under a divider, two selects change the defaults, each
+     option the size name only: Default size (only sizes at or above the
+     minimum) and Minimum allowed size
      ("Smallest size customers can select."; raising it raises the
      default). One Save writes both. Region, on-demand, 730 hours, USD and
      the excluded charges sit behind "Estimate details". Before a completed
