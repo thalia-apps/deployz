@@ -254,6 +254,15 @@ has only `contents: read`. It uploads the image as a `docker save` artifact
 for 7 days. Use it for the heavy repositories and after an emulation failure
 on an ARM machine.
 
+`.github/workflows/runcheck-exam.yml` runs the run-and-check exam itself on
+x86_64 runners, one matrix job for each recipe (at most 20 at the same
+time). It starts only by hand with `mode` (`observe` or `full`), `repos`
+(`all` or recipe ids) and `analysis` (the analyser folder for `full`). It
+validates each input, uses no repository secrets, has only `contents: read`
+and does not keep Git credentials in the checkout. It uploads one JSON result
+for each recipe for 14 days. `pnpm runcheck:fetch --run <run id>` downloads
+them ([`compatibility.md`](compatibility.md#the-exam-on-x86_64-runners)).
+
 ## Timing expectations
 
 See [`strategy.md`](strategy.md#timing-expectations) for the measured

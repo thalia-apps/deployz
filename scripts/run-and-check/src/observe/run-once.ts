@@ -14,6 +14,7 @@ import type {
   ServiceSnapshot,
   SizeLimits,
 } from '../ports.js';
+import { archOf } from '../docker/build.js';
 import { runtimeLimit } from '../emulation.js';
 import { OBSERVATION_PORT, type Candidates } from './candidates.js';
 import { filterLocalDiskWrites, sqliteFileWritten } from './diff-filter.js';
@@ -630,7 +631,7 @@ function skippedRun(ctx: Ctx, startedAt: string, build: Fact<Of<'build'>>, reaso
 export async function runOnce(input: RunInput): Promise<ObservationRun> {
   const { recipe, deps, runIndex } = input;
   const startedAt = deps.now().toISOString();
-  const ctx: Ctx = { ...input, arch: 'amd64-emulated', image: '', secrets: new Set(), timings: {}, failures: [] };
+  const ctx: Ctx = { ...input, arch: archOf(input.platform ?? 'linux/amd64'), image: '', secrets: new Set(), timings: {}, failures: [] };
 
   let built: BuiltImage;
   try {

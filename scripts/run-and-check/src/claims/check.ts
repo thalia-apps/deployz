@@ -300,7 +300,7 @@ const RULES: Record<ClaimType, Rule> = {
 };
 
 /** The weakest architecture of the used facts decides what the verdict proves. */
-const ARCH_ORDER: readonly Architecture[] = ['arm64-native', 'amd64-emulated', 'amd64-ci-build'];
+const ARCH_ORDER: readonly Architecture[] = ['arm64-native', 'amd64-emulated', 'amd64-ci-build', 'amd64-native'];
 
 function verdictArch(run: ObservationRun, facts: readonly ObservationFactName[]): Architecture {
   const archs = new Set((facts.length > 0 ? facts : (['build'] as const)).map((name) => run[name].arch));

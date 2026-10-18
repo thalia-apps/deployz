@@ -5,7 +5,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { recipeSchema } from '../contract.js';
-import { buildImage, classifyBuildFailure, gitContextUrl } from './build.js';
+import { archOf, buildImage, classifyBuildFailure, gitContextUrl } from './build.js';
 import { cleanEnv } from './docker.js';
 import { createImageCache } from './image-cache.js';
 import { withBuildLock } from './lock.js';
@@ -115,6 +115,14 @@ describe('gitContextUrl', () => {
     expect(gitContextUrl('o/r', 'abc')).toBe('https://github.com/o/r.git#abc');
     expect(gitContextUrl('o/r', 'abc', '.')).toBe('https://github.com/o/r.git#abc');
     expect(gitContextUrl('o/r', 'abc', 'apps/web')).toBe('https://github.com/o/r.git#abc:apps/web');
+  });
+});
+
+describe('archOf', () => {
+  it('runs linux/amd64 natively on an x86_64 host and emulated on an ARM host', () => {
+    expect(archOf('linux/amd64', 'x64')).toBe('amd64-native');
+    expect(archOf('linux/amd64', 'arm64')).toBe('amd64-emulated');
+    expect(archOf('linux/arm64', 'x64')).toBe('arm64-native');
   });
 });
 

@@ -7,7 +7,8 @@ import { createDockerResources } from './resources.js';
 import { labelArgs } from './safety.js';
 
 const ALPINE = 'public.ecr.aws/docker/library/alpine:3.20';
-const MIN_FREE_GB = 150;
+/** A GitHub runner builds and runs one repository, so it needs far less disk than the shared local cache. */
+const MIN_FREE_GB = process.env.CI === 'true' ? 20 : 150;
 const GB = 1024 ** 3;
 const ID = 'F0';
 
