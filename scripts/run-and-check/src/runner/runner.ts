@@ -248,6 +248,12 @@ export function createRunner(deps: RunnerDeps): Runner {
         .map((line) => line.slice(2).trim());
     },
 
+    async imageVolumes(image) {
+      const result = await docker(['image', 'inspect', '--format', '{{json .Config.Volumes}}', image]);
+      if (result.exitCode !== 0) throw new Error(`image inspect of ${image} failed: ${tail(result.stderr)}`);
+      return Object.keys((JSON.parse(result.stdout) as Record<string, unknown> | null) ?? {});
+    },
+
     logs,
     stop,
   };

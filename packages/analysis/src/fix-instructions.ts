@@ -974,6 +974,8 @@ export function buildFixInstructionsAiPrompt(
  * Guidance the model must never give. A match drops that item's guidance —
  * the deterministic actions stay — so one bad sentence cannot reach the
  * coding agent. Each rule has a name so a drop can be logged without the text.
+ * A clause that starts with "do not", "never" or "avoid", and a match right
+ * after "do not", "never" or "not", forbid the change and do not count.
  */
 const UNSAFE_GUIDANCE: readonly { name: string; pattern: RegExp }[] = [
   {
@@ -982,7 +984,16 @@ const UNSAFE_GUIDANCE: readonly { name: string; pattern: RegExp }[] = [
   },
   {
     name: 'merge-worker-into-web',
-    pattern: /\b(?:move|merge|fold|inline|run)\b[^.]{0,40}\b(?:worker|jobs?|queue|consumer)\b[^.]{0,40}\binto\b[^.]{0,20}\b(?:web|main|server|same)\b/i,
+    pattern:
+      /\b(?:move|merge|fold|inline|run|process|replace)\b[^.]{0,40}\b(?:worker|jobs?|queue|consumer)\b[^.]{0,40}(?<!\bnot |\binstead of )\b(?:into|inside)\b[^.]{0,20}\b(?:web|main|server|same)\b/i,
+  },
+  {
+    name: 'delete-infrastructure',
+    pattern: /\b(?:delete|remove|drop|strip out)\b[^.]{0,40}\binfrastructure\b/i,
+  },
+  {
+    name: 'rewrite-data-layer',
+    pattern: /\b(?:move|migrate|switch|port|rewrite)\b[^.]{0,30}\b(?:data layer|database)\b[^.]{0,20}\bto (?:postgres\w*|mysql)\b/i,
   },
   {
     name: 'disable-security',
@@ -1001,6 +1012,26 @@ const UNSAFE_GUIDANCE: readonly { name: string; pattern: RegExp }[] = [
   },
 ];
 
+const FORBIDDING_CLAUSE = /^(?:do not|don't|never|avoid)\b/i;
+const FORBIDS = /\b(?:do not|don't|never|not)\s+$/i;
+
+/** The clauses of the guidance that do not forbid a change. A period splits only before a space, not in `config.ts`. */
+function clauses(text: string): string[] {
+  return text
+    .split(/[;!?]|\.(?=\s|$)/)
+    .map((clause) => clause.trim())
+    .filter((clause) => clause.length > 0 && !FORBIDDING_CLAUSE.test(clause));
+}
+
+function hasUnforbiddenMatch(pattern: RegExp, clause: string): boolean {
+  const global = new RegExp(pattern.source, `${pattern.flags}g`);
+  for (let match = global.exec(clause); match !== null; match = global.exec(clause)) {
+    if (!FORBIDS.test(clause.slice(0, match.index))) return true;
+    global.lastIndex = match.index + 1;
+  }
+  return false;
+}
+
 /** Why a guidance string was dropped. It never carries the text. */
 export type GuidanceVerdict =
   | { ok: true }
@@ -1012,7 +1043,7 @@ export function guidanceVerdict(guidance: string): GuidanceVerdict {
   const length = text.length;
   if (length === 0) return { ok: false, reason: 'empty', length };
   if (length > FIX_INSTRUCTIONS_MAX_GUIDANCE_CHARS) return { ok: false, reason: 'too_long', length };
-  const unsafe = UNSAFE_GUIDANCE.find((rule) => rule.pattern.test(text));
+  const unsafe = UNSAFE_GUIDANCE.find((rule) => clauses(text).some((clause) => hasUnforbiddenMatch(rule.pattern, clause)));
   return unsafe ? { ok: false, reason: 'unsafe', rule: unsafe.name, length } : { ok: true };
 }
 

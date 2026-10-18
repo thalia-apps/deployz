@@ -65,6 +65,8 @@ export function fakeDocker(options: FakeDockerOptions = {}) {
         const url = environments.get(args[args.length - 1]!)?.get('DATABASE_URL');
         return done(`starting\nconnecting to ${url ?? 'nothing'}\nready`);
       }
+      case 'image':
+        return done('{"/database":{}}');
       case 'diff':
         return done('C /tmp\nA /app/data.sqlite\nD /var/old\nC /app');
       default:

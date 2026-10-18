@@ -59,3 +59,22 @@ describe('parent folders and runtime artefacts', () => {
     expect(filterLocalDiskWrites(lines)).toEqual([]);
   });
 });
+
+describe('tool config, generated node_modules files and image volumes', () => {
+  it('ignores Prisma CLI config and files generated under node_modules', () => {
+    const ghostfolio = ['C /home', 'C /home/node', 'A /home/node/.config', 'A /home/node/.config/prisma-nodejs', 'A /home/node/.config/prisma-nodejs/commands.json'];
+    expect(filterLocalDiskWrites(ghostfolio)).toEqual([]);
+    const directus = ['C /directus', 'C /directus/node_modules', 'A /directus/node_modules/.directus/app-extensions/_virtual_entry.js'];
+    expect(filterLocalDiskWrites(directus)).toEqual([]);
+  });
+
+  it('ignores the empty mount point of an image volume', () => {
+    expect(filterLocalDiskWrites(['A /database'], ['/database'])).toEqual([]);
+    expect(filterLocalDiskWrites(['A /database'])).toEqual(['/database']);
+  });
+
+  it('keeps real state next to the new rules', () => {
+    const lines = ['A /data/docuseal/attachments/a.pdf', 'A /app/App_Data/tenants.json', 'A /home/node/.config/app/settings.json'];
+    expect(filterLocalDiskWrites(lines, ['/database'])).toEqual(['/app/App_Data/tenants.json', '/data/docuseal/attachments/a.pdf', '/home/node/.config/app/settings.json']);
+  });
+});
