@@ -419,17 +419,17 @@ export function buildReadinessReport(
     findings.push({
       id: 'build-context-git-metadata',
       category: 'container',
-      title: 'Dockerfile copies the .git directory',
+      title: 'Dockerfile copies or reads the .git directory',
       severity: 'required',
       blocking: true,
       plainEnglishExplanation:
-        'Deployz builds the image from a source archive that has no git metadata, so COPY .git cannot succeed.',
+        'Deployz builds the image from a source archive that has no git metadata, so a build step that copies or reads .git cannot succeed.',
       whyItMatters:
         'Deployz fetches the repository as a GitHub tarball, which never contains a .git directory. A build step that copies or reads it fails every deployment.',
       technicalEvidence:
         gitCopy.details ?? `Dockerfile copies .git from the build context: ${String(gitCopy.value ?? '')}`,
       suggestedOutcome:
-        'Remove the copy of .git from the Dockerfile, or make the version build argument optional.',
+        'Remove the copy or read of .git from the Dockerfile, or make the version build argument optional.',
       confidence: 'confirmed',
     });
   }

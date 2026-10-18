@@ -80,3 +80,18 @@ describe('a Go PostgreSQL driver whose importer the bounded fetch did not read',
     expect(assessPostgres(tree).required).toBe(false);
   });
 });
+
+describe('a Go PostgreSQL driver next to an in-memory store choice', () => {
+  const storeTypes = 'package storage\n\ntype Type string\n\nconst (\n\tTypeMemory   Type = "memory"\n\tTypeSQLite   Type = "sqlite"\n\tTypePostgres Type = "postgres"\n)\n';
+  const sqlStore = 'package sql\n\nimport _ "github.com/lib/pq"\n';
+
+  it('does not require PostgreSQL when the app defaults to an in-memory store (gatus shape)', () => {
+    const tree: FileTree = { 'go.mod': GO_MOD, 'storage/type.go': storeTypes, 'storage/store/sql/sql.go': sqlStore };
+    expect(assessPostgres(tree).required).toBe(false);
+  });
+
+  it('keeps PostgreSQL required when the imported driver has no in-memory alternative', () => {
+    const tree: FileTree = { 'go.mod': GO_MOD, 'storage/store/sql/sql.go': sqlStore };
+    expect(assessPostgres(tree).required).toBe(true);
+  });
+});

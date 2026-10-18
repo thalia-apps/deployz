@@ -357,7 +357,13 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // sets is configuration or cache, not durable state, when the Compose service
 // that runs the image mounts at least as many paths and every one is a
 // configuration or cache path. Stored v55 rows reject such an app (searxng).
-export const ANALYSIS_VERSION = 56;
+// Version 57 (run-and-check tuning fixes): a Go driver next to an in-memory store
+// choice is not a database; a typeof test, a `delete` and a Rails storage.yml
+// service block do not make a variable required; a RUN step that reads git
+// history and a repository whose every startable Dockerfile copies a missing
+// build output are unbuildable; a HEALTHCHECK port variable names the port; Node 26
+// images have no Yarn for a Procfile worker. Stored v56 rows can carry those claims.
+export const ANALYSIS_VERSION = 57;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

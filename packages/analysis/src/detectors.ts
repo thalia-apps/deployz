@@ -1001,6 +1001,10 @@ function runtimeDockerfilePort(content: string): { value: string; source: 'env' 
   if (envPort) return { value: envPort, source: 'env', via: 'ENV PORT' };
   const port = exposedPort(runtime);
   if (port) return { value: port, source: 'dockerfile-expose', via: 'EXPOSE' };
+  // The image's own check of itself names its port variable and default
+  // (`HEALTHCHECK CMD wget http://localhost:${LIVEBOOK_PORT-8080}/health`).
+  const checked = /^\s*HEALTHCHECK\b[^\n]*\b(?:localhost|127\.0\.0\.1):\$\{\w+:?-(\d{2,5})\}/m.exec(runtime);
+  if (checked) return { value: checked[1]!, source: 'dockerfile-expose', via: 'HEALTHCHECK' };
   return FRONT_SERVER_BASE_IMAGE_REGEX.test(runtime) ? { value: '80', source: 'dockerfile-expose', via: 'base image default' } : null;
 }
 
@@ -2028,6 +2032,23 @@ function runtimeEngineSelectorDefault(tree: FileTree): boolean {
 }
 
 /**
+ * True when runtime Go source declares an in-memory store next to a PostgreSQL
+ * one (`TypeMemory Type = "memory"`, `TypePostgres Type = "postgres"`): the app
+ * runs without a database unless its configuration selects one.
+ */
+function goInMemoryStoreChoice(tree: FileTree): boolean {
+  return Object.entries(tree).some(
+    ([path, content]) =>
+      content &&
+      GO_SOURCE.test(path) &&
+      !/(?:^|\/)vendor\//.test(path) &&
+      isRuntimeSourcePath(path) &&
+      /^\s*\w+\s+\w*\s*=\s*"memory"/m.test(content) &&
+      /^\s*\w+\s+\w*\s*=\s*"postgres(?:ql)?"/m.test(content),
+  );
+}
+
+/**
  * True when a language-level driver signal comes from a manifest the
  * deployed app is built from (not a tool, test or docs manifest) and, for
  * Go, is a direct requirement rather than an `// indirect` one.
@@ -2040,7 +2061,8 @@ function languageDriverDeclaredAtRuntime(tree: FileTree, signal: string): boolea
     if (!isDependencyManifest(path) || !isRuntimeSourcePath(path)) return false;
     if (!GO_DEPENDENCY_FILES.test(path)) return true;
     const line = new RegExp(`^[^\\n]*${tokenPattern(token)}[^\\n]*$`, 'm').exec(tree[path] ?? '')?.[0] ?? '';
-    return !/\/\/\s*indirect/.test(line) && (goModuleImportedByRuntimeSource(tree, token) || runtimeEngineSelectorDefault(tree));
+    if (/\/\/\s*indirect/.test(line) || goInMemoryStoreChoice(tree)) return false;
+    return goModuleImportedByRuntimeSource(tree, token) || runtimeEngineSelectorDefault(tree);
   });
 }
 
@@ -2575,6 +2597,19 @@ function slugProcessId(name: string): string {
   return slug.length > 0 ? slug : 'worker';
 }
 
+/**
+ * The selected Dockerfile's runtime image is a known JavaScript image without
+ * the runner the command starts with (outline's Procfile `yarn start` on
+ * `node:26-slim`): the process exits with 127 in that image.
+ */
+function runtimeImageLacksRunner(tree: FileTree, command: string): boolean {
+  const runner = command.split(/\s+/)[0] ?? '';
+  if (!JS_RUNNERS.has(runner)) return false;
+  const dockerfile = selectedDockerfile(tree);
+  const image = dockerfile ? runtimeImageOf(dockerfile.content) : null;
+  return image !== null && image.hasShell && image.tools.size > 0 && !image.tools.has(runner);
+}
+
 export function detectDeclaredWorkerCommands(tree: FileTree): DeclaredWorkerCommand[] {
   const declared: DeclaredWorkerCommand[] = [];
   const seen = new Set<string>();
@@ -2590,6 +2625,7 @@ export function detectDeclaredWorkerCommands(tree: FileTree): DeclaredWorkerComm
       const name = match[1]!;
       const command = match[2]!.trim();
       if (command.length === 0 || NON_PERSISTENT_PROCESS_NAME_REGEX.test(name) || isDevToolCommand(command)) continue;
+      if (runtimeImageLacksRunner(tree, command)) continue;
       push(slugProcessId(name), command, path);
     }
   }
@@ -4391,7 +4427,10 @@ function scanConfigFileEnvReads(path: string, content: string): { key: string; n
       for (const key of ['SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD']) add(key, true);
     }
   } else {
-    for (const m of content.matchAll(/\bENV\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]\s*(\|\|)?/g)) add(m[1]!, m[2] !== undefined);
+    // A Rails `config/storage.yml` service block is built only when the app selects that
+    // service, and `ENV['X']` is nil when unset: the app boots without it.
+    const storageServices = /(?:^|\/)config\/storage\.ya?ml$/i.test(path);
+    for (const m of content.matchAll(/\bENV\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]\s*(\|\|)?/g)) add(m[1]!, storageServices || m[2] !== undefined);
     for (const m of content.matchAll(/\bENV\.fetch\(\s*["']([A-Z][A-Z0-9_]*)["']\s*(,|\)\s*\{)?/g)) add(m[1]!, m[2] !== undefined);
     // `$(NAME)` / `${NAME:default}` substitution in a YAML config; the engine selector has no other source
     for (const m of content.matchAll(/\$[({]([A-Z][A-Z0-9_]*)(:[^)}\n]*)?[)}]/g)) {
@@ -4502,10 +4541,12 @@ export function detectEnvVarModel(
         if (content[match.index + match[0].length] === '*') continue;
         // A read in a comment (`* parseTimeout(process.env.X)`) is documentation.
         if (/^\s*(?:\*|\/\/)/.test(content.slice(content.lastIndexOf('\n', match.index) + 1, match.index))) continue;
-        // The same file tests the key for presence (`Boolean(process.env.X)`,
-        // `!!process.env.X`, `if (process.env.X)`, `process.env.X && …`), so it tolerates its absence.
+        // `delete process.env.X` removes the variable; it reads nothing.
+        if (/\bdelete\s+$/.test(content.slice(Math.max(0, match.index - 10), match.index))) continue;
+        // The same file tests the key for presence (`Boolean(process.env.X)`, `!!process.env.X`,
+        // `if (process.env.X)`, `process.env.X && …`, `typeof process.env.X`), so it tolerates its absence.
         const presenceTested = new RegExp(
-          `(?:Boolean\\s*\\(\\s*|!!\\s*|\\bif\\s*\\(\\s*)process\\.env\\.${key}\\b(?!\\s*[=!])|process\\.env\\.${key}\\s*(?:&&|\\?(?!\\?)|!==?\\s*(?:null|undefined)\\b)`,
+          `(?:Boolean\\s*\\(\\s*|!!\\s*|\\bif\\s*\\(\\s*)process\\.env\\.${key}\\b(?!\\s*[=!])|process\\.env\\.${key}\\s*(?:&&|\\?(?!\\?)|!==?\\s*(?:null|undefined)\\b)|\\btypeof\\s+process\\.env\\.${key}\\b`,
         ).test(content);
         if (assignedKeys.has(key) || presenceTested) {
           recordRead(key, false, path);
@@ -5260,7 +5301,10 @@ function runtimeImageOf(content: string): RuntimeImage | null {
   const name = imageName(base);
   const tools = new Set<string>();
   if (/(?:^|\/)node$/.test(name) && !name.startsWith('chainguard/')) {
-    for (const tool of ['node', 'npm', 'npx', 'yarn']) tools.add(tool);
+    for (const tool of ['node', 'npm', 'npx']) tools.add(tool);
+    // The official Node images stopped shipping Yarn with Node 26.
+    const major = /:(\d+)/.exec(base.split('@')[0] ?? base)?.[1];
+    if (major === undefined || Number(major) < 26) tools.add('yarn');
   } else if (/(?:^|\/)bun$/.test(name)) {
     for (const tool of ['bun', 'bunx']) tools.add(tool);
   } else if (/(?:^|\/)deno$/.test(name)) {
@@ -5268,6 +5312,7 @@ function runtimeImageOf(content: string): RuntimeImage | null {
   }
   if (tools.has('npm')) {
     if (/\bcorepack\s+enable\b|\bnpm\s+(?:i|install)\s+(?:-g|--global)\b[^\n]*\bpnpm\b/.test(text)) tools.add('pnpm');
+    if (/\bcorepack\s+enable\b|\bnpm\s+(?:i|install)\s+(?:-g|--global)\b[^\n]*\byarn\b/.test(text)) tools.add('yarn');
     if (/\brm\b[^\n]*\/(?:npm|npx)\b/.test(text)) {
       tools.delete('npm');
       tools.delete('npx');
@@ -5500,6 +5545,11 @@ const COPY_FROM_FLAG_REGEX = /--from=/;
 // The source is `.git` itself or a path inside it (`.git/HEAD`), not a
 // lookalike (`.gitignore`, `.github`, `.gitattributes`, `.gitmodules`).
 const GIT_SOURCE_TOKEN_REGEX = /^(?:\.\/)?\.git(?:\/.*)?$/;
+const DOCKERFILE_RUN_REGEX = /^\s*RUN\s+([^\n]+)$/gm;
+// A command of a RUN step that reads git history (`git rev-parse HEAD > .git_sha`).
+const GIT_HISTORY_COMMAND_REGEX = /^\s*git\s+(?:rev-parse|describe|log|rev-list|show)\b/;
+// The Dockerfile makes its own repository, so git reads work without the context's `.git`.
+const GIT_REPOSITORY_SETUP_REGEX = /\bgit\s+(?:clone|init)\b/;
 
 /**
  * The source tokens of a `COPY`/`ADD` instruction's argument string — every
@@ -5526,7 +5576,8 @@ function copyAddSources(args: string): string[] {
 
 /**
  * Detect a `COPY`/`ADD` instruction in the selected Dockerfile whose source
- * is the repository's `.git` directory. Deployz builds images from a GitHub
+ * is the repository's `.git` directory, or a `RUN` step that reads git history
+ * from it. Deployz builds images from a GitHub
  * tarball (source-fetch.ts), which never contains `.git`, so the copy fails
  * the build with a checksum error before the vendor gets a useful message
  * (DEPLOY-031, sosedoff/pgweb: `COPY .git/ .` feeds a `git rev-parse` in the
@@ -5545,13 +5596,23 @@ export function detectGitCopyInDockerfile(tree: FileTree): DetectorFinding {
       matches.push(match[0].trim());
     }
   }
+  // A RUN command that reads git history with no `||` fallback fails the build (chatwoot's
+  // `RUN git rev-parse HEAD > /app/.git_sha`).
+  if (!GIT_REPOSITORY_SETUP_REGEX.test(collapsed)) {
+    for (const match of collapsed.matchAll(DOCKERFILE_RUN_REGEX)) {
+      const commands = (match[1] ?? '').split(/&&|;/);
+      if (commands.some((command) => GIT_HISTORY_COMMAND_REGEX.test(command) && !command.includes('||'))) {
+        matches.push(match[0].trim());
+      }
+    }
+  }
 
   if (matches.length === 0) return { detector: 'dockerfile-git-copy', detected: false };
   return {
     detector: 'dockerfile-git-copy',
     detected: true,
     value: matches,
-    details: `Dockerfile copies .git from the build context, which the tarball build never has: ${matches.join('; ')} (${dockerfile.path})`,
+    details: `Dockerfile copies or reads .git from the build context, which the tarball build never has: ${matches.join('; ')} (${dockerfile.path})`,
     source: 'dockerfile',
   };
 }
@@ -5564,15 +5625,15 @@ export function detectGitCopyInDockerfile(tree: FileTree): DetectorFinding {
 export const TREE_PATHS: unique symbol = Symbol.for('deployz.analysis.treePaths');
 
 /**
- * `COPY`/`ADD` sources of the selected Dockerfile (no `--from`) that are not in
+ * `COPY`/`ADD` sources of the selected Dockerfile, or of `dockerfilePath` (no `--from`), that are not in
  * the repository, from the root or from the Dockerfile's directory: a build
  * output a CI step makes before `docker build` (listmonk's `COPY listmonk .`,
  * tolgee's prebuilt `BOOT-INF`). The release build has only the repository, so
  * that Dockerfile can never build. Empty when the path list is unknown.
  */
-export function detectDockerfileMissingCopySources(tree: FileTree): string[] {
+export function detectDockerfileMissingCopySources(tree: FileTree, dockerfilePath?: string): string[] {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
-  const dockerfile = selectedDockerfile(tree);
+  const dockerfile = dockerfilePath === undefined ? selectedDockerfile(tree) : { path: dockerfilePath, content: tree[dockerfilePath] ?? '' };
   if (!paths || !dockerfile) return [];
   const dockerDir = dockerfile.path.includes('/') ? dockerfile.path.slice(0, dockerfile.path.lastIndexOf('/')) : '';
   const exists = (path: string): boolean => paths.some((candidate) => candidate === path || candidate.startsWith(`${path}/`));
@@ -5619,9 +5680,10 @@ function isDevOnlyDockerfile(path: string, content: string): boolean {
  * null when it has one or the evidence is incomplete (COMP-021). Complete
  * evidence needs the full tracked path list, every Dockerfile in it fetched,
  * and no git submodule. It rejects when every Dockerfile is a development-only
- * file or a template, or when the single Dockerfile copies sources the
- * repository does not contain (a prebuilt binary or archive). A generated
- * directory, `COPY --from=` and a second candidate Dockerfile never reject.
+ * file or a template, or when the selected Dockerfile copies sources the
+ * repository does not contain (a prebuilt binary or archive), and every other
+ * candidate with a CMD or ENTRYPOINT copies missing sources too. A generated
+ * directory and `COPY --from=` never reject on their own.
  */
 export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
@@ -5636,13 +5698,25 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   if (buildable.length === 0) {
     return `The only Dockerfile${tracked.length > 1 ? 's are' : ' is'} for development or a template (${tracked.slice(0, 3).join(', ')}).`;
   }
-  if (tracked.length > 1) return null;
-
   const missing = detectDockerfileMissingCopySources(tree).filter(
     (source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? ''),
   );
   if (missing.length === 0) return null;
-  return `The only Dockerfile (${tracked[0]}) copies ${missing.slice(0, 3).join(', ')}, which the repository does not contain.`;
+  if (tracked.length === 1) {
+    return `The only Dockerfile (${tracked[0]}) copies ${missing.slice(0, 3).join(', ')}, which the repository does not contain.`;
+  }
+  // Another candidate with a command that copies only repository content is a Dockerfile
+  // the vendor can select (n8n's every image copies a CI build output; its base image
+  // only EXPOSEs a port).
+  const selected = selectedDockerfile(tree)?.path;
+  const alternative = buildable.some(
+    (path) =>
+      path !== selected &&
+      /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) &&
+      detectDockerfileMissingCopySources(tree, path).length === 0,
+  );
+  if (alternative) return null;
+  return `Every Dockerfile with a start command copies files the repository does not contain (${selected} copies ${missing.slice(0, 3).join(', ')}).`;
 }
 
 // 18. Dockerfile build context

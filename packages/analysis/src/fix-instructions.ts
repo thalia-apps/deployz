@@ -402,7 +402,7 @@ const ITEM_BUILDERS: Record<string, (finding: ReadinessFinding, facts: FixInstru
     settings: ['If the repository already has a production Dockerfile under another path, the vendor can select it in the Deployz application settings.'],
   }),
   'build-context-git-metadata': (_finding, facts) => ({
-    name: 'Dockerfile copies .git metadata',
+    name: 'Dockerfile copies or reads .git metadata',
     classification: 'CONFIGURATION_FIX',
     actions: [
       `Remove \`.git\` from COPY and ADD instructions in ${dockerfileRef(facts)}, and remove build steps that read git history.`,

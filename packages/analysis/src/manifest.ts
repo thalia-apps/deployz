@@ -463,9 +463,9 @@ export function normalizeDeploymentManifest(
     unsupported.push('Persistent local filesystem storage is not supported');
   }
   // DEPLOY-031: the source archive Deployz builds from has no git metadata,
-  // so a Dockerfile that copies .git fails every build.
+  // so a Dockerfile that copies or reads .git fails every build.
   if (meta['copiesGitDirectory'] === true) {
-    unsupported.push('The Dockerfile copies the .git directory, which the source archive Deployz builds from does not contain');
+    unsupported.push('The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain');
   }
   // Inconsistency guard: a migration command configured without PostgreSQL.
   // The only source of manifest.migration.command is overrides.migrationCommand
