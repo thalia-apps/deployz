@@ -17,7 +17,8 @@ import { parseArgs } from 'node:util';
 import { createAnalysisAiGateways, resolveAnalysisAiConfig } from '@deployz/api/ai-config';
 import { parse } from 'yaml';
 
-import { analysisResultFileSchema, recipeSchema, type Recipe } from '../contract.js';
+import { analysisResultFileSchema, recipeSchema, type AnalysisResultFile, type Recipe } from '../contract.js';
+import { formatAiUsage, summariseAiUsage } from './ai-usage.js';
 import { aiAnalyserName, openAnalyser, rulesAnalyserName } from './analyse.js';
 import { resolveGithubToken } from './snapshot.js';
 
@@ -97,11 +98,13 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   });
 
   let failed = 0;
+  const written: AnalysisResultFile[] = [];
   try {
     for (const recipe of recipes) {
       process.stdout.write(`${recipe.id} ... `);
       const file = analysisResultFileSchema.parse(await session.analyse(recipe));
       writeFileSync(join(outDir, `${file.id}.json`), `${JSON.stringify(file, null, 2)}\n`);
+      written.push(file);
       if (file.status === 'failed') failed += 1;
       const fallback = file.ai?.['status'] === 'fallback' ? ` (AI fallback: ${String(file.ai['reason'])})` : '';
       console.log(file.status === 'failed' ? `FAILED: ${file.failure ?? 'unknown'}` : `${file.gate?.state}, ${file.vendorQuestions} vendor question(s)${fallback}`);
@@ -110,5 +113,6 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     await session.close();
   }
   console.log(`Wrote ${recipes.length} analysis file(s) to ${outDir}`);
+  if (options.engine === 'ai') console.log(formatAiUsage(summariseAiUsage(written)));
   return failed > 0 ? 1 : 0;
 }
