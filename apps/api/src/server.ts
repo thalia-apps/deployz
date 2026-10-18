@@ -150,7 +150,7 @@ import {
   setConfigBodySchema,
   type ConfigDeps,
 } from './config.js';
-import { FIX_INSTRUCTIONS_AI_PROBLEMS } from './ai-config.js';
+import { FIX_INSTRUCTIONS_AI_PROBLEMS, createAnalysisAiGateways } from './ai-config.js';
 import { env } from './env.js';
 import { ApiError, NotFoundError, UnauthorizedError, toErrorEnvelope } from './errors.js';
 import {
@@ -2497,6 +2497,8 @@ export async function buildServer({
       githubAppPrivateKey,
       githubFixtureMode: githubFixtureMode ?? env.githubFixtureMode,
       aiGateway,
+      analysisEngine: env.analysisAi.engine,
+      aiAnalysis: env.aiFixtureMode ? undefined : createAnalysisAiGateways(env.analysisAi),
       // Shadow-only: a disabled/partial Jev config resolves to the noop
       // runner, and the runner never affects the analysis outcome.
       jevShadow: createJevShadowRunnerFromEnv({ db }, env.jev),

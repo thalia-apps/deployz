@@ -1,6 +1,7 @@
 /** The one entry point of the `runcheck:*` commands: `tsx src/cli.ts <command> [args]`. */
 import { main as analyse } from './analysis/cli.js';
 import { main as claims } from './claims/cli.js';
+import { main as stability } from './claims/stability.js';
 import { main as preflight } from './docker/preflight-cli.js';
 import { main as fetch } from './exam-fetch.js';
 import { main as fixtures } from './fixtures-cli.js';
@@ -19,6 +20,9 @@ const COMMANDS: Record<string, (argv: string[]) => Promise<unknown> | unknown> =
   fixtures,
   observe,
   preflight: () => preflight(),
+  stability: (argv) => {
+    process.exitCode = stability(argv);
+  },
 };
 
 const [command, ...argv] = process.argv.slice(2);

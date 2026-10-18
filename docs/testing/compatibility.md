@@ -26,13 +26,21 @@ compatibility and remediation). The label benchmarks were removed on
 
 ```bash
 pnpm runcheck:preflight                  # machine facts, safety, emulation and disk checks
-pnpm runcheck:analyse                    # the production Analysis for every recipe
+pnpm runcheck:analyse [--engine ai]      # the production Analysis for every recipe
 pnpm runcheck:observe [--repo <id>] [--force]
 pnpm runcheck:claims [--repo <id>] [--analysis <dir>]
 pnpm runcheck:full [--repo <id>] [--analysis <dir>] [--force]
 pnpm runcheck:fixtures [--no-observe]
 pnpm runcheck:fetch --run <run id>       # results of a runcheck-exam.yml run
+pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two analyses
 ```
+
+`--engine ai` runs the AI-first engine (`ANALYSIS_ENGINE=ai`) and writes
+`analyses/ai@<tree>/`. It needs the gateway settings
+([`../ai-analysis.md`](../ai-analysis.md#configuration-and-cost)). Each file
+then has an `ai` record: the status or the fallback reason, the token usage
+and the latency of each call, and the decision for each fact. Use `--out`
+for the second run of the stability criterion.
 
 ### Three modes
 

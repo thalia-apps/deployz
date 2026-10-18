@@ -7,6 +7,7 @@ import {
   FIX_INSTRUCTIONS_AI_PROBLEMS,
   describeAiGatewayConfig,
   describeFixInstructionsAiConfig,
+  resolveAnalysisAiConfig,
   resolveJevConfig,
   type JevConfig,
 } from './ai-config.js';
@@ -210,6 +211,7 @@ function readJevConfig(): JevConfig {
 
 export const env = {
   aiGateway: readAiGatewayConfig(),
+  analysisAi: resolveAnalysisAiConfig(process.env),
   fixInstructionsAi: fixInstructionsAiResolution.config,
   fixInstructionsAiProblem: fixInstructionsAiResolution.problem,
   jev: readJevConfig(),

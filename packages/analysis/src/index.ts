@@ -100,6 +100,8 @@ export { assessRedis, resolveRedisEnvBindings } from './redis.js';
 
 export type { AnalysisResult, DatabaseState } from './analyser.js';
 export { analyseRepo } from './analyser.js';
+export type { ResourceOverrides } from './analyser.js';
+export * from './ai-analysis/index.js';
 
 export type { AsyncWorkloadsResult } from './async-detection.js';
 export { detectAsyncWorkloads } from './async-detection.js';

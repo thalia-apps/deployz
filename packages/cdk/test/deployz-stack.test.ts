@@ -412,6 +412,25 @@ describe('DeployzStack', () => {
     });
   });
 
+  // ANALYSIS_ENGINE is the one-setting rollback of the AI-first Analysis; it and
+  // the per-role model settings must reach the Lambdas or the switch is a no-op.
+  describe('application analysis engine env keys', () => {
+    const KEYS = ['ANALYSIS_ENGINE', 'ANALYSIS_AI_MODEL', 'ANALYSIS_AI_PROVIDER_API_KEY', 'ANALYSIS_REVIEWER_MODEL', 'ANALYSIS_REVIEWER_PROVIDER_API_KEY'];
+
+    it('passes every analysis engine key into the Lambda environment when set', () => {
+      for (const key of KEYS) process.env[key] = `test-value-${key}`;
+      try {
+        const template = Template.fromStack(new DeployzStack(new App(), 'DeployzTest'));
+        const expected = Object.fromEntries(KEYS.map((key) => [key, `test-value-${key}`]));
+        template.hasResourceProperties('AWS::Lambda::Function', {
+          Environment: Match.objectLike({ Variables: Match.objectLike(expected) }),
+        });
+      } finally {
+        for (const key of KEYS) delete process.env[key];
+      }
+    });
+  });
+
   // Phase 15 — static verification that the control plane's Lambda
   // environment allowlist (collectEnvVars in deployz-stack.ts) carries the
   // four Cloudflare config keys the default-HTTPS flow needs in production.

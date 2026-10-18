@@ -5,6 +5,7 @@
  *   tsx src/analysis/cli.ts --repo repo-008      one (or several --repo) recipes
  *   tsx src/analysis/cli.ts --out <dir>          another output folder
  *   tsx src/analysis/cli.ts --offline            cached GitHub snapshots only
+ *   tsx src/analysis/cli.ts --engine ai          the AI engine (needs the gateway settings, see ai-config.ts)
  *
  * Writes analyses/<analyser>/<id>.json (`analysisResultFileSchema`).
  */
@@ -13,10 +14,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
+import { createAnalysisAiGateways, resolveAnalysisAiConfig } from '@deployz/api/ai-config';
 import { parse } from 'yaml';
 
-import { analysisResultFileSchema, recipeSchema, type Recipe } from '../contract.js';
-import { openAnalyser, rulesAnalyserName } from './analyse.js';
+import { analysisResultFileSchema, recipeSchema, type AnalysisResultFile, type Recipe } from '../contract.js';
+import { formatAiUsage, summariseAiUsage } from './ai-usage.js';
+import { aiAnalyserName, openAnalyser, rulesAnalyserName } from './analyse.js';
 import { resolveGithubToken } from './snapshot.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -30,15 +33,22 @@ export interface AnalysisOptions {
   ids: string[];
   out: string | undefined;
   offline: boolean;
+  engine: 'rules' | 'ai';
 }
 
 export function parseAnalysisArgs(argv: readonly string[]): AnalysisOptions {
   const { values } = parseArgs({
     args: [...argv],
-    options: { repo: { type: 'string', multiple: true }, out: { type: 'string' }, offline: { type: 'boolean', default: false } },
+    options: {
+      repo: { type: 'string', multiple: true },
+      out: { type: 'string' },
+      offline: { type: 'boolean', default: false },
+      engine: { type: 'string', default: 'rules' },
+    },
     strict: true,
   });
-  return { ids: values.repo ?? [], out: values.out, offline: values.offline ?? false };
+  if (values.engine !== 'rules' && values.engine !== 'ai') throw new Error(`--engine must be rules or ai, not ${values.engine}`);
+  return { ids: values.repo ?? [], out: values.out, offline: values.offline ?? false, engine: values.engine };
 }
 
 /** The recipe file of an id: `recipes/<id>.yaml`, or `fixtures/<F#>/recipe.yaml` for a fixture. */
@@ -67,26 +77,42 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   }
   const recipes = ids.map(loadRecipe);
 
-  const analyser = rulesAnalyserName(HARNESS_ROOT);
+  const aiAnalysis = options.engine === 'ai' ? createAnalysisAiGateways(resolveAnalysisAiConfig(process.env)) : undefined;
+  if (options.engine === 'ai' && aiAnalysis === undefined) {
+    console.error('--engine ai needs AI_GATEWAY_BASE_URL and a provider key (AI_PROVIDER_API_KEY or ANALYSIS_AI_PROVIDER_API_KEY).');
+    return 1;
+  }
+  const analyser = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);
   const outDir = resolve(options.out ?? join(ANALYSES_DIR, analyser));
   mkdirSync(outDir, { recursive: true });
 
   const token = options.offline ? null : resolveGithubToken();
   if (!options.offline && !token) console.warn('No GitHub token (GITHUB_TOKEN or gh auth): unauthenticated requests are limited to 60/hour.');
-  const session = await openAnalyser({ analyser, cacheDir: SNAPSHOT_CACHE_DIR, token, offline: options.offline, fixturesDir: FIXTURES_DIR });
+  const session = await openAnalyser({
+    analyser,
+    cacheDir: SNAPSHOT_CACHE_DIR,
+    token,
+    offline: options.offline,
+    fixturesDir: FIXTURES_DIR,
+    engine: { engine: options.engine, aiAnalysis },
+  });
 
   let failed = 0;
+  const written: AnalysisResultFile[] = [];
   try {
     for (const recipe of recipes) {
       process.stdout.write(`${recipe.id} ... `);
       const file = analysisResultFileSchema.parse(await session.analyse(recipe));
       writeFileSync(join(outDir, `${file.id}.json`), `${JSON.stringify(file, null, 2)}\n`);
+      written.push(file);
       if (file.status === 'failed') failed += 1;
-      console.log(file.status === 'failed' ? `FAILED: ${file.failure ?? 'unknown'}` : `${file.gate?.state}, ${file.vendorQuestions} vendor question(s)`);
+      const fallback = file.ai?.['status'] === 'fallback' ? ` (AI fallback: ${String(file.ai['reason'])})` : '';
+      console.log(file.status === 'failed' ? `FAILED: ${file.failure ?? 'unknown'}` : `${file.gate?.state}, ${file.vendorQuestions} vendor question(s)${fallback}`);
     }
   } finally {
     await session.close();
   }
   console.log(`Wrote ${recipes.length} analysis file(s) to ${outDir}`);
+  if (options.engine === 'ai') console.log(formatAiUsage(summariseAiUsage(written)));
   return failed > 0 ? 1 : 0;
 }

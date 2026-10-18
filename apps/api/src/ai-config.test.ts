@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AI_MODEL_DEFAULT,
+  ANALYSIS_AI_MODEL_DEFAULT,
+  ANALYSIS_REVIEWER_MODEL_DEFAULT,
   FIX_INSTRUCTIONS_AI_PROBLEMS,
   FIX_INSTRUCTIONS_MODEL_DEFAULT,
   OPENROUTER_BASE_URL_DEFAULT,
+  createAnalysisAiGateways,
   describeFixInstructionsAiConfig,
   resolveAiGatewayConfig,
+  resolveAnalysisAiConfig,
 } from './ai-config.js';
 
 const complete = {
@@ -146,6 +150,47 @@ describe('describeFixInstructionsAiConfig', () => {
 
     expect(result.config).toBeUndefined();
     expect(result.problem).toBe('invalid-provider');
+  });
+});
+
+describe('resolveAnalysisAiConfig', () => {
+  it('defaults to the rules engine and the two default models on the shared gateway', () => {
+    const config = resolveAnalysisAiConfig(complete);
+
+    expect(config.engine).toBe('rules');
+    expect(config.analyst).toEqual({
+      baseUrl: complete.AI_GATEWAY_BASE_URL,
+      providerApiKey: 'provider-key',
+      gatewayToken: 'gateway-token',
+      model: ANALYSIS_AI_MODEL_DEFAULT,
+    });
+    expect(config.reviewer?.model).toBe(ANALYSIS_REVIEWER_MODEL_DEFAULT);
+  });
+
+  it('reads the engine, the models and a separate key per role', () => {
+    const config = resolveAnalysisAiConfig({
+      ...complete,
+      ANALYSIS_ENGINE: 'shadow',
+      ANALYSIS_AI_MODEL: 'anthropic/other',
+      ANALYSIS_AI_PROVIDER_API_KEY: 'anthropic-key',
+      ANALYSIS_REVIEWER_MODEL: 'openai/other',
+      ANALYSIS_REVIEWER_PROVIDER_API_KEY: 'openai-key',
+    });
+
+    expect(config.engine).toBe('shadow');
+    expect(config.analyst).toMatchObject({ model: 'anthropic/other', providerApiKey: 'anthropic-key' });
+    expect(config.reviewer).toMatchObject({ model: 'openai/other', providerApiKey: 'openai-key' });
+  });
+
+  it('maps an unknown engine to rules', () => {
+    expect(resolveAnalysisAiConfig({ ...complete, ANALYSIS_ENGINE: 'magic' }).engine).toBe('rules');
+  });
+
+  it('has no gateways without the gateway URL or a key, or with a key equal to the gateway token', () => {
+    expect(createAnalysisAiGateways(resolveAnalysisAiConfig({ ANALYSIS_ENGINE: 'ai' }))).toBeUndefined();
+    const reused = resolveAnalysisAiConfig({ ...complete, ANALYSIS_AI_PROVIDER_API_KEY: 'gateway-token' });
+    expect(reused.analyst).toBeUndefined();
+    expect(createAnalysisAiGateways(resolveAnalysisAiConfig(complete))).toMatchObject({ analyst: expect.any(Object), reviewer: expect.any(Object) });
   });
 });
 

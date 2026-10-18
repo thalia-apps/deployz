@@ -2,7 +2,16 @@ import { posix as posixPath } from 'node:path';
 
 import { eq } from 'drizzle-orm';
 
-import type { AiGateway, AnalysisResult, FileTree, ReadinessReport, RepositoryAiInput } from '@deployz/analysis';
+import type {
+  AiAnalysisGateways,
+  AiGateway,
+  AnalysisEngine,
+  AnalysisResult,
+  FileTree,
+  MergeResult,
+  ReadinessReport,
+  RepositoryAiInput,
+} from '@deployz/analysis';
 import {
   REPO_AI_TIMEOUT_MS,
   REPOSITORY_AI_PROMPT_VERSION,
@@ -20,6 +29,7 @@ import {
   mainCommandRunsWorker,
   mergeAiAnalysis,
   migrationRunnerVerdict,
+  runAiAnalysis,
   selectAiContextFiles,
   selectMigrationScript,
   verdictFromReadiness,
@@ -373,6 +383,10 @@ export interface AnalysisRunnerDeps {
   githubFixtureMode: boolean;
   /** §15 AI repository-analysis fallback — only invoked when a real question is left unresolved. */
   aiGateway: AiGateway;
+  /** `ANALYSIS_ENGINE`. Default `rules`; `shadow` stores the AI result and changes nothing; `ai` uses it. */
+  analysisEngine?: AnalysisEngine | undefined;
+  /** The analyst and reviewer gateways. Without them every engine runs the rules only. */
+  aiAnalysis?: AiAnalysisGateways | undefined;
   /** Jev requirements/plan shadow verifier — fire-and-forget telemetry only, never awaited. */
   jevShadow?: JevShadowRunner | undefined;
   /** Injectable clock for JWT iat/exp — defaults to Date.now. */
@@ -442,7 +456,8 @@ export async function runApplicationAnalysis(
       );
     }
 
-    if (!options?.force && headSha !== undefined && isCommitShaCacheHit(application.detectedMetadata, headSha)) {
+    const engine = deps.analysisEngine ?? 'rules';
+    if (!options?.force && headSha !== undefined && isCommitShaCacheHit(application.detectedMetadata, headSha, engine)) {
       const durationMs = Date.now() - runStartedMs;
       await deps.db.transaction(async (tx) => {
         await tx
@@ -470,11 +485,19 @@ export async function runApplicationAnalysis(
 
     const tree = await fetchTreeForApplication(deps, application, realModeToken);
     const analysis = analyseRepo(tree);
+    // AI-first Analysis: `shadow` records the AI result next to the rules;
+    // `ai` uses it. Any AI failure falls back to the rules path below.
+    const aiRun = engine === 'rules' ? null : await runAiEngine(deps.aiAnalysis, tree, analysis);
+    const aiMerge = engine === 'ai' ? (aiRun?.merge ?? null) : null;
     // §15 AI fallback: only runs when the deterministic scanner left a real
     // question unresolved, and can never fail the analysis — any AI error
     // degrades to the deterministic metadata plus a warning.
-    const { metadata, aiResolved, multiServiceDowngraded } = await applyAiFallback(deps.aiGateway, tree, analysis);
-    const mergedAnalysis: AnalysisResult = multiServiceDowngraded
+    const { metadata, aiResolved, multiServiceDowngraded } = aiMerge
+      ? { metadata: aiMerge.analysis.metadata, aiResolved: [...aiMerge.aiResolved], multiServiceDowngraded: false }
+      : await applyAiFallback(deps.aiGateway, tree, analysis);
+    const mergedAnalysis: AnalysisResult = aiMerge
+      ? aiMerge.analysis
+      : multiServiceDowngraded
       ? {
           ...analysis,
           metadata,
@@ -491,6 +514,7 @@ export async function runApplicationAnalysis(
     // Vendor intent lives on the application row and can change while this
     // run is fetching and analysing (PATCH /api/applications/:id), so the
     // outcome is derived from the row as it is when written, under its lock.
+    const resolvedWorkerCommands = aiMerge?.workers ? [...aiMerge.workers] : resolveWorkerCommands(tree);
     const buildOutcome = (app: typeof application) => {
       // The vendor-owned field list lives on detected_metadata, which this
       // write replaces wholesale — carry it across or every re-analysis would
@@ -502,7 +526,7 @@ export async function runApplicationAnalysis(
       // command, start command) have no column either; the build and the
       // deployment gate read them from this record.
       const manifestOverrides = app.detectedMetadata?.['manifestOverrides'];
-    const contractFieldUpdates = deriveContractFieldUpdates(vendorOverrides, tree, mergedAnalysis, aiResolved);
+    const contractFieldUpdates = deriveContractFieldUpdates(vendorOverrides, tree, mergedAnalysis, aiResolved, resolvedWorkerCommands[0]?.command);
     // A migration script the runtime image is not shown to run is an open
     // vendor question until the vendor owns the field (a command, or no
     // separate migration).
@@ -516,7 +540,6 @@ export async function runApplicationAnalysis(
     // The semantic readiness report is built from the MERGED metadata, so a
     // start/migration command the AI resolved counts as resolved here too.
     // The persisted verdict is derived from the report — one source of truth.
-    const resolvedWorkerCommands = resolveWorkerCommands(tree);
     const readiness: ReadinessReport = buildReadinessReport(mergedAnalysis, {
       workerCommandResolved: resolvedWorkerCommands.length > 0,
       migrationNeedsInput,
@@ -544,6 +567,8 @@ export async function runApplicationAnalysis(
       ...(markerPresent ? { vendorOverrides } : {}),
       ...(manifestOverrides !== undefined ? { manifestOverrides } : {}),
       analysisVersion: ANALYSIS_VERSION,
+      ...(engine !== 'rules' ? { analysisEngine: engine } : {}),
+      ...(aiRun ? { aiEngine: aiRun.record } : {}),
       ...(headSha !== undefined ? { analysisCommitSha: headSha } : {}),
     };
     // The stored report keeps every finding; the persisted verdict reads the
@@ -754,9 +779,13 @@ async function mintRealModeToken(deps: AnalysisRunnerDeps, application: Applicat
 }
 
 /** A cache hit: the stored analysis was for this exact commit and analyser version. */
-function isCommitShaCacheHit(metadata: Record<string, unknown> | null, headSha: string): boolean {
+function isCommitShaCacheHit(metadata: Record<string, unknown> | null, headSha: string, engine: AnalysisEngine): boolean {
   if (!metadata) return false;
-  return metadata['analysisCommitSha'] === headSha && metadata['analysisVersion'] === ANALYSIS_VERSION;
+  return (
+    metadata['analysisCommitSha'] === headSha &&
+    metadata['analysisVersion'] === ANALYSIS_VERSION &&
+    (metadata['analysisEngine'] ?? 'rules') === engine
+  );
 }
 
 // ── Repo/branch resolution + tree fetch ─────────────────────────────────────
@@ -823,6 +852,32 @@ function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+/** The AI Analysis budget for the whole run: analyst + reviewer, inside the 15-minute worker. */
+const AI_ENGINE_TIMEOUT_MS = 420_000;
+
+/**
+ * Runs the AI-first Analysis and never throws: any failure (no gateway, an
+ * outage, a timeout, invalid output) returns no merge, and the caller keeps
+ * the rules result. `record` is stored as `detected_metadata.aiEngine` for
+ * the shadow comparison and the spend log.
+ */
+async function runAiEngine(
+  gateways: AiAnalysisGateways | undefined,
+  tree: FileTree,
+  analysis: AnalysisResult,
+): Promise<{ merge: MergeResult | null; record: Record<string, unknown> }> {
+  const startedAt = Date.now();
+  if (!gateways) return { merge: null, record: { status: 'fallback', reason: 'not_configured' } };
+  try {
+    const outcome = await runAiAnalysis({ tree, rules: analysis, gateways }, { abortSignal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS) });
+    return { merge: outcome.merge, record: { status: 'ok', ...outcome.report, generatedAt: new Date().toISOString() } };
+  } catch (error) {
+    const reason = error instanceof Error ? error.name : 'unknown';
+    console.warn(JSON.stringify({ event: 'ai_analysis_fallback', reason, latencyMs: Date.now() - startedAt }));
+    return { merge: null, record: { status: 'fallback', reason, latencyMs: Date.now() - startedAt } };
+  }
 }
 
 /**
@@ -1064,9 +1119,16 @@ function detectedMigrationCommand(
   aiResolved: string[],
 ): MigrationCommandResolution | { command: null } | undefined {
   if (analysis.metadata['migrationMode'] === 'startup') return { command: null };
+  const migrationCommands = analysis.metadata['migrationCommands'];
+  if (aiResolved.includes('migrationCommand') && Array.isArray(migrationCommands) && typeof migrationCommands[0] === 'string') {
+    return qualifyMigrationCommand(tree, migrationCommands[0], '');
+  }
+  const aiQuestion = analysis.metadata['aiMigrationQuestion'] as { candidate?: unknown; reason?: unknown } | undefined;
+  if (typeof aiQuestion?.candidate === 'string' && typeof aiQuestion.reason === 'string') {
+    return { candidate: aiQuestion.candidate, reason: aiQuestion.reason };
+  }
   const resolved = resolveMigrationCommand(tree);
   if (resolved) return resolved;
-  const migrationCommands = analysis.metadata['migrationCommands'];
   if (aiResolved.includes('migrationCommands') && Array.isArray(migrationCommands) && typeof migrationCommands[0] === 'string') {
     return qualifyMigrationCommand(tree, migrationCommands[0], '');
   }
@@ -1103,14 +1165,6 @@ export function resolveWorkerCommands(tree: FileTree): ResolvedWorkerCommand[] {
     }
   }
   return workers;
-}
-
-/**
- * The FIRST resolved worker command — the legacy single-slot answer kept for
- * the `workerCommand` contract column and existing readers.
- */
-export function resolveWorkerCommand(tree: FileTree): string | undefined {
-  return resolveWorkerCommands(tree)[0]?.command;
 }
 
 export interface ContractFieldUpdates {
@@ -1182,6 +1236,7 @@ function deriveContractFieldUpdates(
   tree: FileTree,
   analysis: AnalysisResult,
   aiResolved: string[],
+  workerCommand: string | undefined,
 ): ContractFieldUpdates {
   const updates: ContractFieldUpdates = {};
   const vendorOwned = new Set(vendorOverrides);
@@ -1225,9 +1280,8 @@ function deriveContractFieldUpdates(
     }
   }
 
-  if (!vendorOwned.has('workerCommand')) {
-    const command = resolveWorkerCommand(tree);
-    if (command) updates.workerCommand = command;
+  if (!vendorOwned.has('workerCommand') && workerCommand) {
+    updates.workerCommand = workerCommand;
   }
 
   if (!vendorOwned.has('databaseRequired')) {

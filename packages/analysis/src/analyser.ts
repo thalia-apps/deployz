@@ -285,6 +285,18 @@ function buildMetadata(
 }
 
 /**
+ * Resource facts that the AI Analysis verified (`ai-analysis/merge.ts`). The
+ * analysis re-runs with them so every value derived from a resource (the
+ * env-var model, the bindings, the database state, the migration mode) comes
+ * from the same rules. The rejections never change.
+ */
+export interface ResourceOverrides {
+  readonly database?: 'postgres' | 'mysql' | 'none' | undefined;
+  readonly redis?: boolean | undefined;
+  readonly storage?: boolean | undefined;
+}
+
+/**
  * Run the full deterministic analysis: all §18 detectors + all §10 rejection checks.
  *
  * Returns an `AnalysisResult` whose `metadata` field maps to the
@@ -293,31 +305,37 @@ function buildMetadata(
  * This function is PURE: same input → same output every time. No randomness, no
  * AI, no external calls. The §19 verdict engine (todo 23) consumes this output.
  */
-export function analyseRepo(tree: FileTree): AnalysisResult {
+export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): AnalysisResult {
   const findings: DetectorFinding[] = [];
   const rejections: RejectionFinding[] = [];
 
   for (const detector of DETECTORS) {
-    findings.push(detector(tree));
+    const finding = detector(tree);
+    findings.push(finding.detector === 's3' && overrides.storage !== undefined ? { ...finding, detected: overrides.storage } : finding);
   }
 
   // Redis is computed once here (not folded into DETECTORS/REJECTION_CHECKS,
   // which are uniform `(tree) => Finding` arrays) so the single `assessRedis`
   // call can be shared between the `redis` finding, the unsupported-Redis
   // rejection check, and `buildMetadata`'s full `metadata.redis` object.
-  const redis = assessRedis(tree);
+  const assessedRedis = assessRedis(tree);
+  const redis = overrides.redis === undefined ? assessedRedis : { ...assessedRedis, required: overrides.redis };
   findings.push(buildRedisFinding(redis));
 
   // Postgres is computed once here for the same reason as `redis` above —
   // `metadata.postgres` needs the full required-vs-present assessment, not
   // just the `postgresql` finding's `detected` (library presence) flag.
-  const postgres = assessPostgres(tree);
+  const assessedPostgres = assessPostgres(tree);
+  const postgres =
+    overrides.database === undefined ? assessedPostgres : { ...assessedPostgres, required: overrides.database === 'postgres' };
 
   // MySQL is a SUPPORTED managed database (Phase 4B) — assessed once for
   // the `metadata.mysql` requirement object the manifest's engine reads.
-  const mysql = assessMysql(tree);
+  const assessedMysql = assessMysql(tree);
+  const mysql = overrides.database === undefined ? assessedMysql : { ...assessedMysql, required: overrides.database === 'mysql' };
 
-  rejections.push(checkRedisUnsupported(tree, redis));
+  // The rejections always read the rules' own assessment: an override never adds or removes one.
+  rejections.push(checkRedisUnsupported(tree, assessedRedis));
   rejections.push(checkMysql(tree));
   for (const check of REJECTION_CHECKS) {
     rejections.push(check(tree));
@@ -355,7 +373,7 @@ export function analyseRepo(tree: FileTree): AnalysisResult {
   const postgresMeta = metadata['postgres'] as { required?: unknown } | undefined;
   metadata['mysql'] = mysql;
   metadata['usesMysql'] = mysql.detected;
-  if (metadata['usesPostgresql'] !== true && !mysql.required) {
+  if (metadata['usesPostgresql'] !== true && !mysql.required && !(overrides.database === 'postgres')) {
     metadata['migrationMode'] = 'none';
   } else if (postgresMeta?.required !== true && !mysql.required) {
     // A detected-but-unconfirmed database: keep the gentle recommendation.
