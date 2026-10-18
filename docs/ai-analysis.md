@@ -223,6 +223,59 @@ Repository (GitHub tree, bounded)
   on, the production model spent the whole output budget on reasoning, so no
   JSON came back and every attempt took longer than the budget.
 
+## AI-first Analysis (`ANALYSIS_ENGINE`)
+
+The AI-first engine (`packages/analysis/src/ai-analysis/`) is built and
+tested. It is not switched on: the default engine is `rules`. The decision
+and the release gate are in `docs/decisions/README.md`.
+
+- **Setting:** `ANALYSIS_ENGINE=rules|shadow|ai` (worker Lambda and API).
+  `rules` runs the rules Analysis only. `shadow` runs the AI next to the
+  rules, stores its result as `detected_metadata.aiEngine`, and changes
+  nothing else. `ai` uses the merged AI result. `rules` is the one-setting
+  rollback. The commit cache includes the engine, so a change of engine
+  re-runs a stored row.
+- **Evidence pack** (`evidence-pack.ts`): the Dockerfile candidates, the
+  scripts they start, the manifests and process files, and every file that
+  a rules finding names. At most 120,000 characters. Real `.env` files,
+  key files, lockfiles and vendored code are never included. Secrets are
+  redacted line by line, env sample values are removed, and a file with a
+  private key is left out. Each line keeps its repository line number.
+- **Analyst** (`analyst.ts`): `claude-opus-5-5` returns the facts under a
+  strict schema: Dockerfile and context, port, start command, health path,
+  database engine, Redis, S3, migration mode and command, workers and
+  required variables. Each fact has a value, a confidence and
+  `{path, line, quote}` evidence. Budget: 40,000 prompt and 16,000
+  completion tokens, 240 s.
+- **Reviewer** (`reviewer.ts`): GPT-6 Astra reads the same pack and the
+  facts and returns objections only. An objection whose proposed value
+  passes the checks replaces the fact. Any other objection makes the fact a
+  vendor question. Budget: 45,000 prompt and 12,000 completion tokens,
+  180 s.
+- **Checks** (`checks.ts`): each cited line exists in the pack, contains its
+  quote (one line of tolerance) and supports the claim. A required variable
+  is an unguarded read with no default, and no pack line reads it with a
+  default or a guard. The port is in the production stage `EXPOSE`,
+  `ENV PORT` or `HEALTHCHECK`, or the app reads `PORT`. A low-confidence
+  fact never passes.
+- **Merge** (`merge.ts`): a fact that agrees with the rules changes nothing.
+  A different fact that passes enters the analysis (metadata and the
+  detector finding). A different fact that fails, or an open objection,
+  becomes a vendor question when the manifest has one: the port, the start
+  command, the health path, the migration command
+  (`migration-command-needs-input`) or a required variable. For the
+  Dockerfile, the resources and the workers the rules value stays. A
+  verified database, Redis or S3 fact re-runs `analyseRepo` with the
+  override, so the env-var model and the bindings come from the same rules.
+  The rejections and the unsupported reasons never change. A variable that
+  Deployz provides is never made the vendor's.
+- **Fallback:** an unconfigured gateway, an outage, a timeout (420 s for
+  the whole run), a schema failure or a spend-limit error stores
+  `aiEngine: {status: 'fallback', reason}` and the rules result is used.
+- **Spend log:** the gateway logs one line per call (model, latency, tokens,
+  attempts). `aiEngine` keeps the usage and the latency of each call and the
+  decision for each fact.
+
 ## The canonical model
 
 `ApplicationAnalysis` (`packages/contracts/src/application-analysis.ts`,
@@ -540,7 +593,14 @@ diagnostic-vocabulary.ts`) plus a migration.
 
 - Gateway: `AI_GATEWAY_BASE_URL`, `AI_PROVIDER_API_KEY`, optional
   `AI_GATEWAY_TOKEN`, `AI_MODEL` (`apps/api/src/ai-config.ts`);
-  `AI_FIXTURE_MODE=true` swaps in canned answers for E2E.
+  `AI_FIXTURE_MODE=true` swaps in canned answers for E2E and switches the
+  AI-first engine off in the API.
+- AI-first Analysis: `ANALYSIS_ENGINE` (`rules` when unset),
+  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5-5`),
+  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), and optional
+  `ANALYSIS_AI_PROVIDER_API_KEY` / `ANALYSIS_REVIEWER_PROVIDER_API_KEY` when
+  a provider needs another upstream key than `AI_PROVIDER_API_KEY`. Both
+  roles use `AI_GATEWAY_BASE_URL` and `AI_GATEWAY_TOKEN`.
 - Fix-instructions model: `FIX_INSTRUCTIONS_AI_PROVIDER` (`openrouter`, the
   default, or `gateway`), `FIX_INSTRUCTIONS_AI_MODEL` (the OpenRouter model,
   default `anthropic/claude-opus-5.5`), `OPENROUTER_API_KEY`, optional
@@ -573,6 +633,11 @@ diagnostic-vocabulary.ts`) plus a migration.
   rule tests (`stage-a*.test.ts`). The Docker run-and-check test
   (`pnpm runcheck:*`) checks each Analysis claim against the running
   application; see [`testing/compatibility.md`](testing/compatibility.md).
+- AI-first Analysis: `packages/analysis/test/ai-analysis/` tests every
+  check, the reviewer resolution and every merge rule with fake gateways;
+  `apps/api/src/analysis-engine.test.ts` tests the three engines and the
+  fallback. The exam runs the engine with
+  `pnpm runcheck:analyse --engine ai` ([`testing/compatibility.md`](testing/compatibility.md)).
 - AI boundaries: schema/gate tests with fake gateways
   (`repository-ai.test.ts`, `diagnostic-explainer.test.ts`,
   `apps/api/src/ai-explanation.test.ts`, `fix-instructions` tests); the

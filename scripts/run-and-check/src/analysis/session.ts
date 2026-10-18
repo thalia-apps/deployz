@@ -22,6 +22,7 @@ import {
   createAiGateway,
   evaluateManifestReadiness,
   normalizeDeploymentManifest,
+  type AiAnalysisGateways,
   type AnalysisResult,
 } from '@deployz/analysis';
 import { runApplicationAnalysis, type AnalysisRunnerDeps } from '@deployz/api/analysis';
@@ -46,6 +47,8 @@ export interface RawAnalysis {
   gate: ManifestReadinessResult | null;
   /** Files the production tree fetch handed the detectors. */
   treeFiles: number;
+  /** `detected_metadata.aiEngine` when the AI engine ran. */
+  aiEngine: Record<string, unknown> | null;
 }
 
 /** What the session reads of a repository: its id, its GitHub name and the pinned commit. */
@@ -69,7 +72,13 @@ function ephemeralAppKey(): string {
   }).privateKey;
 }
 
-export async function openAnalysisSession(fetchFn: FetchFn): Promise<AnalysisSession> {
+/** The AI engine for the session; omitted, the session runs the rules (the production default). */
+export interface SessionEngine {
+  engine: 'rules' | 'ai';
+  aiAnalysis?: AiAnalysisGateways | undefined;
+}
+
+export async function openAnalysisSession(fetchFn: FetchFn, engine: SessionEngine = { engine: 'rules' }): Promise<AnalysisSession> {
   const client = new PGlite();
   await applyMigrations(client);
   const db: Db = createDb(client);
@@ -80,6 +89,8 @@ export async function openAnalysisSession(fetchFn: FetchFn): Promise<AnalysisSes
     githubAppPrivateKey: ephemeralAppKey(),
     githubFixtureMode: false,
     aiGateway: createAiGateway(undefined),
+    analysisEngine: engine.engine,
+    aiAnalysis: engine.aiAnalysis,
   };
 
   return {
@@ -107,7 +118,7 @@ export async function openAnalysisSession(fetchFn: FetchFn): Promise<AnalysisSes
       const [row] = await db.select().from(schema.applications).where(eq(schema.applications.id, applicationId)).limit(1);
       if (!row) throw new Error(`application ${applicationId} vanished during analysis`);
       if (row.analysisStatus !== 'COMPLETE') {
-        return { status: 'failed', failure: row.compatibilityReason, row, analysis: null, manifest: null, gate: null, treeFiles: 0 };
+        return { status: 'failed', failure: row.compatibilityReason, row, analysis: null, manifest: null, gate: null, treeFiles: 0, aiEngine: null };
       }
 
       // The persisted row carries the merged metadata but not the rejection
@@ -124,7 +135,8 @@ export async function openAnalysisSession(fetchFn: FetchFn): Promise<AnalysisSes
       );
       const gate = evaluateManifestReadiness(manifest, { providedEnvKeys: [] });
 
-      return { status: 'analysed', failure: null, row, analysis, manifest, gate, treeFiles: Object.keys(tree).length };
+      const aiEngine = (row.detectedMetadata?.['aiEngine'] as Record<string, unknown> | undefined) ?? null;
+      return { status: 'analysed', failure: null, row, analysis, manifest, gate, treeFiles: Object.keys(tree).length, aiEngine };
     },
     async close() {
       await client.close();

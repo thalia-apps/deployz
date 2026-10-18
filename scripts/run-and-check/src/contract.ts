@@ -338,6 +338,8 @@ export const analysisResultFileSchema = z
     gate: manifestReadinessResultSchema.nullable(),
     /** Questions the Analysis asks the vendor (manifest questions + gate findings that need a vendor answer). */
     vendorQuestions: z.number().int().nonnegative(),
+    /** The AI engine record (`detected_metadata.aiEngine`): status or fallback reason, usage, latency, fact decisions. */
+    ai: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .strict();
 export type AnalysisResultFile = z.infer<typeof analysisResultFileSchema>;

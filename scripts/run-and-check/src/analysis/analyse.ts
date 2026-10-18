@@ -22,17 +22,24 @@ import {
 import { vendorRequiredVariables } from '../claims/extract.js';
 import type { AnalysisResultFile, Recipe } from '../contract.js';
 import { readLocalTree, serveLocalTree } from './local-tree.js';
-import { openAnalysisSession } from './session.js';
+import { openAnalysisSession, type SessionEngine } from './session.js';
 import { classifyGithubUrl, createSnapshotFetch } from './snapshot.js';
 
 /** The owner a fixture takes in its GitHub-like name, `fixture/<F#>`. */
 const FIXTURE_OWNER = 'fixture';
 
-/** `rules@<short sha of HEAD>`: the Analysis implementation under test. */
 /** Names the rules, not the harness: the git tree of `packages/analysis/src` changes only when the rules change. */
 export function rulesAnalyserName(cwd: string): string {
-  const tree = execFileSync('git', ['rev-parse', '--short', 'HEAD:packages/analysis/src'], { cwd, encoding: 'utf8' }).trim();
-  return `rules@${tree}`;
+  return `rules@${analysisTree(cwd)}`;
+}
+
+/** `ai@<tree>`: the same tree holds the prompts, the checks and the merge. */
+export function aiAnalyserName(cwd: string): string {
+  return `ai@${analysisTree(cwd)}`;
+}
+
+function analysisTree(cwd: string): string {
+  return execFileSync('git', ['rev-parse', '--short', 'HEAD:packages/analysis/src'], { cwd, encoding: 'utf8' }).trim();
 }
 
 /**
@@ -71,6 +78,7 @@ export interface AnalyserOptions {
   offline?: boolean;
   /** `scripts/run-and-check/fixtures`. */
   fixturesDir: string;
+  engine?: SessionEngine | undefined;
 }
 
 export interface Analyser {
@@ -90,7 +98,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
     }
     return github(url, init);
   };
-  const session = await openAnalysisSession(fetchFn);
+  const session = await openAnalysisSession(fetchFn, options.engine);
 
   return {
     async analyse(recipe) {
@@ -115,6 +123,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
         manifest: raw.manifest,
         gate,
         vendorQuestions: raw.manifest && gate ? vendorQuestionCount(raw.manifest, gate) : 0,
+        ...(raw.aiEngine ? { ai: raw.aiEngine } : {}),
       };
     },
     close: () => session.close(),

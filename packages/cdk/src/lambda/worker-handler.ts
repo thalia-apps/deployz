@@ -12,7 +12,12 @@ import { BatchGetBuildsCommand, CodeBuildClient, StartBuildCommand } from '@aws-
 import { PutObjectCommand, S3Client as SdkS3Client } from '@aws-sdk/client-s3';
 
 import { createAiGateway } from '@deployz/analysis';
-import { resolveAiGatewayConfig, resolveJevConfig } from '@deployz/api/ai-config';
+import {
+  createAnalysisAiGateways,
+  resolveAiGatewayConfig,
+  resolveAnalysisAiConfig,
+  resolveJevConfig,
+} from '@deployz/api/ai-config';
 import { createAnalysisRunner } from '@deployz/api/analysis';
 import { createJevShadowRunnerFromEnv, createJevFailureShadowRunnerFromEnv } from '@deployz/api/jev-shadow';
 import { createPaddle } from '@deployz/api/paddle';
@@ -150,6 +155,8 @@ function createDeps(db: LambdaDb): WorkerDeps {
       githubAppPrivateKey: process.env.GITHUB_APP_PRIVATE_KEY,
       githubFixtureMode: process.env.GITHUB_FIXTURE_MODE === 'true',
       aiGateway: createAiGateway(resolveAiGatewayConfig(process.env)),
+      analysisEngine: resolveAnalysisAiConfig(process.env).engine,
+      aiAnalysis: createAnalysisAiGateways(resolveAnalysisAiConfig(process.env)),
       // Same construction as the API server: shadow-only, noop when Jev is
       // disabled or partially configured, one shared breaker per process.
       jevShadow: createJevShadowRunnerFromEnv({ db }, resolveJevConfig(process.env)),

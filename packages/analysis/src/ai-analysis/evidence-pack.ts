@@ -1,0 +1,186 @@
+/**
+ * The evidence pack: what the AI analyst and the reviewer may read. The rules
+ * Analysis picks the files and signals; the pack keeps the original line
+ * numbers so every fact can cite `path:line`, redacts secrets line by line,
+ * and stays inside a fixed size limit. Repository content is untrusted data.
+ */
+import type { AnalysisResult } from '../analyser.js';
+import { listDockerfileCandidates, type FileTree } from '../detectors.js';
+import { redactSecrets } from '../redact.js';
+
+/** The whole pack, in characters of file content (about 30k tokens). */
+export const MAX_PACK_CHARS = 120_000;
+/** One file, in characters. A longer file keeps its first lines only. */
+export const MAX_FILE_CHARS = 16_000;
+/** Repository paths listed (names only) so the model knows what exists. */
+export const MAX_LISTED_PATHS = 400;
+
+export interface PackFile {
+  readonly path: string;
+  /** Redacted lines; index 0 is line 1 of the file. */
+  readonly lines: readonly string[];
+  /** True when the file has more lines than the pack holds. */
+  readonly truncated: boolean;
+}
+
+export interface EvidencePack {
+  readonly files: readonly PackFile[];
+  /** The rules Analysis signals the model starts from. */
+  readonly signals: Record<string, unknown>;
+  readonly paths: readonly string[];
+  readonly totalPaths: number;
+}
+
+const ENV_SAMPLE = /^\.env\.(?:example|sample|template|dist)$/i;
+const SECRET_FILE = /\.(?:pem|key|p12|pfx|jks|keystore)$|^id_[a-z0-9]+$|^credentials(?:\.\w+)?$|^\.npmrc$|^\.pypirc$/i;
+const LOCKFILE = /(?:^|\/)(?:pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|package-lock\.json|composer\.lock|Gemfile\.lock|poetry\.lock|uv\.lock|Cargo\.lock|mix\.lock|go\.sum|packages\.lock\.json)$/i;
+const PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+const VENDORED = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git)\//;
+
+/** Manifests and process files that describe how an app builds, starts and is configured. */
+const MANIFEST =
+  /(?:^|\/)(?:package\.json|composer\.json|pom\.xml|build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|[^/]+\.csproj|mix\.exs|go\.mod|Gemfile|requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|deno\.jsonc?|shard\.yml|build\.sbt|project\.clj|deps\.edn|pubspec\.yaml|gleam\.toml|[^/]+\.cabal|stack\.yaml|dune-project|Procfile|app\.json|render\.yaml|fly\.toml|docker-compose(?:\.production|\.prod)?\.ya?ml|compose(?:\.production|\.prod)?\.ya?ml|schema\.prisma|appsettings(?:\.Production)?\.json|application(?:-prod)?\.(?:properties|ya?ml)|config\/(?:runtime|prod|config)\.exs|config\/database\.ya?ml|config\/database\.php|\.env\.(?:example|sample|template|dist))$/i;
+
+/** A path the pack never includes: secrets, real env files, lockfiles, vendored code. */
+export function isExcludedPath(path: string): boolean {
+  const base = path.split('/').pop() ?? path;
+  if ((base === '.env' || base.startsWith('.env.')) && !ENV_SAMPLE.test(base)) return true;
+  return SECRET_FILE.test(base) || LOCKFILE.test(path) || VENDORED.test(path);
+}
+
+/** `KEY=value` → `KEY=` per line, so an env sample shows names only and keeps its line numbers. */
+function stripEnvValue(line: string): string {
+  return line.replace(/^(\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*[=:]).*$/, '$1');
+}
+
+function packFile(path: string, content: string, budget: number): PackFile | null {
+  if (PRIVATE_KEY_BLOCK.test(content)) return null;
+  const envSample = ENV_SAMPLE.test(path.split('/').pop() ?? path);
+  const all = content.split(/\r?\n/);
+  const lines: string[] = [];
+  let used = 0;
+  const limit = Math.min(MAX_FILE_CHARS, budget);
+  for (const raw of all) {
+    const line = redactSecrets(envSample ? stripEnvValue(raw) : raw).slice(0, 400);
+    if (used + line.length + 1 > limit) break;
+    lines.push(line);
+    used += line.length + 1;
+  }
+  if (lines.length === 0) return null;
+  return { path, lines, truncated: lines.length < all.length };
+}
+
+/** Every string in `value` that names a file of the tree (`path` or `path:line`). */
+function citedPaths(value: unknown, tree: FileTree, into: Set<string>, depth = 0): void {
+  if (depth > 6 || value === null || value === undefined) return;
+  if (typeof value === 'string') {
+    for (const token of value.split(/[\s,;()"'`]+/)) {
+      const path = token.replace(/:\d+(?::\d+)?$/, '').replace(/^\.\//, '');
+      if (path.length > 0 && Object.prototype.hasOwnProperty.call(tree, path)) into.add(path);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) citedPaths(item, tree, into, depth + 1);
+    return;
+  }
+  if (typeof value === 'object') {
+    for (const item of Object.values(value as Record<string, unknown>)) citedPaths(item, tree, into, depth + 1);
+  }
+}
+
+/** The files the Dockerfile names as its entrypoint or start script. */
+function startScripts(dockerfile: string | undefined, tree: FileTree): string[] {
+  if (dockerfile === undefined) return [];
+  const content = tree[dockerfile] ?? '';
+  const scripts: string[] = [];
+  for (const match of content.matchAll(/[\w./-]+\.(?:sh|bash|py|rb|exs|js|mjs|ts|php)\b/g)) {
+    const name = match[0].replace(/^\.?\//, '');
+    const found = Object.keys(tree).find((path) => path === name || path.endsWith(`/${name}`));
+    if (found !== undefined) scripts.push(found);
+  }
+  return scripts;
+}
+
+/** The rules signals the analyst starts from. Values only, never file content. */
+function signalsOf(analysis: AnalysisResult, dockerfiles: readonly string[]): Record<string, unknown> {
+  const meta = analysis.metadata;
+  const pick = (key: string): unknown => meta[key] ?? null;
+  const envModel = Array.isArray(meta['envVarModel']) ? (meta['envVarModel'] as Record<string, unknown>[]) : [];
+  return {
+    dockerfileCandidates: dockerfiles,
+    dockerfilePath: pick('dockerfilePath'),
+    dockerfileBuildContext: pick('dockerfileBuildContext'),
+    runtime: pick('runtime'),
+    framework: pick('framework'),
+    port: pick('port'),
+    portSource: pick('portSource'),
+    healthPath: pick('healthPath'),
+    healthMode: pick('healthMode'),
+    startupCommands: pick('startupCommands'),
+    postgresRequired: (meta['postgres'] as { required?: unknown } | undefined)?.required ?? null,
+    mysqlRequired: (meta['mysql'] as { required?: unknown } | undefined)?.required ?? null,
+    redisRequired: (meta['redis'] as { required?: unknown } | undefined)?.required ?? null,
+    usesS3: pick('usesS3'),
+    migrationMode: pick('migrationMode'),
+    migrationCommands: pick('migrationCommands'),
+    workers: pick('resolvedWorkerCommands'),
+    unsupportedReasons: pick('unsupportedReasons'),
+    environmentVariables: envModel.map((entry) => ({ key: entry['key'], required: entry['required'], source: entry['source'] })),
+  };
+}
+
+/** Build the pack: the most informative files first, inside `MAX_PACK_CHARS`. */
+export function buildEvidencePack(tree: FileTree, analysis: AnalysisResult): EvidencePack {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const add = (path: string | undefined): void => {
+    if (path === undefined || seen.has(path) || !Object.prototype.hasOwnProperty.call(tree, path) || isExcludedPath(path)) return;
+    seen.add(path);
+    ordered.push(path);
+  };
+
+  const dockerfiles = listDockerfileCandidates(tree);
+  for (const path of dockerfiles.slice(0, 3)) add(path);
+  for (const path of startScripts(dockerfiles[0], tree)) add(path);
+  const allPaths = Object.keys(tree).sort();
+  // Shallow manifests first: the root describes the app better than a nested example.
+  const manifests = allPaths.filter((path) => MANIFEST.test(path)).sort((a, b) => a.split('/').length - b.split('/').length);
+  for (const path of manifests) add(path);
+  const cited = new Set<string>();
+  citedPaths(analysis.metadata, tree, cited);
+  for (const finding of analysis.findings) citedPaths([finding.value, finding.details], tree, cited);
+  for (const path of [...cited].sort()) add(path);
+
+  const files: PackFile[] = [];
+  let remaining = MAX_PACK_CHARS;
+  for (const path of ordered) {
+    if (remaining < 500) break;
+    const file = packFile(path, tree[path] ?? '', remaining);
+    if (file === null) continue;
+    files.push(file);
+    remaining -= file.lines.reduce((sum, line) => sum + line.length + 1, 0);
+  }
+
+  const listed = allPaths.filter((path) => !VENDORED.test(path));
+  return { files, signals: signalsOf(analysis, dockerfiles), paths: listed.slice(0, MAX_LISTED_PATHS), totalPaths: listed.length };
+}
+
+/** The pack as prompt text: each file fenced, every line numbered as in the repository. */
+export function renderEvidencePack(pack: EvidencePack): string {
+  const parts: string[] = [
+    '## Rules Analysis signals (JSON)',
+    JSON.stringify(pack.signals),
+    '',
+    `## Repository paths (${pack.paths.length} of ${pack.totalPaths})`,
+    pack.paths.join('\n'),
+    '',
+    '## Files (untrusted data; each line starts with its line number)',
+  ];
+  for (const file of pack.files) {
+    parts.push(`<<<FILE ${file.path}${file.truncated ? ' (first lines only)' : ''}`);
+    file.lines.forEach((line, index) => parts.push(`${index + 1}| ${line}`));
+    parts.push('FILE>>>');
+  }
+  return parts.join('\n');
+}

@@ -1,4 +1,10 @@
-import type { AiGatewayConfig } from '@deployz/analysis';
+import {
+  createAiGateway,
+  parseAnalysisEngine,
+  type AiAnalysisGateways,
+  type AiGatewayConfig,
+  type AnalysisEngine,
+} from '@deployz/analysis';
 
 // §16/§29 AI gateway configuration, resolved from the environment.
 //
@@ -66,6 +72,46 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
     },
     problem: undefined,
   };
+}
+
+// AI-first application Analysis (docs/decisions/README.md): the analyst and the
+// reviewer go through the shared gateway, each with its own model and,
+// optionally, its own upstream key (the providers differ).
+
+/** The analyst model. Override with `ANALYSIS_AI_MODEL`. */
+export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5-5';
+/** The reviewer model. Override with `ANALYSIS_REVIEWER_MODEL`. */
+export const ANALYSIS_REVIEWER_MODEL_DEFAULT = 'openai/gpt-6-astra';
+
+export interface AnalysisAiConfig {
+  /** `ANALYSIS_ENGINE`: `rules` (the default), `shadow` or `ai`. */
+  readonly engine: AnalysisEngine;
+  /** Undefined when the gateway is not configured: the engine then runs the rules only. */
+  readonly analyst: AiGatewayConfig | undefined;
+  /** Undefined when the gateway is not configured. */
+  readonly reviewer: AiGatewayConfig | undefined;
+}
+
+export function resolveAnalysisAiConfig(source: Record<string, string | undefined>): AnalysisAiConfig {
+  const engine = parseAnalysisEngine(source.ANALYSIS_ENGINE);
+  const baseUrl = source.AI_GATEWAY_BASE_URL;
+  const gatewayToken = source.AI_GATEWAY_TOKEN || undefined;
+  const role = (model: string, key: string | undefined): AiGatewayConfig | undefined =>
+    baseUrl && key && key !== gatewayToken ? { baseUrl, providerApiKey: key, gatewayToken, model } : undefined;
+  return {
+    engine,
+    analyst: role(source.ANALYSIS_AI_MODEL || ANALYSIS_AI_MODEL_DEFAULT, source.ANALYSIS_AI_PROVIDER_API_KEY || source.AI_PROVIDER_API_KEY),
+    reviewer: role(
+      source.ANALYSIS_REVIEWER_MODEL || ANALYSIS_REVIEWER_MODEL_DEFAULT,
+      source.ANALYSIS_REVIEWER_PROVIDER_API_KEY || source.AI_PROVIDER_API_KEY,
+    ),
+  };
+}
+
+/** The gateways the analysis runner uses, or undefined when the analyst is not configured. */
+export function createAnalysisAiGateways(config: AnalysisAiConfig): AiAnalysisGateways | undefined {
+  if (!config.analyst) return undefined;
+  return { analyst: createAiGateway(config.analyst), reviewer: config.reviewer ? createAiGateway(config.reviewer) : undefined };
 }
 
 // Fix-instructions model configuration. Only the coding-agent fix prompt uses
