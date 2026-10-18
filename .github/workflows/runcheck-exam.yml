@@ -67,6 +67,9 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    env:
+      # The shared runner IPs exceed the ECR Public anonymous data limit.
+      RUNCHECK_LIBRARY_REGISTRY: docker.io/library
     strategy:
       fail-fast: false
       max-parallel: 20
