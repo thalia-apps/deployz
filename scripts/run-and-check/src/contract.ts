@@ -395,7 +395,7 @@ export const claimVerdictSchema = z
 export type ClaimVerdict = z.infer<typeof claimVerdictSchema>;
 
 /** One full run: the application with exactly the analysed settings (4.1 mode 3). */
-export const fullRunSchema = z
+const singleFullRunSchema = z
   .object({
     schemaVersion: z.literal(1),
     id: z.string().regex(RUN_ID),
@@ -413,6 +413,8 @@ export const fullRunSchema = z
     infrastructureFailures: z.array(z.string()),
   })
   .strict();
+/** The first full run; `repeat` is the second run on a fresh service set. Files from before the repeat have none. */
+export const fullRunSchema = singleFullRunSchema.extend({ repeat: singleFullRunSchema.optional() }).strict();
 export type FullRun = z.infer<typeof fullRunSchema>;
 
 export const repositoryReportSchema = z
@@ -425,10 +427,12 @@ export const repositoryReportSchema = z
     arch: architectureSchema,
     readiness: z.enum(['READY', 'NEEDS_CONFIGURATION', 'NOT_COMPATIBLE']).nullable(),
     verdicts: z.array(claimVerdictSchema),
-    /** null when no full run exists yet. */
+    /** null when no full run exists yet, a full run hit a limit of the test, or the two full runs differ. */
     healthyWithAnalysedSettings: z.boolean().nullable(),
-    /** The Analysis said READY, but the full run is not healthy. */
+    /** The Analysis said READY, but both full runs are not healthy. */
     hiddenProblem: z.boolean(),
+    /** One full run is healthy and the other is not. */
+    unstableFullRun: z.boolean(),
     /** Fixes or vendor decisions the Analysis asked for that the application did not need. */
     falseProblems: z.array(z.string()),
     vendorQuestions: z.number().int().nonnegative(),
@@ -453,6 +457,7 @@ export const summaryReportSchema = z
           repositories: z.number().int().nonnegative(),
           healthyWithAnalysedSettings: z.number().int().nonnegative(),
           hiddenProblems: z.array(z.string()),
+          unstableFullRuns: z.array(z.string()),
           falseProblems: z.array(z.object({ id: z.string(), problem: z.string() }).strict()),
           contradictedByClaimType: countsSchema,
           contradictedByRuntime: countsSchema,
