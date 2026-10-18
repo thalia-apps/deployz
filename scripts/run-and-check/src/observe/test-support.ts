@@ -168,6 +168,9 @@ export function makeFake(options: FakeOptions = {}): Fake {
       async diff() {
         return ['A /app/data.sqlite', 'C /tmp/x', 'A /var/log/app.log'];
       },
+      async imageVolumes() {
+        return [];
+      },
       async logs(container) {
         return `ready ${container.spec.env.SECRET_KEY ?? 'no key'}`;
       },

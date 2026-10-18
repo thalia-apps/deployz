@@ -212,6 +212,10 @@ describe('container state', () => {
     expect(await runner(fakeDocker().docker).diff(container)).toEqual(['/tmp', '/app/data.sqlite', '/app']);
   });
 
+  it('lists the image volumes from docker image inspect', async () => {
+    expect(await runner(fakeDocker().docker).imageVolumes('app:1')).toEqual(['/database']);
+  });
+
   it('joins stdout and stderr of the logs and removes with rm -f', async () => {
     const fake = fakeDocker();
     const r = runner(fake.docker);

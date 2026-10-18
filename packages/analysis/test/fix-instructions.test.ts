@@ -519,9 +519,12 @@ describe('assembleFixInstructions — critical unsafe instructions', () => {
     expect(instructionLines(document)).toContain('  - One command starts the worker.');
   });
 
+  it.each(CRITICAL_UNSAFE.map((rule) => [rule.id, rule.example.replace(/^\s*-\s*/, '')] as const))('the guidance filter drops %s', (_id, guidance) => {
+    expect(isSafeGuidance(guidance)).toBe(false);
+  });
+
   it('drops model guidance that carries one of those instructions', () => {
-    const unsafe = CRITICAL_UNSAFE.filter((rule) => ['remove-worker-entrypoint', 'disable-security', 'invent-secret', 'suppress-errors'].includes(rule.id));
-    const items = unsafe.map((rule, index) => ({ id: ALL_IDS[index]!, guidance: rule.example.replace(/^\s*-\s*/, '') }));
+    const items = CRITICAL_UNSAFE.map((rule, index) => ({ id: ALL_IDS[index]!, guidance: rule.example.replace(/^\s*-\s*/, '') }));
     const document = assembleFixInstructions(context(allFindings, { workerCommands: ['node worker.js'] }), { items });
     for (const item of items) expect(document).not.toContain(item.guidance);
     expect(unsafeInstructions(document)).toEqual([]);
@@ -562,6 +565,8 @@ describe('isSafeGuidance', () => {
     'Start the container with npm run dev.',
     'Skip tests to speed up the build.',
     'Use the key AKIAABCDEFGHIJKLMNOP for S3.',
+    'Keep the API as is; move the worker into the web process.',
+    'If the app does not use Redis, remove the queue code.',
   ])('rejects: %s', (guidance) => {
     expect(isSafeGuidance(guidance)).toBe(false);
   });
@@ -575,6 +580,11 @@ describe('isSafeGuidance', () => {
     'Express registers routes in order: add GET /health before the session middleware in src/app.ts if that file creates the app.',
     'If the app uses Knex, `npx knex migrate:latest` is the non-interactive migration command.',
     'For gunicorn, set --bind 0.0.0.0:$PORT in the Dockerfile CMD.',
+    'Do not move the worker into the web process, and do not remove worker, queue, or scheduler code.',
+    'Never delete working code, disable security, skip tests, or suppress errors to pass a Deployz check.',
+    'Keep the worker as its own process; do not run jobs inside the web process.',
+    'Run the worker as a separate process instead of inside the web server.',
+    'Keep the self-managed infrastructure files and do not remove the infrastructure.',
   ])('accepts: %s', (guidance) => {
     expect(isSafeGuidance(guidance)).toBe(true);
   });

@@ -174,6 +174,8 @@ export interface Runner {
   httpProbe(container: RunningContainer, port: number, paths: string[], request?: Recipe['smoke']): Promise<HttpCheck[]>;
   isRunning(container: RunningContainer): Promise<{ running: boolean; restarts: number; exitCode: number | null }>;
   diff(container: RunningContainer): Promise<string[]>;
+  /** Mount points of the image `VOLUME` instructions. */
+  imageVolumes(image: string): Promise<string[]>;
   logs(container: RunningContainer, tailLines: number): Promise<string>;
   stop(container: RunningContainer): Promise<void>;
 }

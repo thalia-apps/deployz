@@ -433,7 +433,8 @@ vendor's own coding agent (`packages/analysis/src/fix-instructions.ts`).
   per item, as `{items: [{id, guidance}]}` under a strict schema. It cannot
   change a class, an action or a constraint. `isSafeGuidance` drops guidance
   that matches an unsafe pattern, is too long, or names an unknown item.
-  The API logs each dropped entry with the item id, the reason, the rule
+  A clause that forbids the change ("Do not move the worker into the web
+  process") does not match. The API logs each dropped entry with the item id, the reason, the rule
   name and the length, never the text.
 - **Document.** Sections: context (only the facts the items need, and only
   the Deployz capabilities they touch), fixes in order, vendor decisions,

@@ -403,7 +403,7 @@ async function observeSetA(ctx: Ctx): Promise<SetAResult> {
       };
     });
     const localDiskWrites = await check(ctx, async () => {
-      const value = filterLocalDiskWrites(await diff());
+      const value = filterLocalDiskWrites(await diff(), await runner.imageVolumes(ctx.image));
       return { value, evidence: [ev(ctx, 'diff', 'web#1', value.join('\n') || 'no local writes')] };
     });
 
