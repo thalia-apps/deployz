@@ -3,7 +3,7 @@ import type { InfrastructureSizeTier } from '@deployz/contracts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sizeTierCompute, sizeTierLabel } from '@/lib/size-tiers';
 
-/** One select over deployment sizes, each option with its compute. */
+/** One select over deployment sizes, each option with its compute unless `showCompute` is false. */
 export function SizeSelect({
   id,
   value,
@@ -11,6 +11,7 @@ export function SizeSelect({
   onValueChange,
   disabled = false,
   describedBy,
+  showCompute = true,
 }: {
   id: string;
   value: InfrastructureSizeTier;
@@ -19,6 +20,8 @@ export function SizeSelect({
   disabled?: boolean;
   /** The id of helper text that describes the select. */
   describedBy?: string;
+  /** False shows the size name only, where the compute is shown beside the select. */
+  showCompute?: boolean;
 }) {
   return (
     <Select value={value} onValueChange={(next) => onValueChange(next as InfrastructureSizeTier)} disabled={disabled}>
@@ -28,7 +31,8 @@ export function SizeSelect({
       <SelectContent>
         {tiers.map((tier) => (
           <SelectItem key={tier} value={tier}>
-            {sizeTierLabel(tier)} ({sizeTierCompute(tier)})
+            {sizeTierLabel(tier)}
+            {showCompute ? ` (${sizeTierCompute(tier)})` : null}
           </SelectItem>
         ))}
       </SelectContent>

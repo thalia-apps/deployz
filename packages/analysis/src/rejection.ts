@@ -155,6 +155,12 @@ export interface MySqlRequirement {
   /** A MySQL driver is declared (and PostgreSQL is not the engine in use). */
   detected: boolean;
   evidence: string[];
+  /**
+   * `mysql+pymysql` when a SQLAlchemy app declares PyMySQL and not
+   * mysqlclient: SQLAlchemy reads a plain `mysql://` URL as MySQLdb
+   * (mysqlclient), which the image does not have. Absent otherwise.
+   */
+  urlScheme?: 'mysql+pymysql';
 }
 
 const MYSQL_CONNECTION_ENV_VARS = ['MYSQL_URL', 'MYSQL_URI', 'MYSQL_HOST', 'MYSQL_DATABASE', 'MYSQL_USER'] as const;
@@ -301,7 +307,16 @@ export function assessMysql(tree: FileTree): MySqlRequirement {
     required: hasDependency && hasIndependentEvidence,
     detected: true,
     evidence: [...new Set(evidence)],
+    ...(declaresAny(tree, ['PyMySQL', 'pymysql']) &&
+    declaresAny(tree, ['SQLAlchemy', 'sqlalchemy', 'Flask-SQLAlchemy', 'flask-sqlalchemy']) &&
+    !declaresAny(tree, ['mysqlclient'])
+      ? { urlScheme: 'mysql+pymysql' as const }
+      : {}),
   };
+}
+
+function declaresAny(tree: FileTree, tokens: readonly string[]): boolean {
+  return tokens.some((token) => findDependencyEvidence(tree, token).some(isRuntimeSourcePath));
 }
 
 /**

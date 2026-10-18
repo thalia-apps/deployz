@@ -462,7 +462,8 @@ describe('Deployment size and estimate', () => {
 
     expect(selectTrigger('Default size').textContent).toContain('Medium');
     await press(selectTrigger('Default size'));
-    expect(Array.from(document.querySelectorAll('[role="option"]')).map((item) => item.textContent?.split(' ')[0])).toEqual([
+    // The options name the size only; the presets table shows the compute.
+    expect(Array.from(document.querySelectorAll('[role="option"]')).map((item) => item.textContent)).toEqual([
       'Medium',
       'Large',
     ]);
