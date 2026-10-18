@@ -255,6 +255,12 @@ export const deploymentManifestSchema = z
          */
         engine: z.enum(['postgres', 'mysql']).optional(),
         /**
+         * The URL scheme for the app's driver when the engine's standard
+         * scheme does not load it: `mysql+pymysql` for a SQLAlchemy app that
+         * has only PyMySQL. Absent means the standard scheme.
+         */
+        urlScheme: z.enum(['mysql+pymysql']).optional(),
+        /**
          * True when a managed relational database is provisioned but no
          * binding name (standard or alias) is evidenced as read or declared by
          * the application, so the app may read the connection under a name
