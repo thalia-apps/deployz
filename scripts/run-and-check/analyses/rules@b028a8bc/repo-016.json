@@ -1,0 +1,1491 @@
+{
+  "id": "repo-016",
+  "commit": "012188635b0a0fabbd446d4a9aad12eba588c630",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "koa",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "yarn clean && yarn vite:build && yarn build:i18n && yarn build:server",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"build/server/index.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/_health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "AWS_S3_UPLOAD_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": "yarn start --services=worker"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "yarn start --services=worker",
+        "source": "Procfile"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/commands/accountProvisioner.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AWS_ACCESS_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_CLOUDFRONT_KEY_PAIR_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_CLOUDFRONT_KEY_PAIR_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_CLOUDFRONT_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AWS_CLOUDFRONT_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_CLOUDFRONT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_CLOUDFRONT_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_S3_ACCELERATE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_ACCELERATE_URL",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_S3_ACL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_ACL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_FORCE_PATH_STYLE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_UPLOAD_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_UPLOAD_BUCKET_NAME",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_S3_UPLOAD_BUCKET_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_UPLOAD_BUCKET_URL",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_S3_UPLOAD_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AWS_S3_UPLOAD_METHOD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AWS_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AZURE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_RESOURCE_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_RESOURCE_APP_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CDN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares CDN_URL",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLABORATION_MAX_CLIENTS_PER_DOCUMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/collaboration/ConnectionLimitExtension.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLABORATION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COLLABORATION_URL",
+            ".env.test declares COLLABORATION_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_CONNECTION_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DATABASE_CONNECTION_POOL_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_CONNECTION_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DATABASE_CONNECTION_POOL_MIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DATABASE_URL",
+            ".env.development declares DATABASE_URL",
+            ".env.test declares DATABASE_URL",
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config/database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DD_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/logging/tracer.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DD_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/Metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DD_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/tracer.ts",
+            "read in server/logging/tracing.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DEBUG",
+            ".env.test declares DEBUG",
+            "read in server/main.ts",
+            "read in server/logging/Logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DEFAULT_LANGUAGE",
+            "read in app/index.tsx",
+            "read in server/migrations/20201106122752-i18n.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVELOPMENT_UNSAFE_INLINE_CSP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DEVELOPMENT_UNSAFE_INLINE_CSP",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISCORD_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares DISCORD_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_SERVER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISCORD_SERVER_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_SERVER_ROLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISCORD_SERVER_ROLES"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DROPBOX_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares DROPBOX_APP_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_UPDATES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ENABLE_UPDATES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/PluginManager.ts",
+            "read in app/index.tsx",
+            "read in server/onerror.ts",
+            "read in app/stores/index.ts",
+            "read in server/logging/Metrics.ts",
+            "read in server/logging/sentry.ts",
+            "read in server/logging/tracer.ts",
+            "read in server/logging/tracing.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIGMA_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FIGMA_CLIENT_ID",
+            ".env.test declares FIGMA_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIGMA_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FIGMA_CLIENT_SECRET",
+            ".env.test declares FIGMA_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_STORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set a value that stores files outside the container",
+            ".env.sample declares FILE_STORAGE",
+            ".env.test declares FILE_STORAGE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_STORAGE_IMPORT_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FILE_STORAGE_IMPORT_MAX_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_STORAGE_LOCAL_ROOT_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FILE_STORAGE_LOCAL_ROOT_DIR",
+            ".env.test declares FILE_STORAGE_LOCAL_ROOT_DIR",
+            "sample value is a path"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_STORAGE_UPLOAD_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FILE_STORAGE_UPLOAD_MAX_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_STORAGE_WORKSPACE_IMPORT_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FILE_STORAGE_WORKSPACE_IMPORT_MAX_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORCE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FORCE_HTTPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITHUB_APP_ID",
+            ".env.test declares GITHUB_APP_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITHUB_APP_NAME",
+            ".env.test declares GITHUB_APP_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_APP_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITHUB_APP_PRIVATE_KEY",
+            ".env.test declares GITHUB_APP_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITHUB_CLIENT_ID",
+            ".env.test declares GITHUB_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITHUB_CLIENT_SECRET",
+            ".env.test declares GITHUB_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITHUB_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITLAB_CLIENT_ID",
+            ".env.test declares GITLAB_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITLAB_CLIENT_SECRET",
+            ".env.test declares GITLAB_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_ANALYTICS_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/index.tsx",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GOOGLE_CLIENT_ID",
+            ".env.test declares GOOGLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GOOGLE_CLIENT_SECRET",
+            ".env.test declares GOOGLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEROKU_DYNO_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/Metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IFRAMELY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares IFRAMELY_API_KEY",
+            ".env.test declares IFRAMELY_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "IFRAMELY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IFRAMELY_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INSTANCE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/Metrics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LINEAR_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LINEAR_CLIENT_ID",
+            ".env.test declares LINEAR_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINEAR_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares LINEAR_CLIENT_SECRET",
+            ".env.test declares LINEAR_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LOG_LEVEL",
+            ".env.development declares LOG_LEVEL",
+            ".env.test declares LOG_LEVEL",
+            "read in server/logging/Logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NODE_ENV",
+            ".env.test declares NODE_ENV",
+            "read in server/utils/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NOTION_CLIENT_ID",
+            ".env.test declares NOTION_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NOTION_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NOTION_CLIENT_SECRET",
+            ".env.test declares NOTION_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_AUTH_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_AUTH_URI",
+            ".env.test declares OIDC_AUTH_URI"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_CLIENT_ID",
+            ".env.test declares OIDC_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OIDC_CLIENT_SECRET",
+            ".env.test declares OIDC_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_DISPLAY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_DISPLAY_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_LOGOUT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_LOGOUT_URI",
+            ".env.test declares OIDC_LOGOUT_URI"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_SCOPES"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_TOKEN_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_TOKEN_URI",
+            ".env.test declares OIDC_TOKEN_URI"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_USERINFO_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_USERINFO_URI",
+            ".env.test declares OIDC_USERINFO_URI"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_USERNAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_USERNAME_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PORT",
+            "read in server/main.ts",
+            "read in server/middlewares/csp.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RATE_LIMITER_DURATION_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares RATE_LIMITER_DURATION_WINDOW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RATE_LIMITER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares RATE_LIMITER_ENABLED",
+            ".env.test declares RATE_LIMITER_ENABLED",
+            "read in server/middlewares/rateLimiter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMITER_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares RATE_LIMITER_MULTIPLIER",
+            "read in server/middlewares/rateLimiter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMITER_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares RATE_LIMITER_REQUESTS",
+            "read in server/middlewares/rateLimiter.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_COLLABORATION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares REDIS_COLLABORATION_URL",
+            "read in server/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares REDIS_URL",
+            ".env.development declares REDIS_URL",
+            ".env.test declares REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RELEASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/sentry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REQUEST_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROOT_SHARE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/routes/index.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SECRET_KEY",
+            ".env.test declares SECRET_KEY",
+            "read in server/middlewares/csrf.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SENTRY_DSN",
+            "read in app/index.tsx",
+            "read in server/logging/Logger.ts",
+            "read in server/logging/sentry.ts",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_TUNNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SENTRY_TUNNEL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SERVICES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/index.ts",
+            "read in server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SLACK_APP_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SLACK_CLIENT_ID",
+            ".env.test declares SLACK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SLACK_CLIENT_SECRET",
+            ".env.test declares SLACK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_MESSAGE_ACTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SLACK_MESSAGE_ACTIONS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_VERIFICATION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SLACK_VERIFICATION_TOKEN",
+            ".env.test declares SLACK_VERIFICATION_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_DISABLE_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SMTP_FROM_EMAIL",
+            ".env.development declares SMTP_FROM_EMAIL",
+            ".env.test declares SMTP_FROM_EMAIL",
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.test declares SMTP_HOST",
+            "read in server/emails/mailer.tsx",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SMTP_PASSWORD",
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_REPLY_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.test declares SMTP_REPLY_EMAIL",
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SMTP_SERVICE",
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS_CIPHERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SMTP_USERNAME",
+            ".env.test declares SMTP_USERNAME",
+            "read in server/emails/mailer.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SSL_CERT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SSL_KEY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares URL",
+            ".env.development declares URL",
+            ".env.test declares URL",
+            "read in server/main.ts",
+            "read in app/utils/urls.ts",
+            "read in server/commands/userInviter.ts",
+            "read in server/middlewares/csp.ts",
+            "read in server/middlewares/passport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UTILS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares UTILS_SECRET",
+            ".env.test declares UTILS_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/logging/tracer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares WEB_CONCURRENCY",
+            "read in server/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0
+}

@@ -1,0 +1,11 @@
+id: repo-205
+set: holdout
+source:
+  kind: git
+  repository: alfio-event/alf.io
+  commit: 6296c0c855b13050a19ad111f88bc804ab85bdaf
+build:
+  dockerfile: src/main/dist/Dockerfile
+notes:
+  - "The only Dockerfile is src/main/dist/Dockerfile (no Dockerfile at the root). Context: repository root."
+  - "Known build limit: that Dockerfile runs COPY alfio-boot.jar, a jar that Gradle builds (build.gradle tasks dockerize and bootJar). The jar is not in the repository, so a plain docker build of the pinned commit is expected to fail with a dockerfile failure."

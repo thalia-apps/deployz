@@ -1,0 +1,13 @@
+id: repo-008
+set: tuning
+source:
+  kind: git
+  repository: TwiN/gatus
+  commit: 4d15cb7eed6225ac0b03da3d2ab50c424b81c34c
+notes:
+  - Root Dockerfile (Go build, scratch image, config.yaml baked in). No vendor input. BASE_URL in deploy-config.yaml is not needed by the app.
+  - "Vendor inputs BASE_URL: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."
+vendorInputs:
+  - name: BASE_URL
+    source:
+      kind: deploymentUrl

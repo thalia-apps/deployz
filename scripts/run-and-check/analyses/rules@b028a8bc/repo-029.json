@@ -1,0 +1,529 @@
+{
+  "id": "repo-029",
+  "commit": "1933e5d9952fab26fbd3f4a630adfc0ca341717a",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@hapi/hapi",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"/emailengine/server.js\"]",
+      "port": null
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "EENGINE_REDIS",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "EENGINE_EXPORT_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/export.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_EXPORT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/export.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_FETCH_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/consts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_GMAIL_FALLBACK_POLL_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/email-client/gmail-client.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_HTTP_PROXY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/tools.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_HTTP_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/tools.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EENGINE_LOG_LEVEL",
+            ".env.production declares EENGINE_LOG_LEVEL",
+            "read in lib/logger.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/schemas.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_QUEUE_KEEP_FAILED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/queue-retention.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_QUEUE_KEEP_FAILED_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/queue-retention.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_REDIS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EENGINE_REDIS",
+            ".env.production declares EENGINE_REDIS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EENGINE_REDIS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/consts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares EENGINE_SECRET",
+            ".env.production declares EENGINE_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "EENGINE_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EENGINE_SETTINGS",
+            ".env.production declares EENGINE_SETTINGS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EENGINE_TLS_CIPHERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/consts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_TLS_MIN_DH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/consts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_TLS_MIN_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/consts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_TOKEN_LOG_AGE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lib/token-audit-log.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_TOKEN_LOG_ENTRIES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lib/token-audit-log.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EENGINE_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EENGINE_WORKERS",
+            ".env.production declares EENGINE_WORKERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EE_ENV_LOADED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server.js",
+            "read in encrypt.js",
+            "read in lib/consts.js",
+            "read in lib/db.js",
+            "read in lib/get-secret.js",
+            "read in lib/logger.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EE_OPENAPI_VERBOSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server.js",
+            "read in lib/api-routes/chat-routes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAILENGINE_API_BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EMAILENGINE_API_BIND",
+            ".env.production declares EMAILENGINE_API_BIND"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAILENGINE_IMAP_BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EMAILENGINE_IMAP_BIND",
+            ".env.production declares EMAILENGINE_IMAP_BIND"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAILENGINE_SMTP_BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares EMAILENGINE_SMTP_BIND",
+            ".env.production declares EMAILENGINE_SMTP_BIND"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENCRYPT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in lib/db.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "HEALTHCHECK_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares HEALTHCHECK_INTERVAL",
+            ".env.production declares HEALTHCHECK_INTERVAL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEALTHCHECK_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares HEALTHCHECK_RETRIES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEALTHCHECK_START_PERIOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares HEALTHCHECK_START_PERIOD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEALTHCHECK_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares HEALTHCHECK_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_COMPRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares LOG_COMPRESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_MAX_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares LOG_MAX_FILE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares LOG_MAX_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HEALTHCHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares REDIS_HEALTHCHECK",
+            ".env.production declares REDIS_HEALTHCHECK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares REDIS_LOG_LEVEL",
+            ".env.production declares REDIS_LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.production declares REDIS_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RESTART_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.production declares RESTART_POLICY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TF_CPP_MIN_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UV_THREADPOOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "The Dockerfile copies the .git directory, which the source archive Deployz builds from does not contain"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "The Dockerfile copies the .git directory, which the source archive Deployz builds from does not contain"
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      }
+    ]
+  },
+  "vendorQuestions": 1
+}

@@ -1,0 +1,751 @@
+{
+  "id": "repo-003",
+  "commit": "279b491b53bbd01fbae70f603222526962772061",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: npm run migrate && npm start",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMIN_EMAILS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/migrations/20241103083933_user-roles.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONTACT_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/handlers/renders.handler.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_DOMAIN_USE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/utils/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CLIENT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"better-sqlite3\" stores data on the container disk — set \"pg\" or \"postgres\" to use the managed PostgreSQL database",
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js",
+            "read in server/migrations/20241223062111_indexes.js",
+            "read in server/migrations/20241223155527_visits_user_id_index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_FILENAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/knex.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEFAULT_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/links.handler.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/handlers/renders.handler.js",
+            "read in server/handlers/validators.handler.js",
+            "read in server/mail/mail.js",
+            "read in server/utils/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISALLOW_ANONYMOUS_LINKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/renders.handler.js",
+            "read in server/routes/link.routes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISALLOW_LOGIN_FORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/routes/auth.routes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISALLOW_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/routes/auth.routes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RATE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/helpers.handler.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in knexfile.js",
+            "read in server/env.js",
+            "read in server/passport.js",
+            "read in server/server.js",
+            "read in server/utils/utils.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LINK_CUSTOM_ALPHABET",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/utils/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LINK_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/utils/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/mail/mail.js",
+            "read in server/routes/auth.routes.js",
+            "read in server/routes/link.routes.js",
+            "read in server/routes/renders.routes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_APP_INSTANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_BUTTON_TEXT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_EMAIL_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js",
+            "read in server/server.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/routes/renders.routes.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_PROMPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/passport.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/redis.js",
+            "read in server/queues/queues.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/redis.js",
+            "read in server/handlers/auth.handler.js",
+            "read in server/handlers/domains.handler.js",
+            "read in server/handlers/helpers.handler.js",
+            "read in server/queries/domain.queries.js",
+            "read in server/queries/host.queries.js",
+            "read in server/queries/link.queries.js",
+            "read in server/queries/user.queries.js",
+            "read in server/queries/visit.queries.js",
+            "read in server/queues/queues.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/redis.js",
+            "read in server/queues/queues.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/env.js",
+            "read in server/redis.js",
+            "read in server/queues/queues.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/redis.js",
+            "read in server/queues/queues.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REPORT_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/handlers/renders.handler.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_CNAME_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_IP_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/handlers/locals.handler.js",
+            "read in server/mail/mail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/env.js",
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ADMIN_EMAILS, DB_CLIENT, LINK_CUSTOM_ALPHABET. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3
+}

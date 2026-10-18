@@ -1,0 +1,17 @@
+id: repo-039
+set: tuning
+source:
+  kind: git
+  repository: usememos/memos
+  commit: dfa0fda76602d49dfbb68a6683ef20b068c8d45b
+build:
+  dockerfile: scripts/Dockerfile
+  context: .
+notes:
+  - The root has no Dockerfile. scripts/Dockerfile builds the Go backend from the repository root (COPY . .).  The default stage is the last stage, monolithic.
+  - "Vendor inputs MEMOS_DRIVER: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."
+vendorInputs:
+  - name: MEMOS_DRIVER
+    source:
+      kind: fixed
+      value: postgres

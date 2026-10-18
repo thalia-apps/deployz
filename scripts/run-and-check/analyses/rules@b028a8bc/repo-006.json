@@ -1,0 +1,1270 @@
+{
+  "id": "repo-006",
+  "commit": "3ec877a68bc423373220f9ee2fda3d93ba368680",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"sh\", \"start.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "NEXT_PRIVATE_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "NEXT_PRIVATE_DIRECT_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "NEXT_PRIVATE_UPLOAD_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DANGEROUS_BYPASS_RATE_LIMITS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DANGEROUS_BYPASS_RATE_LIMITS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DOCUMENSO_DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DOCUMENSO_DISABLE_TELEMETRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_AUTHENTICATE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_AUTHENTICATE_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_AUTHENTICATE_USER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_AUTHENTICATE_USER_EMAIL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_AUTHENTICATE_USER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares E2E_TEST_AUTHENTICATE_USER_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_VERTEX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_VERTEX_API_KEY",
+            "read in packages/lib/utils/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_VERTEX_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_VERTEX_LOCATION"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_VERTEX_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_VERTEX_PROJECT_ID",
+            "read in packages/lib/utils/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXTAUTH_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXT_PRIVATE_ALLOWED_SIGNUP_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_ALLOWED_SIGNUP_DOMAINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_DATABASE_REPLICA_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PRIVATE_DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_DATABASE_URL",
+            "read in packages/prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "NEXT_PRIVATE_DIRECT_DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_DIRECT_DATABASE_URL",
+            "read in packages/prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "NEXT_PRIVATE_DOCUMENSO_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_DOCUMENSO_LICENSE_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_DOCUMENT_CONVERSION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/lib/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PRIVATE_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_ENCRYPTION_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_GOOGLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_GOOGLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_INNGEST_EVENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_INNGEST_EVENT_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_INTERNAL_WEBAPP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_INTERNAL_WEBAPP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_JOBS_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_JOBS_PROVIDER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_LOGGER_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_LOGGER_FILE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MAILCHANNELS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MAILCHANNELS_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MAILCHANNELS_DKIM_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MAILCHANNELS_DKIM_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MAILCHANNELS_DKIM_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MAILCHANNELS_DKIM_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MAILCHANNELS_DKIM_SELECTOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MAILCHANNELS_DKIM_SELECTOR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MAILCHANNELS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MAILCHANNELS_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MICROSOFT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MICROSOFT_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_MICROSOFT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_MICROSOFT_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_PROMPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_PROMPT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_PROVIDER_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_PROVIDER_LABEL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_SKIP_VERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_SKIP_VERIFY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_OIDC_WELL_KNOWN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_OIDC_WELL_KNOWN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_PLAIN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_PLAIN_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_REDIS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_REDIS_PREFIX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_RESEND_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_RESEND_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SES_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SES_ACCESS_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SES_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SES_REGION"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SES_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SES_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_CSC_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_CSC_OAUTH_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_CSC_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_CSC_OAUTH_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_CSC_PROVIDER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_CSC_PROVIDER_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_CSC_SIGNATURE_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_CSC_SIGNATURE_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_APPLICATION_CREDENTIALS_CONTENTS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_APPLICATION_CREDENTIALS_CONTENTS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_CERT_CHAIN_CONTENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_CERT_CHAIN_CONTENTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_CERT_CHAIN_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_CERT_CHAIN_FILE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_KEY_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_PUBLIC_CRT_FILE_CONTENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_PUBLIC_CRT_FILE_CONTENTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_PUBLIC_CRT_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_PUBLIC_CRT_FILE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_GCLOUD_HSM_SECRET_MANAGER_CERT_PATH",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_GCLOUD_HSM_SECRET_MANAGER_CERT_PATH"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_PASSPHRASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_PASSPHRASE"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_TIMESTAMP_AUTHORITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_TIMESTAMP_AUTHORITY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SIGNING_TRANSPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SIGNING_TRANSPORT",
+            "read in packages/lib/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_APIKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_APIKEY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_APIKEY_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_APIKEY_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_FROM_ADDRESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_FROM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_SECURE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_SERVICE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_TRANSPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_TRANSPORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_UNSAFE_IGNORE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_UNSAFE_IGNORE_TLS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_SMTP_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_STRIPE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_STRIPE_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_TURNSTILE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_TURNSTILE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_REGION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_USE_LEGACY_SIGNING_SUBFILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_USE_LEGACY_SIGNING_SUBFILTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PRIVATE_WEBHOOK_SSRF_BYPASS_HOSTS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PRIVATE_WEBHOOK_SSRF_BYPASS_HOSTS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/remix/server/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNIN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNUP",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNUP"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_GOOGLE_SIGNIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_GOOGLE_SIGNIN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_GOOGLE_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_GOOGLE_SIGNUP"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNIN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_MICROSOFT_SIGNUP"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_OIDC_AUTO_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_OIDC_AUTO_REDIRECT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_OIDC_SIGNIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_OIDC_SIGNIN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_OIDC_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_OIDC_SIGNUP"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_SIGNIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_SIGNIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_SIGNUP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DOCUMENT_SIZE_UPLOAD_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DOCUMENT_SIZE_UPLOAD_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FEATURE_BILLING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_FEATURE_BILLING_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_POSTHOG_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SIGNING_CONTACT_INFO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SIGNING_CONTACT_INFO"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_UPLOAD_TRANSPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_UPLOAD_TRANSPORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_USE_INTERNAL_URL_BROWSERLESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_USE_INTERNAL_URL_BROWSERLESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEBAPP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_WEBAPP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PORT",
+            "read in apps/remix/server/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend",
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0
+}

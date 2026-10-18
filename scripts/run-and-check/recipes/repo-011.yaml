@@ -1,0 +1,18 @@
+id: repo-011
+set: tuning
+source:
+  kind: git
+  repository: healthchecks/healthchecks
+  commit: 69dbd2a0801dfbcfcd554af8cbbdaaab0b39e2a3
+build:
+  dockerfile: docker/Dockerfile
+  context: .
+notes:
+  - The root has no Dockerfile. docker/Dockerfile builds from the repository root (COPY . /opt/healthchecks/). docker/uwsgi.ini runs manage.py migrate before the app starts.
+  - No vendor input. SECRET_KEY has a default in hc/settings.py, and the build step uses its own value.
+  - "healthchecks selects its database with DB (hc/settings.py: DB defaults to sqlite); a vendor who uses the managed PostgreSQL sets DB=postgres (Wave 5)."
+vendorInputs:
+  - name: DB
+    source:
+      kind: fixed
+      value: postgres

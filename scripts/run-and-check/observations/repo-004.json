@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 1,
+  "id": "repo-004",
+  "set": "tuning",
+  "repository": "miniflux/v2",
+  "commit": "a84533db6ca0a2ff9a47800fbf0326be6d9b3170",
+  "recipeHash": "23ee53e01c5423fcb0edf534ce3d34b9183a626afe8c9fa1ee34f0c35a016408",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-17T07:29:53.133Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 0,
+          "imageBytes": 34953262,
+          "dockerfile": "packaging/docker/alpine/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-004:a84533db6ca0a2ff9a47800fbf0326be6d9b3170 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, RUN_MIGRATIONS, CREATE_ADMIN, ADMIN_USERNAME, ADMIN_PASSWORD, BASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=17.654\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 33591,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "18080 all reachable=true\n33591 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/healthcheck",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 302
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 200
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ 200"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "postgres",
+          "connections": 1,
+          "tablesAfterStart": [
+            "acme_cache",
+            "api_keys",
+            "categories",
+            "enclosures",
+            "entries",
+            "entry_tombstones",
+            "feed_icons",
+            "feeds",
+            "icons",
+            "integrations",
+            "schema_version",
+            "users",
+            "web_sessions",
+            "webauthn_credentials"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 1 application connections; tables in deployz: acme_cache, api_keys, categories, enclosures, entries, entry_tombstones, feed_icons, feeds, icons, integrations, schema_version, users, web_sessions, webauthn_credentials"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-004: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-ci-build",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-004: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-ci-build",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "observed",
+        "value": [
+          {
+            "name": "RUN_MIGRATIONS",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "CREATE_ADMIN",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "ADMIN_USERNAME",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "ADMIN_PASSWORD",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "BASE_URL",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without RUN_MIGRATIONS",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without RUN_MIGRATIONS",
+            "text": "the database schema is not up to date: current=v0 expected=v134\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without CREATE_ADMIN",
+            "text": "healthy=true exited=false oomKilled=false seconds=30.433\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without CREATE_ADMIN",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          },
+          {
+            "kind": "command",
+            "source": "web without CREATE_ADMIN",
+            "text": "healthy, but no postgres connection"
+          },
+          {
+            "kind": "http",
+            "source": "web without ADMIN_USERNAME",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ADMIN_USERNAME",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nThe username is mandatory.\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without ADMIN_PASSWORD",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ADMIN_PASSWORD",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nThe password must have at least 6 characters.\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without BASE_URL",
+            "text": "healthy=true exited=false oomKilled=false seconds=21.967\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without BASE_URL",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=18.4\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\n[Migration v1] pq: duplicate key value violates unique constraint \"pg_type_typname_nsp_index\" (23505)\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=26.449\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=134 latest_version=134\nlevel=INFO msg=\"Skipping admin user creation because it already exists\" username=admin\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 17.654,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthcheck",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "RUN_MIGRATIONS",
+          "CREATE_ADMIN",
+          "ADMIN_USERNAME",
+          "ADMIN_PASSWORD",
+          "BASE_URL"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 3.65,
+        "setA": 141.776,
+        "twoCopies": 99.324,
+        "requiredVariables": 516.786
+      }
+    },
+    {
+      "startedAt": "2026-10-17T07:42:34.679Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 0,
+          "imageBytes": 34953262,
+          "dockerfile": "packaging/docker/alpine/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-004:a84533db6ca0a2ff9a47800fbf0326be6d9b3170 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, RUN_MIGRATIONS, CREATE_ADMIN, ADMIN_USERNAME, ADMIN_PASSWORD, BASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=27.084\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 40473,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "18080 all reachable=true\n40473 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/healthcheck",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 302
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 302
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 200
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ 200"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "postgres",
+          "connections": 1,
+          "tablesAfterStart": [
+            "acme_cache",
+            "api_keys",
+            "categories",
+            "enclosures",
+            "entries",
+            "entry_tombstones",
+            "feed_icons",
+            "feeds",
+            "icons",
+            "integrations",
+            "schema_version",
+            "users",
+            "web_sessions",
+            "webauthn_credentials"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 1 application connections; tables in deployz: acme_cache, api_keys, categories, enclosures, entries, entry_tombstones, feed_icons, feeds, icons, integrations, schema_version, users, web_sessions, webauthn_credentials"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-004: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-ci-build",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-004: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-ci-build",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "observed",
+        "value": [
+          {
+            "name": "RUN_MIGRATIONS",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "CREATE_ADMIN",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "ADMIN_USERNAME",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "ADMIN_PASSWORD",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "BASE_URL",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without RUN_MIGRATIONS",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without RUN_MIGRATIONS",
+            "text": "the database schema is not up to date: current=v0 expected=v134\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without CREATE_ADMIN",
+            "text": "healthy=true exited=false oomKilled=false seconds=41.12\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without CREATE_ADMIN",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without ADMIN_USERNAME",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ADMIN_USERNAME",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nThe username is mandatory.\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without ADMIN_PASSWORD",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ADMIN_PASSWORD",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nThe password must have at least 6 characters.\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without BASE_URL",
+            "text": "healthy=true exited=false oomKilled=false seconds=24.388\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without BASE_URL",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\n[Migration v1] pq: duplicate key value violates unique constraint \"pg_type_typname_nsp_index\" (23505)\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=29.34\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=17.143\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "level=INFO msg=\"Running database migrations\" current_version=134 latest_version=134\nlevel=INFO msg=\"Skipping admin user creation because it already exists\" username=admin\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 27.084,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthcheck",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "RUN_MIGRATIONS",
+          "CREATE_ADMIN",
+          "ADMIN_USERNAME",
+          "ADMIN_PASSWORD",
+          "BASE_URL"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 8.708,
+        "setA": 127.843,
+        "twoCopies": 102.546,
+        "requiredVariables": 595.951
+      }
+    }
+  ],
+  "unstable": [
+    "requiredVariables"
+  ],
+  "complete": true
+}

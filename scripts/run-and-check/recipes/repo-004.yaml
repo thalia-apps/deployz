@@ -1,0 +1,32 @@
+id: repo-004
+set: tuning
+source:
+  kind: git
+  repository: miniflux/v2
+  commit: a84533db6ca0a2ff9a47800fbf0326be6d9b3170
+build:
+  dockerfile: packaging/docker/alpine/Dockerfile
+  context: .
+notes:
+  - The root has no Dockerfile. packaging/docker/alpine/Dockerfile builds the Go binary from the repository root (ADD . /go/src/app), so the context is the root (deploy-config.yaml repo-004). The other options are the distroless, debian and rpm packaging files.
+  - "Vendor inputs RUN_MIGRATIONS, CREATE_ADMIN, ADMIN_USERNAME, ADMIN_PASSWORD, BASE_URL: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."
+vendorInputs:
+  - name: RUN_MIGRATIONS
+    source:
+      kind: fixed
+      value: "1"
+  - name: CREATE_ADMIN
+    source:
+      kind: fixed
+      value: "1"
+  - name: ADMIN_USERNAME
+    source:
+      kind: fixed
+      value: admin
+  - name: ADMIN_PASSWORD
+    source:
+      kind: generated
+      format: alnum-32
+  - name: BASE_URL
+    source:
+      kind: deploymentUrl

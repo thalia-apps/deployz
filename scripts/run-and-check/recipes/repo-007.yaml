@@ -1,0 +1,18 @@
+id: repo-007
+set: tuning
+source:
+  kind: git
+  repository: ghostfolio/ghostfolio
+  commit: 73e4f0368de398d7b67c50fb2926351414e2044e
+vendorInputs:
+  - name: ACCESS_TOKEN_SALT
+    source:
+      kind: generated
+      format: alnum-32
+  - name: JWT_SECRET_KEY
+    source:
+      kind: generated
+      format: alnum-32
+notes:
+  - Root Dockerfile builds the app from source. docker/entrypoint.sh runs prisma migrate deploy, then seeds, then starts the server.
+  - ACCESS_TOKEN_SALT and JWT_SECRET_KEY have no default. Needed per apps/api/src/services/configuration/configuration.service.ts (envalid str() without default). Same names as deploy-config.yaml repo-007 secrets.

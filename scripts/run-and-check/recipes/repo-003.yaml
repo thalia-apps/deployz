@@ -1,0 +1,28 @@
+id: repo-003
+set: tuning
+source:
+  kind: git
+  repository: thedevs-network/kutt
+  commit: 279b491b53bbd01fbae70f603222526962772061
+vendorInputs:
+  - name: JWT_SECRET
+    source:
+      kind: generated
+      format: hex64
+  - name: DB_CLIENT
+    source:
+      kind: fixed
+      value: pg
+  - name: DB_SSL
+    source:
+      kind: fixed
+      value: "true"
+  - name: ADMIN_EMAILS
+    source:
+      kind: fixed
+      value: admin@example.com
+notes:
+  - Root Dockerfile (node:22-alpine, CMD npm run migrate && npm start) builds the app from source.
+  - JWT_SECRET has only a devDefault in server/env.js, so it has no value in production. Same name as deploy-config.yaml repo-003 secrets.
+  - deploy-config.yaml also sets DB_CLIENT=pg, DB_SSL and ADMIN_EMAILS. They are not given here, because the app starts without them (server/env.js defaults to better-sqlite3).
+  - "Vendor inputs DB_CLIENT, DB_SSL, ADMIN_EMAILS: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."

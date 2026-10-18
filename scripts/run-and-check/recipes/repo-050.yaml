@@ -1,0 +1,22 @@
+id: repo-050
+set: tuning
+source:
+  kind: git
+  repository: livebook-dev/livebook
+  commit: f18f2035bac89d6c08497f5f2d7e7c4f56e80716
+build:
+  buildArgs:
+    BASE_IMAGE: hexpm/elixir:1.20.1-erlang-28.1.1-ubuntu-noble-20260509.1
+    VARIANT: default
+vendorInputs:
+  - name: LIVEBOOK_PASSWORD
+    source:
+      kind: generated
+      format: alnum-32
+  - name: LIVEBOOK_SECRET_KEY_BASE
+    source:
+      kind: generated
+      format: hex64
+notes:
+  - Root Dockerfile. BASE_IMAGE and VARIANT have no default, so the first FROM fails without them. The values are the ones in .github/workflows/release.yml (VARIANT=default, BASE_IMAGE from the versions file at the pinned commit). Reviewer to check that the hexpm/elixir tag exists on Docker Hub.
+  - LIVEBOOK_SECRET_KEY_BASE must be at least 64 characters (lib/livebook/config.ex:460-471). LIVEBOOK_PASSWORD is the access password named in the task brief. The app also starts with a token when neither is set. Reviewer to check.

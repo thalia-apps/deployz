@@ -40,6 +40,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-12 | A deploy fails closed when the application needs a database or cache that the deployment does not have | Active |
 | 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
+| 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -831,3 +832,43 @@ What would change it: making the locators in `apps/api/src/env.test.ts`
 structural would retire the precondition guard. A third stage, or a third
 deploy workflow, would make the pinned file set and the two-file concurrency
 comparison a list instead.
+
+## Docker run-and-check replaces the label benchmarks (2026-10-16)
+
+The Stage A repository-compatibility benchmark and the remediation benchmark
+compare the Analysis with written labels. An audit found that the labels are
+not trustworthy:
+
+- The labels and the harness do not mean the same thing. The expected
+  `migration` fact means "the application has migrations". The harness
+  (`scripts/repository-compatibility/normalize.ts`) compares it with "a
+  separate migration command exists". This defect causes 43 of the 108
+  unexplained mismatches.
+- Claude models wrote the labels. The AI Analysis that replaces the rules
+  uses the same models, so the labels and the Analysis share blind spots.
+
+The Docker run-and-check test (`scripts/run-and-check/`) replaces both
+benchmarks. It builds and runs real applications in Docker with PostgreSQL,
+MySQL, Valkey and MinIO. It records what each application does, and it checks
+each Analysis claim against that record with fixed code. The running
+application is the truth, not a label. A recipe per repository holds inputs
+only, never expected answers. Ten small fixture applications with known
+answers test the harness itself. The test is the release gate for every
+Analysis change: rules, prompts or models.
+
+Limits:
+
+- Docker on one machine does not test AWS IAM permissions, the load
+  balancer, HTTPS certificates, TLS to RDS, the Fargate network or the relay.
+  The Stage B real-AWS test (`benchmark:deploy`) continues to cover them on a
+  few repositories.
+- On a Windows on ARM machine, the amd64 application images run under QEMU
+  emulation, and the services run natively as arm64. Emulation changes
+  timing, CPU and memory use, and it can crash some builds. An x86_64 machine
+  gives exact parity. A fact from a native arm64 run is evidence for
+  behaviour only. It never confirms a Dockerfile or build claim.
+
+What would change it: an observation method that is less expensive than a
+Docker run and as trustworthy (for example production telemetry from real
+customer deployments), or a release gate that real-AWS runs can give at an
+acceptable cost.

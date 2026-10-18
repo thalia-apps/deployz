@@ -10,6 +10,10 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.next/**',
       '**/cdk.out/**',
+      // Known-answer sample applications that run inside Docker, not harness code.
+      'scripts/run-and-check/fixtures/*/app/**',
+      // Local run outputs and scratch scripts (gitignored).
+      'scripts/run-and-check/.runs/**',
     ],
   },
   eslint.configs.recommended,

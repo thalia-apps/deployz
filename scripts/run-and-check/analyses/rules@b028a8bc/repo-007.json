@@ -1,0 +1,313 @@
+{
+  "id": "repo-007",
+  "commit": "73e4f0368de398d7b67c50fb2926351414e2044e",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"/ghostfolio/entrypoint.sh\" ]",
+      "port": 3333
+    },
+    "health": {
+      "path": "/api/v1/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCESS_TOKEN_SALT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ACCESS_TOKEN_SALT",
+            ".env.dev declares ACCESS_TOKEN_SALT"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/api/src/environments/environment.prod.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMPOSE_PROJECT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares COMPOSE_PROJECT_NAME",
+            ".env.dev declares COMPOSE_PROJECT_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            ".env.dev declares DATABASE_URL",
+            "read in .config/prisma.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DIRECT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .config/prisma.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares JWT_SECRET_KEY",
+            ".env.dev declares JWT_SECRET_KEY",
+            "read in apps/api/src/app/auth-device/auth-device.module.ts",
+            "read in apps/api/src/app/auth/auth.module.ts",
+            "read in apps/api/src/app/info/info.module.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NX_ADD_PLUGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.dev declares NX_ADD_PLUGINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_DB",
+            ".env.dev declares POSTGRES_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTGRES_PASSWORD",
+            ".env.dev declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_USER",
+            ".env.dev declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_HOST",
+            ".env.dev declares REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REDIS_PASSWORD",
+            ".env.dev declares REDIS_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_PORT",
+            ".env.dev declares REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ROOT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/api/src/main.ts",
+            "read in apps/api/src/middlewares/html-template.middleware.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/api/jest-environment-tz.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0
+}

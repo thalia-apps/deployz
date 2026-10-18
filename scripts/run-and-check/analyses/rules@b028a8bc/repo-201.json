@@ -1,0 +1,117 @@
+{
+  "id": "repo-201",
+  "commit": "3e11afc95616d6b81d2c84d6dceb57fa52e4eb08",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npm run build:routes && tsdown",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"npm\", \"run\", \"start\"]",
+      "port": 1200
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HEROKU_SLUG_COMMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/routes-deprecated/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/errors/index.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/errors/index.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_GIT_COMMIT_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/routes-deprecated/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "openai"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0
+}

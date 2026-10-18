@@ -1,0 +1,14 @@
+id: repo-051
+set: tuning
+source:
+  kind: git
+  repository: docusealco/docuseal
+  commit: c216e43d2499614cbf432b13b0fa918c8fd966e6
+notes:
+  - Root Dockerfile (Ruby, webpack stage, Puma). No vendor input. SECRET_KEY_BASE has a fallback (config/dotenv.rb, deploy-config.yaml repo-051 notes). The Dockerfile copies named folders, not .git.
+  - "Vendor inputs SECRET_KEY_BASE: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."
+vendorInputs:
+  - name: SECRET_KEY_BASE
+    source:
+      kind: generated
+      format: hex64

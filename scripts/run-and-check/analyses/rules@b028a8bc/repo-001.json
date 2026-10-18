@@ -1,0 +1,533 @@
+{
+  "id": "repo-001",
+  "commit": "ca661c7057984aa98ed4f7083d84dae2f65bfcb0",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npm-run-all check-env build-db check-db build-tracker build-recorder build-geo build-app",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"sh\", \"scripts/start-docker.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/heartbeat",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOWED_FRAME_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/csp.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/csp.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/crypto.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/proxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/clickhouse.ts",
+            "read in src/lib/db.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_IP_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/ip.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts",
+            "read in src/app/api/record/route.ts",
+            "read in src/app/api/teams/route.ts",
+            "read in src/app/api/websites/route.ts",
+            "read in src/app/api/2fa/disable/route.ts",
+            "read in src/app/api/2fa/status/route.ts",
+            "read in src/app/api/2fa/verify/route.ts",
+            "read in src/app/api/auth/login/route.ts",
+            "read in src/app/api/2fa/setup/cancel/route.ts",
+            "read in src/app/api/2fa/setup/confirm/route.ts",
+            "read in src/app/api/2fa/setup/initiate/route.ts",
+            "read in src/app/api/admin/2fa/global/route.ts",
+            "read in src/app/api/admin/teams/[teamId]/2fa/route.ts",
+            "read in src/app/api/admin/users/[userId]/2fa/route.ts",
+            "read in src/lib/detect.ts",
+            "read in src/lib/ip.ts",
+            "read in src/lib/request.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLECT_API_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/proxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/proxy.ts",
+            "read in src/lib/cors.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_REPLICA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/prisma.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile declares DATABASE_URL",
+            "read in src/lib/crypto.ts",
+            "read in src/lib/db.ts",
+            "read in src/lib/prisma.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISABLE_BOT_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/record/route.ts",
+            "read in src/app/api/send/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/proxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_UI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/layout.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_UPDATES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FAVICON_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOLITE_DB_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/detect.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNORE_IP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/detect.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_BROKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/kafka.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_MAX_MESSAGE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/kafka.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_SASL_MECHANISM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/kafka.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_SSL_ALLOW_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/kafka.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/kafka.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LINKS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_QUERY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/clickhouse.ts",
+            "read in src/lib/prisma.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/(main)/App.tsx",
+            "read in src/lib/clickhouse.ts",
+            "read in src/lib/kafka.ts",
+            "read in src/lib/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PIXELS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REMOVE_TRAILING_SLASH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/send/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SALT_ROTATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/send/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_LOCATION_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/detect.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_SCRIPT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/app/api/config/route.ts",
+            "read in docker/proxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACKER_SCRIPT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/proxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_UUIDV7",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/crypto.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0
+}

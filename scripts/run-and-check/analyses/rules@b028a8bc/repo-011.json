@@ -1,0 +1,659 @@
+{
+  "id": "repo-011",
+  "commit": "69dbd2a0801dfbcfcd554af8cbbdaaab0b39e2a3",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"uwsgi\", \"/opt/healthchecks/docker/uwsgi.ini\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: when unset the app uses another engine — set \"postgres\" or \"django.db.backends.postgresql\" to use the managed PostgreSQL database",
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares DB_HOST",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares DB_NAME",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker/.env.example declares DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares DB_PORT",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_SSLMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_TARGET_SESSION_ATTRS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares DB_USER",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEFAULT_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_MAIL_FROM_TMPL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_PUBLIC_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MASTER_BADGE_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATRIX_HOMESERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MATRIX_USER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PD_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PING_EMAIL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PING_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHBULLET_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHOVER_EMERGENCY_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHOVER_EMERGENCY_RETRY_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHOVER_SUBSCRIPTION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REMOTE_USER_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares S3_BUCKET",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares S3_ENDPOINT",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares S3_REGION",
+            "read in hc/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECURE_PROXY_SSL_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIGNAL_CLI_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_LOGO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py",
+            "read in docker/fetchstatus.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STATSD_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPPORT_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEGRAM_BOT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_ACCOUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_MESSAGING_SERVICE_SID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WHATSAPP_DOWN_CONTENT_SID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHATSAPP_UP_CONTENT_SID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hc/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DB. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 2
+}

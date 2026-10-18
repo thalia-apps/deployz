@@ -1,0 +1,920 @@
+{
+  "id": "repo-203",
+  "commit": "f164f69172002aba6296980c27160a196191dbd6",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: ./fider migrate && ./fider",
+      "port": 3000
+    },
+    "health": {
+      "path": "/_health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOW_ALLOWED_SCHEMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_PRIVATE_NETWORK_TARGETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_FS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_S3_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BLOB_STORAGE_S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CDN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_MAX_IDLE_CONNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_MAX_OPEN_CONNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_ALLOWLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_AWSSES_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_AWSSES_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_AWSSES_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_BLOCKLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_MAILGUN_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_MAILGUN_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_MAILGUN_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_NOREPLY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMAIL_SMTP_ENABLE_IMPLICIT_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_ENABLE_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_ANALYTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GO_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_IDLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_READ_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_WRITE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_CONSOLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_FILE_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SQL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_STRUCTURED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAINTENANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAINTENANCE_MESSAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAINTENANCE_UNTIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_FACEBOOK_APPID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_FACEBOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_GITHUB_CLIENTID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_GITHUB_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_GOOGLE_CLIENTID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_GOOGLE_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POST_CREATION_WITH_TAGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH_NOISE_WORDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIGNUP_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_AUTO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_ANNUAL_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_UK_VAT_TAX_RATE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_LIST_APIKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_LIST_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_DISABLE_ON_FAILURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/pkg/env/env.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: EMAIL_NOREPLY. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1
+}

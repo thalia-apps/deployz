@@ -1,0 +1,22 @@
+id: repo-071
+set: tuning
+source:
+  kind: git
+  repository: chatwoot/chatwoot
+  commit: da4898e7f5e2f2146cd2c24d3a7bd3124016cf82
+build:
+  dockerfile: docker/Dockerfile
+  context: .
+vendorInputs:
+  - name: SECRET_KEY_BASE
+    source:
+      kind: generated
+      format: hex64
+  - name: FRONTEND_URL
+    source:
+      kind: deploymentUrl
+notes:
+  - The root has no Dockerfile. docker/Dockerfile is the production image (RAILS_ENV=production, assets precompiled). docker/dockerfiles/rails.Dockerfile is for development. The file has no CMD, so the start command comes from the Analysis.
+  - SECRET_KEY_BASE is required in production (.env.example). FRONTEND_URL is read for the route host (config/environments/production.rb:105) and is not a derived name, so the vendor gives the app URL (deploymentUrl). Reviewer to check that it is a start condition.
+  - "Vendor inputs FRONTEND_URL: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."
+  - "No build argument keeps .git: production builds from a GitHub tarball, which never has .git (packages/cdk/src/pipeline/source-fetch.ts). A Git URL context without .git gives the same build."

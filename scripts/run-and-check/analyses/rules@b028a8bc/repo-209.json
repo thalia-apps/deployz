@@ -1,0 +1,151 @@
+{
+  "id": "repo-209",
+  "commit": "23e7e4da008fdc9ac5b27b2625faa9144d46f208",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "container/dist.dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "searx/version_frozen.py"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/local/searxng/entrypoint.sh\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GITHUB_REF_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITHUB_REPOSITORY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_DEBUG_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_DISABLE_ETC_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/settings_loader.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_SETTINGS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/settings_loader.py",
+            "read in utils/searxng_check.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies searx/version_frozen.py, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: GITHUB_REF_NAME, GITHUB_REPOSITORY. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 3
+}

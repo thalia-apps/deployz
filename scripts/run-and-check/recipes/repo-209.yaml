@@ -1,0 +1,12 @@
+id: repo-209
+set: holdout
+source:
+  kind: git
+  repository: searxng/searxng
+  commit: 23e7e4da008fdc9ac5b27b2625faa9144d46f208
+build:
+  dockerfile: container/dist.dockerfile
+notes:
+  - "The only application Dockerfiles are container/builder.dockerfile and container/dist.dockerfile (no Dockerfile at the root). Context: repository root."
+  - "Known build limits of container/dist.dockerfile: (1) FROM localhost/searxng/searxng:builder needs an image built earlier from container/builder.dockerfile; (2) COPY ./searx/version_frozen.py needs a file that is not in the repository (the project build generates it). A single docker build of the pinned commit is expected to fail."
+  - "No vendor inputs: SEARXNG_SECRET and SEARXNG_BASE_URL are provided by Deployz (minted secret, application URL)."

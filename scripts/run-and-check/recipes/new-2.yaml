@@ -1,0 +1,16 @@
+id: new-2
+set: holdout
+source:
+  kind: git
+  repository: kimai/kimai
+  commit: a3bf6f94b532332bc0846ed3da880c3e56cc85f6
+build:
+  buildArgs:
+    BASE: apache
+databaseEngine: mysql
+notes:
+  - "Pinned 2026-10-16: HEAD of the default branch main, committed 2026-10-13T18:54:34Z. Same profile as planned: PHP Symfony, MySQL. Not in benchmark.yaml."
+  - "Source build confirmed: root Dockerfile copies the source from the build context and runs composer install; the last stage (prod) is the default target. No Dockerfile path or context override."
+  - "buildArgs BASE=apache: the default BASE=fpm gives php-fpm on port 9000 with no HTTP server. BASE=apache gives Apache on port 8001 (.docker/000-default.conf, EXPOSE 8001), the only variant with an HTTP port."
+  - "databaseEngine mysql: the image installs only the pdo_mysql PHP extension and the default DATABASE_URL is a mysql:// URL."
+  - "No vendor inputs: the entrypoint generates APP_SECRET when it is absent (.docker/entrypoint.sh). ADMINMAIL and ADMINPASS only create an optional admin user."

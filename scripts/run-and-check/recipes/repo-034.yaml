@@ -1,0 +1,10 @@
+id: repo-034
+set: tuning
+source:
+  kind: git
+  repository: CTFd/CTFd
+  commit: 91ced62d44d3ec3142a0948ee96ed19947cfc979
+databaseEngine: mysql
+notes:
+  - Root Dockerfile. docker-entrypoint.sh pings the database, runs flask db upgrade, then starts gunicorn on port 8000.
+  - The image has only the PyMySQL driver (requirements.txt), and CTFd/config.py defaults the driver to mysql+pymysql. So MySQL is given. SECRET_KEY is created by the app when it is not set (CTFd/config.py gen_secret_key).

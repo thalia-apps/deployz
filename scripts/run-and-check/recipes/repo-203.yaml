@@ -1,0 +1,27 @@
+id: repo-203
+set: holdout
+source:
+  kind: git
+  repository: getfider/fider
+  commit: f164f69172002aba6296980c27160a196191dbd6
+vendorInputs:
+  - name: EMAIL_NOREPLY
+    source:
+      kind: fixed
+      value: noreply@example.com
+  - name: EMAIL_SMTP_HOST
+    source:
+      kind: fixed
+      value: localhost
+  - name: EMAIL_SMTP_PORT
+    source:
+      kind: fixed
+      value: "25"
+  - name: BASE_URL
+    source:
+      kind: deploymentUrl
+notes:
+  - Root Dockerfile builds the Go server and the UI from source; no build override.
+  - "EMAIL_NOREPLY, EMAIL_SMTP_HOST and EMAIL_SMTP_PORT: fixed non-secret test values from docs/testing/repository-deployment/deploy-config.yaml (repo-203 config). The server needs them to start; the SMTP host is used only when a sign-up e-mail is sent."
+  - "DATABASE_URL, JWT_SECRET and BASE_URL are not vendor inputs: Deployz provides the database URL, mints the internal secret and supplies the application URL."
+  - "Vendor inputs BASE_URL: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."

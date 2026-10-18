@@ -1,0 +1,35 @@
+id: repo-016
+set: tuning
+source:
+  kind: git
+  repository: outline/outline
+  commit: 012188635b0a0fabbd446d4a9aad12eba588c630
+vendorInputs:
+  - name: SECRET_KEY
+    source:
+      kind: generated
+      format: hex64
+  - name: UTILS_SECRET
+    source:
+      kind: generated
+      format: hex32
+  - name: URL
+    source:
+      kind: deploymentUrl
+  - name: FORCE_HTTPS
+    source:
+      kind: fixed
+      value: "false"
+  - name: FILE_STORAGE
+    source:
+      kind: fixed
+      value: local
+  - name: WEB_CONCURRENCY
+    source:
+      kind: fixed
+      value: "1"
+notes:
+  - Root Dockerfile. It starts from the floating image outlinewiki/outline-base (ARG BASE_IMAGE), so the built code can differ from the pinned commit. Dockerfile.base builds that base image but is not used here.
+  - SECRET_KEY must be 64 hex characters, and UTILS_SECRET must not be empty (server/env.ts:67-81).
+  - URL is required (server/env.ts:225-240). Deployz does not derive a plain URL variable (OWN_URL_NAME_REGEX in packages/analysis/src/detectors.ts), so the vendor gives the app URL (deploymentUrl).
+  - "Vendor inputs URL, FORCE_HTTPS, FILE_STORAGE, WEB_CONCURRENCY: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."

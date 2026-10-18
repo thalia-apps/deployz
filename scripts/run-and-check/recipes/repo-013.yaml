@@ -1,0 +1,12 @@
+id: repo-013
+set: tuning
+source:
+  kind: git
+  repository: louislam/uptime-kuma
+  commit: 5df2a3c0a8c883f362dd48f6fd422b3ee60e685b
+build:
+  dockerfile: docker/dockerfile
+  context: .
+notes:
+  - The root has no Dockerfile. docker/dockerfile has the app stage release (CMD node server/server.js). The last stage in the file is upload-artifact, and the recipe has no build target field. The default build can therefore make a different image from the app. Reported to the orchestrator.
+  - No vendor input. The Analysis must reject this application (SQLite only), and the observation records what the app does.

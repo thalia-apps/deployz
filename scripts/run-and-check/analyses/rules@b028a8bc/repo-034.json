@@ -1,0 +1,677 @@
+{
+  "id": "repo-034",
+  "commit": "91ced62d44d3ec3142a0948ee96ed19947cfc979",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/opt/CTFd/docker-entrypoint.sh\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/healthcheck",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "TESTING_DATABASE_URL",
+          "kind": "url"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APPLICATION_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_S3_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "FLASK_RUN_FROM_CLI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in wsgi.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTML_SANITIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_FOLDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILFROM_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILSENDER_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USEAUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERSE_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SERVER_SENT_EVENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_COOKIE_SAMESITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLALCHEMY_MAX_OVERFLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLALCHEMY_POOL_PRE_PING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLALCHEMY_TRACK_MODIFICATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAGGER_UI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEMPLATES_AUTO_RELOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TESTING_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TESTING_MAIL_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "THEME_FALLBACK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPDATE_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPLOAD_FOLDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPLOAD_PROVIDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"filesystem\" stores files on the container disk — set \"s3\" to use the managed S3 bucket",
+            "read in CTFd/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: UPLOAD_PROVIDER. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses MySQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1
+}

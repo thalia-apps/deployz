@@ -1,0 +1,5672 @@
+{
+  "id": "repo-053",
+  "commit": "0e8fbb0d4e8166f5de6e9bd0f34a50a8678fa72d",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/images/n8n/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": ".",
+      "missingSources": [
+        "compiled"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"tini\", \"--\", \"/docker-entrypoint.sh\"]",
+      "port": 5678
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_POSTGRESDB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_POSTGRESDB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_POSTGRESDB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_POSTGRESDB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_POSTGRESDB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "N8N_ENGINE_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "QUEUE_BULL_REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "QUEUE_BULL_REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "./packages/cli/bin/n8n worker"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "./packages/cli/bin/n8n worker",
+        "source": "package.json"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "CREDENTIALS_DEFAULT_NAME",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREDENTIALS_OVERWRITE_DATA",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREDENTIALS_OVERWRITE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREDENTIALS_OVERWRITE_ENDPOINT_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREDENTIALS_OVERWRITE_PERSISTENCE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DAYTONA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DAYTONA_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION_ACQUISITION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_LOGGING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_LOGGING_MAX_EXECUTION_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_LOGGING_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PING_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PING_MAX_FAILURES_BEFORE_RECOVERY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PING_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_CONNECTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POSTGRESDB_DESTROY_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POSTGRESDB_IDLE_CONNECTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_KEEP_ALIVE_INITIAL_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_MAX_CONNECTION_LIFETIME_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POSTGRESDB_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POSTGRESDB_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_SSL_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_SSL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_STATEMENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POSTGRESDB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_RECOVERY_BACKOFF_MAX_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_RECOVERY_BACKOFF_MIN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SQLITE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SQLITE_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SQLITE_VACUUM_ON_STARTUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_STARTUP_CONNECT_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_TABLE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set \"postgres\" or \"postgresdb\" to use the managed PostgreSQL database",
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEPLOYMENT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_HARD_DELETE_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_MAX_DISPLAY_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_PRUNE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_PRUNE_MAX_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_PRUNE_SOFT_DELETE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_SAVE_ON_ERROR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_SAVE_ON_PROGRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_DATA_SAVE_ON_SUCCESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTIONS_TIMEOUT_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_FRONTEND_HOOKS_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_HOOK_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/external-hooks.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_HOOK_FILES_SEPARATOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/external-hooks.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/generic.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTANCE_AI_BRAVE_SEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/computer-use/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ADDITIONAL_NON_UI_ROUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_AI_SANDBOX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_AI_SANDBOX_EPHEMERAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_AI_SANDBOX_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_AI_SANDBOX_SNAPSHOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_AI_SANDBOX_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_BACKGROUND_TASKS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_CHANNEL_RECONCILE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_CHECKPOINT_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_MODULES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_TRACING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_TRACING_RECORD_INPUTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENTS_TRACING_RECORD_OUTPUTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/agents.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENT_EVALS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/evaluation.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AGENT_EVALS_RUN_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/evaluation.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_AGENT_MAX_PASSTHROUGH_BINARY_SIZE_BYTES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_ALLOW_SENDING_PARAMETER_VALUES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_ANTHROPIC_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai-builder.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_ASSISTANT_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai-assistant.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_GATEWAY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai-gateway.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AI_TIMEOUT_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/cli/src/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AWS_SYSTEM_CREDENTIALS_ACCESS_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_AWS_SYSTEM_CREDENTIALS_SDK_SOURCES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_BLOCK_FILE_ACCESS_TO_N8N_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_BLOCK_FILE_PATTERNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CACHE_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/cache.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CACHE_MEMORY_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/cache.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CACHE_MEMORY_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/cache.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CACHE_REDIS_KEY_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/cache.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CACHE_REDIS_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/cache.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CANVAS_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CHAT_HUB_EXECUTION_CONTEXT_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/chat-hub.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CHAT_HUB_MAX_BUFFERED_CHUNKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/chat-hub.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CHAT_HUB_STREAM_STATE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/chat-hub.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_COLLABORATION_CRDT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/collaboration.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_COMMUNITY_PACKAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_COMMUNITY_PACKAGES_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/compression.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/compression.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CONCURRENCY_EVALUATION_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CONCURRENCY_PRODUCTION_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CONFIG_EVALS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/evaluation.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CONTENT_SECURITY_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CONTENT_SECURITY_POLICY_REPORT_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_CROSS_ORIGIN_OPENER_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_CLEANUP_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_FILE_MAX_AGE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_MAX_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_SIZE_CHECK_CACHE_DURATION_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_UPLOAD_MAX_FILE_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DATA_TABLES_WARNING_THRESHOLD_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/data-table.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DB_PING_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/database.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DEFAULT_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DEPLOYMENT_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/deployment.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DEV_RELOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DIAGNOSTICS_CONFIG_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/diagnostics.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DIAGNOSTICS_CONFIG_FRONTEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/diagnostics.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DIAGNOSTICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/diagnostics.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DIAGNOSTICS_POSTHOG_API_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/diagnostics.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DIAGNOSTICS_POSTHOG_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/diagnostics.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DISABLE_PRODUCTION_MAIN_PROCESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DISABLE_PUBLIC_CHAT_TRIGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/chat-trigger.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DISABLE_UI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DYNAMIC_BANNERS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/dynamic-banners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_DYNAMIC_BANNERS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/dynamic-banners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EDITOR_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EMAIL_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_FORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_FORM_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_FORM_WAIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_HEALTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_MCP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_MCP_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_REST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_WEBHOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_WEBHOOK_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENDPOINT_WEBHOOK_WAIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENFORCE_GLOBAL_USER_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/http-request.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_AUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "N8N_ENGINE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_CONTROL_PLANE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_CONTROL_PLANE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_CONTROL_PLANE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "N8N_ENGINE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENGINE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_ENV_FEAT_SKIP_DURABLE_SCHEDULER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVAL_COLLECTIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/evaluation.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_CHECKUNSENTINTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_KEEPLOGCOUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_LOGBASENAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_LOGFULLPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_MAXFILESIZEINKB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_MAXMESSAGESPERPARSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_LOGWRITER_MAXTOTALMESSAGESPERFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EVENTBUS_RECOVERY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/event-bus.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXECUTIONS_QUEUE_KEEP_LAST_COMPLETED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXECUTIONS_QUEUE_KEEP_LAST_FAILED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXECUTIONS_QUEUE_RECOVERY_BATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXECUTIONS_QUEUE_RECOVERY_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_ALLOW_WEBHOOK_ISOLATE_SKIP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_IDLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_MAX_CODE_CACHE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_MEMORY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_OBSERVABILITY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_SLOW_EVAL_THRESHOLD_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_TRACES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_EXPRESSION_ENGINE_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/expression-engine.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_FEATURE_FLAG_OVERRIDES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/feature-flags.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_FORMDATA_FILE_SIZE_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_FRONTEND_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_GIT_NODE_DISABLE_BARE_REPOS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_GIT_NODE_ENABLE_ALL_CONFIG_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_GIT_NODE_ENABLE_HOOKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_GLOBAL_USER_AGENT_VALUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/http-request.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_GRACEFUL_SHUTDOWN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/generic.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_HIDE_USAGE_PAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_HIRING_BANNER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/hiring-banner.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_HTTP_RESPONSE_BODY_READ_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/http-request.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSECURE_DISABLE_FORM_HTML_SANDBOX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSECURE_DISABLE_WEBHOOK_IFRAME_SANDBOX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_ACTIVATION_CAPPED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_ACTIVATION_LOCK_MESSAGE_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_BROWSER_USE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_BUILDER_SANDBOX_TTL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_CHECKPOINT_GC_RETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_CONFIRMATION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_DAYTONA_TOKEN_REFRESH_SKEW_MS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_GATEWAY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_LOCAL_GATEWAY_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_MCP_CONNECTIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_MCP_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_MODEL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_MODEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_NODE_CONTEXT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_NODE_USAGE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_OBSERVER_MESSAGE_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_PRUNE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_REFLECTOR_OBSERVATION_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_RUN_DEBUG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_AUTO_ARCHIVE_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_AUTO_DELETE_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_AUTO_STOP_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_EPHEMERAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_NAME_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_SNAPSHOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SANDBOX_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SEARXNG_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SETUP_PANEL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_SNAPSHOT_RETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_THINKING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_THREAD_TTL_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_VERTEX_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_VERTEX_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_AI_VERTEX_SERVICE_ACCOUNT_JSON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_OWNER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_OWNER_FIRST_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_OWNER_LAST_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_OWNER_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INSTANCE_OWNER_PASSWORD_HASH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_INVITE_LINKS_EMAIL_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_ACTIVATION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_AUTO_RENEW_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_DETACH_FLOATING_ON_SHUTDOWN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LICENSE_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/license.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LISTEN_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_CRON_ACTIVE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_FILE_COUNT_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_FILE_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_FILE_SIZE_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/logging.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_STREAMING_DESTINATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_LOG_STREAMING_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MANAGED_OAUTH_SHOW_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_ACCESS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_APPS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_BUILDER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_CANVAS_GROUPS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_CLIENT_CACHE_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/mcp-client.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_CLIENT_CACHE_TTL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/mcp-client.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_MAX_REGISTERED_CLIENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_SERVER_SESSION_IDLE_TTL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/mcp-server.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MCP_SERVER_SESSION_SWEEP_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/mcp-server.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_ACTIVE_WORKFLOW_METRIC_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_API_ENDPOINTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_API_METHOD_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_API_PATH_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_API_STATUS_CODE_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_CACHE_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_CREDENTIAL_TYPE_LABEL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_DB_POOL_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_DEFAULT_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_DNS_CACHE_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_EXECUTION_DATA_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_FORM_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_MESSAGE_EVENT_BUS_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_NODE_TYPE_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_POLL_TRIGGER_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_QUEUE_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_SCHEDULER_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_SSRF_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WEBHOOK_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_EXECUTION_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_ID_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_INFO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_NAME_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_PUBLICATION_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_INCLUDE_WORKFLOW_STATISTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_QUEUE_METRICS_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_SCHEDULER_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_WORKFLOW_INFO_METRIC_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_WORKFLOW_PUBLICATION_METRIC_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_METRICS_WORKFLOW_STATISTICS_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MFA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/mfa.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MFA_ENFORCED_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MULTI_MAIN_SETUP_CHECK_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/multi-main-setup.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MULTI_MAIN_SETUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/multi-main-setup.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_MULTI_MAIN_SETUP_KEY_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/multi-main-setup.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_OAUTH_BROWSER_BINDING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/auth.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_OUTBOUND_PROXY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/outbound-proxy.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PASSWORD_MIN_LENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/password.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PAYLOAD_SIZE_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/endpoints.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PERSONALIZATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/personalization.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PERSONAL_SPACE_PUBLISHING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PERSONAL_SPACE_SHARING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_POLLER_DURABLE_CURSORS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_POSTMESSAGE_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PREVIEW_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PROXY_HOPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PUBLIC_API_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/public-api.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PUBLIC_API_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/public-api.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PUBLIC_API_SWAGGERUI_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/public-api.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_PYTHON_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/nodes.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_REDIS_KEY_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/redis.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RELEASE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/generic.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RESTRICT_FILE_ACCESS_TO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_BROKER_LISTEN_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_BROKER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_GRANT_TOKEN_TTL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_HEARTBEAT_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_INSECURE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_MAX_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_MAX_OLD_SPACE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_MAX_PAYLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_TASK_ACCEPT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_TASK_REQUEST_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_RUNNERS_TASK_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/runners.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SAMESITE_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/auth.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SANDBOX_SERVICE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SANDBOX_SERVICE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-ai.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_CLAIM_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_EXECUTOR_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_EXECUTOR_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_FAILED_RETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_JITTER_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_LEASE_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MATERIALIZATION_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MATERIALIZATION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MATERIALIZATION_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MAX_CONCURRENT_PASSES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MIN_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_MISFIRE_GRACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_QUARANTINE_GRACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_RECONCILIATION_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_RECONCILIATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_RECONCILIATION_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_RECONCILIATION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_OWNER_SETTLE_PERIOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_POLL_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_POLL_TRIGGERS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_REAPER_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_REAPER_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_REAPER_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_RETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_RETENTION_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_RETENTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_SYSTEM_TASKS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SCHEDULER_TRIGGER_NODE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scheduler.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SECURE_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/auth.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SECURITY_AUDIT_DAYS_ABANDONED_WORKFLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/security.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SECURITY_POLICY_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_EVENT_LOOP_BLOCK_DETECTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_EVENT_LOOP_BLOCK_MAX_EVENTS_PER_HOUR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_EVENT_LOOP_BLOCK_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_PROFILES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_TRACES_SLOW_SPAN_THRESHOLD_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SENTRY_WEBHOOK_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sentry.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SKIP_CREDENTIAL_OVERWRITE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/credentials.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_OAUTH_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_OAUTH_SERVICE_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_SENDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_JUST_IN_TIME_PROVISIONING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_LDAP_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_LDAP_LOGIN_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_MANAGED_BY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_ACR_VALUES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_ADDITIONAL_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_DISCOVERY_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts",
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_PROMPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_OIDC_RP_INITIATED_LOGOUT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_REDIRECT_LOGIN_TO_SSO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SAML_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts",
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SAML_LOGIN_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SAML_METADATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SAML_METADATA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_INSTANCE_ROLE_CLAIM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_PROJECTS_ROLES_CLAIM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_PROVISION_INSTANCE_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_PROVISION_PROJECT_ROLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_SCOPES_USE_EXPRESSION_MAPPING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/sso.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSO_USER_ROLE_PROVISIONING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/instance-settings-loader.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_ALLOWED_HOSTNAMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_ALLOWED_IP_RANGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_BLOCKED_HOSTNAMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_BLOCKED_IP_RANGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_DNS_CACHE_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_SSRF_PROTECTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/ssrf-protection.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_TEMPLATES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/templates.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_TEMPLATES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/templates.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_API_KEY_REVOKED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_CREDENTIALS_SHARED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_INVITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_MCP_CLIENT_REVOKED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_PROJECT_SHARED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_PWRESET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_WORKFLOW_AUTODEACTIVATED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_WORKFLOW_FAILURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_UM_EMAIL_TEMPLATES_WORKFLOW_SHARED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/cli/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_USER_MANAGEMENT_JWT_DURATION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_USER_MANAGEMENT_JWT_REFRESH_TIMEOUT_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_USER_MANAGEMENT_JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/user-management.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "N8N_USE_WORKFLOW_PUBLICATION_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_VERSION_NOTIFICATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/version-notifications.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_VERSION_NOTIFICATIONS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/version-notifications.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_VERSION_NOTIFICATIONS_INFO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/version-notifications.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_VERSION_NOTIFICATIONS_WHATS_NEW_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/version-notifications.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_VERSION_NOTIFICATIONS_WHATS_NEW_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/version-notifications.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WEBHOOK_RESPONSE_RELAY_OFFLOAD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WEBHOOK_RESPONSE_RELAY_SIZE_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKER_SERVER_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOWS_AUTOSAVE_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_ACTIVATION_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_AUTODEACTIVATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_AUTODEACTIVATION_MAX_LAST_EXECUTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/executions.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_CALLER_POLICY_DEFAULT_OPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_COMPACTION_BATCH_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_COMPACTION_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_COMPACTION_SKIP_ON_START_UP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_COMPACTION_TRIM_ON_START_UP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_OPTIMIZING_MINIMUM_AGE_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_OPTIMIZING_TIME_WINDOW_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_PRUNE_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_TRIMMING_MINIMUM_AGE_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_HISTORY_TRIMMING_TIME_WINDOW_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflow-history-compaction.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_INDEX_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_CLEANUP_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_CLEANUP_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_COMPLETED_RETENTION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_FAILED_RETENTION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_LEASE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_OUTBOX_POLL_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_PUBLICATION_RECONCILE_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "N8N_WORKFLOW_TAGS_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/tags.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODES_ERROR_TRIGGER_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/nodes.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODES_EXCLUDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/nodes.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODES_INCLUDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/nodes.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODES_MERGE_SQL_SANDBOX_MEMORY_LIMIT_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/nodes.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_CLUSTER_NODES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_DNS_LOOKUP_STRATEGY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_DUALSTACK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_KEEP_ALIVE_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_KEEP_ALIVE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_RECONNECT_ON_FAILOVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_SLOT_REFRESH_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_SLOT_REFRESH_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_TIMEOUT_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_TLS_SERVERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_TLS_VALIDATE_CERTIFICATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_BULL_REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_HEALTH_CHECK_ACTIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_HEALTH_CHECK_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_WORKER_LOCK_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_WORKER_LOCK_RENEW_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_WORKER_STALLED_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_WORKER_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/scaling-mode.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOWS_DEFAULT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/@n8n/config/src/configs/workflows.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies compiled, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DB_TYPE. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3
+}

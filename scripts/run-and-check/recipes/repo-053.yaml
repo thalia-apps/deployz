@@ -1,0 +1,18 @@
+id: repo-053
+set: tuning
+source:
+  kind: git
+  repository: n8n-io/n8n
+  commit: 0e8fbb0d4e8166f5de6e9bd0f34a50a8678fa72d
+build:
+  dockerfile: docker/images/n8n/Dockerfile
+  context: .
+vendorInputs:
+  - name: N8N_ENCRYPTION_KEY
+    source:
+      kind: generated
+      format: hex32
+notes:
+  - docker/images/n8n/Dockerfile is the official image. It copies ./compiled, which only pnpm build:docker creates (README in the same folder). The build is expected to fail from the repository alone. The observation records that fact.
+  - The other Dockerfiles (docker/images/engine, n8n-base, runners) have the same dependency on ./compiled or build other images.
+  - N8N_ENCRYPTION_KEY is the encryption key named in the task brief. n8n creates one on first start when it is not set, so this input is a stability aid, not a start condition. Reviewer to check.

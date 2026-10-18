@@ -1,0 +1,2859 @@
+{
+  "id": "repo-076",
+  "commit": "f9f1b2fb951a99e1fd01ee7291304a0370ea6132",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npx turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"npm\", \"run\", \"backend\"]",
+      "port": 3080
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "AWS_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "FIREBASE_STORAGE_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": "node config/migrate-terms-timestamp.js",
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMIN_PANEL_SESSION_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ADMIN_PANEL_SESSION_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ADMIN_PANEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ADMIN_PANEL_URL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_DEBUG_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AGENT_DEBUG_LOGGING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ALLOW_ACCOUNT_DELETION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_EMAIL_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_EMAIL_LOGIN",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_PASSWORD_RESET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ALLOW_PASSWORD_RESET",
+            "read in api/server/middleware/validatePasswordReset.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_REGISTRATION",
+            "read in api/server/middleware/validateRegistration.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_SHARED_LINKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_SHARED_LINKS",
+            "read in api/server/routes/config.js",
+            "read in api/server/routes/share.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_SHARED_LINKS_PUBLIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_SHARED_LINKS_PUBLIC",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_SOCIAL_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_SOCIAL_LOGIN",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_SOCIAL_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_SOCIAL_REGISTRATION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ALLOW_UNVERIFIED_EMAIL_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_UNVERIFIED_EMAIL_LOGIN",
+            "read in api/server/services/AuthService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANALYTICS_GTM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares ANTHROPIC_API_KEY",
+            "read in config/translations/anthropic.ts",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "APPLE_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPLE_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPLE_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLE_KEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPLE_KEY_ID",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLE_PRIVATE_KEY_PATH",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPLE_PRIVATE_KEY_PATH",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLE_TEAM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPLE_TEAM_ID",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_TITLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_TITLE",
+            "read in config/invite-user.js",
+            "read in api/server/controllers/TwoFactorController.js",
+            "read in api/server/routes/config.js",
+            "read in api/server/services/AuthService.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSISTANTS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ASSISTANTS_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_ACCESS_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_ENDPOINT_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_API_VERSION"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_INDEX_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_SEARCH_OPTION_QUERY_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_SEARCH_OPTION_QUERY_TYPE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_SEARCH_OPTION_SELECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_SEARCH_OPTION_SELECT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_SEARCH_OPTION_TOP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_SEARCH_OPTION_TOP"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AI_SEARCH_SERVICE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_AI_SEARCH_SERVICE_ENDPOINT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_CONTAINER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_CONTAINER_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_CONNECTION_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_STORAGE_CONNECTION_STRING"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_PUBLIC_ACCESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_STORAGE_PUBLIC_ACCESS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BAN_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BAN_DURATION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BAN_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BAN_INTERVAL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BAN_VIOLATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BAN_VIOLATIONS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLUSTER_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONCURRENT_MESSAGE_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CONCURRENT_MESSAGE_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CONCURRENT_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CONCURRENT_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CONSOLE_JSON",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CONSOLE_JSON"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CONSOLE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/jest.setup.logging.cjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTINUE_ON_UNCAUGHT_EXCEPTION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in api/server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREDS_IV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CREDS_IV"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CREDS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CREDS_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CUSTOM_FOOTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG_CONSOLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG_CONSOLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DEBUG_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG_LOGGING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DEBUG_OPENAI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG_OPENAI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISCORD_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISCORD_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DISCORD_CLIENT_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DOMAIN_CLIENT",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DOMAIN_CLIENT",
+            "read in config/invite-user.js",
+            "read in api/server/experimental.js",
+            "read in api/server/index.js",
+            "read in api/server/middleware/oauthNavigation.js",
+            "read in api/server/routes/oauth.js",
+            "read in api/server/services/ActionService.js",
+            "read in api/server/services/AuthService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DOMAIN_SERVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DOMAIN_SERVER",
+            "read in api/server/routes/config.js",
+            "read in api/server/routes/oauth.js",
+            "read in api/server/services/ActionService.js",
+            "read in api/server/services/AuthService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMAIL_ALLOW_SELFSIGNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_ALLOW_SELFSIGNED",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_ENCRYPTION",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_ENCRYPTION_HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_ENCRYPTION_HOSTNAME",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_FROM",
+            "read in api/server/routes/config.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_FROM_NAME",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_HOST",
+            "read in api/server/routes/config.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares EMAIL_PASSWORD",
+            "read in api/server/routes/config.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_PORT",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_SERVICE",
+            "read in api/server/routes/config.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_USERNAME",
+            "read in api/server/routes/config.js",
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_IMAGE_OUTPUT_GZIP_SCAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/static.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_INSIGHTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_INSIGHTS",
+            "read in api/server/routes/config.js",
+            "read in api/server/routes/insights.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SHAREPOINT_FILEPICKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_STATIC_ASSET_BROTLI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/utils/staticCache.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS",
+            "read in api/server/services/PermissionService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FACEBOOK_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FACEBOOK_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEBOOK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FACEBOOK_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FACEBOOK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FACEBOOK_CLIENT_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_UPLOAD_SSE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_UPLOAD_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FILE_UPLOAD_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FIREBASE_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FIREBASE_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_AUTH_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FIREBASE_AUTH_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_MESSAGING_SENDER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FIREBASE_MESSAGING_SENDER_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FIREBASE_PROJECT_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FIREBASE_STORAGE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FIREBASE_STORAGE_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FLUX_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FLUX_API_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORK_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FORK_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CSE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CSE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_SEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_SEARCH_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GRAPH_API_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/services/MCP.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HELP_AND_FAQ_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HELP_AND_FAQ_URL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ILLEGAL_MODEL_REQ_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ILLEGAL_MODEL_REQ_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IMPORT_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMPORT_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "JWT_REFRESH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares JWT_REFRESH_SECRET",
+            "read in api/server/controllers/AuthController.js",
+            "read in api/server/middleware/optionalShareFileAuth.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares JWT_SECRET",
+            "read in api/server/middleware/setTwoFactorTempUser.js",
+            "read in api/server/routes/actions.js",
+            "read in api/server/services/ActionService.js",
+            "read in api/server/services/twoFactorService.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LDAP_BIND_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LDAP_BIND_CREDENTIALS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LDAP_BIND_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_BIND_DN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LDAP_CA_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_CA_CERT_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LDAP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_URL",
+            "read in api/server/experimental.js",
+            "read in api/server/index.js",
+            "read in api/server/routes/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_USER_SEARCH_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_USER_SEARCH_BASE",
+            "read in api/server/experimental.js",
+            "read in api/server/index.js",
+            "read in api/server/routes/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIBRECHAT_LOG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/config/meiliLogger.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIMIT_CONCURRENT_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LIMIT_CONCURRENT_MESSAGES",
+            "read in api/server/middleware/abortMiddleware.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIMIT_MESSAGE_IP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LIMIT_MESSAGE_IP",
+            "read in api/server/routes/convos.js",
+            "read in api/server/routes/schedules.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIMIT_MESSAGE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LIMIT_MESSAGE_USER",
+            "read in api/server/routes/convos.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOGIN_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOGIN_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_WINDOW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOG_TO_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_TO_FILE",
+            "read in config/jest.setup.logging.cjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/utils/sendEmail.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEILI_HOST",
+            "read in api/server/routes/search.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_MASTER_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares MEILI_MASTER_KEY",
+            "read in api/server/routes/search.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "MEILI_NO_ANALYTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEILI_NO_ANALYTICS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MEM_DIAG",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in api/server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MESSAGE_IP_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MESSAGE_IP_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MESSAGE_IP_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MESSAGE_IP_WINDOW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MESSAGE_USER_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MESSAGE_USER_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MESSAGE_USER_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MESSAGE_USER_WINDOW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MESSAGE_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MESSAGE_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "METRICS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in api/server/index.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MIN_PASSWORD_LENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_AUTO_CREATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_AUTO_CREATE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_AUTO_INDEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_AUTO_INDEX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_MAX_CONNECTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_MAX_CONNECTING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_MAX_IDLE_TIME_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_MAX_IDLE_TIME_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_MAX_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_MAX_POOL_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_MIN_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_MIN_POOL_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_URI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONGO_WAIT_QUEUE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONGO_WAIT_QUEUE_TIMEOUT_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/controllers/AuthController.js",
+            "read in api/server/utils/staticCache.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_MAX_OLD_SPACE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NODE_MAX_OLD_SPACE_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NON_BROWSER_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NON_BROWSER_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NO_INDEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NO_INDEX",
+            "read in api/server/middleware/noIndex.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_API_KEY",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENAI_MODERATION",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENAI_MODERATION",
+            "read in api/server/middleware/moderateText.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_MODERATION_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_MODERATION_API_KEY",
+            "read in api/server/middleware/moderateText.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_MODERATION_REVERSE_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/middleware/moderateText.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_ADMIN_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ADMIN_ROLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ADMIN_ROLE_PARAMETER_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ADMIN_ROLE_PARAMETER_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ADMIN_ROLE_TOKEN_KIND",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENID_ADMIN_ROLE_TOKEN_KIND"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_AUDIENCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_AUDIENCE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_AUTO_REDIRECT",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_AUTO_REDIRECT",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENID_BUTTON_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_BUTTON_LABEL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_CLIENT_ID",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENID_CLIENT_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_EMAIL_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_EMAIL_CLAIM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_GRAPH_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_GRAPH_SCOPES",
+            "read in api/server/services/GraphApiService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_IMAGE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_IMAGE_URL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ISSUER",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_JWKS_URL_CACHE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_JWKS_URL_CACHE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_JWKS_URL_CACHE_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_JWKS_URL_CACHE_TIME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_MAX_LOGOUT_URL_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_MAX_LOGOUT_URL_LENGTH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_NAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_NAME_CLAIM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_POST_LOGOUT_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_POST_LOGOUT_REDIRECT_URI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REFRESH_AUDIENCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_REFRESH_AUDIENCE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REFRESH_BRIDGE_GRACE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_REFRESH_BRIDGE_GRACE_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REQUIRED_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_REQUIRED_ROLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REQUIRED_ROLE_PARAMETER_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_REQUIRED_ROLE_PARAMETER_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REQUIRED_ROLE_TOKEN_KIND",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENID_REQUIRED_ROLE_TOKEN_KIND"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_REUSE_MAX_SESSION_AGE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_REUSE_MAX_SESSION_AGE_MS",
+            "read in api/server/socialLogins.js",
+            "read in api/server/controllers/AuthController.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_REUSE_TOKENS",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENID_REUSE_TOKENS",
+            "read in api/server/socialLogins.js",
+            "read in api/server/controllers/AuthController.js",
+            "read in api/server/middleware/optionalJwtAuth.js",
+            "read in api/server/middleware/optionalShareFileAuth.js",
+            "read in api/server/middleware/requireJwtAuth.js",
+            "read in api/server/middleware/validateImageRequest.js",
+            "read in api/server/routes/config.js",
+            "read in api/server/services/GraphApiService.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_API_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_API_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_CLAIM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_FALLBACK_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_FALLBACK_ROLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_ROLE_PRIORITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_ROLE_PRIORITY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_ROLE_SYNC_SOURCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_ROLE_SYNC_SOURCE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_SCOPE",
+            "read in api/server/socialLogins.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENID_SESSION_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENID_SESSION_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "OPENID_USERNAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_USERNAME_CLAIM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_USE_END_SESSION_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_USE_END_SESSION_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENID_USE_PKCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENID_USE_PKCE",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENWEATHER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENWEATHER_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_SDK_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/telemetry.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_TRACING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/telemetry.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REFRESH_TOKEN_EXPIRY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REFRESH_TOKEN_EXPIRY",
+            "read in api/server/services/AuthService.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTER_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REGISTER_MAX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REGISTER_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REGISTER_WINDOW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REGISTRATION_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REGISTRATION_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_BUTTON_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_BUTTON_LABEL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_CALLBACK_URL",
+            "sample value is a path"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_CERT",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_EMAIL_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_EMAIL_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_ENTRY_POINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_ENTRY_POINT",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_FAMILY_NAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_FAMILY_NAME_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_GIVEN_NAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_GIVEN_NAME_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_IDP_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_IDP_ISSUER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_IMAGE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_IMAGE_URL",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_ISSUER",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_NAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_NAME_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_PICTURE_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_PICTURE_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_SESSION_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SAML_SESSION_SECRET",
+            "read in api/server/socialLogins.js",
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_USERNAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_USERNAME_CLAIM"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANDPACK_BUNDLER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDPACK_STATIC_BUNDLER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SD_WEBUI_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SD_WEBUI_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEARCH",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares SEARCH",
+            "read in api/server/routes/search.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SESSION_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_EXPIRY",
+            "read in api/server/socialLogins.js",
+            "read in api/server/services/AuthService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHAREPOINT_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHAREPOINT_PICKER_GRAPH_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHAREPOINT_PICKER_SHAREPOINT_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHOW_BIRTHDAY_ICON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/routes/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_CACHE_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/utils/staticCache.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_CACHE_S_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/utils/staticCache.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STREAM_KEEP_COMPLETED_JOBS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in api/server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STT_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STT_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STT_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TAVILY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TAVILY_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TENANT_ISOLATION_STRICT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js",
+            "read in api/server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TEST_VERBOSE_LOGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/jest.setup.logging.cjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAVERSAAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TRAVERSAAL_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUST_PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRUST_TENANT_HEADER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js",
+            "read in api/server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TTS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TTS_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TTS_VIOLATION_SCORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TTS_VIOLATION_SCORE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "USE_ENTRA_ID_FOR_PEOPLE_SEARCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USE_ENTRA_ID_FOR_PEOPLE_SEARCH",
+            "read in api/server/services/GraphApiService.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_REDIS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js",
+            "read in api/server/middleware/checkBan.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_REDIS_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/server/experimental.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIOLATION_SCORE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VIOLATION_SCORE_TTL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WOLFRAM_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WOLFRAM_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZAPIER_NLA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ZAPIER_NLA_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported database dependency: mongoose, and a mongodb service is defined in docker-compose.yml. Deployz does not support MongoDB. Use PostgreSQL.",
+      "Unsupported architecture: docker-compose.yml defines 2 application services (api, rag_api). Deployz runs ONE web process per deployment plus declared background workers.",
+      "This app is configured to run a database migration on deploy but the manifest does not require a database — Deployz cannot run migrations without a provisioned database"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database dependency: mongoose, and a mongodb service is defined in docker-compose.yml. Deployz does not support MongoDB. Use PostgreSQL."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (api, rag_api). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "This app is configured to run a database migration on deploy but the manifest does not require a database — Deployz cannot run migrations without a provisioned database"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ANTHROPIC_API_KEY, CONTINUE_ON_UNCAUGHT_EXCEPTION, DOMAIN_CLIENT, DOMAIN_SERVER, ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS, and 10 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 13
+}

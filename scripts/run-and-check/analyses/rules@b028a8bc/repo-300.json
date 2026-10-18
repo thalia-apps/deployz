@@ -1,0 +1,214 @@
+{
+  "id": "repo-300",
+  "commit": "6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsc",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/web.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "node dist/worker.js"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "node dist/worker.js",
+        "source": "Procfile"
+      }
+    ],
+    "queues": [
+      {
+        "id": "orders-queue",
+        "envBindings": [
+          {
+            "name": "ORDERS_QUEUE_URL",
+            "kind": "url"
+          }
+        ],
+        "producers": [
+          "web"
+        ],
+        "consumers": [
+          "worker"
+        ],
+        "deadLetter": {
+          "maxReceiveCount": 5,
+          "envBindings": [
+            {
+              "name": "ORDERS_DLQ_URL",
+              "kind": "url"
+            }
+          ],
+          "producers": [],
+          "consumers": [
+            "worker"
+          ]
+        },
+        "source": "src/server.ts"
+      }
+    ],
+    "scheduledJobs": [
+      {
+        "id": "canary-tick",
+        "command": "node dist/scheduled.js",
+        "schedule": {
+          "type": "cron",
+          "cron": "*/5 * * * *"
+        },
+        "timezone": null,
+        "source": "render.yaml"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in prisma/schema.prisma",
+            "read in src/orders-consumer.ts",
+            "read in src/scheduled.ts",
+            "read in src/schema.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ORDERS_DLQ_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORDERS_DLQ_URL",
+            "read in src/dlq-monitor.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ORDERS_QUEUE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORDERS_QUEUE_URL",
+            "read in src/server.ts",
+            "read in src/orders-consumer.ts",
+            "read in src/web.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PORT",
+            "read in src/server.ts",
+            "read in src/web.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0
+}

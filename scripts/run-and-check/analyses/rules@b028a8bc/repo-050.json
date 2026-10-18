@@ -1,0 +1,83 @@
+{
+  "id": "repo-050",
+  "commit": "f18f2035bac89d6c08497f5f2d7e7c4f56e80716",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"/app/bin/server\" ]",
+      "port": 4000
+    },
+    "health": {
+      "path": "/public/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "VARIANT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile build arg VARIANT selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the app declares durable local state (LIVEBOOK_HOME=/data (Dockerfile)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (LIVEBOOK_HOME=/data (Dockerfile)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: VARIANT. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1
+}

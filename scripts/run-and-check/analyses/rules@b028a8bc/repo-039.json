@@ -1,0 +1,260 @@
+{
+  "id": "repo-039",
+  "commit": "dfa0fda76602d49dfbb68a6683ef20b068c8d45b",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "scripts/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/local/memos/entrypoint.sh\", \"/usr/local/memos/memos\"]",
+      "port": 5230
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "MEMOS_DSN",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "MEMOS_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_ALLOW_PRIVATE_WEBHOOKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_DATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_DEMO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set a PostgreSQL value to use the managed PostgreSQL database",
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MEMOS_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "MEMOS_INSTANCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_UNIX_SOCK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMOS_WEBHOOK_PRIVATE_NETWORK_ALLOWLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/memos/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_CONTAINER_TESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/testutil/minio/server.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: MEMOS_DRIVER. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1
+}

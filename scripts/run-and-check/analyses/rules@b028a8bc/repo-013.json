@@ -1,0 +1,525 @@
+{
+  "id": "repo-013",
+  "commit": "5df2a3c0a8c883f362dd48f6fd422b3ee60e685b",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/dockerfile"
+    },
+    "build": {
+      "command": "vite build --config ./config/vite.config.js",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"server/server.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCALAPPDATA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/monitor-types/real-browser-monitor-type.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js",
+            "read in server/uptime-kuma-server.js",
+            "read in server/util-server.js",
+            "read in src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTIFICATION_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/notification-providers/notification-provider.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROGRAMFILES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/monitor-types/real-browser-monitor-type.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SET_MIGRATE_AGGREGATE_TABLE_TO_TRUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQL_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_KEY_PASSPHRASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/uptime-calculator.js",
+            "read in server/util-server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_CHECK_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/check-version.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TIMELOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/util-server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/uptime-kuma-server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_ALLOW_ALL_CHROME_EXEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/monitor-types/real-browser-monitor-type.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_CLOUDFLARED_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/server.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_POOL_MAX_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DEBUG_INSPECTOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_DISABLE_FRAME_SAMEORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/setup-database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_IS_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js",
+            "read in server/client.js",
+            "read in server/uptime-kuma-server.js",
+            "read in server/monitor-types/real-browser-monitor-type.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_LOG_RESPONSE_BODY_MONITOR_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/model/monitor.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "UPTIME_KUMA_SQLITE_SINGLE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/database.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_SSL_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_SSL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_SSL_KEY_PASSPHRASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPTIME_KUMA_WS_ORIGIN_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js",
+            "read in server/uptime-kuma-server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "resend",
+      "sendgrid",
+      "smtp",
+      "twilio"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: LOCALAPPDATA, PROGRAMFILES, UPTIME_KUMA_PORT. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 3
+}

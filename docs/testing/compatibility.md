@@ -1,66 +1,164 @@
 # Compatibility
 
-The corpus-benchmark layer (`strategy.md`'s **compat** row): how accurately
-Deployz analyses and deploys a large, fixed set of real open-source
-repositories. It measures analyser and product accuracy against realistic
-customer code — it is not a product regression check, it never gates a merge,
-and it never runs on a pull request. See [`strategy.md`](strategy.md#the-layers)
-for how this differs from the AWS E2E layers, and
-[`aws-e2e.md`](aws-e2e.md) for the version canary this shares its test
-account and its harness building blocks with.
+The corpus layer (`strategy.md`'s **compat** row): how accurately Deployz
+analyses and deploys real open-source repositories. It measures the Analysis
+and the product against realistic customer code. It is not a product
+regression check, it never gates a merge, and it never runs on a pull
+request. See [`strategy.md`](strategy.md#the-layers) for how it differs from
+the AWS E2E layers.
 
-Two stages measure two different questions:
+Two tests answer two different questions:
 
-| Stage | Question | AWS | Corpus source |
+| Test | Question | AWS | Repository list |
 | --- | --- | --- | --- |
-| A — `pnpm benchmark:compat` | Does the analyser *understand* a repository? | None | `benchmark.yaml` (owns the corpus) |
-| B — `pnpm benchmark:deploy` | Can Deployz actually *deploy* it, end to end? | Real, test account | reads `benchmark.yaml` by id, never copies it |
+| Docker run-and-check — `pnpm runcheck:*` | Is each Analysis claim true for the running application? | None | `scripts/run-and-check/recipes/` |
+| Stage B — `pnpm benchmark:deploy` | Can Deployz actually *deploy* it, end to end? | Real, test account | reads the repository list by id |
 
-## Stage A — repository-compatibility audit
+## Docker run-and-check
 
-Runs the production repository-analysis path against 120 real repositories
-pinned to immutable commits, and compares the result with independently
-validated expected facts. Nothing in the corpus is ever executed — repository
-content is read-only, untrusted data, exactly as it is in production.
+The test builds and runs real applications in Docker and checks each
+Analysis claim against what the application does. The running application
+is the truth, not a label. It replaces the label benchmarks (Stage A
+compatibility and remediation); the decision is in
+[`../decisions/README.md`](../decisions/README.md). The harness is
+`scripts/run-and-check/`.
 
 ```bash
-pnpm build                               # the harness imports the built packages
-pnpm benchmark:compat                    # every repository in benchmark.yaml
-pnpm benchmark:compat --repo repo-001    # one entry (repeat --repo for several)
-pnpm benchmark:compat --set unseen       # one benchmark set
-pnpm benchmark:compat --offline          # cached snapshots only, no GitHub
-pnpm benchmark:compat --no-write         # print the summary, write nothing
+pnpm runcheck:preflight                  # machine facts, safety, emulation and disk checks
+pnpm runcheck:analyse                    # the production Analysis for every recipe
+pnpm runcheck:observe [--repo <id>] [--force]
+pnpm runcheck:claims [--repo <id>] [--analysis <dir>]
+pnpm runcheck:full [--repo <id>] [--analysis <dir>] [--force]
+pnpm runcheck:fixtures [--no-observe]
 ```
 
-**The corpus** (`benchmark.yaml`) has 120 entries across three cohorts
-(`realistic`, `messy`, `boundary` — repositories that fall outside the MVP by
-design) and three sets (`improvement`, the 80 used to find and fix analyser
-defects; `unseen` and `unseen2`, 20 each, frozen once the analyser baseline
-is set — their first results are never used to change the analyser). Every
-entry pins a 40-character commit SHA and an `expected` block: the
-**deployment-gate** outcome (`READY` / `NEEDS_CONFIGURATION` /
-`NOT_COMPATIBLE`) a freshly imported application with no configured values
-would get, plus descriptive facts (postgres/redis/storage/migration
-requirements, port, health path, `unsupported` families). Expected facts are
-written from repository evidence (manifests, Dockerfiles, compose files,
-route code), checked by a second independent inspection, and reconciled
-against the files — never against the analyser's own output, and never
-edited to match it.
+### Three modes
 
-**GitHub access.** `GITHUB_TOKEN`, else the `gh` CLI's token, else
-unauthenticated requests (60/hour — too few for a full run). Every fetched
-snapshot is cached under `docs/testing/repository-compatibility/.cache/`
-(gitignored), keyed by git object SHA, so a repository is fetched from GitHub
-at most once and reruns are offline and deterministic (`--offline` refuses to
-fetch anything not already cached).
+1. **Observation run** (`runcheck:observe`). Runs once per repository commit.
+   Docker builds the image and runs the application with every candidate
+   service: PostgreSQL 16 with TLS, MySQL 8.0, Valkey and MinIO (S3). The
+   harness records what the application does: listening ports and their
+   bind address, HTTP status per path, database connections and tables,
+   migrations at start and from a separate command, Valkey clients, MinIO
+   objects, local disk writes (`docker diff`), workers, required variables,
+   two copies at the same time and a restart. Each fact has evidence and the
+   CPU architecture it came from. Each observation runs twice; a fact that
+   differs between the runs is `unstable`. The result is committed in
+   `scripts/run-and-check/observations/<id>.json`. An observation does not
+   depend on one Analysis: the probed paths, commands and variables come
+   from the recipe, from every stored Analysis and from a fixed list.
+2. **Claim check** (`runcheck:claims`). Compares an Analysis result with the
+   stored observations. It needs no Docker and takes seconds. Fixed code
+   gives each claim one verdict: `CONFIRMED`, `CONTRADICTED` or
+   `NOT_CHECKABLE` with a reason. Use it to evaluate a rule, prompt or model
+   change quickly.
+3. **Full run** (`runcheck:full`). Runs the application with exactly the
+   settings that the Analysis produced, and nothing more: the migration
+   command first, then the web container with the image command, then each
+   worker. Use it when the Analysis produces settings that the observations
+   do not cover, and for the release gate.
 
-**Findings.** A mismatch is classified `ANALYSIS_BUG` or
-`ANALYSIS_MISSING_SIGNAL` (fixed, with a regression test, and recorded in
-[`repository-compatibility/findings.md`](repository-compatibility/findings.md)
-as `COMP-nnn`), `MVP_CAPABILITY_GAP` (recorded, ranked, not fixed),
-`CORRECTLY_UNSUPPORTED` (confirms the MVP boundary), or `REPO_INVALID`
-(the corpus entry is replaced). Expected facts are never edited to match a
-disagreeing analyser result.
+The report (`.runs/reports/<analyser>/summary.md`) gives, per repository
+set: the applications that are healthy with the analysed settings, **hidden
+problems** (the Analysis said READY and the application fails with the
+analysed settings), **false problems** (the Analysis asked for a fix or a
+vendor decision that the application did not need), CONTRADICTED claims per
+claim type and per runtime, NOT_CHECKABLE reasons, unstable facts and the
+vendor questions per repository. The tuning set and the holdout set are
+always reported apart.
+
+### Production parity
+
+- The Analysis runs through the production path (`runApplicationAnalysis`,
+  then the readiness gate as production preflight evaluates it).
+- The container environment comes from the production compiler:
+  `compileDeploymentIntent` gives the CloudFormation template, and the
+  harness resolves the task-definition `Environment` and `Secrets` to the
+  local services. Minted secrets and derived URL and S3 values use the same
+  exported functions as the relay (`mintedEnvKeys`, `generateSecretValue`,
+  `derivedUrlEnvValue`, `derivedS3EnvValue`). The harness adds only the
+  MinIO endpoint and keys (production uses the task IAM role), and it points
+  a derived S3 endpoint to MinIO. Each observation lists these names.
+- The web container runs the image command, as production does. A worker
+  runs `sh -c <command>` with the image ENTRYPOINT. A migration replaces the
+  ENTRYPOINT with `sh -c` (`workloadContainerCommand`,
+  `oneShotContainerCommand`).
+- The application gets the `small-v2` memory (512 MiB). The RDS CA bundle
+  path holds the CA of the local PostgreSQL certificate.
+
+### Recipes
+
+A recipe (`recipes/<id>.yaml`) holds **inputs only**, never expected
+answers: the repository and the pinned commit, build overrides only when the
+repository needs them, vendor inputs (a generated secret with a format, or a
+fixed non-secret test value), the SQL engine when the application supports
+only MySQL, and one smoke request when a generic request cannot touch the
+database. A person reviews each recipe.
+
+### Known-answer fixtures
+
+`fixtures/F1` to `fixtures/F10` are ten small applications with known
+behaviour (for example a server bound to 127.0.0.1 only, a silent SQLite
+fallback, a lazy database connection). `answers.json` is the only place with
+expected answers, and it tests only the harness. `pnpm runcheck:fixtures`
+must give the expected verdict for every fixture before anyone trusts other
+results.
+
+### Safety
+
+Repository code is untrusted. It runs only inside Docker containers and
+BuildKit, never on the host.
+
+- Every `docker` call has a clean environment (`PATH`, `SystemRoot`, `TEMP`,
+  `TMP`, `USERPROFILE`, `ProgramFiles`, `DOCKER_*`). No host credential
+  reaches a container.
+- The harness refuses unsafe options: `--privileged`, the host network or
+  PID namespace, added capabilities, devices, published ports, `--env-file`,
+  `-e NAME` without a value, and mounts of host paths or the Docker socket.
+- Builds use a Git URL context (`https://github.com/<owner>/<repo>.git#<sha>`),
+  so the source never touches the host file system.
+- Applications and services run on an internal Docker network with no
+  internet. Probes run from a probe container on that network.
+- Every container has CPU, memory and PID limits. Every resource has the
+  label `deployz.runcheck=1`. Cleanup removes only labelled resources.
+- One build runs at a time on the machine (a lock file in
+  `%LOCALAPPDATA%\deployz-runcheck`). Built images are cached there with
+  `docker save`, outside the repository.
+
+### CPU architecture
+
+Deployz runs Fargate tasks on x86_64. On an ARM machine, the application
+images build and run as `linux/amd64` under QEMU emulation, and the services
+run natively. Emulation makes startup slower: the harness multiplies the
+health grace time by 3 and records the measured times. A heavy repository,
+or one whose build crashes under emulation, builds on an x86_64 GitHub
+runner with the manual workflow `runcheck-build.yml` ([`ci.md`](ci.md)), and
+the harness loads that image. Every fact records its architecture
+(`amd64-emulated`, `amd64-ci-build` or `arm64-native`). A fact from a native
+arm64 run is evidence for behaviour only. It never confirms a Dockerfile
+claim.
+
+### Limits
+
+Docker on one machine does not test AWS IAM permissions, the load balancer,
+HTTPS certificates, TLS to RDS with the Amazon CA, the Fargate network or
+the relay. Stage B keeps covering those on a few repositories. Emulation
+changes timing, CPU and memory use. An x86_64 machine gives exact parity.
+
+### Release gate
+
+A new Analysis implementation (a rules change, a prompt change or a model
+change) passes only when, compared with the baseline:
+
+1. Hidden problems are **0** in the tuning set and in the holdout set.
+2. CONTRADICTED claims are fewer than or equal to the baseline, for each
+   claim type.
+3. False problems are fewer than the baseline.
+4. All fixtures pass.
+
+Use the claim check for quick evaluation. Use a full run on every
+repository for the final decision. Never use the holdout set to tune rules
+or prompts.
 
 ## Stage B — repository-deployment audit
 

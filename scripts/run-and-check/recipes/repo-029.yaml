@@ -1,0 +1,14 @@
+id: repo-029
+set: tuning
+source:
+  kind: git
+  repository: postalsys/emailengine
+  commit: 1933e5d9952fab26fbd3f4a630adfc0ca341717a
+vendorInputs:
+  - name: EENGINE_SECRET
+    source:
+      kind: generated
+      format: hex32
+notes:
+  - EENGINE_SECRET has no default (deploy-config.yaml repo-029 secrets).
+  - "No build argument keeps .git: production builds from a GitHub tarball, which never has .git (packages/cdk/src/pipeline/source-fetch.ts). A Git URL context without .git gives the same build."

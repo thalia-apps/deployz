@@ -1,0 +1,625 @@
+{
+  "schemaVersion": 1,
+  "id": "repo-076",
+  "set": "tuning",
+  "repository": "danny-avila/LibreChat",
+  "commit": "f9f1b2fb951a99e1fd01ee7291304a0370ea6132",
+  "recipeHash": "a24227b3258c9e4874c003fbd1fbfab3b223d52690d904ebeda5b1b863fc06c9",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-17T13:02:59.786Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 0,
+          "imageBytes": 2619261212,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-076:f9f1b2fb951a99e1fd01ee7291304a0370ea6132 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, AWS_BUCKET_NAME, FIREBASE_STORAGE_BUCKET, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, ADMIN_PANEL_SESSION_SECRET, JWT_REFRESH_SECRET, JWT_SECRET, METRICS_SECRET, OPENID_SESSION_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          },
+          {
+            "kind": "command",
+            "source": "migration#1",
+            "text": "node config/migrate-terms-timestamp.js exit=1"
+          },
+          {
+            "kind": "http",
+            "source": "web#1 after migration",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1 after migration",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 11, baseline 9, harness sessions 2: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 4, baseline 2, harness sessions 2: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-076: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "arm64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "observed",
+        "value": [
+          {
+            "command": "node config/migrate-terms-timestamp.js",
+            "exitCode": 1,
+            "createdTables": false,
+            "seconds": 13.676
+          }
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "repo-076-r1-b1-migration1",
+            "text": "/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/config/connect.js:8:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 4, baseline 2, harness sessions 2: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-076: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/app/.env.temp"
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/app/.env.temp"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [
+          "node config/migrate-terms-timestamp.js"
+        ],
+        "workerCommands": [],
+        "variables": [
+          "ANTHROPIC_API_KEY",
+          "CONTINUE_ON_UNCAUGHT_EXCEPTION",
+          "DOMAIN_CLIENT",
+          "DOMAIN_SERVER",
+          "ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS",
+          "JWT_REFRESH_SECRET",
+          "JWT_SECRET",
+          "MEILI_MASTER_KEY",
+          "MEM_DIAG",
+          "OPENAI_MODERATION",
+          "OPENAI_MODERATION_API_KEY",
+          "OPENID_AUTO_REDIRECT",
+          "OPENID_REUSE_TOKENS",
+          "OPENID_SESSION_SECRET",
+          "SEARCH",
+          "STREAM_KEEP_COMPLETED_JOBS",
+          "TENANT_ISOLATION_STRICT",
+          "TRUST_TENANT_HEADER"
+        ],
+        "from": [
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [
+        "emulation: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      ],
+      "timings": {
+        "build": 167.509,
+        "setA": 153.08,
+        "migrations": 58.866,
+        "sizes": 73.548
+      }
+    },
+    {
+      "startedAt": "2026-10-17T13:10:32.799Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 0,
+          "imageBytes": 2619261212,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-ci-build",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-076:f9f1b2fb951a99e1fd01ee7291304a0370ea6132 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, AWS_BUCKET_NAME, FIREBASE_STORAGE_BUCKET, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, ADMIN_PANEL_SESSION_SECRET, JWT_REFRESH_SECRET, JWT_SECRET, METRICS_SECRET, OPENID_SESSION_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          },
+          {
+            "kind": "command",
+            "source": "migration#1",
+            "text": "node config/migrate-terms-timestamp.js exit=1"
+          },
+          {
+            "kind": "http",
+            "source": "web#1 after migration",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1 after migration",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 11, baseline 9, harness sessions 2: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 4, baseline 2, harness sessions 2: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-076: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "arm64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "observed",
+        "value": [
+          {
+            "command": "node config/migrate-terms-timestamp.js",
+            "exitCode": 1,
+            "createdTables": false,
+            "seconds": 4.816
+          }
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "repo-076-r2-b1-migration1",
+            "text": "/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/config/connect.js:8:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 4, baseline 2, harness sessions 2: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-076: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/app/.env.temp"
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/app/.env.temp"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "arm64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "arm64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3080/ none\n3080/health none\n3080/healthz none\n3080/up none\n3080/api/health none\n3080/status none\n3080/ping none\n3080/_health none\n3080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "\n> LibreChat@v0.8.8-rc2 backend\n> cross-env NODE_ENV=production node api/server/index.js\n\n[credentials] Generated temporary credentials for CREDS_KEY, CREDS_IV. They are stored in /app/.env.temp; configure permanent values before production use.\n/app/api/db/connect.js:11\n  throw new Error('Please define the MONGO_URI environment variable');\n  ^\n\nError: Please define the MONGO_URI environment variable\n    at Object.<anonymous> (/app/api/db/connect.js:11:9)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n    at Object..js (node:internal/modules/cjs/loader:1985:10)\n    at Module.load (node:internal/modules/cjs/loader:1577:32)\n    at Module._load (node:internal/modules/cjs/loader:1379:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\n    at Module.require (node:internal/modules/cjs/loader:1600:12)\n    at require (node:internal/modules/helpers:153:16)\n    at Object.<anonymous> (/app/api/db/index.js:3:23)\n    at Module._compile (node:internal/modules/cjs/loader:1854:14)\n\nNode.js v24.16.0\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [
+          "node config/migrate-terms-timestamp.js"
+        ],
+        "workerCommands": [],
+        "variables": [
+          "ANTHROPIC_API_KEY",
+          "CONTINUE_ON_UNCAUGHT_EXCEPTION",
+          "DOMAIN_CLIENT",
+          "DOMAIN_SERVER",
+          "ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS",
+          "JWT_REFRESH_SECRET",
+          "JWT_SECRET",
+          "MEILI_MASTER_KEY",
+          "MEM_DIAG",
+          "OPENAI_MODERATION",
+          "OPENAI_MODERATION_API_KEY",
+          "OPENID_AUTO_REDIRECT",
+          "OPENID_REUSE_TOKENS",
+          "OPENID_SESSION_SECRET",
+          "SEARCH",
+          "STREAM_KEEP_COMPLETED_JOBS",
+          "TENANT_ISOLATION_STRICT",
+          "TRUST_TENANT_HEADER"
+        ],
+        "from": [
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 147.267,
+        "setA": 145.472,
+        "migrations": 75.374,
+        "sizes": 79.906
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

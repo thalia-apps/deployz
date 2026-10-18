@@ -1,0 +1,47 @@
+id: repo-021
+set: tuning
+source:
+  kind: git
+  repository: directus/directus
+  commit: ea25ba63db11d4e25c0b1a4e5b8926a64dadbfee
+vendorInputs:
+  - name: KEY
+    source:
+      kind: generated
+      format: hex32
+  - name: SECRET
+    source:
+      kind: generated
+      format: hex64
+  - name: ADMIN_EMAIL
+    source:
+      kind: fixed
+      value: admin@example.com
+  - name: ADMIN_PASSWORD
+    source:
+      kind: generated
+      format: alnum-32
+  - name: DB_CLIENT
+    source:
+      kind: fixed
+      value: pg
+  - name: DB_SSL
+    source:
+      kind: fixed
+      value: "true"
+  - name: DB_SSL__REJECT_UNAUTHORIZED
+    source:
+      kind: fixed
+      value: "false"
+  - name: PUBLIC_URL
+    source:
+      kind: deploymentUrl
+  - name: PM2_EXEC_MODE
+    source:
+      kind: fixed
+      value: fork
+notes:
+  - Root Dockerfile builds from source (CMD node docker-entrypoint.cjs, which runs directus bootstrap first). Dockerfile.dhi is the hardened variant and is not used.
+  - KEY, SECRET, ADMIN_EMAIL and ADMIN_PASSWORD are the vendor inputs in deploy-config.yaml repo-021. The bootstrap step creates the admin user from ADMIN_EMAIL and ADMIN_PASSWORD (docker-entrypoint.cjs).
+  - PUBLIC_URL is not given. Deployz derives it when the app requires it.
+  - "Vendor inputs DB_CLIENT, DB_SSL, DB_SSL__REJECT_UNAUTHORIZED, PUBLIC_URL, PM2_EXEC_MODE: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."

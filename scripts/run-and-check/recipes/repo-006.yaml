@@ -1,0 +1,30 @@
+id: repo-006
+set: tuning
+source:
+  kind: git
+  repository: documenso/documenso
+  commit: 3ec877a68bc423373220f9ee2fda3d93ba368680
+build:
+  dockerfile: docker/Dockerfile
+  context: .
+vendorInputs:
+  - name: NEXTAUTH_SECRET
+    source:
+      kind: generated
+      format: hex64
+  - name: NEXT_PRIVATE_ENCRYPTION_KEY
+    source:
+      kind: generated
+      format: hex64
+  - name: NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY
+    source:
+      kind: generated
+      format: hex64
+  - name: NEXT_PUBLIC_WEBAPP_URL
+    source:
+      kind: deploymentUrl
+notes:
+  - The root has no Dockerfile. docker/Dockerfile builds the apps/remix app from the repository root (docs/testing/repository-compatibility/benchmark.yaml repo-006). docker/start.sh runs prisma migrate deploy and then the server.
+  - NEXTAUTH_SECRET is required at runtime (packages/auth/server/lib/session/session-cookies.ts:14-19). The two encryption keys are marked REQUIRED, at least 32 characters (.env.example).
+  - NEXT_PUBLIC_WEBAPP_URL is in .env.example. Deployz does not derive it (the name does not match OWN_URL_NAME_REGEX), so the vendor gives the app URL (deploymentUrl). Not confirmed as a start condition. Reviewer to check.
+  - "Vendor inputs NEXT_PUBLIC_WEBAPP_URL: taken from docs/testing/repository-deployment/deploy-config.yaml (the values the vendor set on the real-AWS run; ${DEPLOYZ_APP_URL} becomes deploymentUrl)."

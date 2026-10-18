@@ -1,0 +1,1831 @@
+{
+  "id": "repo-071",
+  "commit": "da4898e7f5e2f2146cd2c24d3a7bd3124016cf82",
+  "analyser": "rules@b028a8bc",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "POSTGRES_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "GCS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "STORAGE_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "bundle exec rails ip_lookup:setup && bundle exec sidekiq -C config/sidekiq.yml"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "bundle exec rails ip_lookup:setup && bundle exec sidekiq -C config/sidekiq.yml",
+        "source": "Procfile"
+      },
+      {
+        "id": "sidekiq",
+        "command": "bundle exec sidekiq -C config/sidekiq.yml",
+        "source": "docker-compose.production.yaml sidekiq"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "ACTION_MAILBOX_SES_SNS_TOPIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ACTION_MAILBOX_SES_SNS_TOPIC"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTIVE_STORAGE_SERVICE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set a value that stores files outside the container",
+            ".env.example declares ACTIVE_STORAGE_SERVICE",
+            "read in config/environments/development.rb",
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ANDROID_BUNDLE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ANDROID_BUNDLE_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ANDROID_SHA256_CERT_FINGERPRINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ANDROID_SHA256_CERT_FINGERPRINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ASSET_CDN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ASSET_CDN_HOST",
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_ACCESS_KEY_ID",
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_REGION",
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_SECRET_ACCESS_KEY",
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AZURE_APP_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AZURE_APP_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_BLOB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CW_API_ONLY_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/routes.rb",
+            "read in config/initializers/cors.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POOL_REAPING_FREQUENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DD_TRACE_AGENT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DIRECT_UPLOADS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DIRECT_UPLOADS_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ELASTICSEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ELASTIC_APM_SECRET_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/elastic_apm.yml",
+            "read in config/application.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_ACCOUNT_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_ACCOUNT_SIGNUP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_API_CORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/cors.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_PUSH_RELAY_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_PUSH_RELAY_SERVER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_CONTACTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_CONVERSATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_LOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_RACK_ATTACK_WIDGET_TRANSCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SIDEKIQ_CLOUDWATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SIDEKIQ_DEQUEUE_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FB_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FB_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FB_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FB_APP_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "FB_VERIFY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FB_VERIFY_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORCE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FORCE_SSL",
+            "read in config/environments/production.rb",
+            "read in config/environments/staging.rb",
+            "read in config/initializers/session_store.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FRONTEND_URL",
+            "read in config/initializers/omniauth.rb",
+            "read in app/models/integrations/app.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_OAUTH_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_OAUTH_CALLBACK_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_OAUTH_CLIENT_ID",
+            "read in config/initializers/omniauth.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_OAUTH_CLIENT_SECRET",
+            "read in config/initializers/omniauth.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HEROKU_SLUG_COMMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/git_sha.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IG_VERIFY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares IG_VERIFY_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IOS_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IOS_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "JUDOSCALE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGRAGE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/lograge.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_LEVEL",
+            "read in config/environments/development.rb",
+            "read in config/environments/production.rb",
+            "read in config/environments/staging.rb",
+            "read in config/environments/test.rb",
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_SIZE",
+            "read in config/environments/development.rb",
+            "read in config/environments/production.rb",
+            "read in config/environments/staging.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILER_INBOUND_EMAIL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAILER_INBOUND_EMAIL_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILER_SENDER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAILER_SENDER_EMAIL",
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_INGRESS_SIGNING_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MAILGUN_INGRESS_SIGNING_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MANDRILL_INGRESS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MANDRILL_INGRESS_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEW_RELIC_AGENT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_APPLICATION_LOGGING_DECORATING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_APPLICATION_LOGGING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/newrelic.yml",
+            "read in config/application.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEW_RELIC_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/newrelic.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSEARCH_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSEARCH_AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSEARCH_AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSEARCH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/searchkick.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PIDFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_HOST",
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTGRES_PASSWORD",
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_STATEMENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_USERNAME",
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PWD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .circleci/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACK_ATTACK_ALLOWED_IPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACK_ATTACK_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RAILS_ENV",
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_INBOUND_EMAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RAILS_INBOUND_EMAIL_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RAILS_INBOUND_EMAIL_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RAILS_INBOUND_EMAIL_SERVICE",
+            "read in config/environments/production.rb",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_LOG_TO_STDOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RAILS_LOG_TO_STDOUT",
+            "read in config/environments/production.rb",
+            "read in config/environments/staging.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MAX_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RAILS_MAX_THREADS",
+            "read in config/database.yml",
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MIN_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_SERVE_STATIC_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_AGENT_CREATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_AGENT_DELETE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_CONTACT_SEARCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_CONVERSATIONS_META",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_CONVERSATION_DELETE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_CONVERSATION_TRANSCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_REPORTS_API_ACCOUNT_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_REPORTS_API_USER_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_REPORTS_DRILLDOWN_API_USER_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_WIDGET_CONTACTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_WIDGET_CONVERSATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_WIDGET_LOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_WIDGET_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_WIDGET_TRANSCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/rack_attack.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_ALFRED_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/01_redis.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REDIS_PASSWORD",
+            "read in config/cable.yml",
+            "read in lib/redis/config.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_SENTINELS",
+            "read in lib/redis/config.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_MASTER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_SENTINEL_MASTER_NAME",
+            "read in lib/redis/config.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lib/redis/config.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_URL",
+            "read in config/cable.yml",
+            "read in lib/redis/config.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_VELMA_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/01_redis.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares S3_BUCKET_NAME",
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/scout_apm.yml",
+            "read in config/application.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_MONITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout_apm.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout_apm.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY_BASE",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares SECRET_KEY_BASE",
+            "read in config/secrets.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_CLOUDWATCH_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_CLOUDWATCH_AWS_SECRET_ACCESS_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SIDEKIQ_CLOUDWATCH_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_CLOUDWATCH_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/sidekiq.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SLACK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SLACK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_SIGNING_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SLACK_SIGNING_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_ADDRESS",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_AUTHENTICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_AUTHENTICATION",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_ENABLE_STARTTLS_AUTO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_ENABLE_STARTTLS_AUTO",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_OPENSSL_VERIFY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_OPENSSL_VERIFY_MODE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PASSWORD",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_PORT",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_USERNAME",
+            "read in config/initializers/mailer.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_SECRET_KEY",
+            "read in config/initializers/stripe.rb",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITTER_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TWITTER_APP_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITTER_CONSUMER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TWITTER_CONSUMER_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITTER_CONSUMER_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TWITTER_CONSUMER_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITTER_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TWITTER_ENVIRONMENT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "VIPS_BLOCK_UNTRUSTED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VIPS_BLOCK_UNTRUSTED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WEB_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "openai",
+      "twilio"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ACTIVE_STORAGE_SERVICE, SIDEKIQ_CLOUDWATCH_AWS_SECRET_ACCESS_KEY. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3
+}
