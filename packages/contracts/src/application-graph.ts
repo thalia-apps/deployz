@@ -173,6 +173,8 @@ export const resourceSchema = z
     envBindings: z.array(manifestEnvBindingSchema),
     /** Optional engine/version hint for data services (e.g. 'postgres', 'mysql', 'valkey', 'standard'). */
     engine: z.string().nullable(),
+    /** Connection URL scheme for the app's driver (relational databases only); absent means the engine's standard scheme. */
+    urlScheme: z.enum(['mysql+pymysql']).optional(),
     /** Message-queue settings (kind `queue` only); absent means the planner defaults. */
     queue: z
       .object({

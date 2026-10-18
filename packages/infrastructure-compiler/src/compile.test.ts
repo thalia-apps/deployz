@@ -652,6 +652,18 @@ describe('mysql database (phase 4b)', () => {
     expect(compiled.resolvedGraph.resources.some((r) => r.cfnType.includes('DBParameterGroup'))).toBe(false);
   });
 
+  it('the URL secret uses the driver scheme the analysis resolved', () => {
+    const pymysqlIr: DeployzIR = {
+      ...mysqlIr,
+      resources: mysqlIr.resources.map((r) =>
+        r.componentId === 'primary-db' ? { ...r, configuration: { ...r.configuration, urlScheme: 'mysql+pymysql' } } : r,
+      ),
+    };
+    const urlSecret = compileDeployzInfrastructure({ ir: pymysqlIr, region: null }).resolvedGraph.resources.find((r) => r.logicalId === 'PrimaryDbUrlSecret')!;
+    const parts = (urlSecret.properties['SecretString'] as Record<string, unknown>)['Fn::Join']![1] as unknown[];
+    expect(parts[0]).toContain('mysql+pymysql://deployz_app:');
+  });
+
   it('app containers get the mysql env aliases and the RDS CA bundle', () => {
     const taskDef = byId.get('WebTaskDefinition')!;
     const app = (taskDef.properties['ContainerDefinitions'] as unknown[])[0] as {

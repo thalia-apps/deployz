@@ -89,6 +89,7 @@ export function buildCapabilityConfiguration(
       instanceType: profile.database.instanceClass,
       storageGb: profile.database.storageGb,
       maxStorageGb: profile.database.maxStorageGb,
+      ...(resource?.urlScheme !== undefined ? { urlScheme: resource.urlScheme } : {}),
     };
   }
   if (capabilityKey === CAPABILITY_KEYS.ELASTICACHE_VALKEY) {

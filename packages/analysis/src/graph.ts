@@ -344,6 +344,7 @@ function buildResources(manifest: DeploymentManifest): Resource[] {
       ownership: 'DEPLOYZ_MANAGED',
       quantity: 1,
       engine,
+      ...(manifest.database.urlScheme !== undefined ? { urlScheme: manifest.database.urlScheme } : {}),
       envBindings: manifest.database.envBindings ?? STANDARD_POSTGRES_BINDINGS,
       provenance: detectedProvenance([
         {
