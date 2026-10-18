@@ -117,8 +117,11 @@ frozen manifest.
   exist. A read in a test, `e2e`, `playwright`, `storybook`, `docs` or
   `examples` folder, and a read in a `client`, `frontend` or `ui` folder, is not
   required. A Ruby `ENV.fetch("X") { default }` has a default. A key that the
-  same file tests for presence is not required. A zod schema that the code
-  parses only inside a function is checked when its feature runs, not at boot.
+  same file tests for presence (also `typeof process.env.X`) is not required,
+  and `delete process.env.X` is not a read. A bare `ENV['X']` in a Rails
+  `config/storage.yml` service block is not required: Rails builds that
+  service only when the app selects it. A zod schema that the code parses
+  only inside a function is checked when its feature runs, not at boot.
 - **Weak reads.** A bare read (an argument, a stored value, a config-file
   lookup) only proves that the app reads the key. It does not make a key
   required when the key is a tuning value (a name with `LIMIT`, `MAX`, `SIZE`,

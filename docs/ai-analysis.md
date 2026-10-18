@@ -95,9 +95,11 @@ Repository (GitHub tree, bounded)
   `go.mod` with no Go source and a `package.json` with no dependencies are
   tooling manifests: they decide the runtime only when nothing else remains.
   A Node framework is reported only for a Node image. The port is the ENV
-  PORT or EXPOSE of the production stage, then the one application service
-  of the production Compose file that publishes a port, then a port literal
-  in runtime source. An
+  PORT or EXPOSE of the production stage, then a HEALTHCHECK of the
+  production stage that probes localhost on a port variable with a default
+  (`${LIVEBOOK_PORT-8080}`), then the one application service of the
+  production Compose file that publishes a port, then a port literal in
+  runtime source. An
   image with a front web server (nginx, caddy) publishes port 80. The health
   path, in order: the URL that the HEALTHCHECK of the production stage or a
   production Compose app service probes; a dedicated route that the app
@@ -112,18 +114,27 @@ Repository (GitHub tree, bounded)
   cases the detector reports no path and the vendor is asked. A Dockerfile
   that is a git symlink is read from its target file. A package.json worker
   script is not a worker when it is a dev or watch command, or when the
-  start command already runs the worker.
+  start command already runs the worker. A Procfile process is not a worker
+  when the runtime image is a known Node, Bun or Deno image that does not
+  have the runner the command starts with. Node 26 images have no Yarn
+  unless the image runs `corepack enable` or installs Yarn.
 - **Build and start checks:** when the selected Dockerfile copies a file or
   directory that the repository does not contain (a build output that a CI
   step makes before `docker build`), the gate blocks with
   `dockerfile-missing-sources`. The vendor adds a Dockerfile that builds the
   app from source, or selects another one. When the full repository path
   list proves there is no Dockerfile that builds a production image (none,
-  only development or template files, or a single Dockerfile that copies
-  sources the repository lacks), the repository is NOT_COMPATIBLE
-  (`no-buildable-dockerfile`) instead. A capped or partial file list, a
-  second candidate Dockerfile, a git submodule, `COPY --from=` and a
-  generated directory never reject. A single Dockerfile with a development
+  only development or template files, or a selected Dockerfile that copies
+  sources the repository lacks while every other Dockerfile that starts
+  something also copies a missing source), the repository is
+  NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A capped or partial
+  file list, a second candidate Dockerfile that starts something and copies
+  only repository content, a git submodule, `COPY --from=` and a generated
+  directory never reject. A Dockerfile that copies `.git`, or a RUN step
+  that reads git history (`git rev-parse`, `git describe`) with no `||`
+  fallback and no `git clone` or `git init` in the Dockerfile, gives the
+  blocking finding `build-context-git-metadata`: the source archive has no
+  `.git`. A single Dockerfile with a development
   name is development-only only when its content shows it (a dev server, no
   command, or no build step). A global `ARG` with no default that a `FROM`
   of the production stage lineage reads (`ARG BASE_IMAGE` with
@@ -169,7 +180,9 @@ Repository (GitHub tree, bounded)
   PostgreSQL driver in `go.mod` counts when runtime Go source imports it,
   when an engine selector the app reads defaults to SQLite or PostgreSQL,
   or when a runtime Go file was outside the bounded fetch (the import cannot
-  be ruled out). The
+  be ruled out). It does not count when runtime Go source declares an
+  in-memory store next to the PostgreSQL store (`TypeMemory = "memory"`):
+  the app runs without a database until its configuration selects one. The
   engine is MySQL only when a MySQL driver and one independent signal are
   present and PostgreSQL is not a runtime option. The independent signal
   is a `mysql://` or `mysql+pymysql://` URL, a `MYSQL_*` variable, a
