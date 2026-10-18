@@ -2597,6 +2597,19 @@ function slugProcessId(name: string): string {
   return slug.length > 0 ? slug : 'worker';
 }
 
+/**
+ * The selected Dockerfile's runtime image is a known JavaScript image without
+ * the runner the command starts with (outline's Procfile `yarn start` on
+ * `node:26-slim`): the process exits with 127 in that image.
+ */
+function runtimeImageLacksRunner(tree: FileTree, command: string): boolean {
+  const runner = command.split(/\s+/)[0] ?? '';
+  if (!JS_RUNNERS.has(runner)) return false;
+  const dockerfile = selectedDockerfile(tree);
+  const image = dockerfile ? runtimeImageOf(dockerfile.content) : null;
+  return image !== null && image.hasShell && image.tools.size > 0 && !image.tools.has(runner);
+}
+
 export function detectDeclaredWorkerCommands(tree: FileTree): DeclaredWorkerCommand[] {
   const declared: DeclaredWorkerCommand[] = [];
   const seen = new Set<string>();
@@ -2612,6 +2625,7 @@ export function detectDeclaredWorkerCommands(tree: FileTree): DeclaredWorkerComm
       const name = match[1]!;
       const command = match[2]!.trim();
       if (command.length === 0 || NON_PERSISTENT_PROCESS_NAME_REGEX.test(name) || isDevToolCommand(command)) continue;
+      if (runtimeImageLacksRunner(tree, command)) continue;
       push(slugProcessId(name), command, path);
     }
   }
@@ -5287,7 +5301,10 @@ function runtimeImageOf(content: string): RuntimeImage | null {
   const name = imageName(base);
   const tools = new Set<string>();
   if (/(?:^|\/)node$/.test(name) && !name.startsWith('chainguard/')) {
-    for (const tool of ['node', 'npm', 'npx', 'yarn']) tools.add(tool);
+    for (const tool of ['node', 'npm', 'npx']) tools.add(tool);
+    // The official Node images stopped shipping Yarn with Node 26.
+    const major = /:(\d+)/.exec(base.split('@')[0] ?? base)?.[1];
+    if (major === undefined || Number(major) < 26) tools.add('yarn');
   } else if (/(?:^|\/)bun$/.test(name)) {
     for (const tool of ['bun', 'bunx']) tools.add(tool);
   } else if (/(?:^|\/)deno$/.test(name)) {
@@ -5295,6 +5312,7 @@ function runtimeImageOf(content: string): RuntimeImage | null {
   }
   if (tools.has('npm')) {
     if (/\bcorepack\s+enable\b|\bnpm\s+(?:i|install)\s+(?:-g|--global)\b[^\n]*\bpnpm\b/.test(text)) tools.add('pnpm');
+    if (/\bcorepack\s+enable\b|\bnpm\s+(?:i|install)\s+(?:-g|--global)\b[^\n]*\byarn\b/.test(text)) tools.add('yarn');
     if (/\brm\b[^\n]*\/(?:npm|npx)\b/.test(text)) {
       tools.delete('npm');
       tools.delete('npx');

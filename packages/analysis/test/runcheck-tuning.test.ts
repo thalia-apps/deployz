@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FileTree } from '../src/analyser.js';
-import { detectEnvVarModel, detectGitCopyInDockerfile, detectPort } from '../src/detectors.js';
+import {
+  detectDeclaredWorkerCommands,
+  detectEnvVarModel,
+  detectGitCopyInDockerfile,
+  detectPort,
+  migrationRunnerVerdict,
+} from '../src/detectors.js';
 
 // Defects the Docker run-and-check test found in the tuning set: each claim
 // was CONTRADICTED by the running application.
@@ -106,5 +112,24 @@ describe('livebook (repo-050): the port the image checks itself on', () => {
   it('keeps the framework default without a HEALTHCHECK port variable', () => {
     expect(detectPort(tree(''))).toMatchObject({ value: '4000', portSource: 'framework-default' });
     expect(detectPort(tree('HEALTHCHECK CMD curl -f http://localhost:4000/health'))).toMatchObject({ portSource: 'framework-default' });
+  });
+});
+
+describe('outline (repo-016): Yarn is not in the Node 26 images', () => {
+  const tree = (runtime: string, extra = ''): FileTree => ({
+    'package.json': JSON.stringify({ name: 'outline', scripts: { start: 'node ./build/server/index.js' } }),
+    Procfile: 'web: yarn start --services=web\nworker: yarn start --services=worker\n',
+    Dockerfile: `FROM node:26.3.0 AS base\nRUN corepack enable && yarn install\nFROM ${runtime} AS runner\n${extra}COPY --from=base /opt/outline/build ./build\nCMD ["node", "build/server/index.js"]\n`,
+  });
+
+  it('drops a Procfile worker that starts with yarn on node:26-slim', () => {
+    expect(detectDeclaredWorkerCommands(tree('node:26.3.0-slim'))).toEqual([]);
+    expect(migrationRunnerVerdict(tree('node:26.3.0-slim'), 'yarn db:migrate')).toMatchObject({ runnable: false });
+  });
+
+  it('keeps the worker when the image has yarn', () => {
+    const worker = { id: 'worker', command: 'yarn start --services=worker', source: 'Procfile' };
+    expect(detectDeclaredWorkerCommands(tree('node:22-slim'))).toEqual([worker]);
+    expect(detectDeclaredWorkerCommands(tree('node:26.3.0-slim', 'RUN corepack enable\n'))).toEqual([worker]);
   });
 });
