@@ -4520,10 +4520,12 @@ export function detectEnvVarModel(
         if (content[match.index + match[0].length] === '*') continue;
         // A read in a comment (`* parseTimeout(process.env.X)`) is documentation.
         if (/^\s*(?:\*|\/\/)/.test(content.slice(content.lastIndexOf('\n', match.index) + 1, match.index))) continue;
-        // The same file tests the key for presence (`Boolean(process.env.X)`,
-        // `!!process.env.X`, `if (process.env.X)`, `process.env.X && …`), so it tolerates its absence.
+        // `delete process.env.X` removes the variable; it reads nothing.
+        if (/\bdelete\s+$/.test(content.slice(Math.max(0, match.index - 10), match.index))) continue;
+        // The same file tests the key for presence (`Boolean(process.env.X)`, `!!process.env.X`,
+        // `if (process.env.X)`, `process.env.X && …`, `typeof process.env.X`), so it tolerates its absence.
         const presenceTested = new RegExp(
-          `(?:Boolean\\s*\\(\\s*|!!\\s*|\\bif\\s*\\(\\s*)process\\.env\\.${key}\\b(?!\\s*[=!])|process\\.env\\.${key}\\s*(?:&&|\\?(?!\\?)|!==?\\s*(?:null|undefined)\\b)`,
+          `(?:Boolean\\s*\\(\\s*|!!\\s*|\\bif\\s*\\(\\s*)process\\.env\\.${key}\\b(?!\\s*[=!])|process\\.env\\.${key}\\s*(?:&&|\\?(?!\\?)|!==?\\s*(?:null|undefined)\\b)|\\btypeof\\s+process\\.env\\.${key}\\b`,
         ).test(content);
         if (assignedKeys.has(key) || presenceTested) {
           recordRead(key, false, path);
