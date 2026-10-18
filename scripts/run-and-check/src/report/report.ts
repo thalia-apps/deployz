@@ -22,11 +22,31 @@ type Readiness = NonNullable<RepositoryReport['readiness']>;
  * The full run's health, or null when there is no full run or when it failed
  * on a limit of the test (QEMU crashed the app, or it needs the internet).
  */
-export function fullRunHealth(fullRun: FullRun | null): boolean | null {
+export function fullRunHealth(fullRun: Pick<FullRun, 'webHealthy' | 'infrastructureFailures'> | null): boolean | null {
   if (fullRun === null) return null;
   if (fullRun.webHealthy) return true;
   const limited = fullRun.infrastructureFailures.some((note) => note.startsWith('emulation') || note.startsWith('needs internet'));
   return limited ? null : false;
+}
+
+const UNSTABLE_FULL_RUN = 'unstable full run: one full run is healthy and the other is not';
+
+/**
+ * The health of both full runs (the same rule as unstable observation facts):
+ * true or false only when both runs agree. `unstable` is true when one run is
+ * healthy and the other is not. A full run from before the repeat counts alone.
+ */
+export function fullRunsHealth(fullRun: FullRun | null): { healthy: boolean | null; unstable: boolean } {
+  const first = fullRunHealth(fullRun);
+  if (fullRun?.repeat === undefined) return { healthy: first, unstable: false };
+  const second = fullRunHealth(fullRun.repeat);
+  if (first === null || second === null) return { healthy: null, unstable: false };
+  return first === second ? { healthy: first, unstable: false } : { healthy: null, unstable: true };
+}
+
+function limitOf(fullRun: FullRun): string {
+  const limited = fullRunHealth(fullRun) === null ? fullRun : (fullRun.repeat ?? fullRun);
+  return limited.infrastructureFailures[0] ?? '';
 }
 
 /**
@@ -44,10 +64,11 @@ function decideReadiness(verdict: ClaimVerdict, state: Readiness, fullRun: FullR
       : { ...facts, verdict: 'CONTRADICTED', observed: 'not buildable', reason: 'the image does not build' };
   }
   if (fullRun === null) return verdict;
-  const healthy = fullRunHealth(fullRun);
-  const facts = { ...verdict, facts: [], arch: fullRun.arch, unstable: false };
+  const { healthy, unstable } = fullRunsHealth(fullRun);
+  const facts = { ...verdict, facts: [], arch: fullRun.arch, unstable };
+  if (unstable) return { ...facts, verdict: 'NOT_CHECKABLE', reason: UNSTABLE_FULL_RUN };
   if (healthy === null) {
-    return { ...facts, verdict: 'NOT_CHECKABLE', reason: `the full run hit a limit of the test: ${fullRun.infrastructureFailures[0] ?? ''}` };
+    return { ...facts, verdict: 'NOT_CHECKABLE', reason: `the full run hit a limit of the test: ${limitOf(fullRun)}` };
   }
   if (state === 'NEEDS_CONFIGURATION') {
     return { ...facts, verdict: 'NOT_CHECKABLE', reason: 'the full run supplies the recipe inputs, so it cannot show whether configuration was needed' };
@@ -91,7 +112,7 @@ function falseProblems(
   const find = (type: ClaimVerdict['claim']['type']) => verdicts.find((entry) => entry.claim.type === type);
   const findings = (id: string) => gate.findings.filter((finding) => finding.id === id);
 
-  const healthy = fullRun !== null ? fullRunHealth(fullRun) === true : run.webHealthy.status === 'observed' && run.webHealthy.value === true;
+  const healthy = fullRun !== null ? fullRunsHealth(fullRun).healthy === true : run.webHealthy.status === 'observed' && run.webHealthy.value === true;
   if (gate.state === 'NOT_COMPATIBLE' && healthy) {
     for (const finding of findings('unsupported')) problems.push(`NOT_COMPATIBLE but the application is healthy: ${shorten(finding.message)}`);
   }
@@ -136,7 +157,7 @@ export function repositoryReport(
   const readiness = analysis.gate?.state ?? null;
   const build = observation.runs[0]!.build;
   const unbuildable = build.value?.ok === false && build.value.failure === 'dockerfile' && build.arch !== 'arm64-native';
-  const fullHealth = fullRunHealth(fullRun);
+  const { healthy: fullHealth, unstable: unstableFullRun } = fullRunsHealth(fullRun);
   const decided = verdicts.map((entry) => {
     if (entry.claim.type === 'readiness' && readiness !== null) return decideReadiness(entry, readiness, fullRun, unbuildable);
     // The observation gives every app Valkey, so an app that uses it only when present looks like it needs it.
@@ -146,7 +167,11 @@ export function repositoryReport(
     }
     return entry;
   });
-  const failures = [...observation.runs.flatMap((run) => run.infrastructureFailures), ...(fullRun?.infrastructureFailures ?? [])];
+  const failures = [
+    ...observation.runs.flatMap((run) => run.infrastructureFailures),
+    ...(fullRun?.infrastructureFailures ?? []),
+    ...(fullRun?.repeat?.infrastructureFailures ?? []),
+  ];
 
   return {
     id: recipe.id,
@@ -159,6 +184,7 @@ export function repositoryReport(
     verdicts: decided,
     healthyWithAnalysedSettings: fullRun === null && unbuildable ? false : fullHealth,
     hiddenProblem: readiness === 'READY' && (fullHealth === false || (fullRun === null && unbuildable)),
+    unstableFullRun,
     falseProblems: falseProblems(analysis, decided, observation, fullRun),
     vendorQuestions: analysis.vendorQuestions,
     unstableFacts: observation.unstable,
@@ -197,6 +223,7 @@ export function summaryReport(
         repositories: inSet.length,
         healthyWithAnalysedSettings: inSet.filter((report) => report.healthyWithAnalysedSettings === true).length,
         hiddenProblems: inSet.filter((report) => report.hiddenProblem).map((report) => report.id),
+        unstableFullRuns: inSet.filter((report) => report.unstableFullRun).map((report) => report.id),
         falseProblems: inSet.flatMap((report) => report.falseProblems.map((problem) => ({ id: report.id, problem }))),
         contradictedByClaimType,
         contradictedByRuntime,
@@ -237,6 +264,7 @@ export function renderMarkdown(summary: SummaryReport, reports: readonly Reposit
       `- Repositories: ${set.repositories}`,
       `- Healthy with analysed settings: ${set.healthyWithAnalysedSettings} of ${set.repositories} (${percent}%)`,
       `- Hidden problems: ${set.hiddenProblems.length > 0 ? set.hiddenProblems.join(', ') : 'none'}`,
+      `- Unstable full runs: ${set.unstableFullRuns.length > 0 ? set.unstableFullRuns.join(', ') : 'none'}`,
       `- False problems: ${set.falseProblems.length}`,
       '',
       '### Repositories',
@@ -249,7 +277,13 @@ export function renderMarkdown(summary: SummaryReport, reports: readonly Reposit
             report.id,
             report.repository,
             report.readiness ?? 'failed',
-            report.healthyWithAnalysedSettings === null ? 'no full run' : report.healthyWithAnalysedSettings ? 'yes' : 'no',
+            report.unstableFullRun
+              ? 'unstable'
+              : report.healthyWithAnalysedSettings === null
+                ? 'no full run'
+                : report.healthyWithAnalysedSettings
+                  ? 'yes'
+                  : 'no',
             report.hiddenProblem ? 'yes' : 'no',
             report.falseProblems.length,
             report.verdicts.filter((entry) => entry.verdict === 'CONTRADICTED').length,

@@ -57,15 +57,21 @@ pnpm runcheck:fixtures [--no-observe]
    settings that the Analysis produced, and nothing more: the migration
    command first, then the web container with the image command, then each
    worker. Use it when the Analysis produces settings that the observations
-   do not cover, and for the release gate.
+   do not cover, and for the release gate. Each full run runs twice, each
+   time on a fresh service set. The application is healthy with the
+   analysed settings only when both runs are healthy, and not healthy only
+   when both runs are not healthy. When one run is healthy and the other is
+   not, the full run is `unstable`: the health is open and the report gives
+   the reason `unstable full run`.
 
 The report (`.runs/reports/<analyser>/summary.md`) gives, per repository
 set: the applications that are healthy with the analysed settings, **hidden
 problems** (the Analysis said READY and the application fails with the
-analysed settings), **false problems** (the Analysis asked for a fix or a
-vendor decision that the application did not need), CONTRADICTED claims per
-claim type and per runtime, NOT_CHECKABLE reasons, unstable facts and the
-vendor questions per repository. The tuning set and the holdout set are
+analysed settings in both full runs), **unstable full runs**, **false
+problems** (the Analysis asked for a fix or a vendor decision that the
+application did not need), CONTRADICTED claims per claim type and per
+runtime, NOT_CHECKABLE reasons, unstable facts and the vendor questions per
+repository. The tuning set and the holdout set are
 always reported apart.
 
 ### Production parity
@@ -151,7 +157,10 @@ changes timing, CPU and memory use. An x86_64 machine gives exact parity.
 A new Analysis implementation (a rules change, a prompt change or a model
 change) passes only when, compared with the baseline:
 
-1. Hidden problems are **0** in the tuning set and in the holdout set.
+1. Hidden problems are **0** in the tuning set and in the holdout set. An
+   unstable full run is reported, not counted as a hidden problem. It blocks
+   a release only when the repository is in the holdout set and the
+   Analysis said READY.
 2. CONTRADICTED claims are fewer than or equal to the baseline, for each
    claim type.
 3. False problems are fewer than the baseline.

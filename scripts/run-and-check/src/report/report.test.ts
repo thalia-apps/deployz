@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { checkClaims } from '../claims/check.js';
 import { extractClaims } from '../claims/extract.js';
 import { makeAnalysis, makeManifest, makeObservation, makeRun } from '../claims/test-support.js';
-import type { AnalysisResultFile, ClaimVerdict, FullRun, Observation, RepositoryReport } from '../contract.js';
-import { fullRunHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
+import { fullRunSchema, type AnalysisResultFile, type ClaimVerdict, type FullRun, type Observation, type RepositoryReport } from '../contract.js';
+import { fullRunHealth, fullRunsHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
 
 type Values = Parameters<typeof makeRun>[0];
 
@@ -389,6 +389,73 @@ describe('fullRunHealth', () => {
     expect(fullRunHealth({ ...base, webHealthy: false, infrastructureFailures: [] })).toBe(false);
     expect(fullRunHealth({ ...base, webHealthy: true, infrastructureFailures: ['needs internet at run time: x'] })).toBe(true);
     expect(fullRunHealth(null)).toBeNull();
+  });
+});
+
+describe('two full runs', () => {
+  const twice = (first: boolean, second: boolean, patch: Partial<FullRun> = {}) =>
+    fullRun({ webHealthy: first, repeat: fullRun({ webHealthy: second, ...patch }) });
+
+  it('is healthy only when both runs are healthy', () => {
+    expect(report(ready(), {}, twice(true, true))).toMatchObject({ healthyWithAnalysedSettings: true, hiddenProblem: false, unstableFullRun: false });
+  });
+
+  it('is a hidden problem only when both runs are not healthy', () => {
+    expect(report(ready(), {}, twice(false, false))).toMatchObject({ healthyWithAnalysedSettings: false, hiddenProblem: true, unstableFullRun: false });
+  });
+
+  it('is an unstable full run, not a hidden problem, when the runs differ', () => {
+    for (const [first, second] of [
+      [true, false],
+      [false, true],
+    ] as const) {
+      const result = report(ready(), {}, twice(first, second));
+      expect(result).toMatchObject({ healthyWithAnalysedSettings: null, hiddenProblem: false, unstableFullRun: true });
+      expect(verdictOf(result, 'readiness')).toMatchObject({ verdict: 'NOT_CHECKABLE', unstable: true, reason: expect.stringContaining('unstable full run') });
+    }
+  });
+
+  it('is not checkable, not unstable, when one run hit a limit of the test', () => {
+    const result = report(ready(), {}, twice(true, false, { infrastructureFailures: ['emulation: qemu-x86_64: QEMU internal SIGSEGV'] }));
+    expect(result).toMatchObject({ healthyWithAnalysedSettings: null, hiddenProblem: false, unstableFullRun: false });
+    expect(verdictOf(result, 'readiness')?.reason).toBe('the full run hit a limit of the test: emulation: qemu-x86_64: QEMU internal SIGSEGV');
+    expect(result.infrastructureFailures).toContain('emulation: qemu-x86_64: QEMU internal SIGSEGV');
+  });
+
+  it('reports no false problem for NOT_COMPATIBLE when only one run is healthy', () => {
+    const unsupported = { id: 'unsupported', category: 'compatibility', severity: 'error', message: 'Unsupported storage: named volumes.' } as const;
+    const notCompatible = makeAnalysis(makeManifest({ unsupported: [unsupported.message] }), { state: 'NOT_COMPATIBLE', findings: [unsupported] });
+    expect(report(notCompatible, {}, twice(true, false)).falseProblems).toEqual([]);
+  });
+
+  it('counts a full run from before the repeat alone', () => {
+    expect(fullRunsHealth(fullRun({ webHealthy: false }))).toEqual({ healthy: false, unstable: false });
+    expect(fullRunsHealth(null)).toEqual({ healthy: null, unstable: false });
+  });
+
+  it('lists unstable full runs in the summary and the Markdown', () => {
+    const reports = [
+      { ...report(ready(), {}, twice(true, false)), id: 'repo-201' },
+      { ...report(ready(), {}, twice(true, true)), id: 'repo-202' },
+    ];
+    const summary = summaryReport(reports, 'rules@abc1234', { generatedAt: 'now' });
+    expect(summary.sets[0]).toMatchObject({ unstableFullRuns: ['repo-201'], hiddenProblems: [] });
+    const text = renderMarkdown(summary, reports);
+    expect(text).toContain('- Unstable full runs: repo-201');
+    expect(text).toMatch(/\| repo-201 \| owner\/name \| READY \| unstable \|/);
+  });
+});
+
+describe('fullRunSchema', () => {
+  it('reads a stored single full run from before the repeat', () => {
+    const single = fullRun();
+    expect(fullRunSchema.parse(single)).toEqual(single);
+  });
+
+  it('reads two full runs and rejects a repeat inside the repeat', () => {
+    const two = fullRun({ repeat: fullRun({ webHealthy: false }) });
+    expect(fullRunSchema.parse(two)).toEqual(two);
+    expect(fullRunSchema.safeParse(fullRun({ repeat: { ...fullRun(), repeat: fullRun() } as FullRun['repeat'] })).success).toBe(false);
   });
 });
 
