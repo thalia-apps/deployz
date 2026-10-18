@@ -150,6 +150,27 @@ describe('artifact addressing', () => {
     );
   });
 
+  // A non-production control plane owns its own regional buckets. The
+  // argument is optional, so every caller that omits it keeps production's.
+  it('addresses a non-production prefix without moving the production bucket', () => {
+    const input = compilerArtifactPublishInput(
+      'eu-west-1',
+      'abc123',
+      '{"Resources":{}}',
+      'deployz-staging-templates',
+    );
+    expect(input.bucket).toBe('deployz-staging-templates-eu-west-1');
+    expect(compilerArtifactUrl('eu-west-1', 'abc123', 'deployz-staging-templates')).toBe(
+      'https://deployz-staging-templates-eu-west-1.s3.eu-west-1.amazonaws.com/compiler-v2/abc123.json',
+    );
+    expect(compilerArtifactPublishInput('eu-west-1', 'abc123', '{}').bucket).toBe(
+      'deployz-templates-eu-west-1',
+    );
+    expect(compilerArtifactUrl('eu-west-1', 'abc123')).toBe(
+      'https://deployz-templates-eu-west-1.s3.eu-west-1.amazonaws.com/compiler-v2/abc123.json',
+    );
+  });
+
   it('the default publisher is a no-op', async () => {
     await expect(NO_OP_TEMPLATE_PUBLISHER.publishTemplate({
       region: 'us-east-1',

@@ -1,0 +1,99 @@
+# Builds one third-party repository image on a real x86_64 runner for the
+# Docker run-and-check test (scripts/run-and-check). It starts only by hand
+# (workflow_dispatch), uses no repository secrets, and uploads the image as a
+# `docker save` artifact that the harness loads locally.
+name: runcheck-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: GitHub repository, owner/name
+        required: true
+        type: string
+      commit:
+        description: Full commit SHA (40 hex characters)
+        required: true
+        type: string
+      dockerfile:
+        description: Dockerfile path relative to the build context
+        required: false
+        default: Dockerfile
+        type: string
+      context:
+        description: Build context subfolder of the repository (empty = root)
+        required: false
+        default: ''
+        type: string
+      build_args:
+        description: Build arguments, KEY=VALUE separated by spaces
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # pipefail: a failed `docker build | tee` or `docker save | gzip` must fail the step.
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Validate inputs
+        env:
+          REPO: ${{ inputs.repo }}
+          COMMIT: ${{ inputs.commit }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          CONTEXT: ${{ inputs.context }}
+          BUILD_ARGS: ${{ inputs.build_args }}
+        run: |
+          [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "invalid repo"; exit 1; }
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid commit"; exit 1; }
+          path_re='^[A-Za-z0-9_./-]*$'
+          [[ "$DOCKERFILE" =~ $path_re && "$DOCKERFILE" != *..* && "$DOCKERFILE" != /* ]] || { echo "invalid dockerfile"; exit 1; }
+          [[ "$CONTEXT" =~ $path_re && "$CONTEXT" != *..* && "$CONTEXT" != /* ]] || { echo "invalid context"; exit 1; }
+          for arg in $BUILD_ARGS; do
+            [[ "$arg" =~ ^[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_.:/@+-]*$ ]] || { echo "invalid build arg"; exit 1; }
+          done
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Build image
+        env:
+          REPO: ${{ inputs.repo }}
+          COMMIT: ${{ inputs.commit }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          CONTEXT: ${{ inputs.context }}
+          BUILD_ARGS: ${{ inputs.build_args }}
+        run: |
+          url="https://github.com/${REPO}.git#${COMMIT}"
+          [[ -n "$CONTEXT" ]] && url="${url}:${CONTEXT}"
+          args=()
+          for arg in $BUILD_ARGS; do args+=(--build-arg "$arg"); done
+          start=$(date +%s)
+          docker build --progress=plain --platform linux/amd64 -f "$DOCKERFILE" "${args[@]}" \
+            --label deployz.runcheck=1 -t "runcheck/image:${COMMIT}" "$url" 2>&1 | tee build.log
+          echo "build seconds: $(( $(date +%s) - start ))"
+
+      - name: Save image
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          mkdir -p out
+          docker save "runcheck/image:${COMMIT}" | gzip -1 > out/image.tar.gz
+          cp build.log out/build.log
+          ls -l out
+
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: runcheck-image-${{ inputs.commit }}
+          path: out/
+          retention-days: 7
+          compression-level: 0

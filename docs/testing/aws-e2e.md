@@ -644,7 +644,13 @@ customer deployment's AWS resources and DB rows while preserving
 control-plane data, and `verify` re-scans AWS and the DB to confirm nothing
 customer-owned survived. Use it when an id-keyed `cleanup --run-id` cannot
 reach a resource, or to reset the whole test account between campaigns —
-never as a substitute for a run's own cleanup.
+never as a substitute for a run's own cleanup. The tool holds a protected
+control-plane inventory that covers both stages: the stacks `Deployz` and
+`DeployzStaging`, their build-source and template buckets, the regional
+template buckets, the `cdk-*` bootstrap buckets, and the repositories
+`deployz-images` and `deployz-staging-images`. The inventory repeats the
+names in `packages/cdk/src/stage.ts`, because the script cannot import the
+CDK package.
 
 `packages/cdk/scripts/audit-deployment.mjs`
 (`pnpm --filter @deployz/cdk audit:deployment --installation <uuid>`) is a

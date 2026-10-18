@@ -10,6 +10,7 @@
 #     --build-arg NEXT_PUBLIC_APP_HOST=app.deployz.dev \
 #     --build-arg NEXT_PUBLIC_MARKETING_HOST=deployz.dev \
 #     --build-arg NEXT_PUBLIC_SITE_URL=https://deployz.dev \
+#     --build-arg NEXT_PUBLIC_COOKIE_PREFIX= \
 #     -t deployz-web .
 
 FROM --platform=linux/amd64 node:22-alpine AS base
@@ -65,10 +66,12 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_HOST
 ARG NEXT_PUBLIC_MARKETING_HOST
 ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_COOKIE_PREFIX
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_APP_HOST=$NEXT_PUBLIC_APP_HOST \
     NEXT_PUBLIC_MARKETING_HOST=$NEXT_PUBLIC_MARKETING_HOST \
-    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_COOKIE_PREFIX=$NEXT_PUBLIC_COOKIE_PREFIX
 
 # NEXT_OUTPUT gates `output: 'standalone'` in next.config.ts — see the comment
 # there: it is opt-in because the standalone tree symlinks into the pnpm store,

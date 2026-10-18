@@ -38,7 +38,17 @@ import { CONFIG_SECRET_KMS_CONTEXT_KEYS, CONFIG_SECRET_KMS_PURPOSE } from '@depl
 
 import { ApiLambda } from './api-lambda.js';
 import { BuildPipeline } from './pipeline/build-pipeline.js';
+import { stageNames, type DeployzStage } from './stage.js';
 import { WorkerLambda } from './worker-lambda.js';
+
+export interface DeployzStackProps extends StackProps {
+  /**
+   * Which control plane this stack is. Selects the account-unique names
+   * (KMS alias, ECR repository, template-bucket prefix) so a staging stack
+   * can stand beside production in one account. Default: production.
+   */
+  readonly stage?: DeployzStage;
+}
 
 /**
  * Deployz control-plane stack.
@@ -59,8 +69,10 @@ import { WorkerLambda } from './worker-lambda.js';
  * passed to the Lambda via the `environment` prop.
  */
 export class DeployzStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props?: DeployzStackProps) {
     super(scope, id, { ...props, env: { region: 'us-east-1' } });
+
+    const names = stageNames(props?.stage ?? 'production');
 
     Tags.of(this).add('deployz:managed', 'true');
     Tags.of(this).add('deployz:scope', 'control-plane');
@@ -143,6 +155,7 @@ export class DeployzStack extends Stack {
       // exactOptionalPropertyTypes: the concrete Bucket's optional members are
       // narrower than IBucket's, so the interface type has to be asserted.
       sourceBucket: sourceBucket as IBucket,
+      repositoryName: names.ecrRepositoryName,
       // Documenso's monorepo image build exceeds the default SMALL (3 GB)
       // builder and could brush the default 30-minute timeout.
       computeType: ComputeType.LARGE,
@@ -177,7 +190,7 @@ export class DeployzStack extends Stack {
     // Keep the construct id stable — a new id replaces the key.
     const configSecretsKey = new Key(this, 'ConfigSecretsKey', {
       description: 'Deployz control-plane config secrets (vendor secrets and pending-secret vault).',
-      alias: 'alias/deployz-config-secrets',
+      alias: names.kmsAlias,
       enableKeyRotation: true,
       removalPolicy: RemovalPolicy.RETAIN,
     });
@@ -225,6 +238,14 @@ export class DeployzStack extends Stack {
         // artifacts are not confirmed published (fail closed). The publisher
         // prints this value after verifying every region.
         ...(deployableAwsRegions ? { DEPLOYABLE_AWS_REGIONS: deployableAwsRegions } : {}),
+        // Prefix of the regional buckets the API publishes each deployment's
+        // compiled template into. Set only outside production: `env.ts`
+        // defaults the key to `deployz-templates`, so leaving it absent keeps
+        // the synthesized production template byte-identical — which is the
+        // proof that the stage work cannot change production.
+        ...(props?.stage && props.stage !== 'production'
+          ? { DEPLOYZ_TEMPLATE_BUCKET_PREFIX: names.templateBucketPrefix }
+          : {}),
         // Phase 1.1 ECR pull-grant lifecycle: the repository whose policy the
         // API mutates when an installation is granted/revoked.
         DEPLOYZ_ECR_REPOSITORY_NAME: buildPipeline.repository.repositoryName,
@@ -278,7 +299,7 @@ export class DeployzStack extends Stack {
     apiLambda.function.addToRolePolicy(
       new PolicyStatement({
         actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::deployz-templates-*/compiler-v2/*'],
+        resources: [`arn:aws:s3:::${names.templateBucketPrefix}-*/compiler-v2/*`],
       }),
     );
 
@@ -460,6 +481,7 @@ function collectEnvVars(): Record<string, string> {
     'WEB_URL',
     'MARKETING_URL',
     'COOKIE_DOMAIN',
+    'COOKIE_PREFIX',
     'AI_GATEWAY_BASE_URL',
     'AI_MODEL',
     'AI_PROVIDER_API_KEY',

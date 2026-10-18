@@ -2227,6 +2227,7 @@ export async function buildServer({
       return {
         enabled: env.defaultHttpsFixtureMode,
         apex: DEFAULT_HTTPS_FIXTURE_APEX,
+        prefix: env.defaultHostnamePrefix,
         dns:
           fixtureDefaultDnsProvider?.client ??
           createDnsClientFromNameWriter(noopDnsRecordClient, {
@@ -2247,7 +2248,8 @@ export async function buildServer({
       // Cloudflare is authoritative for the deployz.dev apex.
       return {
         enabled: true,
-        apex,
+        apex: cloudflareZoneName,
+        prefix: env.defaultHostnamePrefix,
         dns: createCloudflareDnsClient({
           token: cloudflareToken,
           zoneId: cloudflareZoneId,
@@ -2263,6 +2265,7 @@ export async function buildServer({
     return {
       enabled: false,
       apex,
+      prefix: env.defaultHostnamePrefix,
       dns: createDnsClientFromNameWriter(noopDnsRecordClient, {
         zoneName: apex,
         prefix: env.defaultHostnamePrefix,
@@ -9604,7 +9607,8 @@ export async function buildServer({
     // stamps delivery on every successful decrypt. A decrypt failure logs
     // ids only, omits the value, and keeps the row so the next relay cycle
     // can retry — plaintext never appears in this response's envelope.
-    const entries = await buildRelayConfigEntries(db, deployment, configStore, {
+    const defaultHostname = { prefix: defaultHttpsDeps.prefix, zone: defaultHttpsDeps.apex };
+    const entries = await buildRelayConfigEntries(db, { ...deployment, defaultHostname }, configStore, {
       async readBound(deploymentId, key) {
         const rows = await pendingSecrets.listBoundForDeployment(deploymentId);
         const row = rows.find((candidate) => candidate.key === key);

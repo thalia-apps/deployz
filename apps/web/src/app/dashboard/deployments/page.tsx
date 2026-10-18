@@ -187,7 +187,7 @@ export default function DeploymentsPage() {
             would show the same button twice on one screen. */}
         {state.status === 'empty' ? null : (
           <Button asChild size="sm">
-            <Link href="/dashboard/deployments/new">Invite customer</Link>
+            <Link href="/dashboard/deployments/new">Create deployment</Link>
           </Button>
         )}
       </div>
@@ -327,7 +327,7 @@ function ErrorState({
   );
 }
 
-// One action: a deployment starts with an invitation.
+// One action: create the first deployment.
 function EmptyState() {
   return (
     <section
@@ -338,10 +338,10 @@ function EmptyState() {
         No customer deployments yet
       </h2>
       <p className="max-w-md text-sm text-muted-foreground">
-        Invite a customer to deploy into their AWS account.
+        Create a deployment to install your application in a customer&apos;s AWS account.
       </p>
       <Button asChild className="mt-2">
-        <Link href="/dashboard/deployments/new">Invite customer</Link>
+        <Link href="/dashboard/deployments/new">Create deployment</Link>
       </Button>
     </section>
   );

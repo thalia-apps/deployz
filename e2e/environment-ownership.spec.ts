@@ -174,7 +174,7 @@ test('a key moved from vendor to customer reaches each customer only from that c
   });
 
   // The customer view never presents the old vendor value as this customer's default.
-  await page.goto(`/dashboard/applications/${application.id}/config?customer=${views[0]!.customerId}`);
+  await page.goto(`/dashboard/applications/${application.id}/config?customer=${views[0]!.customerId}#environment-variables`);
   const customerOverrides = page.getByTestId('config-customer-overrides');
   await expect(customerOverrides).toContainText('API_BASE_URL');
   await expect(customerOverrides).not.toContainText(vendorValue);

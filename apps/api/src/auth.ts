@@ -20,9 +20,10 @@ export function createAuth(
   // Injectable Paddle migration Phase 7 fixture-mode override (mirrors
   // ServerDeps.billingFixtureMode's `?? env.x` pattern) — tests can enable it
   // without mutating module-level env.
-  opts: { billingFixtureMode?: boolean } = {},
+  opts: { billingFixtureMode?: boolean; cookiePrefix?: string } = {},
 ) {
   const billingFixtureMode = opts.billingFixtureMode ?? env.billingFixtureMode;
+  const cookiePrefix = opts.cookiePrefix ?? env.cookiePrefix;
   return betterAuth({
     appName: 'Deployz',
     baseURL: env.apiUrl,
@@ -38,11 +39,19 @@ export function createAuth(
     // so Lax cookies are still sent, and Lax avoids the third-party-cookie
     // blocking that None invites in Safari and Firefox. Absent COOKIE_DOMAIN
     // (local dev) this whole block is omitted and cookies stay host-scoped.
-    ...(env.cookieDomain
+    // COOKIE_PREFIX renames the session cookie, so staging and production can
+    // share the cookie domain without one reading or overwriting the other's
+    // session.
+    ...(env.cookieDomain || cookiePrefix
       ? {
           advanced: {
-            crossSubDomainCookies: { enabled: true, domain: env.cookieDomain },
-            defaultCookieAttributes: { secure: true, sameSite: 'lax' as const },
+            ...(env.cookieDomain
+              ? {
+                  crossSubDomainCookies: { enabled: true, domain: env.cookieDomain },
+                  defaultCookieAttributes: { secure: true, sameSite: 'lax' as const },
+                }
+              : {}),
+            ...(cookiePrefix ? { cookiePrefix } : {}),
           },
         }
       : {}),

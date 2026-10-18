@@ -10,11 +10,12 @@ import {
 } from '@deployz/contracts';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import { ListSearchInput } from '@/components/list-controls';
 import { SecretInput } from '@/components/secret-input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,6 +61,20 @@ const GROUP_LABEL: Record<EnvGroupId, string> = {
 };
 
 const GROUP_ORDER: readonly EnvGroupId[] = ['new', 'attention', 'vendor', 'customer', 'deployz', 'optional'];
+
+type EnvFilter = 'inputs' | 'attention' | 'managed' | 'optional' | 'all';
+
+/** The list opens on what the vendor and customers enter. New values always show. */
+const FILTERS: readonly { value: EnvFilter; label: string; groups: readonly EnvGroupId[] }[] = [
+  { value: 'inputs', label: 'Vendor & customer', groups: ['new', 'attention', 'vendor', 'customer'] },
+  { value: 'attention', label: 'Needs input', groups: ['new', 'attention'] },
+  { value: 'managed', label: 'Managed', groups: ['new', 'deployz'] },
+  { value: 'optional', label: 'Optional', groups: ['new', 'optional'] },
+  { value: 'all', label: 'All', groups: GROUP_ORDER },
+];
+
+/** Rows rendered at once; "Show more" adds the next page. */
+const PAGE_SIZE = 50;
 
 /** The managed values a variable can be mapped to. Only those of a provisioned resource show. */
 const MANAGED_VALUES: readonly { label: string; binding: EnvironmentBinding }[] = [
@@ -220,6 +235,9 @@ function EnvironmentVariablesTable({
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'partial' | 'error'>('idle');
   const [problems, setProblems] = useState<string[]>([]);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<EnvFilter>('inputs');
+  const [query, setQuery] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   const variables = useMemo(() => response?.variables ?? [], [response]);
   const savedSettings = useMemo(() => response?.settings ?? [], [response]);
@@ -265,6 +283,34 @@ function EnvironmentVariablesTable({
     for (const entry of customEntries) byGroup.get('vendor')!.push({ type: 'custom', key: entry.key, entry });
     return GROUP_ORDER.map((id) => ({ id, items: byGroup.get(id)! })).filter((group) => group.items.length > 0);
   }, [newEntries, savedEvaluation.rows, rowsByKey, customEntries]);
+
+  // Filter and search only change which rows render: edits on hidden rows stay
+  // in the drafts and are saved with the rest.
+  const view = useMemo(() => {
+    const groupIds = FILTERS.find((candidate) => candidate.value === filter)!.groups;
+    const needle = query.trim().toLowerCase();
+    let remaining = limit;
+    let matched = 0;
+    const visible = groups
+      .filter((group) => groupIds.includes(group.id))
+      .map((group) => {
+        const items = group.items.filter(
+          (item) => item.type === 'draft' || needle.length === 0 || item.key.toLowerCase().includes(needle),
+        );
+        matched += items.length;
+        const shown = items.slice(0, Math.max(remaining, 0));
+        remaining -= shown.length;
+        return { id: group.id, items: shown, total: items.length };
+      })
+      .filter((group) => group.items.length > 0);
+    return { groups: visible, matched, hidden: Math.max(matched - limit, 0) };
+  }, [groups, filter, query, limit]);
+  const attentionTotal = groups.find((group) => group.id === 'attention')?.items.length ?? 0;
+
+  function changeFilter(next: EnvFilter): void {
+    setFilter(next);
+    setLimit(PAGE_SIZE);
+  }
 
   const dirty = drafts.size > 0 || valueDrafts.size > 0 || newEntries.length > 0 || removed.size > 0;
 
@@ -478,7 +524,9 @@ function EnvironmentVariablesTable({
       <CardHeader>
         <CardTitle>Environment variables</CardTitle>
         {summary ? <CardDescription data-testid="environment-variables-summary">{summary}</CardDescription> : null}
-        <CardAction className="flex flex-wrap gap-2">
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2">
           {undecidedKeys.length > 0 ? (
             <Button
               type="button"
@@ -518,9 +566,39 @@ function EnvironmentVariablesTable({
               Add managed value
             </Button>
           ) : null}
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+        </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div role="group" aria-label="Filter variables" className="flex flex-wrap gap-1" data-testid="environment-variables-filters">
+            {FILTERS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={filter === option.value ? 'secondary' : 'ghost'}
+                aria-pressed={filter === option.value}
+                data-testid={`environment-variables-filter-${option.value}`}
+                onClick={() => changeFilter(option.value)}
+              >
+                {option.label}
+                {option.value === 'attention' && attentionTotal > 0 ? (
+                  <Badge variant="warning" className="ml-0.5 tabular-nums">
+                    {attentionTotal}
+                  </Badge>
+                ) : null}
+              </Button>
+            ))}
+          </div>
+          <ListSearchInput
+            value={query}
+            onCommit={(next) => {
+              setQuery(next);
+              setLimit(PAGE_SIZE);
+            }}
+            placeholder="Search variables"
+            label="Search variables"
+          />
+        </div>
+
         {loadState === 'error' ? (
           <Alert data-testid="environment-variables-error">
             <AlertDescription>
@@ -609,12 +687,16 @@ function EnvironmentVariablesTable({
             </TableRow>
           </TableHeader>
           <TableBody aria-busy={loadState === 'loading' || undefined}>
-            {groups.map((group) => (
+            {view.groups.map((group) => (
               <Fragment key={group.id}>
-                <TableRow className="bg-muted/50 hover:bg-muted/50" data-testid={`environment-variables-group-${group.id}`}>
-                  <TableHead colSpan={COLUMN_COUNT} scope="colgroup" className="text-foreground">
+                <TableRow className="hover:bg-transparent" data-testid={`environment-variables-group-${group.id}`}>
+                  <TableHead
+                    colSpan={COLUMN_COUNT}
+                    scope="colgroup"
+                    className="h-8 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                  >
                     {GROUP_LABEL[group.id]}
-                    {group.id === 'new' ? null : ` · ${group.items.length}`}
+                    {group.id === 'new' ? null : ` · ${group.total}`}
                   </TableHead>
                 </TableRow>
                 {group.items.map((item) =>
@@ -673,8 +755,37 @@ function EnvironmentVariablesTable({
                 </TableCell>
               </TableRow>
             ) : null}
+            {loadState !== 'loading' && groups.length > 0 && view.matched === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={COLUMN_COUNT} className="text-muted-foreground" data-testid="environment-variables-no-matches">
+                  No variables match.{' '}
+                  {filter !== 'all' ? (
+                    <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => changeFilter('all')}>
+                      Show all variables
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
+
+        {view.hidden > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              Showing {view.matched - view.hidden} of {view.matched}.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="environment-variables-show-more"
+              onClick={() => setLimit((current) => current + PAGE_SIZE)}
+            >
+              Show {Math.min(view.hidden, PAGE_SIZE)} more
+            </Button>
+          </div>
+        ) : null}
 
         {draftError ? (
           <p role="alert" className="text-sm text-destructive">
@@ -805,7 +916,7 @@ function DetectedRow({
         <TableCell className="align-top">
           {valueText ? (
             <span
-              className={cn('break-all', vendorEntry?.needsReentry && valueDraft === undefined && TONE_TEXT.attention)}
+              className={cn('break-words', vendorEntry?.needsReentry && valueDraft === undefined && TONE_TEXT.attention)}
               data-testid={`environment-variable-value-${row.key}`}
             >
               {valueText}

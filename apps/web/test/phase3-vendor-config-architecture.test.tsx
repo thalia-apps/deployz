@@ -149,9 +149,19 @@ vi.mock('../src/app/dashboard/applications/[id]/application-page-context', () =>
   }),
 }));
 
-const { DeploymentConfiguration } = await import(
+const { ResourcesPanel, SizePresetsPanel } = await import(
   '../src/app/dashboard/applications/[id]/config/deployment-configuration'
 );
+
+/** Both analysis-driven panels, as the Configuration tab mounts them. */
+function DeploymentConfiguration() {
+  return (
+    <>
+      <ResourcesPanel />
+      <SizePresetsPanel />
+    </>
+  );
+}
 
 function byTestId(id: string): Element | null {
   return document.body.querySelector(`[data-testid="${id}"]`);
@@ -252,14 +262,14 @@ describe('Services & resources table', () => {
     expect(mocks.generateFixInstructions).toHaveBeenCalled();
   });
 
-  it('lists each question once in the attention summary, linked to its row', async () => {
+  it('counts each question once in the attention line and shows it on its row', async () => {
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    expect(byTestId('attention-item-question-0')?.querySelector('a')?.getAttribute('href')).toBe('#config-row-question-0');
-    expect(byTestId('attention-item-question-1')?.querySelector('a')?.getAttribute('href')).toBe('#config-row-port');
-    expect(document.getElementById('config-row-port')).not.toBeNull();
+    expect(byTestId('attention-summary-resources')?.textContent).toContain('2 items need attention');
+    expect(document.getElementById('config-row-question-0')?.textContent).toContain('Needs input');
+    expect(document.getElementById('config-row-port')?.textContent).toContain('Blocking');
   });
 
   it('shows no detected components when no architecture data exists', async () => {
@@ -273,7 +283,7 @@ describe('Services & resources table', () => {
     expect(byTestId('inventory-row-question-0')).toBeNull();
   });
 
-  it('shows the empty table and no size card when analysis is incomplete and there is no plan', async () => {
+  it('shows the empty table and no size presets when analysis is incomplete and there is no plan', async () => {
     currentApplication = applicationFixture({ analysisStatus: 'PENDING' });
     currentReadiness = readinessFixture({
       analysisStatus: 'PENDING',
@@ -289,5 +299,6 @@ describe('Services & resources table', () => {
 
     expect(byTestId('readiness-empty')?.textContent).toContain('Analyse the application');
     expect(byTestId('deployment-size')).toBeNull();
+    expect(byTestId('deployment-size-empty')?.textContent).toBe('Size presets show after a successful analysis.');
   });
 });

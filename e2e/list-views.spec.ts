@@ -232,7 +232,8 @@ test.describe('Deployments list', () => {
     await expect(page.getByRole('button', { name: 'Clear filters' })).toHaveCount(0);
 
     const cases: [string, string, string[]][] = [
-      ['Live', 'healthy', ['Acme', 'The Extraordinarily Long-Named Customer Holdings International Limited']],
+      // Live keeps the live deployment with an update available (Acme · Sheets).
+      ['Live', 'healthy', ['Acme', 'Acme', 'The Extraordinarily Long-Named Customer Holdings International Limited']],
       ['In progress', 'in-progress', ['Initech']],
       ['Failed or needs attention', 'attention', ['Stark', 'Future Co', 'Globex']],
       ['Waiting for customer', 'waiting', ['Hooli']],
@@ -404,7 +405,7 @@ test.describe('Deployments list', () => {
     await mockApi(page, []);
     await page.goto('/dashboard/deployments');
     await expect(page.getByRole('heading', { name: 'No customer deployments yet' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Invite customer' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create deployment' })).toBeVisible();
     await expect(page.getByText('No deployments match these filters.')).toHaveCount(0);
   });
 });

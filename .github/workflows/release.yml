@@ -1,0 +1,217 @@
+# One entry point for a release. A merge to main is proven on staging before
+# it reaches customers, and a human approves the step between the two.
+#
+# This workflow decides what to release and in which order. The work itself
+# stays in .github/workflows/deploy-api.yml and .github/workflows/deploy-web.yml,
+# which are reusable workflows here and may also be dispatched on their own to
+# release or roll back one service.
+#
+# The approval comes from the required reviewers on the `production` GitHub
+# Environment, which both called deploy jobs declare. Both production jobs
+# therefore wait together, and one approval releases both services.
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The one stage to release. An automatic run after CI releases both stages.
+        type: choice
+        default: staging
+        options: [staging, production]
+      sha:
+        description: The commit to release. Empty releases the tip of the chosen ref.
+        type: string
+        required: false
+        default: ''
+
+# There is no workflow-level concurrency group on purpose. A production job
+# that waits for an approval must not hold a lock that stops the next staging
+# deploy. The lock lives in the called deploy job, one group for each
+# environment and service.
+
+jobs:
+  plan:
+    name: Decide what to release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      sha: ${{ steps.decide.outputs.sha }}
+      staging: ${{ steps.decide.outputs.staging }}
+      production: ${{ steps.decide.outputs.production }}
+    steps:
+      # No checkout: each deploy workflow keeps its own check that the commit
+      # is still the tip of main.
+      - name: Decide
+        id: decide
+        env:
+          DISPATCH_SHA: ${{ inputs.sha }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          FALLBACK_SHA: ${{ github.sha }}
+          TARGET: ${{ inputs.environment }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          sha="${DISPATCH_SHA:-}"
+          if [ -z "$sha" ]; then sha="${RUN_SHA:-}"; fi
+          if [ -z "$sha" ]; then sha="${FALLBACK_SHA:-}"; fi
+          if [ -z "$sha" ]; then
+            echo "::error::There is no commit to release: the dispatch input, the CI run and the workflow ref are all empty."
+            exit 1
+          fi
+          # An automatic run releases both stages. A dispatch releases the one
+          # stage the operator chose, so production can be released again
+          # without a second staging deploy.
+          staging=true
+          production=true
+          if [ "$MANUAL" = "true" ]; then
+            if [ "$TARGET" = "production" ]; then
+              staging=false
+            else
+              production=false
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "staging=$staging" >> "$GITHUB_OUTPUT"
+          echo "production=$production" >> "$GITHUB_OUTPUT"
+          echo "Releasing $sha: staging=$staging, production=$production."
+
+  # secrets: inherit on every calling job below. A calling job may not declare
+  # environment:, so an explicit secrets mapping would resolve every value at
+  # the repository level and pass production's secrets into the staging
+  # deploy. The called job declares the Environment, and inherit is what lets
+  # its own Environment secrets resolve.
+  #
+  # permissions: is a ceiling, never an elevation. Without these two keys the
+  # called workflow gets the repository default token, and both the OIDC step
+  # and the tag push fail.
+  staging-api:
+    name: Staging API
+    needs: plan
+    if: needs.plan.outputs.staging == 'true'
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      environment: staging
+      sha: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+
+  staging-web:
+    name: Staging web
+    needs: plan
+    if: needs.plan.outputs.staging == 'true'
+    uses: ./.github/workflows/deploy-web.yml
+    with:
+      environment: staging
+      sha: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+
+  # The single node both production jobs depend on, so one check decides
+  # whether the release goes on. It is also the only check of MARKETING_HOST:
+  # deploy-web.yml polls the dashboard host alone.
+  staging-verify:
+    name: Verify staging answers
+    needs: [plan, staging-api, staging-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # The three values below are variables on this Environment. A job without
+    # this key resolves only repository values, so they would arrive empty.
+    environment: staging
+    steps:
+      - name: Poll the staging endpoints
+        env:
+          API_URL: ${{ vars.API_URL }}
+          APP_HOST: ${{ vars.APP_HOST }}
+          MARKETING_HOST: ${{ vars.MARKETING_HOST }}
+        run: |
+          set -euo pipefail
+          # A blank host would make the requests below ask for a URL that no
+          # stage owns, so they fail before the first request.
+          missing=()
+          for key in API_URL APP_HOST MARKETING_HOST; do
+            if [ -z "${!key:-}" ]; then missing+=("$key"); fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing staging Environment values for: ${missing[*]}"
+            exit 1
+          fi
+          # A short poll: both deploy jobs already waited for their own service
+          # to answer, so these hosts are live when this runs.
+          problems=()
+          for url in "$API_URL/health/ready" "https://$APP_HOST/healthz" "https://$MARKETING_HOST/"; do
+            code=""
+            for _ in $(seq 1 5); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+              echo "$url: $code"
+              if [ "$code" = "200" ]; then break; fi
+              sleep 10
+            done
+            if [ "$code" != "200" ]; then
+              problems+=("$url answered \"$code\" and not 200.")
+            fi
+          done
+          if [ ${#problems[@]} -ne 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::$problem"
+            done
+            {
+              echo "### Staging did not answer"
+              echo
+              for problem in "${problems[@]}"; do
+                echo "- $problem"
+              done
+              echo
+              echo "Production is not released until every staging endpoint answers 200."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Every staging endpoint answered 200."
+
+  # !cancelled() is what lets this job evaluate its condition when
+  # staging-verify was skipped, which is the production-only dispatch. It
+  # still refuses a production deploy on a cancelled run. The last clause
+  # requires a successful staging verification on every run that released
+  # staging, which is every automatic run.
+  production-api:
+    name: Production API
+    needs: [plan, staging-verify]
+    if: ${{ !cancelled()
+            && needs.plan.outputs.production == 'true'
+            && (needs.plan.outputs.staging != 'true'
+                || needs.staging-verify.result == 'success') }}
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      environment: production
+      sha: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+
+  production-web:
+    name: Production web
+    needs: [plan, staging-verify]
+    if: ${{ !cancelled()
+            && needs.plan.outputs.production == 'true'
+            && (needs.plan.outputs.staging != 'true'
+                || needs.staging-verify.result == 'success') }}
+    uses: ./.github/workflows/deploy-web.yml
+    with:
+      environment: production
+      sha: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write

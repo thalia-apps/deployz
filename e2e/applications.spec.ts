@@ -173,9 +173,10 @@ test('deleting an application removes it from the list', async ({ page }) => {
   // on the detail page.
   const repoFullName = 'deployz-demo/express-api';
 
-  // The danger zone lives in General settings, on the Configuration tab.
+  // The danger zone lives on the Configuration tab's Settings tab.
   await page.getByRole('tab', { name: 'Configuration' }).click();
   await page.waitForURL('**/config');
+  await page.getByTestId('config-tab-settings').click();
 
   // Open the danger-zone dialog, type the repo name, and confirm deletion.
   await page.getByTestId('delete-app-trigger').click();
@@ -212,11 +213,12 @@ test('delete is blocked when the application has a deployment', async ({ page })
     headers: { cookie },
   });
 
-  // Now try to delete — the 409 should block it. The danger zone lives in
-  // General settings, on the Configuration tab.
+  // Now try to delete — the 409 should block it. The danger zone lives
+  // on the Configuration tab's Settings tab.
   const repoFullName = 'deployz-demo/express-api';
   await page.getByRole('tab', { name: 'Configuration' }).click();
   await page.waitForURL('**/config');
+  await page.getByTestId('config-tab-settings').click();
   await page.getByTestId('delete-app-trigger').click();
   await page.getByTestId('delete-app-confirm').fill(repoFullName);
   await page.getByTestId('delete-app-button').click();

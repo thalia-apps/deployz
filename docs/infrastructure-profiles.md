@@ -33,8 +33,8 @@ the frozen spec's graph → planner → IR chain; the size profile only decides
 
 | Setting | Who | Where | Rule |
 | --- | --- | --- | --- |
-| Recommended size (application default) | Vendor | Application configuration › Deployment size | Small initially. Must be the same as the minimum size or bigger. |
-| Minimum supported size | Vendor | Application configuration › Deployment size | Small initially. |
+| Recommended size (application default) | Vendor | Application configuration › Size presets (Default size) | Small initially. Must be the same as the minimum size or bigger. |
+| Minimum supported size | Vendor | Application configuration › Size presets (Minimum allowed size) | Small initially. |
 | Link recommendation | Vendor | Creating a public link or an invitation | Preselects the application default. The vendor can override it per link. |
 | Deployment size | Customer (public link, invitation) or vendor (vendor-created or TEST deployment, legacy deploy link, checkout) | At creation | Any size at or above the minimum. Frozen afterwards. |
 

@@ -13,6 +13,8 @@
  */
 
 // ── Protected control-plane inventory ───────────────────────────────────────
+// This script cannot import @deployz/cdk, so the stage names below repeat the
+// literals in packages/cdk/src/stage.ts.
 
 export interface ProtectedInventory {
   readonly stackNames: ReadonlySet<string>;
@@ -20,16 +22,21 @@ export interface ProtectedInventory {
   readonly ecrRepositoryNames: ReadonlySet<string>;
 }
 
-const PROTECTED_STACK_NAMES = ['Deployz', 'CDKToolkit'] as const;
+const PROTECTED_STACK_NAMES = ['Deployz', 'DeployzStaging', 'CDKToolkit'] as const;
 
-/** Bucket-name prefixes the control-plane stack provisions — see deployz-stack.ts. */
+/** Bucket-name prefixes the production and staging control-plane stacks
+ * provision — see deployz-stack.ts and stage.ts. */
 const PROTECTED_BUCKET_PATTERNS = [
   /^deployz-buildsourcebucket/i,
   /^deployz-templatebucket/i,
+  /^deployz-templates-/i,
+  /^deployzstaging-buildsourcebucket/i,
+  /^deployzstaging-templatebucket/i,
+  /^deployz-staging-templates-/i,
   /^cdk-/i,
 ] as const;
 
-const PROTECTED_ECR_REPOSITORIES = ['deployz-images'] as const;
+const PROTECTED_ECR_REPOSITORIES = ['deployz-images', 'deployz-staging-images'] as const;
 
 export function buildProtectedInventory(): ProtectedInventory {
   return {
@@ -48,9 +55,10 @@ export interface DeletionCandidate {
 
 /**
  * Throws the moment any deletion candidate matches the hardcoded
- * control-plane invariants — 'Deployz'/'CDKToolkit' stacks, anything tagged
- * as belonging to one of them, the build-source/template buckets, the `cdk-*`
- * bootstrap buckets, or the `deployz-images` ECR repository.
+ * control-plane invariants — the 'Deployz', 'DeployzStaging' and 'CDKToolkit'
+ * stacks, anything tagged as belonging to one of them, the build-source and
+ * template buckets of both stages, the `cdk-*` bootstrap buckets, or the
+ * `deployz-images` and `deployz-staging-images` ECR repositories.
  */
 export function assertNoOverlap(
   candidates: readonly DeletionCandidate[],
@@ -82,7 +90,7 @@ export function assertNoOverlap(
       candidate.kind === 'ecr-repository' &&
       protectedInventory.ecrRepositoryNames.has(candidate.name)
     ) {
-      throw new Error(`Refusing to proceed: "${candidate.name}" is the protected ECR repository`);
+      throw new Error(`Refusing to proceed: "${candidate.name}" is a protected ECR repository`);
     }
   }
 }

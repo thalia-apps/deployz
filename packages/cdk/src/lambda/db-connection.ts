@@ -220,7 +220,20 @@ export function connectDb(): Promise<LambdaDb> {
       // migrator exactly as before.
       if (!(await migrationsUpToDate(pool, journal))) {
         const migrationsDir = writeMigrationsToTmp();
-        await migrate(db, { migrationsFolder: migrationsDir });
+        // One migrator run per journal prefix, so each migration commits
+        // before the next one starts. drizzle applies every pending migration
+        // in ONE transaction, and Postgres refuses to use an enum value until
+        // the transaction that added it commits (55P04): 0023 uses values that
+        // 0002, 0014 and 0017 add, so a fresh database failed at 0023.
+        // Already-applied entries are skipped by drizzle's own created_at check.
+        const entries = (journal as { entries: readonly unknown[] }).entries;
+        for (let count = 1; count <= entries.length; count++) {
+          writeFileSync(
+            join(migrationsDir, 'meta', '_journal.json'),
+            JSON.stringify({ ...journal, entries: entries.slice(0, count) }),
+          );
+          await migrate(db, { migrationsFolder: migrationsDir });
+        }
       }
 
       process.env.DATABASE_URL = databaseUrl;

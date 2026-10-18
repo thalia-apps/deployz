@@ -100,7 +100,7 @@ test('application detail page links to the configuration screen', async ({ page 
   await page.waitForURL(`**/dashboard/applications/${application.id}/config`);
 
   await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'Services & resources' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resources' })).toBeVisible();
 });
 
 /** The environment variables table, and the row of one saved default no detected variable covers. */
@@ -111,7 +111,7 @@ function customRow(page: Page, key: string) {
 test('config screen renders vendor defaults and customer overrides', async ({ page }) => {
   await signUp(page);
   const { applicationId, customerId } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
 
   await expect(page.getByRole('tab', { name: 'Configuration' })).toHaveAttribute('aria-selected', 'true');
 
@@ -134,7 +134,7 @@ test('config screen renders vendor defaults and customer overrides', async ({ pa
 test('secrets render masked — empty password inputs, never plaintext', async ({ page }) => {
   await signUp(page);
   const { applicationId, customerId } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
   await expect(customRow(page, 'DATABASE_URL')).toContainText('Secret saved');
 
   // DATABASE_URL (vendor default) + API_KEY (customer override) are secrets.
@@ -156,7 +156,7 @@ test('secrets render masked — empty password inputs, never plaintext', async (
 test('secret fields are write-only password inputs with a show/hide toggle', async ({ page }) => {
   await signUp(page);
   const { applicationId } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config`);
+  await page.goto(`/dashboard/applications/${applicationId}/config#environment-variables`);
 
   const section = page.getByTestId('environment-variables-section');
   await customRow(page, 'DATABASE_URL').getByRole('button', { name: 'Edit DATABASE_URL' }).click();
@@ -174,7 +174,7 @@ test('saving defaults sends the write and confirms', async ({ page }) => {
   await signUp(page);
   const { applicationId } = await seedAppWithConfig(page);
 
-  await page.goto(`/dashboard/applications/${applicationId}/config`);
+  await page.goto(`/dashboard/applications/${applicationId}/config#environment-variables`);
   const section = page.getByTestId('environment-variables-section');
   await customRow(page, 'LOG_LEVEL').getByRole('button', { name: 'Edit LOG_LEVEL' }).click();
   await section.getByLabel('LOG_LEVEL', { exact: true }).fill('warn');
@@ -206,7 +206,7 @@ test('saving defaults through the UI persists to the real API (regression: CORS 
   await signUp(page);
   const { applicationId } = await seedAppWithConfig(page);
 
-  await page.goto(`/dashboard/applications/${applicationId}/config`);
+  await page.goto(`/dashboard/applications/${applicationId}/config#environment-variables`);
   const section = page.getByTestId('environment-variables-section');
   const newValue = `warn-${crypto.randomUUID().slice(0, 8)}`;
   await customRow(page, 'LOG_LEVEL').getByRole('button', { name: 'Edit LOG_LEVEL' }).click();
@@ -233,7 +233,7 @@ test('saving a secret sends the new value on the write path but never renders it
   await signUp(page);
   const { applicationId, customerId } = await seedAppWithConfig(page);
 
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
   const overrides = page.getByTestId('config-customer-overrides');
   await overrides.getByLabel('API_KEY').fill('e2e-brand-new-secret-value');
 
@@ -266,7 +266,7 @@ test('saving a secret sends the new value on the write path but never renders it
 test('the customer overrides group names the customer, never its id', async ({ page }) => {
   await signUp(page);
   const { applicationId, customerId, customerName } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
 
   const overrides = page.getByTestId('config-customer-overrides');
   await expect(overrides).toContainText(`For ${customerName} only.`);
@@ -281,7 +281,7 @@ test('a group with no values yet offers a way to add one, and the add persists',
 }) => {
   await signUp(page);
   const application = await createApplication(page);
-  await page.goto(`/dashboard/applications/${application.id}/config`);
+  await page.goto(`/dashboard/applications/${application.id}/config#environment-variables`);
 
   const section = page.getByTestId('environment-variables-section');
   await expect(section.getByTestId('environment-variables-empty')).toBeVisible();
@@ -306,7 +306,7 @@ test('a group with no values yet offers a way to add one, and the add persists',
 test('a secret can be added, and the new value never renders after saving', async ({ page }) => {
   await signUp(page);
   const { applicationId, customerId } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
 
   const overrides = page.getByTestId('config-customer-overrides');
   await overrides.getByTestId('config-customer-overrides-add-secret').click();
@@ -341,7 +341,7 @@ test('a secret can be added, and the new value never renders after saving', asyn
 test('adding a value that is already in the group is refused before any write', async ({ page }) => {
   await signUp(page);
   const { applicationId } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config`);
+  await page.goto(`/dashboard/applications/${applicationId}/config#environment-variables`);
 
   const section = page.getByTestId('environment-variables-section');
   await section.getByTestId('environment-variables-add-value').click();
@@ -365,7 +365,7 @@ test('saving the defaults keeps the customer scope intact (regression: overrides
 }) => {
   await signUp(page);
   const { applicationId, customerId, customerName } = await seedAppWithConfig(page);
-  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}#environment-variables`);
 
   const section = page.getByTestId('environment-variables-section');
   await customRow(page, 'LOG_LEVEL').getByRole('button', { name: 'Edit LOG_LEVEL' }).click();

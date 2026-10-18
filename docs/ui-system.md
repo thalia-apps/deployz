@@ -45,6 +45,8 @@ feature/domain components only where repeated logic justifies them
   duplicate large page titles in header and body.
 - Screen padding and base spacing come from the shell's single `<main>`
   (`flex flex-col gap-6 p-4 md:p-6 lg:p-8`). Pages do not add shell padding.
+- `SidebarInset` carries `min-w-0`, so a wide table scrolls inside its own
+  container and never widens the page beside the tablet sidebar.
 - No parallel custom responsive navigation; mobile behavior comes from the
   shadcn Sidebar.
 
@@ -160,44 +162,67 @@ plain links):
    and — for a Deployz-side failure, instead of the prompt — Copy report for
    Deployz support. The buildspec's "The image build did not produce an
    image" is a final check and is never shown as the cause.
-3. **Configuration** — sections in this order: Needs attention (only when
-   something needs the vendor), Deployment size, Services & resources,
-   Environment variables, then general settings (rename, repository,
-   danger zone). The page has two main tables:
-   - **Services & resources** (`lib/configuration-inventory.ts`,
-     `deriveServiceInventory`): columns Item · Configuration / resources ·
-     Est. AWS/month · After removal · Issues · Actions, in the groups
-     Application & runtime, Data services, Networking & HTTPS, External
-     integrations (empty groups are omitted). Runtime, build and start
-     commands, port, health check, worker command and migrations are
-     indented rows under their service; commands show in full and wrap.
-     Each plan AWS resource sits once under the service that owns it
-     (collapsed "Planned AWS resources (N)"), with its own Kept / Removed
-     policy; resources no service owns stay on a "Shared resources" row.
-     Each cost item counts once; a planned row without a price reads
-     "Price unavailable", never $0. Unresolved architecture questions are
-     issues on their row (or their own row), and route to EditDialog (port)
-     or FixInstructionsDialog. Detected / Confirmed node states sit under
-     Technical details, because nodes cannot be joined to plan rows yet
-     (UX-BACKEND-007).
-   - **Environment variables**: one table (Variable · When used · Who
-     provides · Value · Required · Secret · Status · Actions) for the
-     detected variables and every other vendor default. Groups, all
-     expanded, no paging: Needs attention, Set by vendor, Set by customer,
-     Managed by Deployz, Optional and uncertain. Rows are compact; Edit
-     opens the existing editors in the row. One Save writes the decisions,
-     then the values; a failed value write after saved decisions says so.
-     Customer overrides stay a separate section, shown only with
-     `?customer=`.
-   - **Deployment size** is one Small / Medium / Large segmented control
-     (shadcn `Tabs`) for the recommended size. The selected size's panel
-     lists only what the application needs: compute (vCPU and memory per
-     service), workers, database instance type, cache node type, and the
-     estimated AWS cost (the size's plan `costEstimate`, "+ usage" when
-     usage is excluded). Sizes below the minimum are disabled. The minimum
-     is one select with "Smallest size customers can select." One Save
-     writes both. One short estimate note; region, on-demand, 730 hours,
-     USD and the excluded charges sit behind "Estimate details".
+3. **Configuration** — four secondary tabs (shadcn `Tabs`, default
+   variant, under the route tabs): Resources, Size presets, Variables,
+   Settings. Resources opens by default. The selected tab is kept per
+   application in `sessionStorage` (`deployz:config-tab:<id>`). A section
+   anchor picks its tab: `#required-changes`, `#services` and
+   `#config-row-*` open Resources; `#deployment-size` opens Size presets;
+   `#environment-variables` and `#env-row-*` open Variables; `#settings`
+   opens Settings. Selecting a tab removes the anchor, so the same link
+   works again. Every panel stays mounted and is only hidden, so unsaved
+   edits survive a tab switch and a switch loads nothing (no analysis, no
+   plan or AWS request). A tab shows a count only for the existing
+   attention counts: Resources counts the required findings plus the
+   unresolved architecture questions; Variables counts `environmentSetup`
+   needs-decision plus missing-value. Each setting has one place to edit
+   it; other tabs only link to it.
+   - **Resources** (`lib/configuration-inventory.ts`,
+     `deriveServiceInventory`): one short attention line (`#required-changes`,
+     focused when the URL has that hash) with the count and a link to the
+     variables that need input, then one flat table: Resource ·
+     Configuration · action. Groups are small labels: Application &
+     runtime, Data services, Networking & HTTPS, External integrations
+     (empty groups are omitted). Each issue badge sits beside its resource
+     name and its text under the configuration; the row's action (Edit,
+     Add, Fix, Get fix instructions) opens the existing EditDialog or
+     FixInstructionsDialog. Runtime, build and start commands, port, health
+     check, worker command and migrations are indented rows under their
+     service; commands show in full and wrap. A muted line carries the
+     row's estimate ("Est. AWS/month: …", "Price unavailable" for a planned
+     row without a price, never $0) and "Kept after removal" where it
+     applies. Each plan AWS resource sits once under the service that owns
+     it (collapsed "Planned AWS resources (N)"); resources no service owns
+     stay on a "Shared resources" row. Detected / Confirmed node states sit
+     under Technical details, because nodes cannot be joined to plan rows
+     yet (UX-BACKEND-007).
+   - **Size presets**: the three published presets side by side, read-only
+     (rows Compute, Workers, Database, Storage, Cache, Est. AWS cost; a row
+     shows only when a size has a value). Each size's values and estimate
+     come from that size's plan (`costEstimate`, "+ usage" when usage is
+     excluded). The column header marks the saved Default and "Below
+     minimum". Under a divider, two selects change the defaults: Default
+     size (only sizes at or above the minimum) and Minimum allowed size
+     ("Smallest size customers can select."; raising it raises the
+     default). One Save writes both. Region, on-demand, 730 hours, USD and
+     the excluded charges sit behind "Estimate details". Before a completed
+     analysis the tab says when the presets show.
+   - **Variables**: one table (Variable · When used · Who provides · Value ·
+     Required · Secret · Status · Actions) for the detected variables and
+     every other vendor default, in the groups Needs attention, Set by
+     vendor, Set by customer, Managed by Deployz, Optional and uncertain.
+     Filters: Vendor & customer (the default: Needs attention, Set by
+     vendor, Set by customer), Needs input (with its count), Managed,
+     Optional, All; a search matches variable names. New values always
+     show. Filters only hide rows: edits on hidden rows are kept and saved.
+     The table renders 50 rows at a time with "Show 50 more". Secrets are
+     write-only and show only their state. Edit opens the existing editors
+     in the row. One Save writes the decisions, then the values; a failed
+     value write after saved decisions says so. Customer overrides stay a
+     separate section in this tab, shown only with `?customer=`.
+   - **Settings**: General (name, repository, default branch, Re-analyse)
+     then, under a divider, the Danger zone with its existing typed
+     confirmation. The header's "More actions" menu keeps Re-analyse too.
 
 `lib/application-state.ts` (`deriveApplicationPresentation`) is the single
 source of the page's state: badge, heading, message, actions, the setup
@@ -229,14 +254,11 @@ happening now.
   instructions"): Add for an unset optional field and Edit once a value
   exists. Raw detection evidence (file + reason) lives only under the
   collapsed "Analysis details" disclosure, never in the table itself.
-- Required findings also show in the "Needs attention" summary above the
-  tables (`#required-changes`, focused when the URL has that hash). The
-  summary lists every item once — architecture questions and the
-  environment variables that need a decision or a value — each
-  with a link to its row. External services (`architecture.externalServices`)
-  are information, never an attention item: each is a row under External
-  integrations, billed separately, linking to Environment variables. Fix
-  routes by
+- Required findings and architecture questions show as issues on their
+  Resources row and are counted once in the attention line and on the tab.
+  External services (`architecture.externalServices`) are information,
+  never an attention item: each is a row under External integrations,
+  billed separately, linking to the Variables tab. Fix routes by
   `requiredChangeFix`: only `port-unresolved` opens a setting editor; every
   other finding needs a repository change and a new analysis, so it opens the
   fix instructions.
@@ -263,6 +285,45 @@ happening now.
   guessed at.
 - Billing notices do not belong on this page.
 
+## Overview (Home)
+
+The homepage (`app/dashboard/page.tsx`) is titled "Overview"; the sidebar
+item stays "Home". Its state comes from `lib/home-state.ts`
+(`deriveHomeState`), which reads only the applications and deployments
+lists. There is no deployment table, activity feed, chart or banner on it.
+
+- **Onboarding** (no customer deployment yet): one checklist, Add
+  application → Review configuration → Create deployment. A step is complete
+  only when the data says so (configuration is complete only when the
+  analysis is COMPLETE and READY). Only the current step shows a detail line
+  and its one action; no header action competes with it. A ready application
+  makes the current step "Create deployment"
+  (`/dashboard/deployments/new?applicationId=…`).
+- **Overview** (at least one deployment): the header carries "Create
+  deployment". One compact summary card: Live · Need attention · Deploying ·
+  Awaiting customer, each a count above a short label and a link to
+  `/dashboard/deployments?status=healthy|attention|in-progress|waiting`. Each
+  count is one status group of `lib/deployment-status-groups`, so it equals
+  the rows of its filtered view. Only a nonzero Need attention count is red.
+- **Next steps**: at most three rows, each one title and one link, most
+  urgent first. Attention is one grouped row ("6 deployments need attention"
+  → Review deployments). Customers that have not installed are one row,
+  counted by customer ("1 customer hasn't completed setup" → View pending
+  setups). An application task shows only when no application can be
+  deployed and none is being analysed. Zero counts and normal in-progress
+  deployments are never tasks.
+- With no next steps, "Nothing needs your attention." "All deployments
+  healthy" shows above it only when every deployment is live and reports
+  HEALTHY; a live deployment without a health report is named as such,
+  never called healthy. Attention counts current state only: a later
+  successful attempt clears an earlier failure.
+- Loading is a skeleton of the same layout under the real title; a failed
+  load is the error state with Try again, never zero counts. When updates
+  fail after a load, the last known state stays with "Updates unavailable",
+  and the all-clear message is hidden.
+- Refresh reuses `useStatusPoll`: 5 s only while an analysis runs or the
+  organization's only deployment is being set up, otherwise 60 s.
+
 ## List views (Customers, Deployments)
 
 The two lists answer different questions. Customers answers "which
@@ -277,6 +338,11 @@ relationships need attention?" with one row per customer. Deployments answers
   never a stored status.
 - A state that the app does not know shows as "Unknown status" and counts as
   "Needs attention". It never shows a raw enum value.
+- The "Live" status filter (`status=healthy`) also keeps live deployments that
+  have an update available: their badge reads Live, and Overview counts them
+  as Live. "Update available" stays a separate filter for that subset.
+- The Deployments header action is "Create deployment". Invitation wording
+  stays on the invitation itself (the create page and its submit button).
 - Search, filters, and sort live in the URL query (`q`, `status` or `state`,
   `application`, `region`, `sort`, `dir`). Use `useListParams`. A default value
   leaves no trace in the URL. Back from a detail page restores the view.

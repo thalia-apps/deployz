@@ -1312,9 +1312,13 @@ export const RELAY_CREDENTIAL_PARAMETER = 'RelayCredential';
  * per region, and this function is the single rule for what each region's
  * bucket is called, shared by the publisher (which writes it) and the
  * resolver (which builds the URL).
+ *
+ * `prefix` lets a non-production control plane name its own regional buckets
+ * (see `packages/cdk/src/stage.ts`). The default is production's prefix, so
+ * every caller that does not pass one is unchanged.
  */
-export function bootstrapTemplateBucketName(region: string): string {
-  return `deployz-templates-${region}`;
+export function bootstrapTemplateBucketName(region: string, prefix = 'deployz-templates'): string {
+  return `${prefix}-${region}`;
 }
 
 /** Object key of the published bootstrap template (under the key prefix). */

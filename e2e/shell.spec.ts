@@ -51,10 +51,8 @@ test('authenticated user reaches the homepage and sees the first-run state', asy
   await page.getByRole('button', { name: 'Create account' }).click();
 
   await page.waitForURL('/dashboard');
-  await expect(
-    page.getByRole('heading', { name: 'Get your first customer deployed' }),
-  ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Connect GitHub repository' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Add application' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Dashboard' })).toBeVisible();
 });
 

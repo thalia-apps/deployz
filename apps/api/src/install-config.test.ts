@@ -606,6 +606,14 @@ describe('post-install configuration', () => {
       { key: 'NEXTAUTH_URL', isSecret: false, value: url, source: 'derived' },
     ]);
 
+    // The URL uses the running control plane's prefix and zone.
+    const staging = await buildRelayConfigEntries(
+      db,
+      { ...deployment!, defaultHostname: { prefix: 's-', zone: 'deployz.test' } },
+      createConfigStore(db),
+    );
+    expect(staging.find((entry) => entry.key === 'APP_URL')?.value).toBe(`https://s-${deployment!.id}.deployz.test`);
+
     // An explicit vendor value always wins over the derived one.
     await db
       .insert(schema.applicationConfigs)

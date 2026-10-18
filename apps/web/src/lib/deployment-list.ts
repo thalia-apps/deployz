@@ -76,6 +76,10 @@ export function deploymentUpdatedAt(deployment: FleetDeployment): string | null 
   return null;
 }
 
+function inStatusFilter(group: StatusGroup, status: StatusGroup): boolean {
+  return group === status || (status === 'healthy' && group === 'update-available');
+}
+
 export function filterDeployments(
   deployments: readonly FleetDeployment[],
   query: DeploymentListQuery,
@@ -83,8 +87,9 @@ export function filterDeployments(
   return deployments.filter((deployment) => {
     const { group, label } = deploymentDisplayStatus(deployment);
     // "All statuses" is the live fleet, as on Home: removed deployments only
-    // appear when asked for.
-    if (query.status === null ? group === 'removed' : group !== query.status) return false;
+    // appear when asked for. "Live" also keeps live deployments with an
+    // update available — their badge reads Live, and Home counts them so.
+    if (query.status === null ? group === 'removed' : !inStatusFilter(group, query.status)) return false;
     if (query.application !== null && deployment.applicationName !== query.application) return false;
     if (query.region !== null && deployment.region !== query.region) return false;
     return matchesSearch(

@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   fetchConfig,
   mergeConfig,
@@ -25,7 +26,7 @@ import { TONE_TEXT } from '@/lib/status-tone';
 import { cn } from '@/lib/utils';
 
 import { useApplicationPage } from '../application-page-context';
-import { DeploymentConfiguration } from './deployment-configuration';
+import { ResourcesPanel, SizePresetsPanel, resourceAttentionCount } from './deployment-configuration';
 import { EnvironmentVariablesSection } from './environment-variables-section';
 import { GeneralSettings } from './general-settings';
 
@@ -85,30 +86,173 @@ function ConfigScreen() {
   }, [id, customerId]);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Section order: Needs attention, Deployment size, Services &
-          resources, Environment variables, Settings. `DeploymentConfiguration`
-          supplies the first three before the `children` slot. */}
-      <DeploymentConfiguration>
-        {state.status === 'loading' ? <PageSkeleton /> : null}
-        {state.status === 'error' ? (
-          <section
-            aria-labelledby="config-error"
-            className="rounded-xl border border-dashed px-6 py-16 text-center"
-          >
-            <h2 id="config-error" className="text-lg font-semibold">
-              Something went wrong
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">{state.message}</p>
-          </section>
-        ) : null}
-        {state.status === 'loaded' ? (
-          <ConfigBody data={state.data} onSaved={(next) => setState({ status: 'loaded', data: next })} />
-        ) : null}
-      </DeploymentConfiguration>
+    <ConfigurationTabs
+      applicationId={id}
+      resources={<ResourcesPanel />}
+      sizes={<SizePresetsPanel />}
+      variables={
+        <>
+          {state.status === 'loading' ? <PageSkeleton /> : null}
+          {state.status === 'error' ? (
+            <section
+              aria-labelledby="config-error"
+              className="rounded-xl border border-dashed px-6 py-16 text-center"
+            >
+              <h2 id="config-error" className="text-lg font-semibold">
+                Something went wrong
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">{state.message}</p>
+            </section>
+          ) : null}
+          {state.status === 'loaded' ? (
+            <ConfigBody data={state.data} onSaved={(next) => setState({ status: 'loaded', data: next })} />
+          ) : null}
+        </>
+      }
+      settings={<GeneralSettings />}
+    />
+  );
+}
 
-      <GeneralSettings />
-    </div>
+type ConfigTab = 'resources' | 'sizes' | 'variables' | 'settings';
+
+const CONFIG_TABS: readonly { value: ConfigTab; label: string }[] = [
+  { value: 'resources', label: 'Resources' },
+  { value: 'sizes', label: 'Size presets' },
+  { value: 'variables', label: 'Variables' },
+  { value: 'settings', label: 'Settings' },
+];
+
+// Section anchors that links into this page use (Overview, Releases, the
+// create page, the rows themselves) and the tab each one lives on.
+const HASH_TABS: Readonly<Record<string, ConfigTab>> = {
+  'required-changes': 'resources',
+  services: 'resources',
+  'deployment-size': 'sizes',
+  'environment-variables': 'variables',
+  settings: 'settings',
+};
+
+function tabForHash(hash: string): ConfigTab | null {
+  const anchor = hash.replace(/^#/, '');
+  if (anchor in HASH_TABS) return HASH_TABS[anchor]!;
+  if (anchor.startsWith('config-row-')) return 'resources';
+  if (anchor.startsWith('env-row-')) return 'variables';
+  return null;
+}
+
+function isConfigTab(value: string | null): value is ConfigTab {
+  return CONFIG_TABS.some((tab) => tab.value === value);
+}
+
+const tabStorageKey = (applicationId: string): string => `deployz:config-tab:${applicationId}`;
+
+function readStoredTab(applicationId: string): ConfigTab | null {
+  try {
+    const stored = window.sessionStorage.getItem(tabStorageKey(applicationId));
+    return isConfigTab(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeTab(applicationId: string, tab: ConfigTab): void {
+  try {
+    window.sessionStorage.setItem(tabStorageKey(applicationId), tab);
+  } catch {
+    // Storage can be blocked; the tab then resets on the next visit.
+  }
+}
+
+// Four secondary tabs. Every panel stays mounted (only hidden), so unsaved
+// edits survive a tab switch and a switch loads nothing. A section anchor in
+// the URL picks its tab; otherwise the last tab of this application in this
+// browser session opens, else Resources.
+function ConfigurationTabs({
+  applicationId,
+  resources,
+  sizes,
+  variables,
+  settings,
+}: {
+  applicationId: string;
+  resources: ReactNode;
+  sizes: ReactNode;
+  variables: ReactNode;
+  settings: ReactNode;
+}) {
+  const { data } = useApplicationPage();
+  const [tab, setTab] = useState<ConfigTab>('resources');
+
+  useEffect(() => {
+    const initial = tabForHash(window.location.hash) ?? readStoredTab(applicationId);
+    if (initial) setTab(initial);
+    function followHash(): void {
+      const next = tabForHash(window.location.hash);
+      if (next) {
+        setTab(next);
+        storeTab(applicationId, next);
+      }
+    }
+    window.addEventListener('hashchange', followHash);
+    return () => window.removeEventListener('hashchange', followHash);
+  }, [applicationId]);
+
+  function selectTab(next: string): void {
+    if (!isConfigTab(next)) return;
+    setTab(next);
+    storeTab(applicationId, next);
+    // Drop a section anchor that pointed at another tab, so following the
+    // same link again fires `hashchange` and switches back.
+    if (window.location.hash) {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    }
+  }
+
+  const setup = data?.readiness.environmentSetup ?? null;
+  const counts: Partial<Record<ConfigTab, number>> = data
+    ? {
+        resources: resourceAttentionCount(data.readiness),
+        variables: setup ? setup.needsDecision + setup.missingValue : 0,
+      }
+    : {};
+  const panels: Record<ConfigTab, ReactNode> = { resources, sizes, variables, settings };
+
+  return (
+    <Tabs value={tab} onValueChange={selectTab} className="gap-6">
+      <TabsList aria-label="Configuration sections" className="w-full justify-start overflow-x-auto sm:w-fit">
+        {CONFIG_TABS.map((option) => {
+          const count = counts[option.value] ?? 0;
+          return (
+            <TabsTrigger
+              key={option.value}
+              value={option.value}
+              className="flex-none px-2"
+              data-testid={`config-tab-${option.value}`}
+            >
+              {option.label}
+              {count > 0 ? (
+                <Badge variant="warning" className="h-4 min-w-4 px-1 tabular-nums" data-testid={`config-tab-${option.value}-count`}>
+                  {count}
+                  <span className="sr-only"> need attention</span>
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+      {CONFIG_TABS.map((option) => (
+        <TabsContent
+          key={option.value}
+          value={option.value}
+          forceMount
+          className="flex flex-col gap-6 data-[state=inactive]:hidden"
+          data-testid={`config-panel-${option.value}`}
+        >
+          {panels[option.value]}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }
 

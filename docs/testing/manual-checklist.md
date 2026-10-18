@@ -18,11 +18,15 @@ new simulated scenario or canary case
 ## Before you start
 
 1. **Fix the commit under test.** Production is the last commit on `main`
-   whose CI run was green: `deploy-api.yml` and `deploy-web.yml` run after a
-   successful CI run, and the `deployed/api` and `deployed/web` tags name
-   the deployed commits. Record
-   `git rev-parse origin/main` **and** confirm both deploy runs for that SHA
-   succeeded (`gh run list --workflow deploy-api.yml --limit 3`; the API
+   whose CI run was green: `release.yml` runs after a successful CI run and
+   calls `deploy-api.yml` and `deploy-web.yml`, and the `deployed/api` and
+   `deployed/web` tags name the commits production runs. The
+   `deployed/staging/api` and `deployed/staging/web` tags name staging's.
+   Record
+   `git rev-parse origin/main` **and** confirm the release run for that SHA
+   succeeded (`gh run list --workflow release.yml --limit 3`; a called
+   workflow's run is nested under the caller's run and does not list on its
+   own, and the API
    Lambda's `LastModified` must be after the run). Another workstream may
    merge while you test — re-record the SHA whenever `origin/main` moves and
    note which findings were observed on which SHA.

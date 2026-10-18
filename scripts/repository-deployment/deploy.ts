@@ -1046,9 +1046,9 @@ export function generateSecret(format: SecretFormat): string {
 
 const APP_URL_PLACEHOLDER = 'https://pending.deployz.dev';
 
-/** The deployment's permanent default-HTTPS address (`d-<id>.deployz.dev`), checked against the API once HTTPS is ACTIVE. */
-export function defaultDeploymentUrl(deploymentId: string): string {
-  return `https://d-${deploymentId.toLowerCase()}.deployz.dev`;
+/** The deployment's permanent default-HTTPS address (`<prefix><id>.deployz.dev`, prefix `d-` unless the target control plane sets another), checked against the API once HTTPS is ACTIVE. */
+export function defaultDeploymentUrl(deploymentId: string, env: NodeJS.ProcessEnv = process.env): string {
+  return `https://${env['DEPLOYZ_DEFAULT_HOSTNAME_PREFIX'] ?? 'd-'}${deploymentId.toLowerCase()}.deployz.dev`;
 }
 
 function summarize(detail: DeploymentDetail): Record<string, unknown> {

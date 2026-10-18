@@ -30,6 +30,14 @@ rationale lives in [`decisions/README.md`](decisions/README.md).
 Everything in the control plane is deployed by CI only; see
 [`operations/control-plane.md`](operations/control-plane.md).
 
+A second control plane (staging) can run in the same AWS account and Region.
+The stage selects every account-unique name — the stack id, the config-secret
+KMS alias, the ECR repository and the prefix of the regional template buckets
+— so the two stacks never share a resource and neither can reach into the
+other's template buckets. Production's names are written out per stage, never
+derived, because the KMS key and the ECR repository are retained. See
+[`operations/control-plane.md`](operations/control-plane.md).
+
 **Customer side (the customer's AWS account and chosen Region)**:
 
 | Stack | Created by | Contents |

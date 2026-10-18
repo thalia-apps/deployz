@@ -99,29 +99,34 @@ test('the vendor sets the recommended and minimum sizes and they persist after a
   const application = (await appResponse.json()) as { id: string };
   expect((await page.request.post(`${API_URL}/api/applications/${application.id}/analyse`, {})).ok()).toBeTruthy();
 
-  await page.goto(`/dashboard/applications/${application.id}/config`);
+  await page.goto(`/dashboard/applications/${application.id}/config#deployment-size`);
   const card = page.getByTestId('deployment-size');
-  const sizes = card.getByRole('tablist', { name: 'Recommended size' });
-  await expect(sizes.getByRole('tab', { name: 'Small' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('config-tab-sizes')).toHaveAttribute('aria-selected', 'true');
+  await expect(card.getByTestId('deployment-size-small')).toContainText('Default');
   await expect(card.getByTestId('deployment-size-small-cost')).toHaveText(/^~\$\d+–\d+\/month/);
+  await expect(card.getByTestId('deployment-size-large-compute')).toHaveText('2 vCPU · 4 GiB per service');
   await card.scrollIntoViewIfNeeded();
   await card.screenshot({ path: testInfo.outputPath('size-card-desktop.png') });
 
-  // Recommended Large, minimum Medium: Small becomes unavailable.
-  await sizes.getByRole('tab', { name: 'Large' }).click();
-  await expect(card.getByTestId('deployment-size-large')).toContainText('2 vCPU · 4 GiB per service');
+  // Default Large, minimum Medium: Small is below the minimum.
+  await card.getByLabel('Default size').click();
+  await page.getByRole('option', { name: /^Large/ }).click();
   await card.getByLabel('Minimum allowed size').click();
   await page.getByRole('option', { name: /^Medium/ }).click();
-  await expect(sizes.getByRole('tab', { name: 'Small' })).toBeDisabled();
   await card.getByRole('button', { name: 'Estimate details' }).click();
   await expect(card.getByTestId('deployment-cost-details')).toContainText('730 hours a month');
   await card.getByTestId('deployment-size-save').click();
   await expect(card.getByText('Saved.')).toBeVisible();
+  await expect(card.getByTestId('deployment-size-small')).toContainText('Below minimum');
 
   await page.reload();
-  await expect(sizes.getByRole('tab', { name: 'Large' })).toHaveAttribute('aria-selected', 'true');
+  await expect(card.getByLabel('Default size')).toContainText('Large');
   await expect(card.getByLabel('Minimum allowed size')).toContainText('Medium');
-  await expect(sizes.getByRole('tab', { name: 'Small' })).toBeDisabled();
+  await expect(card.getByTestId('deployment-size-large')).toContainText('Default');
+  await expect(card.getByTestId('deployment-size-small')).toContainText('Below minimum');
+  await card.getByLabel('Default size').click();
+  await expect(page.getByRole('option', { name: /^Small/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 375, height: 812 });
   await card.scrollIntoViewIfNeeded();

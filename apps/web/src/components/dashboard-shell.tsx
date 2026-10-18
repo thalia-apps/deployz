@@ -32,7 +32,9 @@ export function DashboardShell({
         organizations={organizations}
         activeOrganizationId={activeOrganizationId}
       />
-      <SidebarInset>
+      {/* min-w-0: a wide table scrolls inside its own container instead of
+          widening the page beside the tablet sidebar. */}
+      <SidebarInset className="min-w-0">
         <div className="sticky top-0 z-10 flex h-12 items-center border-b bg-background px-4 md:hidden">
           <SidebarTrigger aria-label="Open sidebar" />
         </div>
