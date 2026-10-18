@@ -5,7 +5,9 @@ import { detectDeclaredWorkerCommands, detectWorker } from '../src/detectors.js'
 import { checkMysql, checkOtherUnsupportedDatabases, checkPulumi, checkTerraform } from '../src/rejection.js';
 
 // Stage A phase-6 regression fixtures — the hardening batch from the unseen
-// set (docs/testing/repository-compatibility/findings.md, COMP-015, 036, 037).
+// set, COMP-015, 036, 037. The Stage A corpus and its findings registry were
+// removed on 2026-10-18; see docs/testing/compatibility.md for the Docker
+// run-and-check test.
 
 describe('COMP-015 — worker code and declared worker processes outside Node', () => {
   it('detects job queues declared in Ruby, Python, Go, JVM and Elixir manifests', () => {

@@ -4,7 +4,6 @@ import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { loadBenchmark, parseBenchmark, type BenchmarkEntry } from '../repository-compatibility/manifest.js';
 import { loadConfig } from '../version-canary/config.js';
 import type { DeploymentDetail } from '../version-canary/control-plane.js';
 import { applyCleanupToClassification, cleanupAttempt } from './cleanup.js';
@@ -12,11 +11,11 @@ import { classifyFailure } from './classify.js';
 import { appUrlKeys, configFor, deploymentClassFor, loadDeployConfig, parseDeployConfig, providedKeys, requireSmokeContract, secretValue } from './config.js';
 import { defaultDeploymentUrl, generateSecret, runRepositoryAttempt, resolveHealthPath, DEFAULT_TIMEOUTS, nextReleaseVersion, reusableRelease, type AwsLike, type ControlPlaneLike, type DeployDeps, reusableReleaseVersion } from './deploy.js';
 import { applicationContainerDefinition, arnKind, resourceStillExists, sanitize, stoppedExit } from './evidence.js';
-import { gateOutcome, manifestFacts, missingKeys, overridesToManifest } from './gate.js';
+import { manifestFacts, missingKeys, overridesToManifest } from './gate.js';
 import { activeRunsBlock, listUnfinishedLedgers, openLedger, readSeries, stageBRun, stageBRunId, writeSeries } from './ledger.js';
 import {
-  BENCHMARK_PATH,
   DEPLOY_CONFIG_PATH,
+  RECIPES_DIR,
   STAGE_B_DIR,
   assertRealAwsRepos,
   buildPlan,
@@ -41,49 +40,18 @@ import {
   readResult,
   renderStageBSummary,
   stageBResultSchema,
-  writeFrozenIfAbsent,
   writeResult,
   type StageBResult,
 } from './results.js';
+import { loadTargets, selectTargets, type StageBTarget } from './targets.js';
 
 const SHA = 'a'.repeat(40);
 const OTHER_SHA = 'b'.repeat(40);
 
-const BENCHMARK = parseBenchmark(`
-version: 1
-findings: []
-repositories:
-  - id: repo-001
-    repository: acme/api
-    commit: ${SHA}
-    cohort: realistic
-    set: improvement
-    expected:
-      compatibility: NEEDS_CONFIGURATION
-      runtime: [node]
-      monorepo: false
-      postgres: true
-      redis: false
-      worker: false
-      healthPath: /healthz
-    customer_realism: high
-    difficulty: 2
-  - id: repo-002
-    repository: acme/worker
-    commit: ${OTHER_SHA}
-    cohort: boundary
-    set: unseen
-    expected:
-      compatibility: NOT_COMPATIBLE
-      runtime: [python]
-      monorepo: false
-      postgres: false
-      redis: true
-      worker: true
-      unsupported: [kafka]
-    customer_realism: medium
-    difficulty: 3
-`);
+const TARGETS: StageBTarget[] = [
+  { id: 'repo-001', repository: 'acme/api', commit: SHA },
+  { id: 'repo-002', repository: 'acme/worker', commit: OTHER_SHA },
+];
 
 const DEPLOY_CONFIG = parseDeployConfig(`
 version: 1
@@ -150,19 +118,17 @@ describe('deploy-config', () => {
     expect(() => parseDeployConfig('version: 1\nrepositories:\n  - id: repo-001\n    secrets: [{ key: A, format: plain }]\n')).toThrow();
   });
 
-  it('parses the committed deploy-config and references only Stage A ids', () => {
-    const benchmark = loadBenchmark(BENCHMARK_PATH);
+  it('parses the committed deploy-config and names only repositories that have a recipe in its waves and class lists', () => {
     const config = loadDeployConfig(DEPLOY_CONFIG_PATH);
-    const ids = new Set(benchmark.repositories.map((entry) => entry.id));
-    for (const entry of config.repositories) expect(ids, `${entry.id} is not a Stage A id`).toContain(entry.id);
-    for (const members of Object.values(config.waves)) for (const id of members) expect(ids).toContain(id);
+    const ids = new Set(loadTargets(RECIPES_DIR).map((target) => target.id));
+    for (const members of Object.values(config.waves)) for (const id of members) expect(ids, `wave member ${id} has no recipe`).toContain(id);
     const registry = new Set([...readFileSync(join(STAGE_B_DIR, 'findings.md'), 'utf8').matchAll(/^\| (DEPLOY-\d{3}) \|/gm)].map((m) => m[1]!));
     for (const entry of config.repositories) for (const id of entry.findings) expect(registry, `${entry.id} references unregistered ${id}`).toContain(id);
-    // b2/b3 lists are disjoint and every id is a valid Stage A id.
+    // b2/b3 lists are disjoint and every id has a recipe.
     const b2Set = new Set(config.b2Repos);
     const b3Set = new Set(config.b3Repos);
-    for (const id of config.b2Repos) expect(ids, `b2Repos ${id} is not a Stage A id`).toContain(id);
-    for (const id of config.b3Repos) expect(ids, `b3Repos ${id} is not a Stage A id`).toContain(id);
+    for (const id of config.b2Repos) expect(ids, `b2Repos ${id} has no recipe`).toContain(id);
+    for (const id of config.b3Repos) expect(ids, `b3Repos ${id} has no recipe`).toContain(id);
     expect(config.b2Repos.length).toBeGreaterThan(0);
     expect(config.b3Repos.length).toBeGreaterThan(0);
     expect([...b2Set].filter((id) => b3Set.has(id))).toEqual([]);
@@ -170,53 +136,10 @@ describe('deploy-config', () => {
 });
 
 describe('assertRealAwsRepos (real-AWS virtual-fixture guard)', () => {
-  const virtualBenchmark = parseBenchmark(`
-version: 1
-findings: []
-repositories:
-  - id: repo-900
-    repository: deployz-demo/async-app
-    commit: ${SHA}
-    cohort: realistic
-    set: improvement
-    expected:
-      compatibility: READY
-      runtime: [node]
-      monorepo: false
-      postgres: false
-      redis: false
-      storage: false
-      worker: false
-      migration: false
-      appRoot: .
-      dockerfilePath: Dockerfile
-      port: 3000
-      healthPath: /
-      unsupported: []
-    customer_realism: high
-    difficulty: 1
-  - id: repo-901
-    repository: acme/api
-    commit: ${SHA}
-    cohort: realistic
-    set: improvement
-    expected:
-      compatibility: READY
-      runtime: [node]
-      monorepo: false
-      postgres: false
-      redis: false
-      storage: false
-      worker: false
-      migration: false
-      appRoot: .
-      dockerfilePath: Dockerfile
-      port: 3000
-      healthPath: /
-      unsupported: []
-    customer_realism: high
-    difficulty: 1
-`);
+  const virtualTargets: StageBTarget[] = [
+    { id: 'repo-900', repository: 'deployz-demo/async-app', commit: SHA },
+    { id: 'repo-901', repository: 'acme/api', commit: SHA },
+  ];
 
   function makeConfig(repositories: { id: string; fork?: string }[]): Parameters<typeof assertRealAwsRepos>[0] {
     return {
@@ -229,27 +152,27 @@ repositories:
   }
 
   it('refuses deployz-demo/* virtual fixtures even when the fork is unset', () => {
-    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-900' }]), virtualBenchmark)).toThrow(
+    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-900' }]), virtualTargets)).toThrow(
       /resolves to virtual fixture "deployz-demo\/async-app"/,
     );
   });
 
   it('refuses deployz-demo/* virtual fixtures even when the fork is set to a deployz-demo/* path', () => {
-    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-900', fork: 'deployz-demo/async-app' }]), virtualBenchmark)).toThrow(
+    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-900', fork: 'deployz-demo/async-app' }]), virtualTargets)).toThrow(
       /virtual fixture/,
     );
   });
 
   it('lets a real GitHub identity through when the fork points at it', () => {
-    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901', fork: 'instashop-dev/deployz-phase5-canary' }]), virtualBenchmark)).not.toThrow();
+    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901', fork: 'instashop-dev/deployz-phase5-canary' }]), virtualTargets)).not.toThrow();
   });
 
-  it('lets a real GitHub identity through when neither fork nor the benchmark is virtual', () => {
-    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901' }]), virtualBenchmark)).not.toThrow();
+  it('lets a real GitHub identity through when neither fork nor the target is virtual', () => {
+    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901' }]), virtualTargets)).not.toThrow();
   });
 
   it('refuses an invalid owner/name shape (no slashes, whitespace, etc.)', () => {
-    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901', fork: 'no slash here' }]), virtualBenchmark)).toThrow(
+    expect(() => assertRealAwsRepos(makeConfig([{ id: 'repo-901', fork: 'no slash here' }]), virtualTargets)).toThrow(
       /invalid repository/,
     );
   });
@@ -257,10 +180,16 @@ repositories:
 
 describe('result model', () => {
   it('starts every stage NOT_ATTEMPTED and validates against the schema', () => {
-    const result = emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'gate', null));
+    const result = emptyResult(identityFor(TARGETS[0]!, SHA, 'gate', null));
     expect(() => stageBResultSchema.parse(result)).not.toThrow();
-    expect(result.expectedDeployable).toBe(true);
-    expect(emptyResult(identityFor(BENCHMARK.repositories[1]!, SHA, 'gate', null)).expectedDeployable).toBe(false);
+  });
+
+  it('reads a result written with the removed label fields and drops them', () => {
+    const legacy = { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'gate', null)), set: 'improvement', cohort: 'realistic', customerRealism: 'high', difficulty: 2, stageAExpected: 'READY', expectedDeployable: true };
+    legacy.gate = { ...legacy.gate, outcome: 'correct-accept' } as typeof legacy.gate;
+    const parsed = stageBResultSchema.parse(legacy);
+    for (const field of ['set', 'cohort', 'customerRealism', 'difficulty', 'stageAExpected', 'expectedDeployable']) expect(parsed).not.toHaveProperty(field);
+    expect(parsed.gate).not.toHaveProperty('outcome');
   });
 
   it('accepts only the documented vocabularies', () => {
@@ -270,7 +199,7 @@ describe('result model', () => {
     for (const stage of FAILURE_STAGES) expect(docs).toContain(stage);
     for (const cause of ROOT_CAUSES) expect(docs).toContain(cause);
     expect(CLASSIFICATIONS).toContain('PASS');
-    const result = emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'gate', null));
+    const result = emptyResult(identityFor(TARGETS[0]!, SHA, 'gate', null));
     expect(() => stageBResultSchema.parse({ ...result, classification: 'SOMETHING_ELSE' })).toThrow();
     expect(() => stageBResultSchema.parse({ ...result, rootCause: 'USER_ERROR' })).toThrow();
     expect(() => stageBResultSchema.parse({ ...result, findingIds: ['COMP-001'] })).toThrow();
@@ -278,10 +207,10 @@ describe('result model', () => {
 
   it('protects a deployment result and keeps history only with --force', () => {
     const runs = join(tmp, 'runs-protect');
-    const gate = emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'gate', null));
+    const gate = emptyResult(identityFor(TARGETS[0]!, SHA, 'gate', null));
     writeResult(runs, gate);
     writeResult(runs, gate); // a gate result always replaces a gate result
-    const deploy = { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')), classification: 'PASS' as const, failureStage: null, rootCause: null };
+    const deploy = { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')), classification: 'PASS' as const, failureStage: null, rootCause: null };
     writeResult(runs, deploy);
     expect(() => writeResult(runs, deploy)).toThrow('rerun with --force');
     const { replaced } = writeResult(runs, { ...deploy, deployzCommit: OTHER_SHA }, { force: true });
@@ -289,62 +218,63 @@ describe('result model', () => {
     expect(readResult(runs, 'repo-001')?.deployzCommit).toBe(OTHER_SHA);
   });
 
-  it('writes the frozen unseen copy once', () => {
-    const runs = join(tmp, 'runs-frozen');
-    const result = emptyResult(identityFor(BENCHMARK.repositories[1]!, SHA, 'deploy', 'run-1'));
-    expect(writeFrozenIfAbsent(runs, result)).toBe(true);
-    expect(writeFrozenIfAbsent(runs, { ...result, deployzCommit: OTHER_SHA })).toBe(false);
-    expect(JSON.parse(readFileSync(join(runs, 'unseen-frozen', 'repo-002.json'), 'utf8')).deployzCommit).toBe(SHA);
-  });
-
   it('summarizes the funnel and the true-deployment-success metric', () => {
     const pass: StageBResult = {
-      ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')),
-      gate: { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')).gate, status: 'PASS', verdict: 'NEEDS_CONFIGURATION', outcome: 'correct-accept', configuredVerdict: 'READY', missingKeys: ['APP_KEY'] },
-      build: { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')).build, status: 'PASS' },
-      deployment: { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')).deployment, status: 'PASS' },
-      runtime: { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')).runtime, ecs: 'HEALTHY', alb: 'HEALTHY', https: 'PASS' },
+      ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')),
+      gate: { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')).gate, status: 'PASS', verdict: 'NEEDS_CONFIGURATION', configuredVerdict: 'READY', missingKeys: ['APP_KEY'] },
+      build: { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')).build, status: 'PASS' },
+      deployment: { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')).deployment, status: 'PASS' },
+      runtime: { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')).runtime, ecs: 'HEALTHY', alb: 'HEALTHY', https: 'PASS' },
       dependencies: { postgres: 'PASS', redis: 'NOT_REQUIRED', storage: 'NOT_REQUIRED', migration: 'NOT_REQUIRED', detail: null },
-      cleanup: { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1')).cleanup, status: 'PASS' },
+      cleanup: { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1')).cleanup, status: 'PASS' },
       classification: 'PASS',
       failureStage: null,
       rootCause: null,
       rootCauseEvidence: null,
     };
-    const unsupported: StageBResult = {
-      ...emptyResult(identityFor(BENCHMARK.repositories[1]!, SHA, 'gate', null)),
-      gate: { ...emptyResult(identityFor(BENCHMARK.repositories[1]!, SHA, 'gate', null)).gate, status: 'PASS', verdict: 'NOT_COMPATIBLE', outcome: 'correct-reject' },
-      classification: 'EXPECTED_UNSUPPORTED',
-      failureStage: 'EXPECTED_UNSUPPORTED',
-      rootCause: 'CORRECTLY_UNSUPPORTED',
+    const rejected: StageBResult = {
+      ...emptyResult(identityFor(TARGETS[1]!, SHA, 'gate', null)),
+      gate: { ...emptyResult(identityFor(TARGETS[1]!, SHA, 'gate', null)).gate, status: 'FAIL', verdict: 'NOT_COMPATIBLE' },
+      classification: 'GATE_ERROR',
+      failureStage: 'GATE_ERROR',
+      rootCause: null,
       findingIds: ['DEPLOY-001'],
     };
     expect(isTrueDeploymentSuccess(pass)).toBe(true);
     expect(isTrueDeploymentSuccess({ ...pass, dependencies: { ...pass.dependencies, postgres: 'FAIL' } })).toBe(false);
-    const summary = buildStageBSummary([pass, unsupported], SHA);
-    expect(summary.expectedDeployable).toBe(1);
-    expect(summary.expectedUnsupported).toBe(1);
-    expect(summary.gate.correctAccept).toBe(1);
-    expect(summary.gate.correctReject).toBe(1);
+    const summary = buildStageBSummary([pass, rejected], SHA);
+    expect(summary.gate).toMatchObject({ attempted: 2, ready: 0, needsConfiguration: 1, notCompatible: 1 });
     expect(summary.trueDeploymentSuccess).toBe(1);
-    expect(summary.trueDeploymentSuccessRate).toBe(100);
+    expect(summary.trueDeploymentSuccessRate).toBe(50);
     expect(summary.cleanup.successRate).toBe(100);
     expect(summary.byFinding['DEPLOY-001']).toEqual(['repo-002']);
-    expect(summary.bySet['unseen']?.expectedUnsupported).toBe(1);
-    const rendered = renderStageBSummary([pass, unsupported], summary);
-    expect(rendered).toContain('**True deployment success / expected deployable** | **1 / 1 (100%)**');
-    expect(rendered).toContain('| repo-002 | acme/worker@bbbbbbb | boundary | NOT_COMPATIBLE | NOT_COMPATIBLE (correct-reject) |');
+    const rendered = renderStageBSummary([pass, rejected], summary);
+    expect(rendered).toContain('**True deployment success / repositories** | **1 / 2 (50%)**');
+    expect(rendered).toContain('| repo-002 | acme/worker@bbbbbbb | NOT_COMPATIBLE |');
   });
 });
 
 describe('selection and CLI', () => {
-  it('selects by set, cohort, wave order and finding', () => {
-    expect(selectForRun(BENCHMARK, DEPLOY_CONFIG, { ids: [], set: 'unseen', cohort: undefined, wave: undefined, finding: undefined }).map((e) => e.id)).toEqual(['repo-002']);
-    expect(selectForRun(BENCHMARK, DEPLOY_CONFIG, { ids: [], set: undefined, cohort: 'realistic', wave: undefined, finding: undefined }).map((e) => e.id)).toEqual(['repo-001']);
-    expect(selectForRun(BENCHMARK, DEPLOY_CONFIG, { ids: [], set: undefined, cohort: undefined, wave: 'wave-1', finding: undefined }).map((e) => e.id)).toEqual(['repo-002', 'repo-001']);
-    expect(() => selectForRun(BENCHMARK, DEPLOY_CONFIG, { ids: [], set: undefined, cohort: undefined, wave: 'wave-9', finding: undefined })).toThrow('unknown wave wave-9');
-    const existing = [{ ...emptyResult(identityFor(BENCHMARK.repositories[1]!, SHA, 'gate', null)), findingIds: ['DEPLOY-001'] }];
-    expect(selectForRun(BENCHMARK, DEPLOY_CONFIG, { ids: [], set: undefined, cohort: undefined, wave: undefined, finding: 'DEPLOY-001' }, existing).map((e) => e.id)).toEqual(['repo-002']);
+  it('selects by id, wave order and finding', () => {
+    expect(selectForRun(TARGETS, DEPLOY_CONFIG, { ids: ['repo-002'], wave: undefined, finding: undefined }).map((e) => e.id)).toEqual(['repo-002']);
+    expect(() => selectForRun(TARGETS, DEPLOY_CONFIG, { ids: ['repo-042'], wave: undefined, finding: undefined })).toThrow('unknown repository id repo-042');
+    expect(selectForRun(TARGETS, DEPLOY_CONFIG, { ids: [], wave: 'wave-1', finding: undefined }).map((e) => e.id)).toEqual(['repo-002', 'repo-001']);
+    expect(() => selectForRun(TARGETS, DEPLOY_CONFIG, { ids: [], wave: 'wave-9', finding: undefined })).toThrow('unknown wave wave-9');
+    const existing = [{ ...emptyResult(identityFor(TARGETS[1]!, SHA, 'gate', null)), findingIds: ['DEPLOY-001'] }];
+    expect(selectForRun(TARGETS, DEPLOY_CONFIG, { ids: [], wave: undefined, finding: 'DEPLOY-001' }, existing).map((e) => e.id)).toEqual(['repo-002']);
+  });
+
+  it('takes its repositories from the git recipes of the run-and-check test', () => {
+    const targets = loadTargets(RECIPES_DIR);
+    const recipe = readFileSync(join(RECIPES_DIR, 'repo-001.yaml'), 'utf8');
+    expect(targets.find((target) => target.id === 'repo-001')).toEqual({
+      id: 'repo-001',
+      repository: /repository: (.+)/.exec(recipe)![1],
+      commit: /commit: ([0-9a-f]{40})/.exec(recipe)![1],
+    });
+    for (const target of targets) expect(target.id).toMatch(/^repo-\d{3}$/);
+    expect(selectTargets(targets, ['repo-001']).map((target) => target.id)).toEqual(['repo-001']);
+    expect(() => selectTargets(targets, ['new-1'])).toThrow('unknown repository id new-1');
   });
 
   it('parses the modes and refuses contradictions', () => {
@@ -389,18 +319,19 @@ describe('selection and CLI', () => {
     expect(() => requireRealAws(parseRunArgs(['--audit']), { DEPLOYZ_E2E_ALLOW_REAL_AWS: '1' })).not.toThrow();
   });
 
-  it('plans gate-only for expected-unsupported entries, the funnel for the rest, and skips protected results', () => {
-    const plan = buildPlan(BENCHMARK.repositories, DEPLOY_CONFIG, [], { gate: false, force: false });
+  it('plans the funnel, or the gate only under --gate, and skips protected results', () => {
+    const plan = buildPlan(TARGETS, DEPLOY_CONFIG, [], { gate: false, force: false });
     expect(plan.map((l) => [l.id, l.action])).toEqual([
       ['repo-001', 'full-funnel'],
-      ['repo-002', 'gate-only'],
+      ['repo-002', 'full-funnel'],
     ]);
+    expect(buildPlan(TARGETS, DEPLOY_CONFIG, [], { gate: true, force: false }).map((l) => l.action)).toEqual(['gate-only', 'gate-only']);
     expect(plan[0]?.repositoryUsed).toBe('instashop-dev/api');
     expect(plan[0]?.configuredKeys).toEqual(['APP_URL', 'DB_CLIENT', 'JWT_SECRET', 'SECRET_KEY']);
-    const done = { ...emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'r')), classification: 'PASS' as const };
-    expect(buildPlan(BENCHMARK.repositories, DEPLOY_CONFIG, [done], { gate: false, force: false })[0]?.action).toBe('skip-has-result');
-    expect(buildPlan(BENCHMARK.repositories, DEPLOY_CONFIG, [done], { gate: false, force: true })[0]?.action).toBe('full-funnel');
-    expect(renderPlan(plan, { concurrency: 1 })).toContain('full funnel: 1, gate only: 1, skipped: 0');
+    const done = { ...emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'r')), classification: 'PASS' as const };
+    expect(buildPlan(TARGETS, DEPLOY_CONFIG, [done], { gate: false, force: false })[0]?.action).toBe('skip-has-result');
+    expect(buildPlan(TARGETS, DEPLOY_CONFIG, [done], { gate: false, force: true })[0]?.action).toBe('full-funnel');
+    expect(renderPlan(plan, { concurrency: 1 })).toContain('full funnel: 2, gate only: 0, skipped: 0');
     expect(renderPlan(plan, { concurrency: 1 })).toContain('B1 runtime-reuse');
     // Neither repo is in b2Repos/b3Repos — deploymentClassFor's default (capability-cohort), not the withdrawn B1 label.
     expect(plan[0]?.deploymentClass).toBe('capability-cohort');
@@ -408,8 +339,8 @@ describe('selection and CLI', () => {
   });
 
   it('points Deployz at the fork the installation can read', () => {
-    expect(repositoryUsedFor(BENCHMARK.repositories[0]!, { id: 'repo-001', findings: [], notes: [] })).toEqual({ repositoryUsed: 'instashop-dev/api', repositoryForm: 'fork' });
-    expect(repositoryUsedFor(BENCHMARK.repositories[0]!, { id: 'repo-001', fork: 'instashop-dev/acme-api', findings: [], notes: [] }).repositoryUsed).toBe('instashop-dev/acme-api');
+    expect(repositoryUsedFor(TARGETS[0]!, { id: 'repo-001', findings: [], notes: [] })).toEqual({ repositoryUsed: 'instashop-dev/api', repositoryForm: 'fork' });
+    expect(repositoryUsedFor(TARGETS[0]!, { id: 'repo-001', fork: 'instashop-dev/acme-api', findings: [], notes: [] }).repositoryUsed).toBe('instashop-dev/acme-api');
   });
 });
 
@@ -489,7 +420,7 @@ repositories:
 
   it('plan printer shows class breakdown with counts', () => {
     const config = deploymentConfig();
-    const plan = buildPlan(BENCHMARK.repositories, config, [], { gate: false, force: false });
+    const plan = buildPlan(TARGETS, config, [], { gate: false, force: false });
     const rendered = renderPlan(plan, { concurrency: 1 });
     expect(rendered).toContain('B1 runtime-reuse');
     expect(rendered).toContain('B2 capability cohorts');
@@ -501,7 +432,7 @@ repositories:
   });
 
   it('result model schema accepts the three deployment classes', () => {
-    const result = emptyResult(identityFor(BENCHMARK.repositories[0]!, SHA, 'deploy', 'run-1', 'runtime-reuse'));
+    const result = emptyResult(identityFor(TARGETS[0]!, SHA, 'deploy', 'run-1', 'runtime-reuse'));
     expect(result.deploymentClass).toBe('runtime-reuse');
     expect(() => stageBResultSchema.parse({ ...result, deploymentClass: 'runtime-reuse' })).not.toThrow();
     expect(() => stageBResultSchema.parse({ ...result, deploymentClass: 'capability-cohort' })).not.toThrow();
@@ -511,15 +442,6 @@ repositories:
 });
 
 describe('gate', () => {
-  it('classifies the four gate outcomes', () => {
-    expect(gateOutcome(true, 'READY')).toBe('correct-accept');
-    expect(gateOutcome(true, 'NEEDS_CONFIGURATION')).toBe('correct-accept');
-    expect(gateOutcome(false, 'NOT_COMPATIBLE')).toBe('correct-reject');
-    expect(gateOutcome(false, 'READY')).toBe('false-acceptance');
-    expect(gateOutcome(true, 'NOT_COMPATIBLE')).toBe('false-rejection');
-    expect(gateOutcome(true, null)).toBeNull();
-  });
-
   it('maps vendor overrides onto the manifest override vocabulary', () => {
     expect(overridesToManifest({ containerPort: 8080, healthPath: '/up', dockerfilePath: 'docker/Dockerfile', redisRequired: false })).toEqual({
       port: 8080,
@@ -827,12 +749,11 @@ describe('resourceStillExists (leak-audit confirmation)', () => {
 });
 
 describe('classification', () => {
-  const base = { expectedDeployable: true, message: 'x' } as const;
+  const base = { message: 'x' } as const;
 
-  it('recognises the expected-unsupported gate outcome and the two gate mistakes', () => {
-    expect(classifyFailure({ ...base, point: 'gate', expectedDeployable: false, gateVerdict: 'NOT_COMPATIBLE' })).toMatchObject({ failureStage: 'EXPECTED_UNSUPPORTED', rootCause: 'CORRECTLY_UNSUPPORTED' });
+  it('reports a gate rejection and a configuration refusal', () => {
     expect(classifyFailure({ ...base, point: 'gate', gateVerdict: 'NOT_COMPATIBLE' })).toMatchObject({ failureStage: 'GATE_ERROR', rootCause: null });
-    expect(classifyFailure({ ...base, point: 'gate', expectedDeployable: false, gateVerdict: 'READY' }).rootCauseEvidence).toContain('false acceptance');
+    expect(classifyFailure({ ...base, point: 'gate', gateVerdict: 'NOT_COMPATIBLE' }).rootCauseEvidence).toContain('rejected the repository');
     expect(classifyFailure({ ...base, point: 'configuration' }).failureStage).toBe('CONFIG_ERROR');
   });
 
@@ -1190,7 +1111,7 @@ function fakes(script: Script): { deps: DeployDeps; calls: string[]; puts: Recor
 }
 
 function attempt(
-  entry: BenchmarkEntry,
+  entry: StageBTarget,
   script: Script,
   config = configFor(DEPLOY_CONFIG, entry.id),
   existingApplicationId?: string,
@@ -1205,7 +1126,7 @@ function attempt(
   return {
     run: () =>
       runRepositoryAttempt(deps, {
-        benchmark: entry,
+        target: entry,
         config,
         repositoryUsed: 'instashop-dev/api',
         repositoryForm: 'fork',
@@ -1222,8 +1143,7 @@ function attempt(
 }
 
 describe('the funnel', () => {
-  const deployable = BENCHMARK.repositories[0]!;
-  const unsupported = BENCHMARK.repositories[1]!;
+  const deployable = TARGETS[0]!;
 
   it('passes end to end with the release serving, HTTPS active and dependencies bound', async () => {
     // A distinct value per call: proves the customer-scope secrets PUT reuses the
@@ -1319,26 +1239,12 @@ repositories:
     expect(() => stageBResultSchema.parse(out)).not.toThrow();
   });
 
-  it('stops an accepted expected-unsupported repository at the gate without creating anything', async () => {
-    const { run, calls } = attempt(unsupported, {});
-    const out = await run();
-    expect(out.classification).toBe('GATE_ERROR');
-    expect(out.rootCauseEvidence).toContain('false acceptance');
-    expect(calls).not.toContain('createDeployment');
-    expect(calls.some((c) => c.startsWith('createStack'))).toBe(false);
-  });
-
-  it('records EXPECTED_UNSUPPORTED when the control plane refuses an expected-unsupported repository', async () => {
-    const { run } = attempt(unsupported, { preflight: { state: 'NOT_COMPATIBLE', ready: false, blockers: [{ id: 'unsupported', message: 'kafka' }], warnings: [] } });
-    const out = await run();
-    expect(out.classification).toBe('EXPECTED_UNSUPPORTED');
-    expect(out.rootCause).toBe('CORRECTLY_UNSUPPORTED');
-    expect(out.gate.status).toBe('PASS');
-  });
-
-  it('records a false rejection and a configuration refusal without building', async () => {
+  it('records a gate rejection and a configuration refusal without building', async () => {
     const rejected = await attempt(deployable, { preflight: { state: 'NOT_COMPATIBLE', ready: false, blockers: [{ id: 'unsupported', message: 'x' }], warnings: [] } });
-    expect((await rejected.run()).classification).toBe('GATE_ERROR');
+    const refused = await rejected.run();
+    expect(refused.classification).toBe('GATE_ERROR');
+    expect(refused.gate.status).toBe('FAIL');
+    expect(rejected.calls).not.toContain('createDeployment');
     expect(rejected.calls.some((c) => c.startsWith('createRelease'))).toBe(false);
     const needs = await attempt(deployable, { preflight: { state: 'NEEDS_CONFIGURATION', ready: false, blockers: [{ id: 'required-env-vars-missing', message: 'APP_KEY' }], warnings: [] } });
     expect((await needs.run()).classification).toBe('CONFIG_ERROR');
@@ -1446,7 +1352,7 @@ repositories:
 });
 
 describe('inventory gate (plan-versus-actual)', () => {
-  const deployable = BENCHMARK.repositories[0]!;
+  const deployable = TARGETS[0]!;
 
   it('passes when the plan, the inventory expectations and the stack resources all agree', async () => {
     const { run } = attempt(deployable, {});
@@ -1548,7 +1454,7 @@ describe('inventory gate (plan-versus-actual)', () => {
 });
 
 describe('smoke contracts', () => {
-  const deployable = BENCHMARK.repositories[0]!;
+  const deployable = TARGETS[0]!;
   const withSmoke = (checks: string) =>
     configFor(
       parseDeployConfig(`version: 1\nrepositories:\n  - id: repo-001\n    smoke:\n${checks}\n`),
@@ -1606,7 +1512,7 @@ describe('smoke contracts', () => {
 });
 
 describe('--exercise-update', () => {
-  const deployable = BENCHMARK.repositories[0]!;
+  const deployable = TARGETS[0]!;
 
   it('happy path: builds, deploys and re-verifies a second release', async () => {
     const { run, calls } = attempt(deployable, { exerciseUpdate: true });
@@ -1626,7 +1532,7 @@ describe('--exercise-update', () => {
 });
 
 describe('reusing an application on a retry (--reuse-application)', () => {
-  const deployable = BENCHMARK.repositories[0]!;
+  const deployable = TARGETS[0]!;
   const config = configFor(DEPLOY_CONFIG, deployable.id);
 
   it('names a release by repository, pinned commit and image inputs', () => {
@@ -1759,7 +1665,7 @@ describe('reusing an application on a retry (--reuse-application)', () => {
 });
 
 describe('cleanup', () => {
-  const deployable = BENCHMARK.repositories[0]!;
+  const deployable = TARGETS[0]!;
   const idleApi = () => ({ getDeployment: async () => ({ state: 'HEALTHY', jobs: [{ id: 'j', type: 'INSTALL', state: 'SUCCEEDED' }] }) }) as never;
 
   it('always runs every stage, records what is left, and marks the ledger complete only on success', async () => {

@@ -179,13 +179,10 @@ test('12. an edited spec runs on its own; an edited scenario spec on top of the 
   assert.ok(https.some(c => c.args.includes('e2e/home.spec.ts') && !c.args.includes('e2e/scenario-default-https.spec.ts')));
 });
 
-test('12b. benchmark corpora and registries are harness test data, not docs; DB enums are schema', () => {
-  const compat = plan(['docs/testing/repository-compatibility/benchmark.yaml']);
-  assert.equal(compat.risk, 'targeted');
-  assert.deepEqual(compat.unitProjects, ['repository-compatibility']);
-  assert.deepEqual(plan(['docs/testing/repository-deployment/findings.md']).unitProjects, ['repository-deployment']);
-  assert.deepEqual(plan(['docs/testing/remediation-benchmark/cases.yaml']).unitProjects, ['remediation-benchmark']);
-  assert.ok(plan(['packages/analysis/src/fix-instructions.ts']).unitProjects.includes('remediation-benchmark'));
+test('12b. the Stage B configuration and registry are harness test data, not docs; DB enums are schema', () => {
+  const stageB = plan(['docs/testing/repository-deployment/findings.md']);
+  assert.equal(stageB.risk, 'targeted');
+  assert.deepEqual(stageB.unitProjects, ['repository-deployment']);
   assert.equal(plan(['apps/api/src/fix-instructions.ts']).unitProjects, 'ALL');
   assert.equal(plan(['packages/db/src/enums.ts']).risk, 'critical');
 });
@@ -195,7 +192,7 @@ test('13. harness changes run their own project and the harness typecheck', () =
   assert.equal(p.risk, 'targeted');
   assert.deepEqual(p.unitProjects, ['version-canary']);
   assert.equal(p.typecheckScripts, true);
-  assert.equal(plan(['scripts/jev-eval/index.ts']).unitProjects[0], 'jev-eval');
+  assert.deepEqual(plan(['scripts/run-and-check/src/analysis/session.ts']).unitProjects, ['repository-deployment', 'run-and-check']);
   const reset = plan(['scripts/customer-reset/safety.ts']);
   assert.equal(reset.risk, 'targeted');
   assert.equal(reset.typecheckScripts, true);

@@ -1,20 +1,24 @@
 /**
- * The Stage B result model — one schema-validated document per Stage A id
+ * The Stage B result model — one schema-validated document per repository id
  * under `docs/testing/repository-deployment/runs/`, plus the corpus summary.
  *
  * Two fixed vocabularies (README "Result model"): the failure stage names
  * where the funnel stopped, the root cause names the first responsible
  * layer. Nothing else is accepted. A completed result is protected: a rerun
- * moves the previous document to `runs/history/` only with `--force`, and
- * the frozen first-run results of the unseen set are never overwritten.
+ * moves the previous document to `runs/history/` only with `--force`.
+ *
+ * A result records what the run observed. It holds no expected answer.
+ * Documents written before 2026-10-18 also carry label fields (set, cohort,
+ * realism, difficulty, expected verdict, gate outcome). The schema ignores
+ * those fields, and the next write of such a document drops them.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { manifestReadinessStateSchema } from '@deployz/contracts';
 import { z } from 'zod';
 
 import { DEPLOYMENT_CLASSES } from './config.js';
-import { COHORTS, BENCHMARK_SETS, COMPATIBILITY_STATES, REALISM_LEVELS } from '../repository-compatibility/manifest.js';
 
 export const FAILURE_STAGES = [
   'GATE_ERROR',
@@ -62,9 +66,6 @@ export type Classification = (typeof CLASSIFICATIONS)[number];
 export const STAGE_STATUSES = ['PASS', 'FAIL', 'SKIPPED', 'NOT_REQUIRED', 'NOT_ATTEMPTED'] as const;
 export type StageStatus = (typeof STAGE_STATUSES)[number];
 
-export const GATE_OUTCOMES = ['correct-accept', 'correct-reject', 'false-acceptance', 'false-rejection'] as const;
-export type GateOutcome = (typeof GATE_OUTCOMES)[number];
-
 const FINDING_ID_REGEX = /^DEPLOY-\d{3}$/;
 const stageStatus = z.enum(STAGE_STATUSES);
 
@@ -72,9 +73,8 @@ export const gateResultSchema = z
   .object({
     status: stageStatus,
     /** The deployment gate's verdict for a fresh application with no configured values. */
-    verdict: z.enum(COMPATIBILITY_STATES).nullable(),
+    verdict: manifestReadinessStateSchema.nullable(),
     analysisVerdict: z.string().nullable(),
-    outcome: z.enum(GATE_OUTCOMES).nullable(),
     gateFindings: z.array(z.string()),
     /** Every env key the manifest marks required (before Deployz-provided keys are subtracted). */
     requiredKeys: z.array(z.string()),
@@ -82,7 +82,7 @@ export const gateResultSchema = z
     missingKeys: z.array(z.string()),
     unsupported: z.array(z.string()),
     /** The gate's verdict once the Stage B vendor configuration is applied (offline evaluation). */
-    configuredVerdict: z.enum(COMPATIBILITY_STATES).nullable(),
+    configuredVerdict: manifestReadinessStateSchema.nullable(),
     configuredFindings: z.array(z.string()),
     /** Where the verdict came from: the in-process production path, the deployed control plane, or both. */
     source: z.enum(['in-process', 'control-plane', 'both']).nullable(),
@@ -109,8 +109,7 @@ export const gateResultSchema = z
       .strict()
       .nullable(),
     detail: z.string().nullable(),
-  })
-  .strict();
+  });
 
 export const configurationResultSchema = z
   .object({
@@ -276,14 +275,8 @@ export const stageBResultSchema = z
     /** The repository form Deployz was pointed at (`owner/repo`); the same as `repository` unless a fork was needed. */
     repositoryForm: z.enum(['original', 'fork']).nullable(),
     repositoryUsed: z.string().nullable(),
-    set: z.enum(BENCHMARK_SETS),
-    cohort: z.enum(COHORTS),
-    customerRealism: z.enum(REALISM_LEVELS),
-    difficulty: z.number().int().min(1).max(5),
     deployzCommit: z.string().regex(/^[0-9a-f]{7,40}$/),
     runId: z.string().nullable(),
-    stageAExpected: z.enum(COMPATIBILITY_STATES),
-    expectedDeployable: z.boolean(),
     /** How far the harness was asked to go: the gate only, or the whole funnel. */
     mode: z.enum(['gate', 'deploy']),
     /** Which deployment class this repository was assigned to (B1/B2/B3). Default runtime-reuse for backward compatibility. */
@@ -322,8 +315,7 @@ export const stageBResultSchema = z
       .strict(),
     /** Summarized, sanitized evidence — never raw AWS logs, never secrets. */
     evidence: z.record(z.string(), z.unknown()),
-  })
-  .strict();
+  });
 export type StageBResult = z.infer<typeof stageBResultSchema>;
 
 // ── Construction ─────────────────────────────────────────────────────────
@@ -332,32 +324,24 @@ export interface ResultIdentity {
   id: string;
   repository: string;
   commit: string;
-  set: StageBResult['set'];
-  cohort: StageBResult['cohort'];
-  customerRealism: StageBResult['customerRealism'];
-  difficulty: number;
   deployzCommit: string;
   runId: string | null;
-  stageAExpected: StageBResult['stageAExpected'];
   mode: StageBResult['mode'];
   deploymentClass: StageBResult['deploymentClass'];
 }
 
 /** A result with every stage NOT_ATTEMPTED — the starting point every run fills in. */
 export function emptyResult(identity: ResultIdentity): StageBResult {
-  const expectedDeployable = identity.stageAExpected !== 'NOT_COMPATIBLE';
   return {
     schemaVersion: 1,
     ...identity,
     deploymentClass: identity.deploymentClass,
     repositoryForm: null,
     repositoryUsed: null,
-    expectedDeployable,
     gate: {
       status: 'NOT_ATTEMPTED',
       verdict: null,
       analysisVerdict: null,
-      outcome: null,
       gateFindings: [],
       requiredKeys: [],
       missingKeys: [],
@@ -462,7 +446,6 @@ export function emptyResult(identity: ResultIdentity): StageBResult {
 /** True when a result's funnel ended in TRUE_DEPLOYMENT_SUCCESS terms (README "Metrics"). */
 export function isTrueDeploymentSuccess(result: StageBResult): boolean {
   return (
-    result.expectedDeployable &&
     result.mode === 'deploy' &&
     result.build.status === 'PASS' &&
     result.deployment.status === 'PASS' &&
@@ -528,25 +511,13 @@ export function writeResult(runsDir: string, result: StageBResult, options: Writ
   return { replaced };
 }
 
-/** The frozen first-run copy of an unseen-set result: written once, never replaced. */
-export function writeFrozenIfAbsent(runsDir: string, result: StageBResult): boolean {
-  const dir = join(runsDir, 'unseen-frozen');
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `${result.id}.json`);
-  if (existsSync(path)) return false;
-  writeFileSync(path, `${JSON.stringify(stageBResultSchema.parse(result), null, 2)}\n`);
-  return true;
-}
-
 // ── Summary ──────────────────────────────────────────────────────────────
 
 export interface StageBSummary {
   deployzCommit: string;
   total: number;
-  expectedDeployable: number;
-  expectedUnsupported: number;
-  gate: { attempted: number; correctAccept: number; correctReject: number; falseAcceptance: number; falseRejection: number; configuredReady: number };
-  build: { attempted: number; succeeded: number; failed: number; successRateAmongDeployable: number };
+  gate: { attempted: number; ready: number; needsConfiguration: number; notCompatible: number; configuredReady: number };
+  build: { attempted: number; succeeded: number; failed: number; successRate: number };
   infrastructure: { attempted: number; succeeded: number; failed: number };
   runtime: { ecsRunning: number; albHealthy: number; httpsReachable: number; applicationResponseValid: number };
   dependencies: { postgres: number; redis: number; storage: number; migration: number };
@@ -557,18 +528,7 @@ export interface StageBSummary {
   byFailureStage: Record<string, number>;
   byRootCause: Record<string, number>;
   byFinding: Record<string, string[]>;
-  bySet: Record<string, CohortBucket>;
-  byCohort: Record<string, CohortBucket>;
   byClass: Record<string, { total: number; pass: number; fail: number }>;
-}
-
-export interface CohortBucket {
-  total: number;
-  expectedDeployable: number;
-  deployed: number;
-  trueDeploymentSuccess: number;
-  expectedUnsupported: number;
-  gateCorrect: number;
 }
 
 function percent(numerator: number, denominator: number): number {
@@ -586,7 +546,6 @@ function count<T>(items: readonly T[], key: (item: T) => string | null): Record<
 }
 
 export function buildStageBSummary(results: readonly StageBResult[], deployzCommit: string): StageBSummary {
-  const deployable = results.filter((r) => r.expectedDeployable);
   const gated = results.filter((r) => r.gate.status !== 'NOT_ATTEMPTED');
   const built = results.filter((r) => r.build.status === 'PASS' || r.build.status === 'FAIL');
   const buildOk = results.filter((r) => r.build.status === 'PASS');
@@ -594,20 +553,6 @@ export function buildStageBSummary(results: readonly StageBResult[], deployzComm
   const infraOk = results.filter((r) => r.deployment.status === 'PASS');
   const destroys = results.filter((r) => r.cleanup.status === 'PASS' || r.cleanup.status === 'FAIL');
   const trueSuccess = results.filter(isTrueDeploymentSuccess);
-
-  const bucket = (key: (r: StageBResult) => string): Record<string, CohortBucket> => {
-    const groups: Record<string, CohortBucket> = {};
-    for (const r of results) {
-      const b = (groups[key(r)] ??= { total: 0, expectedDeployable: 0, deployed: 0, trueDeploymentSuccess: 0, expectedUnsupported: 0, gateCorrect: 0 });
-      b.total += 1;
-      if (r.expectedDeployable) b.expectedDeployable += 1;
-      else b.expectedUnsupported += 1;
-      if (r.deployment.status === 'PASS') b.deployed += 1;
-      if (isTrueDeploymentSuccess(r)) b.trueDeploymentSuccess += 1;
-      if (r.gate.outcome === 'correct-accept' || r.gate.outcome === 'correct-reject') b.gateCorrect += 1;
-    }
-    return Object.fromEntries(Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)));
-  };
 
   const byFinding: Record<string, string[]> = {};
   for (const r of results) {
@@ -626,22 +571,19 @@ export function buildStageBSummary(results: readonly StageBResult[], deployzComm
   return {
     deployzCommit,
     total: results.length,
-    expectedDeployable: deployable.length,
-    expectedUnsupported: results.length - deployable.length,
     byClass,
     gate: {
       attempted: gated.length,
-      correctAccept: gated.filter((r) => r.gate.outcome === 'correct-accept').length,
-      correctReject: gated.filter((r) => r.gate.outcome === 'correct-reject').length,
-      falseAcceptance: gated.filter((r) => r.gate.outcome === 'false-acceptance').length,
-      falseRejection: gated.filter((r) => r.gate.outcome === 'false-rejection').length,
+      ready: gated.filter((r) => r.gate.verdict === 'READY').length,
+      needsConfiguration: gated.filter((r) => r.gate.verdict === 'NEEDS_CONFIGURATION').length,
+      notCompatible: gated.filter((r) => r.gate.verdict === 'NOT_COMPATIBLE').length,
       configuredReady: gated.filter((r) => r.gate.configuredVerdict === 'READY').length,
     },
     build: {
       attempted: built.length,
       succeeded: buildOk.length,
       failed: built.length - buildOk.length,
-      successRateAmongDeployable: percent(buildOk.filter((r) => r.expectedDeployable).length, deployable.length),
+      successRate: percent(buildOk.length, results.length),
     },
     infrastructure: { attempted: infra.length, succeeded: infraOk.length, failed: infra.length - infraOk.length },
     runtime: {
@@ -657,7 +599,7 @@ export function buildStageBSummary(results: readonly StageBResult[], deployzComm
       migration: results.filter((r) => r.dependencies.migration === 'PASS').length,
     },
     trueDeploymentSuccess: trueSuccess.length,
-    trueDeploymentSuccessRate: percent(trueSuccess.length, deployable.length),
+    trueDeploymentSuccessRate: percent(trueSuccess.length, results.length),
     cleanup: {
       destroys: destroys.length,
       destroyFailures: destroys.filter((r) => r.cleanup.status === 'FAIL').length,
@@ -668,17 +610,10 @@ export function buildStageBSummary(results: readonly StageBResult[], deployzComm
     byFailureStage: count(results, (r) => r.failureStage),
     byRootCause: count(results, (r) => r.rootCause),
     byFinding: Object.fromEntries(Object.entries(byFinding).sort(([a], [b]) => a.localeCompare(b))),
-    bySet: bucket((r) => r.set),
-    byCohort: bucket((r) => r.cohort),
   };
 }
 
 export function renderStageBSummary(results: readonly StageBResult[], summary: StageBSummary): string {
-  const bucketRows = (groups: Record<string, CohortBucket>): string[] =>
-    Object.entries(groups).map(
-      ([name, b]) =>
-        `| ${name} | ${b.total} | ${b.expectedDeployable} | ${b.expectedUnsupported} | ${b.gateCorrect} | ${b.deployed} | ${b.trueDeploymentSuccess} |`,
-    );
   const lines: string[] = [
     '# Repository deployment audit — run summary',
     '',
@@ -687,17 +622,14 @@ export function renderStageBSummary(results: readonly StageBResult[], summary: S
     '| Metric | Value |',
     '| --- | --- |',
     `| Repositories | ${summary.total} |`,
-    `| Expected deployable | ${summary.expectedDeployable} |`,
-    `| Expected unsupported | ${summary.expectedUnsupported} |`,
-    `| Gate: correct accept / correct reject | ${summary.gate.correctAccept} / ${summary.gate.correctReject} |`,
-    `| Gate: false acceptance / false rejection | ${summary.gate.falseAcceptance} / ${summary.gate.falseRejection} |`,
+    `| Gate: READY / NEEDS_CONFIGURATION / NOT_COMPATIBLE | ${summary.gate.ready} / ${summary.gate.needsConfiguration} / ${summary.gate.notCompatible} |`,
     `| Gate: READY with the Stage B configuration | ${summary.gate.configuredReady} |`,
     `| Build attempted / succeeded / failed | ${summary.build.attempted} / ${summary.build.succeeded} / ${summary.build.failed} |`,
-    `| Build success among expected deployable | ${summary.build.successRateAmongDeployable}% |`,
+    `| Build success rate | ${summary.build.successRate}% |`,
     `| Infrastructure attempted / succeeded / failed | ${summary.infrastructure.attempted} / ${summary.infrastructure.succeeded} / ${summary.infrastructure.failed} |`,
     `| Runtime: ECS running / ALB healthy / HTTPS reachable / application response valid | ${summary.runtime.ecsRunning} / ${summary.runtime.albHealthy} / ${summary.runtime.httpsReachable} / ${summary.runtime.applicationResponseValid} |`,
     `| Dependencies: PostgreSQL / Redis / storage / migration verified | ${summary.dependencies.postgres} / ${summary.dependencies.redis} / ${summary.dependencies.storage} / ${summary.dependencies.migration} |`,
-    `| **True deployment success / expected deployable** | **${summary.trueDeploymentSuccess} / ${summary.expectedDeployable} (${summary.trueDeploymentSuccessRate}%)** |`,
+    `| **True deployment success / repositories** | **${summary.trueDeploymentSuccess} / ${summary.total} (${summary.trueDeploymentSuccessRate}%)** |`,
     `| Cleanup: destroys / failures / leaks / success rate | ${summary.cleanup.destroys} / ${summary.cleanup.destroyFailures} / ${summary.cleanup.leaks} / ${summary.cleanup.successRate}% |`,
     '',
     '## By classification',
@@ -718,18 +650,6 @@ export function renderStageBSummary(results: readonly StageBResult[], summary: S
     '| --- | --- |',
     ...Object.entries(summary.byFinding).map(([k, v]) => `| ${k} | ${v.length}: ${v.join(', ')} |`),
     '',
-    '## By set',
-    '',
-    '| Set | Repositories | Expected deployable | Expected unsupported | Gate correct | Deployed | True success |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
-    ...bucketRows(summary.bySet),
-    '',
-    '## By cohort',
-    '',
-    '| Cohort | Repositories | Expected deployable | Expected unsupported | Gate correct | Deployed | True success |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
-    ...bucketRows(summary.byCohort),
-    '',
     '## By deployment class',
     '',
     '| Class | Repositories | Pass | Fail |',
@@ -738,13 +658,13 @@ export function renderStageBSummary(results: readonly StageBResult[], summary: S
     '',
     '## Repositories',
     '',
-    '| Id | Repository | Cohort | Expected | Gate | Build | Deploy | Runtime | Cleanup | Result | Findings |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Id | Repository | Gate | Build | Deploy | Runtime | Cleanup | Result | Findings |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
   ];
   for (const r of results) {
     const runtime = r.runtime.ecs === 'NOT_ATTEMPTED' ? '—' : `${r.runtime.ecs}/${r.runtime.alb}/https ${r.runtime.https}`;
     lines.push(
-      `| ${r.id} | ${r.repository}@${r.commit.slice(0, 7)} | ${r.cohort} | ${r.stageAExpected} | ${r.gate.verdict ?? '—'} (${r.gate.outcome ?? '—'}) | ${r.build.status} | ${r.deployment.status} | ${runtime} | ${r.cleanup.status} | ${r.classification}${r.rootCause ? ` / ${r.rootCause}` : ''} | ${r.findingIds.join(', ')} |`,
+      `| ${r.id} | ${r.repository}@${r.commit.slice(0, 7)} | ${r.gate.verdict ?? '—'} | ${r.build.status} | ${r.deployment.status} | ${runtime} | ${r.cleanup.status} | ${r.classification}${r.rootCause ? ` / ${r.rootCause}` : ''} | ${r.findingIds.join(', ')} |`,
     );
   }
   lines.push('');

@@ -100,11 +100,7 @@ const RELAY_AWS_INTERFACE = new Set([
 
 // scripts/<dir> Vitest projects (root vitest.config.ts) — the project name is
 // the directory name.
-const SCRIPT_PROJECTS = ['version-canary', 'repository-compatibility', 'repository-deployment', 'jev-eval', 'remediation-benchmark'];
-
-// The fix-instructions generator is graded by the remediation benchmark's
-// release gate (an API change already runs every project).
-const REMEDIATION_GENERATOR = /^packages\/analysis\/src\/fix-instructions\.ts$/;
+const SCRIPT_PROJECTS = ['version-canary', 'repository-deployment', 'run-and-check'];
 
 const CANARY_STATELESS = 'pnpm e2e:canary:versions profile --profile stateless';
 const CANARY_CORE = 'pnpm e2e:canary:versions core';
@@ -230,8 +226,6 @@ function classify(f, layers, graph) {
     return;
   }
 
-  if (REMEDIATION_GENERATOR.test(f)) layers.unitProjects.add('remediation-benchmark');
-
   if (pkgName) {
     layers.changedPackages.add(pkgName);
     layers.unitProjects.add(pkgName);
@@ -311,6 +305,8 @@ function classify(f, layers, graph) {
     layers.typecheckScripts = true;
     if (SCRIPT_PROJECTS.includes(script)) {
       layers.unitProjects.add(script);
+      // Stage B imports the analysis session and the recipe contract of run-and-check.
+      if (script === 'run-and-check') layers.unitProjects.add('repository-deployment');
       return;
     }
     if (script === 'customer-reset') return;
@@ -361,12 +357,11 @@ export function planFromFiles(files, options = {}) {
   const list = files.map(toForwardSlash);
   let docOnly = true;
   for (const f of list) {
-    // The benchmark corpora and finding registries under docs/testing are
+    // The Stage B configuration and finding registry under docs/testing are
     // read by the harness tests, so they are test data, not documentation.
-    const harnessData = /^docs\/testing\/(repository-compatibility|repository-deployment|remediation-benchmark)\//.exec(f);
-    if (harnessData) {
+    if (/^docs\/testing\/repository-deployment\//.test(f)) {
       docOnly = false;
-      layers.unitProjects.add(harnessData[1]);
+      layers.unitProjects.add('repository-deployment');
       layers.typecheckScripts = true;
       continue;
     }

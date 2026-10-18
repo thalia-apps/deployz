@@ -200,13 +200,13 @@ Run id: `stage-b-repo-300-20260929-084814-893f` (most recent).
 | -------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | db4fa10  | Phase 5 canary fixture + Stage B `repo-300`                 | `apps/api/src/github.ts`, `docs/testing/repository-deployment/deploy-config.yaml`        |
 | fca34bb  | Klarline mirror fixture + Stage B `repo-301`                | `apps/api/src/github.ts`, `docs/testing/repository-deployment/deploy-config.yaml`        |
-| 6c457aa  | Stage A entries for `repo-300` and `repo-301`               | `docs/testing/repository-compatibility/benchmark.yaml`                                |
-| 259fded  | Generic Stage B virtual-fixture guard (5/5 tests)           | `scripts/repository-deployment/index.ts`, `scripts/repository-deployment/harness.test.ts`, `docs/testing/repository-compatibility/benchmark.yaml`, `docs/testing/repository-deployment/deploy-config.yaml` |
+| 6c457aa  | Stage A entries for `repo-300` and `repo-301`               | `docs/testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18)                                |
+| 259fded  | Generic Stage B virtual-fixture guard (5/5 tests)           | `scripts/repository-deployment/index.ts`, `scripts/repository-deployment/harness.test.ts`, `docs/testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18), `docs/testing/repository-deployment/deploy-config.yaml` |
 | 310ec0e  | Vendor config typing for D1 + D2 preflight                  | `docs/testing/repository-deployment/deploy-config.yaml`                                |
 | b0c69a6  | Drop `migrationCommand` (Prisma inconsistency guard)        | `docs/testing/repository-deployment/deploy-config.yaml`                                |
 | 52e3b33  | Type `DATABASE_URL` so preflight marks it as provided       | `docs/testing/repository-deployment/deploy-config.yaml`                                |
-| 929231a  | Canary Dockerfile fix + diagnostic persistence             | `docs/testing/repository-compatibility/benchmark.yaml`, `docs/testing/repository-deployment/deploy-config.yaml`, `scripts/repository-deployment/deploy.ts` |
-| ec58374..4903f62 | Per-file canary fixes (5 commits, see commit list) | `docs/testing/repository-compatibility/benchmark.yaml`, `docs/testing/repository-deployment/deploy-config.yaml` |
+| 929231a  | Canary Dockerfile fix + diagnostic persistence             | `docs/testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18), `docs/testing/repository-deployment/deploy-config.yaml`, `scripts/repository-deployment/deploy.ts` |
+| ec58374..4903f62 | Per-file canary fixes (5 commits, see commit list) | `docs/testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18), `docs/testing/repository-deployment/deploy-config.yaml` |
 
 Plus the on-disk extractor fix at `.claude/extract-phase5-canary.mjs:130-…` (handles `JSON.stringify(…)` and `[…].join('\n')` correctly) — generic improvement; not a Deployz product change.
 
@@ -404,7 +404,7 @@ Log: `.claude/stage-b-d2-run-15.log`. Evidence:
   - `src/orders-consumer.ts` awaits `ensureSchema()` before polling.
   This matches the "migrations at boot" shape already used by the other
   benchmark entries. `tsc --noEmit` exits 0.
-- `docs/testing/repository-compatibility/benchmark.yaml` `repo-300` commit
+- `docs/testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18) `repo-300` commit
   pinned to `6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d`.
 - `docs/testing/repository-deployment/deploy-config.yaml` repo-300 notes
   corrected: new SHA, `pg` instead of Prisma, boot-time schema, and the stale

@@ -13,7 +13,7 @@ smoke:
   body: '{"query":"{ shop { name } }"}'
   contentType: application/json
 notes:
-  - "Pinned 2026-10-16: HEAD of the default branch main, committed 2026-10-16T10:34:17Z. Same profile as planned: Django, PostgreSQL, Redis, separate Celery worker. Not in benchmark.yaml."
+  - "Pinned 2026-10-16: HEAD of the default branch main, committed 2026-10-16T10:34:17Z. Same profile as planned: Django, PostgreSQL, Redis, separate Celery worker. It was never in the earlier label benchmark (removed 2026-10-18)."
   - "Source build confirmed: root Dockerfile (python:3.12, uv sync --locked from uv.lock and pyproject.toml, COPY . /app, collectstatic). No build override. EXPOSE 8000, uvicorn saleor.asgi:application."
   - "ALLOWED_HOSTS: saleor/settings.py defaults it to localhost,127.0.0.1, so Django answers 400 to the probe host name. Fixed non-secret test value. DEBUG defaults to True, so SECRET_KEY is not needed to start."
   - "smoke: a generic GET cannot read the database. The GraphQL query shop { name } reads the site settings row (Query.shop in saleor/graphql/schema.graphql)."

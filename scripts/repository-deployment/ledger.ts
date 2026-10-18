@@ -116,7 +116,7 @@ export interface SeriesState {
   organizationId?: string;
   /**
    * The organization and application a repository's first attempt created,
-   * keyed by Stage A id. Only `--reuse-application` reads it: a retry then
+   * keyed by recipe id. Only `--reuse-application` reads it: a retry then
    * adds a release to the same application instead of minting a new
    * organization, which is what lets it redeploy an image already built.
    */

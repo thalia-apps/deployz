@@ -555,20 +555,21 @@ diagnostic-vocabulary.ts`) plus a migration.
 
 - Deterministic corpora: `packages/analysis/test/eval-corpus.test.ts` (nine
   archetypes with exact expectations), `application-analysis.test.ts`,
-  `env-classification.test.ts`, `readiness-report.test.ts`, and the
-  120-repository Stage A audit (`pnpm benchmark:compat`).
+  `env-classification.test.ts`, `readiness-report.test.ts`, and the Stage A
+  rule tests (`stage-a*.test.ts`). The Docker run-and-check test
+  (`pnpm runcheck:*`) checks each Analysis claim against the running
+  application; see [`testing/compatibility.md`](testing/compatibility.md).
 - AI boundaries: schema/gate tests with fake gateways
   (`repository-ai.test.ts`, `diagnostic-explainer.test.ts`,
   `apps/api/src/ai-explanation.test.ts`, `fix-instructions` tests); the
   live gateway test (`ai-live.test.ts`) runs only with `DEPLOYZ_LIVE_AI=1`
   and asserts structure, never wording.
-- Fix instructions: `pnpm benchmark:remediation` grades the plan and the
-  document over pinned real-repository snapshots and targeted mutations
-  (`docs/testing/remediation-benchmark/`): classes, critical unsafe
-  instructions, structure, expected content. CI runs the same checks
-  (`scripts/remediation-benchmark/benchmark.test.ts`). `--live` calls the
-  configured model and records its answers; `--replay <dir>` grades recorded
-  answers without a model call.
+- Fix instructions: the unit tests in
+  `packages/analysis/test/fix-instructions.test.ts` render the document from
+  inline findings. They fail when a critical unsafe instruction appears: a
+  worker or queue moved into the web process, infrastructure deleted, the
+  data layer rewritten without approval, security disabled, a secret
+  embedded or errors suppressed. CI runs them.
 - Changing a prompt or schema: keep `.strict()`, add the fixture-mode
   answer in `apps/api/src/ai-fixture.ts` if E2E needs it, and never assert
   on model prose in CI.

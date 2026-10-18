@@ -404,6 +404,130 @@ describe('planRemediation — safety', () => {
   });
 });
 
+// ==========================================================================
+// Safety: the rendered document never carries a critical unsafe instruction
+// ==========================================================================
+
+/**
+ * Instructions that, executed as written, remove working architecture,
+ * rewrite the data layer without the vendor's approval, bypass security,
+ * invent secrets, or suppress errors. They are matched only against
+ * instruction lines: the constraint and rule lines that forbid them are
+ * excluded.
+ */
+const CRITICAL_UNSAFE: readonly { id: string; pattern: RegExp; example: string }[] = [
+  {
+    id: 'worker-into-web',
+    pattern: /\b(?:process|run|move)\b[^.\n]{0,40}\b(?:background jobs|worker(?: processing)?)\b[^.\n]{0,30}\binside the web process|\bmove the worker processing into the web process/i,
+    example: '   - Process background jobs inside the web process (an in-process scheduler or queue worker).',
+  },
+  {
+    id: 'remove-worker-entrypoint',
+    pattern: /\bremove the separate worker entrypoint\b/i,
+    example: '   - Remove the separate worker entrypoint.',
+  },
+  {
+    id: 'queue-into-web',
+    pattern: /\breplace the queue with (?:background )?jobs (?:that )?run(?:ning)? inside the (?:web process|deployz container)/i,
+    example: '   - Replace the queue with jobs that run inside the web process.',
+  },
+  {
+    id: 'delete-infrastructure',
+    pattern: /\bremove the (?:self-managed|third-party) infrastructure(?: files)?\b/i,
+    example: '   - Remove the self-managed infrastructure files and dependencies.',
+  },
+  {
+    id: 'unapproved-data-rewrite',
+    pattern: /^(?:[-\d.\s]*)(?:inspect actual usage first\. )?move the data layer to postgres/im,
+    example: '   - Inspect actual usage first. Move the data layer to PostgreSQL reusing the existing schema.',
+  },
+  {
+    id: 'disable-security',
+    pattern: /\b(?:disable|bypass|turn off)\b[^.\n]{0,30}\b(?:auth\w*|csrf|tls|ssl|security)\b/i,
+    example: '   - Disable CSRF protection for the health route.',
+  },
+  {
+    id: 'invent-secret',
+    pattern: /\b(?:hard-?code|commit)\b[^.\n]{0,40}\b(?:secret|password|api[ _-]?key|token)\b/i,
+    example: '   - Hardcode the API key in config.ts.',
+  },
+  {
+    id: 'suppress-errors',
+    pattern: /\b(?:swallow|suppress|ignore)\b[^.\n]{0,20}\b(?:all )?(?:errors|exceptions)\b/i,
+    example: '   - Swallow all errors in the startup code.',
+  },
+];
+
+/** The document's instruction lines: everything except constraint blocks and the general rules. */
+function instructionLines(document: string): string[] {
+  const lines: string[] = [];
+  let inConstraints = false;
+  let inRules = false;
+  for (const line of document.split('\n')) {
+    if (/^## /.test(line)) inRules = /^## Rules for every change/.test(line);
+    if (/^- (?:Do not|Rules for every change):?$/.test(line) || /^Rules for every change:$/.test(line)) {
+      inConstraints = true;
+      if (/^Rules for every change:$/.test(line)) inRules = true;
+      continue;
+    }
+    if (inConstraints && !/^ {2}- /.test(line)) inConstraints = false;
+    if (inConstraints || inRules) continue;
+    if (/^\s*-?\s*(?:Do not|Never)\b/i.test(line)) continue;
+    lines.push(line);
+  }
+  return lines;
+}
+
+function unsafeInstructions(document: string): string[] {
+  const text = instructionLines(document).join('\n');
+  return CRITICAL_UNSAFE.filter((rule) => rule.pattern.test(text)).map((rule) => rule.id);
+}
+
+describe('assembleFixInstructions — critical unsafe instructions', () => {
+  const allFindings = ALL_IDS.map((id) => finding(id));
+
+  it.each([
+    ['a Node app with a worker', {}],
+    ['a MySQL app with Redis and two workers', { database: 'mysql', redisRequired: true, workerCommands: ['node worker.js', 'celery -A app worker'] }],
+    ['an app with no database and no Dockerfile', { database: 'none', dockerfilePath: null }],
+  ] as const)('the document for every finding of %s has none', (_name, factOverrides) => {
+    const document = assembleFixInstructions(context(allFindings, { workerCommands: ['node worker.js'], ...factOverrides }), NO_AI);
+    expect(document).toContain('## Fixes, in order');
+    expect(unsafeInstructions(document)).toEqual([]);
+  });
+
+  it('the document for recommended findings has none', () => {
+    const document = assembleFixInstructions(context(ALL_IDS.map((id) => finding(id, { severity: 'recommended' }))), NO_AI);
+    expect(unsafeInstructions(document)).toEqual([]);
+  });
+
+  it.each(CRITICAL_UNSAFE.map((rule) => [rule.id, rule.example] as const))('the check flags %s', (id, example) => {
+    expect(unsafeInstructions(`## Fixes\n${example}`)).toEqual([id]);
+  });
+
+  it('the check does not flag the constraints and rules that forbid those changes', () => {
+    const document = [
+      '### 1. Worker',
+      '- Do not:',
+      '  - Do not move the worker into the web process, and do not remove worker, queue, or scheduler code.',
+      '- Done when:',
+      '  - One command starts the worker.',
+      '## Rules for every change',
+      '- Never delete working code, disable security, skip tests, or suppress errors to pass a Deployz check.',
+    ].join('\n');
+    expect(unsafeInstructions(document)).toEqual([]);
+    expect(instructionLines(document)).toContain('  - One command starts the worker.');
+  });
+
+  it('drops model guidance that carries one of those instructions', () => {
+    const unsafe = CRITICAL_UNSAFE.filter((rule) => ['remove-worker-entrypoint', 'disable-security', 'invent-secret', 'suppress-errors'].includes(rule.id));
+    const items = unsafe.map((rule, index) => ({ id: ALL_IDS[index]!, guidance: rule.example.replace(/^\s*-\s*/, '') }));
+    const document = assembleFixInstructions(context(allFindings, { workerCommands: ['node worker.js'] }), { items });
+    for (const item of items) expect(document).not.toContain(item.guidance);
+    expect(unsafeInstructions(document)).toEqual([]);
+  });
+});
+
 describe('guidanceVerdict', () => {
   it('names the rule of unsafe guidance and never carries the text', () => {
     expect(guidanceVerdict('Delete the worker entry point and run jobs in the web process.')).toEqual({

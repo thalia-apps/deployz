@@ -10,8 +10,8 @@
  *   pnpm benchmark:deploy --cleanup --repo repo-001    Disconnect/Purge/leftovers/audit for the recorded ids
  *   pnpm benchmark:deploy --audit                      account scan for Stage B tags and recorded installations
  *
- * Reads docs/testing/repository-compatibility/benchmark.yaml (by id — never
- * copied) and docs/testing/repository-deployment/deploy-config.yaml, writes
+ * Reads the git recipes in scripts/run-and-check/recipes (id, repository and
+ * pinned commit — never copied) and docs/testing/repository-deployment/deploy-config.yaml, writes
  * docs/testing/repository-deployment/runs/<id>.json and the summaries.
  * Exit code 1 when the harness itself failed; a product failure is the
  * audit's subject, not a harness failure.
@@ -24,9 +24,8 @@ import { parseArgs } from 'node:util';
 import { ANALYSIS_VERSION } from '@deployz/api/analysis';
 import { SUPPORTED_AWS_REGIONS } from '@deployz/contracts';
 
-import { openAnalysisSession } from '../repository-compatibility/analyse.js';
-import { loadBenchmark, selectEntries, type Benchmark, type BenchmarkEntry } from '../repository-compatibility/manifest.js';
-import { createSnapshotFetch, resolveGithubToken } from '../repository-compatibility/snapshot.js';
+import { openAnalysisSession } from '../run-and-check/src/analysis/session.js';
+import { createSnapshotFetch, resolveGithubToken } from '../run-and-check/src/analysis/snapshot.js';
 import {
   albDnsName,
   auditLeaks,
@@ -55,26 +54,23 @@ import {
   emptyResult,
   readAllResults,
   readResult,
-  writeFrozenIfAbsent,
   writeResult,
   writeSummaryFiles,
   type StageBResult,
 } from './results.js';
+import { loadTargets, selectTargets, type StageBTarget } from './targets.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(here, '..', '..');
-export const STAGE_A_DIR = join(REPO_ROOT, 'docs', 'testing', 'repository-compatibility');
-export const BENCHMARK_PATH = join(STAGE_A_DIR, 'benchmark.yaml');
+export const RECIPES_DIR = join(REPO_ROOT, 'scripts', 'run-and-check', 'recipes');
 export const STAGE_B_DIR = join(REPO_ROOT, 'docs', 'testing', 'repository-deployment');
 export const DEPLOY_CONFIG_PATH = join(STAGE_B_DIR, 'deploy-config.yaml');
 export const RUNS_DIR = join(STAGE_B_DIR, 'runs');
 export const EVIDENCE_DIR = join(RUNS_DIR, 'evidence');
-export const CACHE_DIR = join(STAGE_A_DIR, '.cache');
+export const CACHE_DIR = join(REPO_ROOT, 'scripts', 'run-and-check', '.runs', 'snapshot-cache');
 
 export interface RunOptions {
   ids: string[];
-  set: string | undefined;
-  cohort: string | undefined;
   wave: string | undefined;
   finding: string | undefined;
   gate: boolean;
@@ -107,8 +103,6 @@ export function parseRunArgs(argv: readonly string[]): RunOptions {
     args: [...argv],
     options: {
       repo: { type: 'string', multiple: true },
-      set: { type: 'string' },
-      cohort: { type: 'string' },
       wave: { type: 'string' },
       finding: { type: 'string' },
       gate: { type: 'boolean', default: false },
@@ -144,8 +138,6 @@ export function parseRunArgs(argv: readonly string[]): RunOptions {
   if (values['real-aws'] && values.gate) throw new Error('--gate and --real-aws are exclusive (the funnel runs the gate itself)');
   return {
     ids: values.repo ?? [],
-    set: values.set,
-    cohort: values.cohort,
     wave: values.wave,
     finding: values.finding,
     gate: values.gate ?? false,
@@ -178,21 +170,20 @@ export function requireRealAws(options: RunOptions, env: NodeJS.ProcessEnv): voi
   requireRealAwsOptIn(env);
 }
 
-/** Selection by id, set, cohort, wave and finding — every filter narrows. */
+/** Selection by id, wave and finding — every filter narrows. */
 export function selectForRun(
-  benchmark: Benchmark,
+  targets: readonly StageBTarget[],
   config: DeployConfig,
-  options: Pick<RunOptions, 'ids' | 'set' | 'cohort' | 'wave' | 'finding'>,
+  options: Pick<RunOptions, 'ids' | 'wave' | 'finding'>,
   existing: readonly StageBResult[] = [],
-): BenchmarkEntry[] {
-  let entries = selectEntries(benchmark, { ids: options.ids, set: options.set });
-  if (options.cohort !== undefined) entries = entries.filter((entry) => entry.cohort === options.cohort);
+): StageBTarget[] {
+  let entries = selectTargets(targets, options.ids);
   if (options.wave !== undefined) {
     const members = config.waves[options.wave];
     if (!members) throw new Error(`unknown wave ${options.wave}`);
     const order = new Map(members.map((id, index) => [id, index]));
     for (const id of members) {
-      if (!benchmark.repositories.some((entry) => entry.id === id)) throw new Error(`wave ${options.wave} names unknown repository ${id}`);
+      if (!targets.some((target) => target.id === id)) throw new Error(`wave ${options.wave} names unknown repository ${id}`);
     }
     entries = entries.filter((entry) => order.has(entry.id)).sort((a, b) => order.get(a.id)! - order.get(b.id)!);
   }
@@ -207,25 +198,20 @@ export function deployzSha(): string {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
 }
 
-export function identityFor(entry: BenchmarkEntry, sha: string, mode: StageBResult['mode'], runId: string | null, deploymentClass: StageBResult['deploymentClass'] = 'capability-cohort'): Parameters<typeof emptyResult>[0] {
+export function identityFor(entry: StageBTarget, sha: string, mode: StageBResult['mode'], runId: string | null, deploymentClass: StageBResult['deploymentClass'] = 'capability-cohort'): Parameters<typeof emptyResult>[0] {
   return {
     id: entry.id,
     repository: entry.repository,
     commit: entry.commit,
-    set: entry.set,
-    cohort: entry.cohort,
-    customerRealism: entry.customer_realism,
-    difficulty: entry.difficulty,
     deployzCommit: sha,
     runId,
-    stageAExpected: entry.expected.compatibility,
     mode,
     deploymentClass,
   };
 }
 
 /** The fork Deployz is pointed at for a repository (README "Repository access"). */
-export function repositoryUsedFor(entry: BenchmarkEntry, config: RepositoryConfig): { repositoryUsed: string; repositoryForm: 'original' | 'fork' } {
+export function repositoryUsedFor(entry: StageBTarget, config: RepositoryConfig): { repositoryUsed: string; repositoryForm: 'original' | 'fork' } {
   if (config.fork) return { repositoryUsed: config.fork, repositoryForm: 'fork' };
   const repo = entry.repository.split('/')[1]!;
   return { repositoryUsed: `instashop-dev/${repo}`, repositoryForm: 'fork' };
@@ -236,7 +222,6 @@ export function repositoryUsedFor(entry: BenchmarkEntry, config: RepositoryConfi
 export interface PlanLine {
   id: string;
   repository: string;
-  expected: string;
   action: 'gate-only' | 'full-funnel' | 'skip-has-result';
   repositoryUsed: string;
   configuredKeys: string[];
@@ -244,17 +229,15 @@ export interface PlanLine {
   deploymentClass: DeploymentClass;
 }
 
-export function buildPlan(entries: readonly BenchmarkEntry[], config: DeployConfig, existing: readonly StageBResult[], options: Pick<RunOptions, 'gate' | 'force'>): PlanLine[] {
+export function buildPlan(entries: readonly StageBTarget[], config: DeployConfig, existing: readonly StageBResult[], options: Pick<RunOptions, 'gate' | 'force'>): PlanLine[] {
   return entries.map((entry) => {
     const repoConfig = configFor(config, entry.id);
     const has = existing.find((result) => result.id === entry.id);
-    const expectedDeployable = entry.expected.compatibility !== 'NOT_COMPATIBLE';
-    let action: PlanLine['action'] = options.gate || !expectedDeployable ? 'gate-only' : 'full-funnel';
+    let action: PlanLine['action'] = options.gate ? 'gate-only' : 'full-funnel';
     if (!options.gate && has && has.mode === 'deploy' && !options.force) action = 'skip-has-result';
     return {
       id: entry.id,
       repository: entry.repository,
-      expected: entry.expected.compatibility,
       action,
       repositoryUsed: repositoryUsedFor(entry, repoConfig).repositoryUsed,
       configuredKeys: providedKeys(repoConfig),
@@ -272,7 +255,7 @@ export function renderPlan(plan: readonly PlanLine[], options: Pick<RunOptions, 
   const lines = [
     `Stage B plan — ${plan.length} repositories, concurrency ${options.concurrency}`,
     `  B1 runtime-reuse: ${b1} | B2 capability cohorts: ${b2} | B3 full-fresh: ${b3} | skipped: ${skipped}`,
-    ...plan.map((line) => `${line.id} ${line.repository} [${line.deploymentClass}] expected ${line.expected} → ${line.action}${line.overrides.length ? ` overrides[${line.overrides.join(',')}]` : ''}${line.configuredKeys.length ? ` keys[${line.configuredKeys.join(',')}]` : ''}`),
+    ...plan.map((line) => `${line.id} ${line.repository} [${line.deploymentClass}] → ${line.action}${line.overrides.length ? ` overrides[${line.overrides.join(',')}]` : ''}${line.configuredKeys.length ? ` keys[${line.configuredKeys.join(',')}]` : ''}`),
     `full funnel: ${plan.filter((l) => l.action === 'full-funnel').length}, gate only: ${plan.filter((l) => l.action === 'gate-only').length}, skipped: ${skipped}`,
   ];
   return lines.join('\n');
@@ -281,7 +264,7 @@ export function renderPlan(plan: readonly PlanLine[], options: Pick<RunOptions, 
 // ── Gate audit (B1 + offline B2) ───────────────────────────────────────────
 
 export async function runGateAudit(
-  entries: readonly BenchmarkEntry[],
+  entries: readonly StageBTarget[],
   config: DeployConfig,
   options: Pick<RunOptions, 'offline' | 'cacheDir' | 'runsDir'>,
   sha: string,
@@ -297,25 +280,20 @@ export async function runGateAudit(
       const existing = readResult(options.runsDir, entry.id);
       const result = existing ?? emptyResult(identityFor(entry, sha, 'gate', null, deploymentClassFor(config, entry.id)));
       const raw = await session.analyse(entry);
-      const { gate } = gateSection(entry, raw, repoConfig, ANALYSIS_VERSION);
+      const { gate } = gateSection(raw, repoConfig, ANALYSIS_VERSION);
       result.gate = gate;
       result.findingIds = [...repoConfig.findings];
       if (!existing || existing.mode === 'gate') {
         result.deployzCommit = sha;
         result.mode = 'gate';
-        const unsupported = !result.expectedDeployable && gate.verdict === 'NOT_COMPATIBLE';
-        result.classification = unsupported ? 'EXPECTED_UNSUPPORTED' : gate.status === 'PASS' ? 'PASS' : 'GATE_ERROR';
-        result.failureStage = unsupported ? 'EXPECTED_UNSUPPORTED' : gate.status === 'PASS' ? null : 'GATE_ERROR';
-        result.rootCause = unsupported ? 'CORRECTLY_UNSUPPORTED' : null;
-        result.rootCauseEvidence = unsupported
-          ? `rejected on ${gate.unsupported.join(', ') || 'the gate findings'}`
-          : gate.status === 'PASS'
-            ? null
-            : `${gate.outcome ?? 'no verdict'}: ${gate.detail ?? gate.gateFindings.join(', ')}`;
+        result.classification = gate.status === 'PASS' ? 'PASS' : 'GATE_ERROR';
+        result.failureStage = gate.status === 'PASS' ? null : 'GATE_ERROR';
+        result.rootCause = null;
+        result.rootCauseEvidence = gate.status === 'PASS' ? null : `${gate.verdict ?? 'no verdict'}: ${gate.detail ?? gate.gateFindings.join(', ')}`;
       }
       writeResult(options.runsDir, result, { force: true });
       results.push(result);
-      console.log(`${gate.verdict ?? 'FAILED'} (${gate.outcome ?? gate.detail ?? '—'}) configured→${gate.configuredVerdict ?? '—'}`);
+      console.log(`${gate.verdict ?? `FAILED (${gate.detail ?? '—'})`} configured→${gate.configuredVerdict ?? '—'}`);
     }
   } finally {
     await session.close();
@@ -439,7 +417,7 @@ function realDeps(series: Series, options: RunOptions): DeployDeps {
   };
 }
 
-async function runAttempt(series: Series, options: RunOptions, config: DeployConfig, entry: BenchmarkEntry): Promise<StageBResult> {
+async function runAttempt(series: Series, options: RunOptions, config: DeployConfig, entry: StageBTarget): Promise<StageBResult> {
   const repoConfig = configFor(config, entry.id);
   requireSmokeContract(repoConfig, options.requireSmoke);
   const runId = stageBRunId(entry.id);
@@ -473,7 +451,7 @@ async function runAttempt(series: Series, options: RunOptions, config: DeployCon
   const deps = realDeps(series, options);
   try {
     await runRepositoryAttempt(deps, {
-      benchmark: entry,
+      target: entry,
       config: repoConfig,
       repositoryUsed,
       repositoryForm,
@@ -528,10 +506,10 @@ export function regionalConfig(config: CanaryConfig, run: { region: string; stag
  * `owner/name` that does not match the `^[\w.-]+/[\w.-]+$` shape is
  * refused, and `deployz-demo/*` is refused outright.
  */
-export function assertRealAwsRepos(config: DeployConfig, benchmark: Benchmark): void {
+export function assertRealAwsRepos(config: DeployConfig, targets: readonly StageBTarget[]): void {
   const seen = new Set<string>();
   for (const entry of config.repositories) {
-    const match = benchmark.repositories.find((b) => b.id === entry.id);
+    const match = targets.find((target) => target.id === entry.id);
     if (!match) continue;
     const [owner, ...rest] = match.repository.split('/');
     const name = rest.join('/');
@@ -562,13 +540,8 @@ async function cleanupLedger(series: Series, options: RunOptions, runId: string)
     id: run.stageB.repoId,
     repository: run.stageB.repository,
     commit: run.stageB.commit,
-    set: 'improvement',
-    cohort: 'realistic',
-    customerRealism: 'high',
-    difficulty: 1,
     deployzCommit: run.stageB.deployzCommit,
     runId,
-    stageAExpected: 'READY',
     mode: 'deploy',
     deploymentClass: 'runtime-reuse',
   });
@@ -650,15 +623,12 @@ function writeSummaries(runsDir: string, sha: string): void {
 
 async function main(): Promise<number> {
   const options = parseRunArgs(process.argv.slice(2));
-  const benchmark = loadBenchmark(BENCHMARK_PATH);
+  const targets = loadTargets(RECIPES_DIR);
   const config = loadDeployConfig(DEPLOY_CONFIG_PATH);
-  for (const entry of config.repositories) {
-    if (!benchmark.repositories.some((b) => b.id === entry.id)) throw new Error(`deploy-config names unknown repository ${entry.id}`);
-  }
-  if (options.realAws) assertRealAwsRepos(config, benchmark);
+  if (options.realAws) assertRealAwsRepos(config, targets);
   const sha = deployzSha();
   const existing = readAllResults(options.runsDir);
-  const entries = selectForRun(benchmark, config, options, existing);
+  const entries = selectForRun(targets, config, options, existing);
 
   if (options.dryRun) {
     console.log(renderPlan(buildPlan(entries, config, existing, options), options));
@@ -720,19 +690,11 @@ async function main(): Promise<number> {
     const entry = entries.find((e) => e.id === line.id)!;
     let keepGoing = true;
     try {
-      let result: StageBResult;
-      if (line.action === 'gate-only') {
-        // Expected unsupported: the gate audit is the whole funnel, and the
-        // control-plane gate is exercised without creating AWS resources.
-        result = (await runGateAudit([entry], config, options, sha))[0]!;
-      } else {
-        result = await runAttempt(series, options, config, entry);
-        writeResult(options.runsDir, result, { force: options.force });
-        if (entry.set !== 'improvement') writeFrozenIfAbsent(options.runsDir, result);
-        if (shouldStopWave(result)) {
-          keepGoing = false;
-          failures.push(`${entry.id}: cleanup ${result.cleanup.status} — wave stopped (${result.cleanup.detail ?? 'see the result'}); run --cleanup --repo ${entry.id}, then --resume`);
-        }
+      const result = await runAttempt(series, options, config, entry);
+      writeResult(options.runsDir, result, { force: options.force });
+      if (shouldStopWave(result)) {
+        keepGoing = false;
+        failures.push(`${entry.id}: cleanup ${result.cleanup.status} — wave stopped (${result.cleanup.detail ?? 'see the result'}); run --cleanup --repo ${entry.id}, then --resume`);
       }
       console.log(`${entry.id}: ${result.classification}${result.rootCause ? ` (${result.rootCause})` : ''}`);
     } catch (error) {

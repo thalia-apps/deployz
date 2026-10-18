@@ -57,10 +57,10 @@ ladder.
 - **L6 — production canary.** The same L5 harness (`profile --profile
   stateless --production`) against the deployed control plane, on a
   schedule, to answer "can production Deployz deploy right now?"
-- **compat** — the compatibility benchmark (Stage A `benchmark:compat`,
-  offline; Stage B `benchmark:deploy`, real AWS against third-party repos).
-  It measures analyser accuracy, not product regressions. It never runs on
-  a pull request.
+- **compat** — the compatibility tests (the Docker run-and-check test,
+  `pnpm runcheck:*`, no AWS; Stage B `benchmark:deploy`, real AWS against
+  third-party repos). They measure analyser accuracy, not product
+  regressions. They never run on a pull request.
 - **manual** — a human follows a written runbook. Today this is
   `docs/testing/manual-checklist.md`.
 
@@ -82,7 +82,7 @@ ladder.
 | GitHub connection | Vendor authorizes the GitHub App; installation token is vended | Webhook signature invalid; App JWT expired; no installation found | `apps/api/src/github.test.ts` covers webhook signature verification, App JWT, and installation-token vending (93 tests) | L1, L2, L3 | `apps/api/src/github.test.ts`; `apps/web/test/github-state.test.ts`; `apps/web/test/github-setup.test.ts`; `e2e/github.spec.ts` (GITHUB_FIXTURE_MODE) | Mid-session access revocation (installation deselects the repo after analysis started) is not simulated | P1 |
 | Repository permissions (GitHub App selected-repo access) | Vendor selects a repo the App has access to | Vendor points at a repo the App cannot see | S4 scope enforcement inside `github.test.ts`; a real-world GitHub App selected-repo access blocker was hit during the 2026-09 regional/pilot campaigns (operational finding, not yet a named COMP/DEPLOY id) | L1, L2 | `apps/api/src/github.test.ts` (S4 scope); `e2e/applications.spec.ts` ("Select repo" path) | No test for the App having access revoked between selection and analysis; no test for a repo outside the installation's selected-repo list at analysis time | P1 |
 | Application creation | Vendor creates an application from a connected repo | Duplicate application; cross-org access attempt; delete blocked by live deployments | §42 list/edit/delete/delete-blocked/cross-org isolation | L1, L2, L3 | `e2e/applications.spec.ts` (10 tests) | none known | P1 |
-| Repo analysis | Analyser reads the repo and returns a manifest | Unreadable repo; empty repo; analysis timeout | 41 `COMP-nnn` findings track analyser-accuracy regressions; `c9983cd7` (DEPLOY-031, Dockerfile copies `.git`) | L1, compat | `packages/analysis/test/analysis.test.ts` (134 tests); `apps/api/src/analysis.test.ts`; `packages/analysis/test/eval-corpus.test.ts`; Stage A `benchmark:compat` (COMP-001..041) | 10 open COMP findings (COMP-005, 010, 014, 017, 022, 025, 030, 039, 040, 041) have no fix yet, only a recorded finding | P1 |
+| Repo analysis | Analyser reads the repo and returns a manifest | Unreadable repo; empty repo; analysis timeout | 41 `COMP-nnn` findings track analyser-accuracy regressions; `c9983cd7` (DEPLOY-031, Dockerfile copies `.git`) | L1, compat | `packages/analysis/test/analysis.test.ts` (134 tests); `apps/api/src/analysis.test.ts`; `packages/analysis/test/eval-corpus.test.ts`; the Stage A rule tests `packages/analysis/test/stage-a*.test.ts` (COMP-001..041; the Stage A corpus was removed on 2026-10-18); the Docker run-and-check test (`pnpm runcheck:*`) | 10 COMP findings (COMP-005, 010, 014, 017, 022, 025, 030, 039, 040, 041) were open when the Stage A registry was removed on 2026-10-18 | P1 |
 | Framework/runtime detection | Analyser identifies the framework, runtime, and start command | Ambiguous multi-framework repo; unsupported runtime | `94f5a61a` (DEPLOY-032, Go env struct tags rated the app Go, not the JS UI) | L1, compat | `packages/analysis/test/analysis.test.ts`; `packages/analysis/test/application-analysis.test.ts` (`detectRuntime`, `detectBindAddress`) | none known | P1 |
 | Database detection | Analyser detects a Postgres dependency and derives `DATABASE_URL` bindings | False-positive DB detection; DB engine gated behind an env value | `e8f0d3a1` (DB_* family becomes postgres binding aliases, DEPLOY-005/013); `b64f52fd` (DEPLOY-026, preset pins its own connection-URL names) | L1, compat | `packages/analysis/test/stage-b-phase2.test.ts`; `packages/analysis/test/analysis.test.ts` | COMP-022 (open): a DB engine selected by an env value is rated READY without the value present; `DEPLOY-022`/COMP-029 (open): a false-positive DB detection provisions a real RDS instance in Stage B | P0 |
 | Redis detection | Analyser detects a Redis/BullMQ dependency and marks the Cache component required | Redis-Stack (unsupported) repo; Redis used only in a dev script | `c86643a5` (redis component actually reported); `33bee50b` (Valkey needs a replication group, not a cache cluster) | L1, L3, compat | `packages/analysis/test/redis.test.ts`; `e2e/redis.spec.ts`; scenario `redis-success`; scenario `redis-failure` | Overlap between `redis.test.ts` and inline Redis fixtures in `packages/analysis/test/stage-a.test.ts` not yet de-duplicated (tracked, not urgent) | P1 |
@@ -201,9 +201,9 @@ list is ordered by priority, P0 first.
    `COMP-022` (open) and `DEPLOY-022`/`COMP-029` (open) describe a
    falsely-detected database provisioning a real, costly RDS instance in
    Stage B.
-   Proposed layer: compat (Stage A) plus L1.
+   Proposed layer: compat (a run-and-check fixture) plus L1.
    Proposed test: add the specific repo shape from `DEPLOY-022`/`COMP-029`
-   to the Stage A corpus as a regression fixture, and add a
+   as a fixture of the Docker run-and-check test, and add a
    `packages/analysis` unit case asserting an env-gated DB engine choice
    is not rated READY without the value present (closes `COMP-022`
    directly).
@@ -340,9 +340,9 @@ list is ordered by priority, P0 first.
     e2e/visual.spec.ts`, with a note that the snapshots are Windows-only.
 
 21. **~~`jev-eval`/`jev-shadow` is orphaned tooling~~ Resolved.** `pnpm
-    jev:eval` is now documented in [`compatibility.md`](compatibility.md)
-    and its run evidence moved from `docs/testing/jev-shadow/runs/` to
-    `scripts/jev-eval/runs/` (kept, not a test-coverage gap).
+    jev:eval` and its evaluation corpus were removed on 2026-10-18 (see
+    "Jev shadow analysis" in [`compatibility.md`](compatibility.md)). This is
+    not a test-coverage gap.
 
 22. **~~Stage B B1 `runtime-reuse` class is dead code.~~ Resolved.** The
     `--runtime-reuse` CLI path and `assertRuntimeReuseSupported()` are

@@ -11,7 +11,6 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { applicationStackNameForInstallation, releaseImageTag } from '@deployz/contracts';
 
-import type { BenchmarkEntry } from '../repository-compatibility/manifest.js';
 import type { Evidence } from '../version-canary/evidence.js';
 import { ControlPlaneError, describeDeployment, waitFor, type DeploymentDetail, type DeploymentPlanView, type InfrastructureInventory } from '../version-canary/control-plane.js';
 import { parseQuickCreateUrl } from '../version-canary/steps.js';
@@ -21,6 +20,7 @@ import type { DependencyPresence, StoppedTask, TaskDefinitionEnv } from './evide
 import { stoppedExit } from './evidence.js';
 import { stageBRun } from './ledger.js';
 import type { StageBResult } from './results.js';
+import type { StageBTarget } from './targets.js';
 
 const MINUTE = 60_000;
 
@@ -76,12 +76,12 @@ const IMAGE_INPUT_OVERRIDES = [
  * Change any of those and the version changes, so a retry can never redeploy
  * an image that the current configuration would not have produced.
  */
-export function reusableReleaseVersion(benchmark: BenchmarkEntry, config: RepositoryConfig): string {
+export function reusableReleaseVersion(target: StageBTarget, config: RepositoryConfig): string {
   const inputs = IMAGE_INPUT_OVERRIDES.map(
     (key) => `${key}=${String(config.overrides?.[key] ?? '')}`,
   ).join('|');
   const fingerprint = createHash('sha256').update(inputs).digest('hex').slice(0, 8);
-  return `${benchmark.id}-${benchmark.commit.slice(0, 7)}-${fingerprint}`;
+  return `${target.id}-${target.commit.slice(0, 7)}-${fingerprint}`;
 }
 
 /** Which attempt a version names within its family: the base is 1, `-r2` is 2. */
@@ -202,7 +202,7 @@ export interface DeployDeps {
 }
 
 export interface RepositoryAttemptInput {
-  benchmark: BenchmarkEntry;
+  target: StageBTarget;
   config: RepositoryConfig;
   repositoryUsed: string;
   repositoryForm: 'original' | 'fork';
@@ -365,7 +365,7 @@ function applySmokeFailuresToDependencies(result: StageBResult, outcomes: StageB
  * itself cannot continue (after recording TEST_HARNESS_ERROR).
  */
 export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAttemptInput): Promise<StageBResult> {
-  const { benchmark, config, evidence, result } = input;
+  const { target, config, evidence, result } = input;
   const run = stageBRun(evidence);
   const started = deps.now();
   result.timing.startedAt = new Date(started).toISOString();
@@ -384,11 +384,11 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
         const created = input.existingApplicationId
           ? { id: input.existingApplicationId }
           : await deps.api.createApplication({
-              name: `stage-b-${benchmark.id}`,
+              name: `stage-b-${target.id}`,
               githubInstallationId: deps.githubInstallationId,
               repoFullName: input.repositoryUsed,
               repoUrl: `https://github.com/${input.repositoryUsed}`,
-              defaultBranch: benchmark.commit,
+              defaultBranch: target.commit,
             });
         details['applicationReused'] = Boolean(input.existingApplicationId);
         run.applicationId = created.id;
@@ -445,21 +445,16 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
         return body;
       }),
     );
-    const expectedDeployable = result.expectedDeployable;
     if (!preflight.ready) {
       const verdict = (preflight.state as 'READY' | 'NEEDS_CONFIGURATION' | 'NOT_COMPATIBLE' | null) ?? null;
       const blockers = preflight.blockers.map((b) => `${b.id}: ${b.message}`).join('; ');
-      if (verdict === 'NOT_COMPATIBLE' || !expectedDeployable) {
+      if (verdict === 'NOT_COMPATIBLE') {
         throw new FunnelStop('gate', `the control plane's gate refuses: ${blockers}`, { gateVerdict: verdict });
       }
       throw new FunnelStop('configuration', `the control plane's gate still needs configuration: ${blockers}`, { gateVerdict: verdict });
     }
     result.configuration.status = 'PASS';
     result.gate.status = result.gate.status === 'NOT_ATTEMPTED' ? 'PASS' : result.gate.status;
-    if (!expectedDeployable) {
-      // A false acceptance: the funnel stops here — no AWS resources for an expected-unsupported repository.
-      throw new FunnelStop('gate', 'the control plane accepted an expected-unsupported repository', { gateVerdict: (preflight.state as 'READY' | 'NEEDS_CONFIGURATION' | 'NOT_COMPATIBLE' | null) ?? null });
-    }
 
     // ── Build ───────────────────────────────────────────────────────────
     point = 'build';
@@ -473,8 +468,8 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
         // rather than silently redeploying a stale image.
         const releases = deps.reuseApplication ? await deps.api.listReleases(applicationId) : [];
         const base = deps.reuseApplication
-          ? reusableReleaseVersion(benchmark, config)
-          : `${benchmark.id}-${run.runId.slice('stage-b-'.length + benchmark.id.length + 1)}`;
+          ? reusableReleaseVersion(target, config)
+          : `${target.id}-${run.runId.slice('stage-b-'.length + target.id.length + 1)}`;
         const existing = deps.reuseApplication ? reusableRelease(base, releases) : undefined;
         // Reuse keeps the name it found; a rebuild takes the next one,
         // because the attempt that failed still owns the name it took.
@@ -484,16 +479,16 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
           ? { id: existing.id, version }
           : await deps.api.createRelease(applicationId, {
               version,
-              gitSha: benchmark.commit,
+              gitSha: target.commit,
               ...(config.overrides?.migrationCommand ? { migrationCommand: config.overrides.migrationCommand } : {}),
             });
         result.build.imageReused = Boolean(existing);
         details['imageReused'] = Boolean(existing);
-        run.releases['release'] = { id: created.id, version, gitSha: benchmark.commit };
+        run.releases['release'] = { id: created.id, version, gitSha: target.commit };
         evidence.save();
         result.build.releaseId = created.id;
         result.build.version = version;
-        result.build.gitSha = benchmark.commit;
+        result.build.gitSha = target.commit;
         const application = await deps.api.getApplication(applicationId);
         const metadata = (application['detectedMetadata'] ?? {}) as Record<string, unknown>;
         const overrides = (metadata['manifestOverrides'] ?? {}) as Record<string, unknown>;
@@ -531,7 +526,7 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
     const deploymentId = await step('install', () =>
       evidence.step('Customer deployment, install link and the customer Quick Create', async (details) => {
         const customer = await deps.api.createCustomer({
-          name: `Stage B ${benchmark.id}`,
+          name: `Stage B ${target.id}`,
           email: `customer-${run.runId.toLowerCase()}@deployz-stage-b.example.com`,
         });
         run.customerId = customer.id;
@@ -895,10 +890,10 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
           const version = `${release.version}-u2`;
           const created = await deps.api.createRelease(applicationId, {
             version,
-            gitSha: benchmark.commit,
+            gitSha: target.commit,
             ...(config.overrides?.migrationCommand ? { migrationCommand: config.overrides.migrationCommand } : {}),
           });
-          run.releases['update'] = { id: created.id, version, gitSha: benchmark.commit };
+          run.releases['update'] = { id: created.id, version, gitSha: target.commit };
           evidence.save();
           result.update.releaseId = created.id;
           result.update.version = version;
@@ -1072,7 +1067,6 @@ async function recordFailure(deps: DeployDeps, input: RepositoryAttemptInput, st
   const failurePoint = stop.point === 'harness' ? 'harness' : stop.point;
   const evidenceIn: FailureEvidence = {
     point: failurePoint,
-    expectedDeployable: result.expectedDeployable,
     message: stop.message,
     healthPathSource: result.runtime.healthPathSource,
     manifestHealthPath: null,
@@ -1137,11 +1131,7 @@ async function recordFailure(deps: DeployDeps, input: RepositoryAttemptInput, st
   };
   switch (failurePoint) {
     case 'gate':
-      if (result.expectedDeployable || classified.failureStage !== 'EXPECTED_UNSUPPORTED') markFail(result.gate);
-      else {
-        result.gate.status = 'PASS';
-        result.gate.detail = stop.message.slice(0, 500);
-      }
+      markFail(result.gate);
       break;
     case 'configuration':
       markFail(result.configuration);

@@ -1,8 +1,9 @@
 # Stage B per-repository vendor configuration and wave membership.
 # Schema and cross-checks: scripts/repository-deployment/config.ts.
 #
-# Every entry references a Stage A id (docs/testing/repository-compatibility/
-# benchmark.yaml) and adds only what a vendor could set through the product:
+# Every entry references a recipe id (scripts/run-and-check/recipes/<id>.yaml,
+# the source of the repository and the pinned commit) and adds only what a
+# vendor could set through the product:
 # `overrides` (PATCH /api/applications/:id), `config` (non-secret values the
 # vendor types into the Configuration screen; `${DEPLOYZ_APP_URL}` stands for
 # the deployment's permanent default-HTTPS address), `secrets` (keys the
@@ -10,6 +11,12 @@
 # names the format the app validates), `verify` (what Stage B probes) and
 # `dependencies` (which checks to run). `fork` names the copy the vendor
 # GitHub App installation can read; default instashop-dev/<repo>.
+#
+# Stage B runs only the ids that have a recipe. An entry without a recipe is
+# not run. It keeps the configuration of a recorded run in runs/. A wave or a
+# class list names only ids that have a recipe. The ids repo-002, repo-005,
+# repo-012, repo-018, repo-022, repo-026 and repo-092 have no recipe, so they
+# are not in a wave or a class list.
 #
 # `smoke`: a list of repository-specific checks run against the live
 # application after HTTPS is ACTIVE. A generic 200 is not enough — each check
@@ -24,7 +31,7 @@
 # 3) and `retryDelaySeconds` (default 20). `--require-smoke` refuses a
 # repository with no `smoke` entry before anything is created.
 #
-# Values here are what the Stage A notes establish as the app's own
+# Values here are what the repository's own files establish as the app's own
 # requirements. Nothing here patches a repository; a key the analyser wrongly
 # demands is still provided (a vendor would have to), and the mismatch is the
 # gate audit's finding, not the configuration's.
@@ -47,20 +54,17 @@
 #
 # Coverage claim (verified at load time — no overlap allowed):
 #   PostgreSQL        ✓ 001, 003, 004, 007, 008, 016, 021, 039, 051, 035
-#   Redis             ✓ 007, 016, 002
+#   Redis             ✓ 007, 016
 #   Storage           ✓ 016
 #   Custom Dockerfile ✓ 004, 039
 #   Custom port       ✓ 004
 #   Custom health     ✓ 003, 008
-#   Special topology  ✓ 022 (background worker)
 version: 1
 b2Repos:
   # Rails, PostgreSQL, custom fork — framework-specific build (realistic)
   - repo-051
   # Flask, PostgreSQL — Python cohort rep (realistic)
   - repo-035
-  # ToolJet — special application topology via background worker (realistic)
-  - repo-022
 b3Repos:
   # 10 representative repos covering the widest capability and cohort spread.
   # Each is a distinct app type, runtime, or dependency profile. All have
@@ -73,16 +77,13 @@ b3Repos:
   - repo-016  # Koa/Sequelize, PostgreSQL + Redis + storage, realistic
   - repo-021  # Node, PostgreSQL, heavy config, realistic
   - repo-039  # Go, custom Dockerfile, PostgreSQL, messy
-  - repo-002  # Python, Redis, worker, boundary, NOT_COMPATIBLE
-  - repo-005  # boundary, NOT_COMPATIBLE
 
 waves:
   wave-1: [repo-008, repo-001, repo-051, repo-004, repo-035, repo-003, repo-007, repo-021, repo-039, repo-016]
   regional-w1: [repo-008, repo-004]
   regional-w2: [repo-001, repo-203]
-  regional-w3: [repo-051, repo-092]
-  regional-w4: [repo-021, repo-018]
-  regional-w5: [repo-026, repo-012]
+  regional-w3: [repo-051]
+  regional-w4: [repo-021]
 
 repositories:
   - id: repo-008
@@ -221,7 +222,7 @@ repositories:
       - { path: /healthz, status: 200, bodyIncludes: "Service ready" }
       - { path: /api/v1/instance/profile, status: 200, jsonPath: version, exercises: [postgres], graceSeconds: 30 }
     notes:
-      - "Go; PostgreSQL is selected with MEMOS_DRIVER=postgres and read from MEMOS_DSN (a connection string). Migrations run at boot. The Dockerfile ships the backend with a stub frontend page (Stage A note); health and API still answer."
+      - "Go; PostgreSQL is selected with MEMOS_DRIVER=postgres and read from MEMOS_DSN (a connection string). Migrations run at boot. The Dockerfile ships the backend with a stub frontend page; health and API still answer."
 
   - id: repo-016
     findings: [DEPLOY-005]
@@ -494,7 +495,7 @@ repositories:
     verify: { healthPath: /health, appPath: /health }
     notes:
       - "AWS Gate D D2 (Phase 5) real-AWS qualification. Permanent Phase 5 canary repository at instashop-dev/deployz-phase5-canary@6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d, replaced with a minimal buildable Phase 5 canary (web + worker + scheduler + DLQ + Postgres). Web (Node Express) producer to a Standard SQS queue, separate worker consumer (orders-consumer.ts reads only ORDERS_QUEUE_URL, dlq-monitor.ts reads only ORDERS_DLQ_URL — one queue URL per file, which the Phase 5 queue attribution requires), DLQ reachable from the worker, render.yaml type: cron scheduled job writing to Postgres, PostgreSQL through pg via DATABASE_URL, messages/ticks tables created at boot by src/schema.ts. The harness's preflight refused to proceed because exec-form Dockerfile CMDs are not parsed into manifest.web.command (start-command-missing); overrides.startCommand covers it. Queue/storage bindings are typed as vendor-known empty strings so the preflight sees them as provided; the IR substitutes the real Deployz-managed values at deploy time. Same shape as repo-016 outlines."
-      - "overrides.migrationCommand is intentionally omitted. The manifest merge's inconsistency guard at packages/analysis/src/manifest.ts:435-439 rejects a migration command when the manifest does not require PostgreSQL, so a Deployz-managed migration job is not configured for this entry. The canary creates its own messages/ticks tables at boot from src/schema.ts, the same migrations-at-boot shape the other benchmark entries use; schema creation is the canary's responsibility, not a Gate D product dependency."
+      - "overrides.migrationCommand is intentionally omitted. The manifest merge's inconsistency guard at packages/analysis/src/manifest.ts:435-439 rejects a migration command when the manifest does not require PostgreSQL, so a Deployz-managed migration job is not configured for this entry. The canary creates its own messages/ticks tables at boot from src/schema.ts, the same migrations-at-boot shape the other entries use; schema creation is the canary's responsibility, not a Gate D product dependency."
 
   - id: repo-301
     deploymentClass: fresh-full
