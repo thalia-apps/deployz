@@ -67,3 +67,32 @@ CMD ["bundle", "exec", "rails", "s"]
     expect(detectGitCopyInDockerfile(dockerfile('RUN go build -ldflags "-X main.sha=$(git rev-parse HEAD)" .')).detected).toBe(false);
   });
 });
+
+describe('docuseal (repo-051): Active Storage service credentials', () => {
+  const gemfile = "source 'https://rubygems.org'\ngem 'rails', '~> 8.0'\ngem 'aws-sdk-s3'\n";
+  const storage = [
+    'disk:',
+    '  service: Disk',
+    "  root: <%= ENV['WORKDIR'] || '.' %>/attachments",
+    'aws_s3:',
+    '  service: S3',
+    "  access_key_id: <%= ENV['AWS_ACCESS_KEY_ID'] %>",
+    "  secret_access_key: <%= ENV['AWS_SECRET_ACCESS_KEY'] %>",
+    'azure:',
+    '  service: AzureBlob',
+    "  storage_access_key: <%= ENV['AZURE_STORAGE_ACCESS_KEY'] %>",
+    '',
+  ].join('\n');
+
+  it('does not require a credential read only in an optional storage.yml service block', () => {
+    const required = requiredKeys({ Gemfile: gemfile, 'config/storage.yml': storage });
+    expect(required).not.toContain('AWS_ACCESS_KEY_ID');
+    expect(required).not.toContain('AWS_SECRET_ACCESS_KEY');
+    expect(required).not.toContain('AZURE_STORAGE_ACCESS_KEY');
+  });
+
+  it('keeps ENV.fetch without a default required: it raises at boot', () => {
+    const fetched = "amazon:\n  service: S3\n  secret_access_key: <%= ENV.fetch('AWS_SECRET_ACCESS_KEY') %>\n";
+    expect(requiredKeys({ Gemfile: gemfile, 'config/storage.yml': fetched })).toContain('AWS_SECRET_ACCESS_KEY');
+  });
+});

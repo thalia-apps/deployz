@@ -4409,7 +4409,10 @@ function scanConfigFileEnvReads(path: string, content: string): { key: string; n
       for (const key of ['SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD']) add(key, true);
     }
   } else {
-    for (const m of content.matchAll(/\bENV\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]\s*(\|\|)?/g)) add(m[1]!, m[2] !== undefined);
+    // A Rails `config/storage.yml` service block is built only when the app selects that
+    // service, and `ENV['X']` is nil when unset: the app boots without it.
+    const storageServices = /(?:^|\/)config\/storage\.ya?ml$/i.test(path);
+    for (const m of content.matchAll(/\bENV\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]\s*(\|\|)?/g)) add(m[1]!, storageServices || m[2] !== undefined);
     for (const m of content.matchAll(/\bENV\.fetch\(\s*["']([A-Z][A-Z0-9_]*)["']\s*(,|\)\s*\{)?/g)) add(m[1]!, m[2] !== undefined);
     // `$(NAME)` / `${NAME:default}` substitution in a YAML config; the engine selector has no other source
     for (const m of content.matchAll(/\$[({]([A-Z][A-Z0-9_]*)(:[^)}\n]*)?[)}]/g)) {
