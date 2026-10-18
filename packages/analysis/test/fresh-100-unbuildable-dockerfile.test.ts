@@ -55,7 +55,7 @@ describe('a repository with no Dockerfile that builds a production image', () =>
         ...APP,
         'docker/images/n8n/Dockerfile': 'FROM node:22-alpine\nCOPY ./compiled /usr/local/lib/node_modules/n8n\nEXPOSE 5678\nENTRYPOINT ["tini", "--", "n8n"]\n',
         'docker/images/runners/Dockerfile': 'FROM node:22-alpine\nCOPY ./dist/task-runner /app/task-runner\nCMD ["node", "/app/task-runner"]\n',
-        'docker/images/base/Dockerfile': 'FROM node:22-alpine\nRUN npm install -g pnpm\n',
+        'docker/images/base/Dockerfile': 'FROM node:22-alpine\nRUN npm install -g pnpm\nEXPOSE 5678\n',
       }),
     );
     expect(rejected?.reason).toContain('compiled');

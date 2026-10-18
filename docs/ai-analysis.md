@@ -125,11 +125,11 @@ Repository (GitHub tree, bounded)
   app from source, or selects another one. When the full repository path
   list proves there is no Dockerfile that builds a production image (none,
   only development or template files, or a selected Dockerfile that copies
-  sources the repository lacks while every other Dockerfile that starts
-  something also copies a missing source), the repository is
+  sources the repository lacks while every other Dockerfile with a CMD or
+  ENTRYPOINT also copies a missing source), the repository is
   NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A capped or partial
-  file list, a second candidate Dockerfile that starts something and copies
-  only repository content, a git submodule, `COPY --from=` and a generated
+  file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
+  copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
   fallback and no `git clone` or `git init` in the Dockerfile, gives the
