@@ -13,8 +13,9 @@ import {
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { checkDockerComposeMultiService, checkElasticsearch, checkGpu, checkMongo, checkSqlite } from '../src/rejection.js';
 
-// Stage A phase-3 regression fixtures — the main-corpus findings
-// (docs/testing/repository-compatibility/findings.md, COMP-024 onwards).
+// Stage A phase-3 regression fixtures — the main-corpus findings, COMP-024
+// onwards. The Stage A corpus and its findings registry were removed on
+// 2026-10-18; see docs/testing/compatibility.md for the Docker run-and-check test.
 
 const APP = 'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n';
 

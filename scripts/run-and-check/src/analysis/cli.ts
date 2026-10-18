@@ -15,9 +15,9 @@ import { parseArgs } from 'node:util';
 
 import { parse } from 'yaml';
 
-import { resolveGithubToken } from '../../../repository-compatibility/snapshot.js';
 import { analysisResultFileSchema, recipeSchema, type Recipe } from '../contract.js';
 import { openAnalyser, rulesAnalyserName } from './analyse.js';
+import { resolveGithubToken } from './snapshot.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const HARNESS_ROOT = resolve(here, '..', '..');

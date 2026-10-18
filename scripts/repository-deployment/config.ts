@@ -5,8 +5,8 @@
  * Everything here is what a real vendor could set through the product
  * (application overrides, configuration values) plus what the audit needs
  * to verify a deployment (health path to probe, expected response,
- * dependency checks). It references Stage A entries by id and never
- * repeats the corpus. Secret VALUES are never stored: `secrets` names the
+ * dependency checks). It references run-and-check recipes by id and never
+ * repeats them. Secret VALUES are never stored: `secrets` names the
  * keys the harness generates at run time.
  */
 import { readFileSync } from 'node:fs';
@@ -188,7 +188,7 @@ export type RepositoryConfig = z.infer<typeof repositoryConfigSchema>;
 export const deployConfigSchema = z
   .object({
     version: z.literal(1),
-    /** Wave name → Stage A ids, in execution order. */
+    /** Wave name → recipe ids, in execution order. */
     waves: z.record(z.string().regex(WAVE_ID_REGEX), z.array(z.string().regex(ENTRY_ID_REGEX)).min(1)).default({}),
     repositories: z.array(repositoryConfigSchema).default([]),
     /**
@@ -231,8 +231,8 @@ export function deploymentClassFor(config: DeployConfig, id: string): Deployment
 /**
  * Parse and cross-validate: unique repository ids, unique keys within an
  * entry's config, no key both configured and generated, unique ids within a
- * wave. Whether every id exists in the Stage A benchmark is checked by the
- * caller, which holds the benchmark.
+ * wave. Whether every wave id has a recipe is checked by the caller, which
+ * holds the recipes.
  */
 export function parseDeployConfig(text: string): DeployConfig {
   const config = deployConfigSchema.parse(parse(text) ?? {});
@@ -267,7 +267,7 @@ export function loadDeployConfig(path: string): DeployConfig {
   return parseDeployConfig(readFileSync(path, 'utf8'));
 }
 
-/** The configuration for one Stage A entry — an empty one when nothing is configured. */
+/** The configuration for one recipe id — an empty one when nothing is configured. */
 export function configFor(config: DeployConfig, id: string): RepositoryConfig {
   return config.repositories.find((entry) => entry.id === id) ?? { id, findings: [], notes: [] };
 }

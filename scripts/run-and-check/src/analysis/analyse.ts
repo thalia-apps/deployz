@@ -1,10 +1,9 @@
 /**
  * Produces an Analysis result file for a recipe through the production path.
  *
- * The Stage A session (`scripts/repository-compatibility/analyse.ts`) runs
+ * The analysis session (`session.ts`) runs
  * `runApplicationAnalysis` on an in-process PGlite with the real migrations,
- * then `normalizeDeploymentManifest` and `evaluateManifestReadiness`. It is
- * reused by import until Wave 6 moves it. A git recipe reads GitHub through the
+ * then `normalizeDeploymentManifest` and `evaluateManifestReadiness`. A git recipe reads GitHub through the
  * snapshot cache. A fixture recipe is served from its local folder by the
  * same tree fetch.
  */
@@ -20,12 +19,11 @@ import {
   type ManifestReadinessResult,
 } from '@deployz/contracts';
 
-import { openAnalysisSession } from '../../../repository-compatibility/analyse.js';
-import type { BenchmarkEntry } from '../../../repository-compatibility/manifest.js';
-import { classifyGithubUrl, createSnapshotFetch } from '../../../repository-compatibility/snapshot.js';
 import { vendorRequiredVariables } from '../claims/extract.js';
 import type { AnalysisResultFile, Recipe } from '../contract.js';
 import { readLocalTree, serveLocalTree } from './local-tree.js';
+import { openAnalysisSession } from './session.js';
+import { classifyGithubUrl, createSnapshotFetch } from './snapshot.js';
 
 /** The owner a fixture takes in its GitHub-like name, `fixture/<F#>`. */
 const FIXTURE_OWNER = 'fixture';
@@ -40,7 +38,7 @@ export function rulesAnalyserName(cwd: string): string {
 /**
  * The deployment-creation gate for a new application, as production runs it
  * (`evaluatePreflight`): a variable that needs no vendor value counts as
- * provided. The Stage A session passes no provided keys, so it also flags
+ * provided. The analysis session passes no provided keys, so it also flags
  * Deployz-managed variables.
  */
 export function freshApplicationGate(manifest: DeploymentManifest): ManifestReadinessResult {
@@ -106,8 +104,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
         commit = tree.commit;
         fixtures.set(recipe.source.fixture, serveLocalTree(tree));
       }
-      // The session reads only the id, the repository and the commit of an entry.
-      const raw = await session.analyse({ id: recipe.id, repository, commit } as BenchmarkEntry);
+      const raw = await session.analyse({ id: recipe.id, repository, commit });
       const gate = raw.manifest ? freshApplicationGate(raw.manifest) : null;
       return {
         id: recipe.id,

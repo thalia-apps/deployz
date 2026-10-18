@@ -1,9 +1,9 @@
 /**
  * B1 — the deployment gate over a pinned snapshot, through the production
- * analysis path the Stage A harness already drives (`openAnalysisSession`:
+ * analysis path the Docker run-and-check harness drives (`openAnalysisSession`:
  * `runApplicationAnalysis` → `normalizeDeploymentManifest` →
- * `evaluateManifestReadiness`), read from the Stage B side: is the
- * repository expected to be deployable, and does the gate agree?
+ * `evaluateManifestReadiness`), read from the Stage B side: what verdict does
+ * the gate give? The verdict is reported, not graded.
  *
  * B2 offline — the same gate with the Stage B vendor configuration applied
  * (overrides merged the way `applicationToManifestOverrides` merges them,
@@ -14,20 +14,9 @@ import { evaluateManifestReadiness, normalizeDeploymentManifest } from '@deployz
 import { applicationToManifestOverrides } from '@deployz/api/manifest';
 import type { DeploymentManifest, DeploymentManifestOverrides, ManifestReadinessResult } from '@deployz/contracts';
 
-import type { RawAnalysis } from '../repository-compatibility/analyse.js';
-import type { BenchmarkEntry } from '../repository-compatibility/manifest.js';
-import { normalizeActual } from '../repository-compatibility/normalize.js';
+import type { RawAnalysis } from '../run-and-check/src/analysis/session.js';
 import { providedKeys, type RepositoryConfig, type VendorOverrides } from './config.js';
-import type { GateOutcome, StageBResult } from './results.js';
-
-export function gateOutcome(expectedDeployable: boolean, verdict: StageBResult['gate']['verdict']): GateOutcome | null {
-  if (verdict === null) return null;
-  const accepted = verdict !== 'NOT_COMPATIBLE';
-  if (expectedDeployable && accepted) return 'correct-accept';
-  if (!expectedDeployable && !accepted) return 'correct-reject';
-  if (!expectedDeployable && accepted) return 'false-acceptance';
-  return 'false-rejection';
-}
+import type { StageBResult } from './results.js';
 
 /** Stage B vendor overrides in the manifest's override vocabulary (PATCH /api/applications/:id → manifest). */
 export function overridesToManifest(overrides: VendorOverrides | undefined): DeploymentManifestOverrides {
@@ -63,19 +52,16 @@ export function evaluateConfiguredGate(
 
 /** Fill the `gate` section of a result from one in-process analysis. */
 export function gateSection(
-  benchmarkEntry: BenchmarkEntry,
   raw: RawAnalysis,
   entry: RepositoryConfig,
   analysisVersion: number,
 ): { gate: StageBResult['gate']; manifest: DeploymentManifest | null; configuredManifest: DeploymentManifest | null } {
-  const expectedDeployable = benchmarkEntry.expected.compatibility !== 'NOT_COMPATIBLE';
   if (raw.status !== 'analysed' || !raw.gate) {
     return {
       gate: {
         status: 'FAIL',
         verdict: null,
         analysisVerdict: raw.row.compatibilityStatus,
-        outcome: null,
         gateFindings: [],
         requiredKeys: [],
         missingKeys: [],
@@ -91,20 +77,17 @@ export function gateSection(
       configuredManifest: null,
     };
   }
-  const actual = normalizeActual(raw);
   const configured = evaluateConfiguredGate(raw, entry);
   const verdict = raw.gate.state;
-  const outcome = gateOutcome(expectedDeployable, verdict);
   return {
     gate: {
-      status: outcome === 'correct-accept' || outcome === 'correct-reject' ? 'PASS' : 'FAIL',
+      status: verdict === 'NOT_COMPATIBLE' ? 'FAIL' : 'PASS',
       verdict,
-      analysisVerdict: actual.analysisVerdict,
-      outcome,
-      gateFindings: actual.gateFindings,
-      requiredKeys: actual.requiredEnvVars,
+      analysisVerdict: raw.row.compatibilityStatus,
+      gateFindings: raw.gate.findings.map((finding) => finding.id),
+      requiredKeys: requiredKeys(raw.manifest),
       missingKeys: missingKeys(raw.gate),
-      unsupported: actual.unsupported,
+      unsupported: unsupportedBlockers(raw),
       configuredVerdict: configured.gate.state,
       configuredFindings: configured.gate.findings.map((finding) => finding.id),
       source: 'in-process',
@@ -115,6 +98,23 @@ export function gateSection(
     manifest: raw.manifest,
     configuredManifest: configured.manifest,
   };
+}
+
+/** Every env key the manifest marks required. */
+function requiredKeys(manifest: DeploymentManifest | null): string[] {
+  return (manifest?.environment.variables ?? []).filter((variable) => variable.required).map((variable) => variable.key).sort();
+}
+
+/** What blocks the repository: the detected rejections, the local filesystem and a background worker. */
+function unsupportedBlockers(raw: RawAnalysis): string[] {
+  const metadata = (raw.row.detectedMetadata ?? {}) as Record<string, unknown>;
+  const blockers = new Set<string>();
+  for (const rejection of raw.analysis?.rejections ?? []) {
+    if (rejection.detected) blockers.add(rejection.dependency);
+  }
+  if (metadata['usesLocalFilesystem'] === true) blockers.add('local-filesystem');
+  if (metadata['hasWorkerProcesses'] === true && raw.manifest !== null && raw.manifest.worker.command !== null) blockers.add('background-worker');
+  return [...blockers].sort();
 }
 
 /** The keys the gate's `required-env-vars-missing` finding names — what a vendor must still provide. */

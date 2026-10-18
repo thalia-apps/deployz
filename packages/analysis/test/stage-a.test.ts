@@ -23,8 +23,9 @@ import {
 } from '../src/rejection.js';
 
 // Stage A regression fixtures — each describes a shape found in the
-// repository-compatibility audit (docs/testing/repository-compatibility/
-// findings.md) and pins the analyser behaviour the fix established.
+// repository-compatibility audit and pins the analyser behaviour the fix
+// established. The Stage A corpus and its findings registry were removed on
+// 2026-10-18; see docs/testing/compatibility.md for the Docker run-and-check test.
 
 describe('COMP-001 — the container port from the Dockerfile and Compose', () => {
   it('reads ENV PORT from the selected Dockerfile', () => {

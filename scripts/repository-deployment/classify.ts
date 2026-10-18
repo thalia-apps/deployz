@@ -27,7 +27,6 @@ export type FunnelPoint =
 
 export interface FailureEvidence {
   readonly point: FunnelPoint;
-  readonly expectedDeployable: boolean;
   /** What the harness observed as the immediate error text. */
   readonly message: string;
   readonly timedOut?: boolean;
@@ -128,14 +127,8 @@ export function classifyFailure(evidence: FailureEvidence): ClassifiedFailure {
   }
 
   if (point === 'gate') {
-    if (!evidence.expectedDeployable && evidence.gateVerdict === 'NOT_COMPATIBLE') {
-      return { failureStage: 'EXPECTED_UNSUPPORTED', rootCause: 'CORRECTLY_UNSUPPORTED', rootCauseEvidence: 'the gate rejected an expected-unsupported repository' };
-    }
-    if (evidence.expectedDeployable && evidence.gateVerdict === 'NOT_COMPATIBLE') {
-      return { failureStage: 'GATE_ERROR', rootCause: null, rootCauseEvidence: `false rejection: ${trim(evidence.message)} — decide ANALYSIS_BUG vs ANALYSIS_MISSING_SIGNAL vs MVP_CAPABILITY_GAP from the rejection evidence` };
-    }
-    if (!evidence.expectedDeployable) {
-      return { failureStage: 'GATE_ERROR', rootCause: null, rootCauseEvidence: `false acceptance: the gate returned ${evidence.gateVerdict ?? 'unknown'} for an expected-unsupported repository` };
+    if (evidence.gateVerdict === 'NOT_COMPATIBLE') {
+      return { failureStage: 'GATE_ERROR', rootCause: null, rootCauseEvidence: `the gate rejected the repository: ${trim(evidence.message)} — decide ANALYSIS_BUG vs ANALYSIS_MISSING_SIGNAL vs MVP_CAPABILITY_GAP vs CORRECTLY_UNSUPPORTED from the rejection evidence` };
     }
     return { failureStage: 'GATE_ERROR', rootCause: null, rootCauseEvidence: trim(evidence.message) };
   }
