@@ -5600,15 +5600,15 @@ export function detectGitCopyInDockerfile(tree: FileTree): DetectorFinding {
 export const TREE_PATHS: unique symbol = Symbol.for('deployz.analysis.treePaths');
 
 /**
- * `COPY`/`ADD` sources of the selected Dockerfile (no `--from`) that are not in
+ * `COPY`/`ADD` sources of the selected Dockerfile, or of `dockerfilePath` (no `--from`), that are not in
  * the repository, from the root or from the Dockerfile's directory: a build
  * output a CI step makes before `docker build` (listmonk's `COPY listmonk .`,
  * tolgee's prebuilt `BOOT-INF`). The release build has only the repository, so
  * that Dockerfile can never build. Empty when the path list is unknown.
  */
-export function detectDockerfileMissingCopySources(tree: FileTree): string[] {
+export function detectDockerfileMissingCopySources(tree: FileTree, dockerfilePath?: string): string[] {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
-  const dockerfile = selectedDockerfile(tree);
+  const dockerfile = dockerfilePath === undefined ? selectedDockerfile(tree) : { path: dockerfilePath, content: tree[dockerfilePath] ?? '' };
   if (!paths || !dockerfile) return [];
   const dockerDir = dockerfile.path.includes('/') ? dockerfile.path.slice(0, dockerfile.path.lastIndexOf('/')) : '';
   const exists = (path: string): boolean => paths.some((candidate) => candidate === path || candidate.startsWith(`${path}/`));
@@ -5655,9 +5655,10 @@ function isDevOnlyDockerfile(path: string, content: string): boolean {
  * null when it has one or the evidence is incomplete (COMP-021). Complete
  * evidence needs the full tracked path list, every Dockerfile in it fetched,
  * and no git submodule. It rejects when every Dockerfile is a development-only
- * file or a template, or when the single Dockerfile copies sources the
- * repository does not contain (a prebuilt binary or archive). A generated
- * directory, `COPY --from=` and a second candidate Dockerfile never reject.
+ * file or a template, or when the selected Dockerfile copies sources the
+ * repository does not contain (a prebuilt binary or archive), and every other
+ * candidate that starts something copies missing sources too. A generated
+ * directory and `COPY --from=` never reject on their own.
  */
 export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
@@ -5672,13 +5673,24 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   if (buildable.length === 0) {
     return `The only Dockerfile${tracked.length > 1 ? 's are' : ' is'} for development or a template (${tracked.slice(0, 3).join(', ')}).`;
   }
-  if (tracked.length > 1) return null;
-
   const missing = detectDockerfileMissingCopySources(tree).filter(
     (source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? ''),
   );
   if (missing.length === 0) return null;
-  return `The only Dockerfile (${tracked[0]}) copies ${missing.slice(0, 3).join(', ')}, which the repository does not contain.`;
+  if (tracked.length === 1) {
+    return `The only Dockerfile (${tracked[0]}) copies ${missing.slice(0, 3).join(', ')}, which the repository does not contain.`;
+  }
+  // Another candidate that starts something and copies only repository content is a
+  // Dockerfile the vendor can select (n8n's every image copies a CI build output).
+  const selected = selectedDockerfile(tree)?.path;
+  const alternative = buildable.some(
+    (path) =>
+      path !== selected &&
+      dockerfileStartsSomething(tree[path] ?? '') &&
+      detectDockerfileMissingCopySources(tree, path).length === 0,
+  );
+  if (alternative) return null;
+  return `Every Dockerfile that starts the app copies files the repository does not contain (${selected} copies ${missing.slice(0, 3).join(', ')}).`;
 }
 
 // 18. Dockerfile build context
