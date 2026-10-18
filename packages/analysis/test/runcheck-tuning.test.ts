@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FileTree } from '../src/analyser.js';
-import { detectEnvVarModel } from '../src/detectors.js';
+import { detectEnvVarModel, detectGitCopyInDockerfile } from '../src/detectors.js';
 
 // Defects the Docker run-and-check test found in the tuning set: each claim
 // was CONTRADICTED by the running application.
@@ -42,5 +42,28 @@ describe('kutt (repo-003): optional variables', () => {
   it('keeps a bare chained read without a presence test required', () => {
     const source = 'const emails = process.env.ADMIN_EMAILS.split(",");\n';
     expect(requiredKeys({ 'package.json': NODE_PACKAGE, 'server/admin.js': source })).toContain('ADMIN_EMAILS');
+  });
+});
+
+describe('chatwoot (repo-071): a RUN step that reads git history', () => {
+  const dockerfile = (run: string): FileTree => ({
+    Dockerfile: `FROM ruby:3.4-alpine
+RUN apk add --no-cache git
+COPY . /app
+${run}
+CMD ["bundle", "exec", "rails", "s"]
+`,
+  });
+
+  it('flags `RUN git rev-parse` without a fallback: the source archive has no .git', () => {
+    expect(detectGitCopyInDockerfile(dockerfile('RUN git rev-parse HEAD > /app/.git_sha')).detected).toBe(true);
+    expect(detectGitCopyInDockerfile(dockerfile('RUN bundle install && \
+  git describe --tags > VERSION')).detected).toBe(true);
+  });
+
+  it('does not flag a git read with a fallback, a clone, or a command substitution', () => {
+    expect(detectGitCopyInDockerfile(dockerfile('RUN git rev-parse HEAD > /app/.git_sha || echo unknown > /app/.git_sha')).detected).toBe(false);
+    expect(detectGitCopyInDockerfile(dockerfile('RUN git clone https://github.com/a/b /src && cd /src && git rev-parse HEAD')).detected).toBe(false);
+    expect(detectGitCopyInDockerfile(dockerfile('RUN go build -ldflags "-X main.sha=$(git rev-parse HEAD)" .')).detected).toBe(false);
   });
 });

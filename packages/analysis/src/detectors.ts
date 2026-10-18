@@ -5520,6 +5520,11 @@ const COPY_FROM_FLAG_REGEX = /--from=/;
 // The source is `.git` itself or a path inside it (`.git/HEAD`), not a
 // lookalike (`.gitignore`, `.github`, `.gitattributes`, `.gitmodules`).
 const GIT_SOURCE_TOKEN_REGEX = /^(?:\.\/)?\.git(?:\/.*)?$/;
+const DOCKERFILE_RUN_REGEX = /^\s*RUN\s+([^\n]+)$/gm;
+// A command of a RUN step that reads git history (`git rev-parse HEAD > .git_sha`).
+const GIT_HISTORY_COMMAND_REGEX = /^\s*git\s+(?:rev-parse|describe|log|rev-list|show)\b/;
+// The Dockerfile makes its own repository, so git reads work without the context's `.git`.
+const GIT_REPOSITORY_SETUP_REGEX = /\bgit\s+(?:clone|init)\b/;
 
 /**
  * The source tokens of a `COPY`/`ADD` instruction's argument string — every
@@ -5546,7 +5551,8 @@ function copyAddSources(args: string): string[] {
 
 /**
  * Detect a `COPY`/`ADD` instruction in the selected Dockerfile whose source
- * is the repository's `.git` directory. Deployz builds images from a GitHub
+ * is the repository's `.git` directory, or a `RUN` step that reads git history
+ * from it. Deployz builds images from a GitHub
  * tarball (source-fetch.ts), which never contains `.git`, so the copy fails
  * the build with a checksum error before the vendor gets a useful message
  * (DEPLOY-031, sosedoff/pgweb: `COPY .git/ .` feeds a `git rev-parse` in the
@@ -5565,13 +5571,23 @@ export function detectGitCopyInDockerfile(tree: FileTree): DetectorFinding {
       matches.push(match[0].trim());
     }
   }
+  // A RUN command that reads git history with no `||` fallback fails the build (chatwoot's
+  // `RUN git rev-parse HEAD > /app/.git_sha`).
+  if (!GIT_REPOSITORY_SETUP_REGEX.test(collapsed)) {
+    for (const match of collapsed.matchAll(DOCKERFILE_RUN_REGEX)) {
+      const commands = (match[1] ?? '').split(/&&|;/);
+      if (commands.some((command) => GIT_HISTORY_COMMAND_REGEX.test(command) && !command.includes('||'))) {
+        matches.push(match[0].trim());
+      }
+    }
+  }
 
   if (matches.length === 0) return { detector: 'dockerfile-git-copy', detected: false };
   return {
     detector: 'dockerfile-git-copy',
     detected: true,
     value: matches,
-    details: `Dockerfile copies .git from the build context, which the tarball build never has: ${matches.join('; ')} (${dockerfile.path})`,
+    details: `Dockerfile copies or reads .git from the build context, which the tarball build never has: ${matches.join('; ')} (${dockerfile.path})`,
     source: 'dockerfile',
   };
 }
