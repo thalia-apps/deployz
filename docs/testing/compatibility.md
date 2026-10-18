@@ -12,14 +12,15 @@ Two tests answer two different questions:
 | Test | Question | AWS | Repository list |
 | --- | --- | --- | --- |
 | Docker run-and-check — `pnpm runcheck:*` | Is each Analysis claim true for the running application? | None | `scripts/run-and-check/recipes/` |
-| Stage B — `pnpm benchmark:deploy` | Can Deployz actually *deploy* it, end to end? | Real, test account | reads the repository list by id |
+| Stage B — `pnpm benchmark:deploy` | Can Deployz actually *deploy* it, end to end? | Real, test account | the git recipes in `scripts/run-and-check/recipes/` |
 
 ## Docker run-and-check
 
 The test builds and runs real applications in Docker and checks each
 Analysis claim against what the application does. The running application
-is the truth, not a label. It replaces the label benchmarks (Stage A
-compatibility and remediation); the decision is in
+is the truth, not a label. It replaced the label benchmarks (Stage A
+compatibility and remediation). The label benchmarks were removed on
+2026-10-18. The decision is in
 [`../decisions/README.md`](../decisions/README.md). The harness is
 `scripts/run-and-check/`.
 
@@ -162,8 +163,8 @@ or prompts.
 
 ## Stage B — repository-deployment audit
 
-Answers what Stage A stops short of: when a repository is inside the MVP
-support boundary, can Deployz build it, deploy it into a real customer AWS
+Answers what the Docker run-and-check test stops short of: when a repository is
+inside the MVP support boundary, can Deployz build it, deploy it into a real customer AWS
 account, make it healthy over HTTPS, and remove it cleanly afterwards? It
 runs the pinned repositories through the real production path — analysis,
 configuration, CodeBuild, ECR, the published templates, the relay,
@@ -172,6 +173,13 @@ gates, default HTTPS, Disconnect and Purge — and records one result per
 repository. `CloudFormation CREATE_COMPLETE` is never a pass; a repository
 passes only when it reaches a stable application-level healthy state and its
 resources are gone afterwards.
+
+Stage B takes the id, the repository and the pinned commit from the git
+recipes in `scripts/run-and-check/recipes/`. It holds no expected answer.
+It reports what it observed, and it does not grade the gate against a label.
+A recipe without a Stage B id (`repo-nnn`) or with a fixture source is not
+a Stage B repository. A `deploy-config.yaml` entry for an id without a recipe
+is not run. Waves and class lists name only ids that have a recipe.
 
 ### Classes B2 and B3
 
@@ -208,7 +216,7 @@ over the `b2Repos`/`b3Repos` lists.
 
 | Stage | What runs | Stops the funnel when |
 | --- | --- | --- |
-| Gate | `runApplicationAnalysis` → `normalizeDeploymentManifest` + `evaluateManifestReadiness`, then the same gate on the deployed control plane | expected unsupported and rejected (`EXPECTED_UNSUPPORTED`); expected deployable but rejected (`GATE_ERROR`, a false rejection) |
+| Gate | `runApplicationAnalysis` → `normalizeDeploymentManifest` + `evaluateManifestReadiness`, then the same gate on the deployed control plane | the gate rejects the repository (`GATE_ERROR`) |
 | Configuration | Vendor overrides and configuration values from `deploy-config.yaml`; secrets generated at run time, or read from the environment (`fromEnv`) for a credential the harness cannot generate — never committed | the gate still refuses (`CONFIG_ERROR`) |
 | Build | A release is created at the pinned SHA; CodeBuild → ECR digest | release `FAILED` (`SOURCE_FETCH_ERROR`, `BUILD_ERROR`, `IMAGE_ERROR`) — no AWS infrastructure created |
 | Deployment | Customer + deployment, install link launched, bootstrap stack created exactly as Quick Create would, relay enrolls, INSTALL provisions the application stack | stack failure (`INFRA_ERROR`), task failure (`CONTAINER_START_ERROR`, `PORT_ERROR`, `ENV_BINDING_ERROR`, …), `TIMEOUT` |
@@ -242,13 +250,16 @@ CORRECTLY_UNSUPPORTED REPO_CONFIGURATION UPSTREAM_REPO_FAILURE
 AWS_TRANSIENT_FAILURE TEST_HARNESS_FAILURE
 ```
 
-`REPOSITORY_BROKEN` and `TEST_HARNESS_ERROR` are failure stages for a corpus
-snapshot that cannot be attempted at all and a harness-side fault, neither a
-product nor an analyser problem. `DEPLOYZ_BUG`, `REPO_CONFIGURATION`,
-`UPSTREAM_REPO_FAILURE` and `AWS_TRANSIENT_FAILURE` are root causes with no
-Stage A equivalent: a genuine product defect, a `deploy-config.yaml`
-mistake, a fault in the third-party repository itself, and a transient AWS
-error a retry would clear.
+`REPOSITORY_BROKEN` and `TEST_HARNESS_ERROR` are failure stages for a
+repository snapshot that cannot be attempted at all and a harness-side fault,
+neither a product nor an analyser problem. `DEPLOYZ_BUG`, `REPO_CONFIGURATION`,
+`UPSTREAM_REPO_FAILURE` and `AWS_TRANSIENT_FAILURE` are root causes for a
+genuine product defect, a `deploy-config.yaml` mistake, a fault in the
+third-party repository itself, and a transient AWS error a retry would
+clear. `EXPECTED_UNSUPPORTED` and `CORRECTLY_UNSUPPORTED` appear only in
+records written before 2026-10-18, when Stage B compared the gate with an
+expected label. New records never use them. The result schema ignores the
+label fields of those old records.
 
 ### Cleanup rules and the leak audit
 
@@ -284,42 +295,19 @@ DEPLOYZ_E2E_ALLOW_REAL_AWS=1 pnpm benchmark:deploy --audit
 ```
 
 **Findings** are systemic (`DEPLOY-nnn`, in
-[`repository-deployment/findings.md`](repository-deployment/findings.md)),
-distinct from Stage A's `COMP-nnn` analyser-accuracy findings — a Stage B
-`GATE_ERROR` on an expected-deployable repository is a Stage A false
-rejection seen from the product side; a `HEALTH_PATH_ERROR` is a Stage A
-`healthPath` mismatch that became a failed deployment.
+[`repository-deployment/findings.md`](repository-deployment/findings.md)). A
+Stage B `GATE_ERROR` is a gate rejection seen from the product side. A
+`HEALTH_PATH_ERROR` is a health path that the Analysis chose and the running
+application did not answer. The Docker run-and-check test finds the
+analyser-accuracy problems.
 
-## `pnpm jev:eval`
+## Jev shadow analysis
 
-An offline evaluation harness for a shadow-mode second opinion: it runs the
-requirements-shadow verifier and the UNKNOWN-failure classifier across the
-Stage A corpus and the Stage B failure records, and compares the result
-against the same `benchmark.yaml` expected facts Stage A uses — labels never
-come from the analyser. `--fixture` runs with deterministic canned answers
-and needs no credentials; the default mode needs
-`JEV_ENABLED`/`JEV_GATEWAY_URL`/`JEV_API_KEY` and fails fast without them.
-`--max-calls` (default 150) and `--delay-ms` (default 250) guard cost and
-rate; a repository whose run file already carries the same evidence
-fingerprint and schema versions is resumed, not re-asked.
-
-```bash
-pnpm jev:eval                     # every corpus repository
-pnpm jev:eval --repo repo-001     # one (or several --repo) entries
-pnpm jev:eval --failures          # replay the Stage B failure records
-pnpm jev:eval --plan              # dry-run: selection, sizes, call count
-```
-
-As of 2026-09-20 a full evaluation (360 labelled decisions across 120
-repositories) found the shadow model produced no discriminative signal and
-misclassified every verifiable failure case — Jev shadow analysis is not
-adopted (`docs/decisions/README.md`). The code stays behind `JEV_ENABLED`
-(unset in production) with zero runtime effect, and `pnpm jev:eval` remains
-a one-command re-evaluation if a future model version warrants it. Its
-resume cache and result files moved from `docs/testing/jev-shadow/runs/` to
-`scripts/jev-eval/runs/` (`EVAL_DIR` in `scripts/jev-eval/index.ts`) — next
-to the harness that reads it, alongside the `version-canary`,
-`repository-compatibility` and `repository-deployment` harness directories.
+The Jev shadow analysis is not adopted (`docs/decisions/README.md`). On
+2026-09-20 an evaluation of 360 labelled decisions across 120 repositories
+found no discriminative signal. The evaluation corpus and `pnpm jev:eval`
+were removed on 2026-10-18 with the label benchmarks. The runtime code stays
+behind `JEV_ENABLED` (unset in production) and has no runtime effect.
 
 ## The manual full-product walk
 
@@ -347,15 +335,16 @@ Run it:
 
 ## What is kept where
 
-Nothing under `runs/` moved except `jev-shadow` (above).
-`repository-compatibility/findings.md`, `benchmark.yaml`, `.cache/` and
-`runs/` stay where the Stage A harness reads them
-(`docs/testing/repository-compatibility/`).
 `repository-deployment/findings.md`, `deploy-config.yaml` and `runs/` stay
 where the Stage B harness reads them
 (`docs/testing/repository-deployment/`). This document replaces
-`repository-compatibility/README.md` and `repository-deployment/README.md`,
-which are deleted — the harness code, `findings.md` registries and YAML
-configuration are the source of truth for anything not covered here (corpus
-entry format, finding categories, the full result-record schema, the
-multi-region campaign flags).
+`repository-deployment/README.md`, which is deleted. The harness code, the
+`findings.md` registry and the YAML configuration are the source of truth for
+anything not covered here (the full result-record schema, the multi-region
+campaign flags).
+
+The Docker run-and-check test keeps its recipes, fixtures, observations and
+Analysis results in `scripts/run-and-check/`. Its run outputs and the GitHub
+snapshot cache are in `scripts/run-and-check/.runs/` (not committed). Stage B
+reads the same snapshot cache. Stage B result records written before
+2026-10-18 stay in `repository-deployment/runs/` unchanged.

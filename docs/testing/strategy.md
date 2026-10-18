@@ -24,10 +24,10 @@ confidence is cheap to get and real AWS stays a deliberate, rare step.
   regression test must reproduce the same failure every run. Real
   third-party repositories are not deterministic enough for regression
   tests; use the simulated AWS account and the fixture application instead.
-- **Compatibility testing is separate from CI.** The repository-compatibility
-  and repository-deployment benchmarks measure analyser accuracy against a
-  large corpus. They do not run on a pull request and they do not gate a
-  merge.
+- **Compatibility testing is separate from CI.** The Docker run-and-check
+  test and the repository-deployment audit measure analyser accuracy and
+  deployability against real repositories. They do not run on a pull request
+  and they do not gate a merge.
 - **Real AWS is small, diagnosable, and cleans up after itself.** Every
   real-AWS run tags its own resources, keeps a short evidence trail, and
   destroys what it created. A real-AWS run that cannot explain a failure in
@@ -51,7 +51,7 @@ thing. Do not stretch a layer to prove something a higher layer owns.
 | **L4 — AWS integration** (`fresh`) | One real AWS boundary in minutes, with no product flow: the bootstrap stack's real create → verify → destroy path | A full product lifecycle — `fresh` never installs an application | `DEPLOYZ_E2E_ALLOW_REAL_AWS=1 pnpm e2e:fresh` | Manual/local escalation only; never in CI |
 | **L5 — AWS E2E** (version canary) | A complete real lifecycle through the deployed control plane, against a Deployz-controlled fixture application. Fixture A is the stateless profile (`profile --profile stateless`) — install, deploy, verify, teardown, no database. Fixture B is the Postgres+Redis `core` ladder — the full release/rollback/failed-release/recovery/persistence/cleanup lifecycle | Routine development iteration — this is an escalation, not a debugging loop | `DEPLOYZ_E2E_ALLOW_REAL_AWS=1 pnpm e2e:canary:versions profile --profile stateless`, `DEPLOYZ_E2E_ALLOW_REAL_AWS=1 pnpm e2e:canary:versions core` | Manual/on-demand escalation, and before an MVP release |
 | **L6 — production canary** | The same harness as L5, run with `profile --profile stateless --production`, against the deployed control plane with the production-published template — answers "can production Deployz deploy right now?" | A pre-merge check — this runs against production, not a pull request | `DEPLOYZ_E2E_ALLOW_REAL_AWS=1 pnpm e2e:canary:versions profile --profile stateless --production` | On demand; a weekly schedule exists in the workflow but stays disabled until three consecutive green manual `--production` runs — see [`aws-e2e.md`](aws-e2e.md#l6--production-canary) |
-| **Compatibility** | Analyser accuracy over a large corpus: Stage A offline against 120 pinned repositories, Stage B through the real production path against the same corpus | A product regression check — a compatibility finding (`COMP-nnn`/`DEPLOY-nnn`) is an analyser-accuracy finding, not a proof the product is broken | `pnpm benchmark:compat` (Stage A, no AWS), `pnpm benchmark:deploy` (Stage B, real AWS) | On demand — see [`compatibility.md`](compatibility.md) |
+| **Compatibility** | Analyser accuracy over real repositories: the Docker run-and-check test builds and runs each application and checks each Analysis claim against it; Stage B deploys a few of them through the real production path | A product regression check — a compatibility finding (`DEPLOY-nnn`, or a contradicted run-and-check claim) is an analyser-accuracy finding, not a proof the product is broken | `pnpm runcheck:*` (Docker, no AWS), `pnpm benchmark:deploy` (Stage B, real AWS) | On demand — see [`compatibility.md`](compatibility.md) |
 | **Manual** | Whatever no automated layer reaches yet: the full product walk against the deployed control plane, with an arbitrary real application, through the real dashboard | A substitute for automation — a manual finding should become a scenario or a canary case | A human follows the written runbook | Before calling a release ready — see [`manual-checklist.md`](manual-checklist.md) |
 
 ## What belongs where

@@ -38,7 +38,7 @@ all required keys supplied) → `manifestToApplicationGraph` →
 `planApplicationGraph` → `compileDeployzInfrastructure`.
 
 The input is the pinned snapshots of
-[`benchmark.yaml`](../testing/repository-compatibility/benchmark.yaml):
+`benchmark.yaml` (`docs/testing/repository-compatibility/`, removed 2026-10-18):
 
 - canonical `repo-001`…`repo-100`
 - holdout `unseen2` `repo-201`…`repo-220`

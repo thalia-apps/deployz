@@ -53,8 +53,8 @@ not here.
 - **No implementation plans or run reports.** Completed plans, phase
   ledgers, audits and one-off canary reports are removed once their durable
   knowledge has moved into the documents above; git history keeps them.
-  Exceptions are the benchmark finding registries under `testing/`, which
-  the harnesses and tests read.
+  The exception is the Stage B finding registry under
+  `testing/repository-deployment/`, which the harness and tests read.
 - **Names, never values.** Configuration keys are documented by name only.
 - **Generated files.** `testing/*/runs/summary.md` files are written by the
   harness scripts; do not edit them by hand.

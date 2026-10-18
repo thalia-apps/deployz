@@ -2,7 +2,7 @@
 
 Deployz `51997a3e` (main, 2026-10-06) · `ANALYSIS_VERSION` 38 · compiler `dynamic-compiler-v2-3`.
 Sample: `repo-001`..`repo-100` from
-[`testing/repository-compatibility/benchmark.yaml`](../testing/repository-compatibility/benchmark.yaml).
+`testing/repository-compatibility/benchmark.yaml` (removed 2026-10-18).
 No AWS deployments. No product code changes.
 
 ## 1. Executive verdict
@@ -91,7 +91,7 @@ Assessment: **reasonable, with a known bias.**
    - `runApplicationAnalysis` → readiness report → `evaluateManifestReadiness` → production `evaluatePreflight`, run twice (no config, and all required env supplied)
    - → `manifestToApplicationGraph` → `planApplicationGraph` → `compileDeployzInfrastructure` → `buildDeploymentSpecV2`.
 
-   The probe compiles even gate-blocked manifests. The harness is `scripts/repository-compatibility` plus a probe script. Neither is committed.
+   The probe compiles even gate-blocked manifests. The harness is `scripts/repository-compatibility` (removed 2026-10-18) plus a probe script. Neither is committed.
 3. **Ground truth.** 8 parallel Sonnet agents (12–13 repositories each) read the source at the pinned commit. They used the benchmark notes as a starting point and verified key claims in the source.
 4. **Normalization (Opus master)**, applied to all rows before totals:
    - *Friction is not a blocker.* Spurious required env or an over-provisioned resource means B with PARTIAL correctness, because the vendor is prompted and can fill or ignore it.

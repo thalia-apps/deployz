@@ -86,7 +86,7 @@ new simulated scenario or canary case
    the application, wait for analysis, confirm "Ready to deploy" and that the
    Configuration form shows the detected container port, health path and
    migration command you expect.
-   **Automated:** `packages/analysis/test/*`, Stage A (`compatibility.md`)
+   **Automated:** `packages/analysis/test/*`, the Docker run-and-check test (`compatibility.md`)
    for analyser accuracy. **Judge:** does the readiness page read clearly to
    someone who has never seen Deployz before?
 2. **Deployment**: Deployments → Create Customer Deployment (a throwaway
@@ -212,7 +212,7 @@ Run these on the same walk, in order — they cost nothing extra in AWS.
    health check and migrations, each with evidence behind its disclosure.
    For Documenso: runtime Node.js, PostgreSQL required, health check
    `/api/health`, a migration command, no blocker.
-   **Automated:** Stage A (`compatibility.md`). **Judge:** is the evidence
+   **Automated:** the Docker run-and-check test (`compatibility.md`). **Judge:** is the evidence
    disclosure actually convincing, or does it read like a black box?
 2. **Fix guidance.** "Generate fix instructions" for a required finding must
    name the finding's evidence and read as verify-then-implement; reopening

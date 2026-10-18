@@ -179,10 +179,11 @@ test 5b) asserts the graph has no dependent the manifests do not name.
 
 ### `scripts/<dir>` harness projects
 
-`version-canary`, `repository-compatibility`, `repository-deployment`, and
-`jev-eval` each run their own Vitest project (`SCRIPT_PROJECTS` in
-`scripts/test-affected.mjs`) plus the harness typecheck
-(`pnpm typecheck:scripts`). `scripts/customer-reset/` runs the harness
+`version-canary`, `repository-deployment`, and `run-and-check` each run their
+own Vitest project (`SCRIPT_PROJECTS` in `scripts/test-affected.mjs`) plus the
+harness typecheck (`pnpm typecheck:scripts`). A change in `run-and-check` also
+runs the `repository-deployment` project, because Stage B imports the analysis
+session and the recipe contract. `scripts/customer-reset/` runs the harness
 typecheck only — it has no Vitest project. Any other unrecognised
 `scripts/` directory is critical (fail-safe).
 

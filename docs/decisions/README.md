@@ -207,10 +207,9 @@ analyzer on all 360 labelled decisions across 120 repositories, produced no
 discriminative signal, and misclassified every verifiable failure case, most
 with high confidence. The code stays behind `JEV_ENABLED` (unset in
 production; the deploy workflow never sets the `JEV_*` keys) with zero
-runtime effect, and `pnpm jev:eval` remains a one-command re-evaluation if a
-future model version warrants it (its evidence lives under
-`scripts/jev-eval/runs/`, generated). Nothing routes a production
-decision through Jev.
+runtime effect. The evaluation corpus and `pnpm jev:eval` were removed on
+2026-10-18 with the label benchmarks. Nothing routes a production decision
+through Jev.
 
 ## Config secrets are KMS-encrypted; Lambdas fail closed (2026-09-22)
 
@@ -645,8 +644,8 @@ not trustworthy:
 
 - The labels and the harness do not mean the same thing. The expected
   `migration` fact means "the application has migrations". The harness
-  (`scripts/repository-compatibility/normalize.ts`) compares it with "a
-  separate migration command exists". This defect causes 43 of the 108
+  (`scripts/repository-compatibility/normalize.ts`, removed) compares it with
+  "a separate migration command exists". This defect causes 43 of the 108
   unexplained mismatches.
 - Claude models wrote the labels. The AI Analysis that replaces the rules
   uses the same models, so the labels and the Analysis share blind spots.
@@ -671,6 +670,14 @@ Limits:
   timing, CPU and memory use, and it can crash some builds. An x86_64 machine
   gives exact parity. A fact from a native arm64 run is evidence for
   behaviour only. It never confirms a Dockerfile or build claim.
+
+Removal (2026-10-18): the label benchmarks (`scripts/repository-compatibility/`,
+`scripts/remediation-benchmark/`, `scripts/jev-eval/` and their data under
+`docs/testing/`) were removed. The checks for unsafe fix instructions moved
+to unit tests in `packages/analysis/test/fix-instructions.test.ts`. The
+Stage A rule tests in `packages/analysis/test/stage-a*.test.ts` stay. Stage B
+takes its repositories from the recipes and does not grade the gate against
+labels.
 
 What would change it: an observation method that is less expensive than a
 Docker run and as trustworthy (for example production telemetry from real
