@@ -552,6 +552,9 @@ export function normalizeDeploymentManifest(
       // Written ONLY for MySQL so every PostgreSQL manifest stays
       // byte-identical with pre-4B output (absent = postgres).
       ...(postgresRequired && detectedEngine === 'mysql' ? { engine: 'mysql' as const } : {}),
+      ...(postgresRequired && detectedEngine === 'mysql' && mysqlMeta['urlScheme'] === 'mysql+pymysql'
+        ? { urlScheme: 'mysql+pymysql' as const }
+        : {}),
       // Stage B phase 2: the names the RDS URL/parts are injected under —
       // the standard DATABASE_* names always, plus the aliases the app reads
       // (MEMOS_DSN, PAPERLESS_DBHOST, …). Absent when no DB is provisioned.

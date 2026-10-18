@@ -444,6 +444,9 @@ function compileRds(dbResource: IrResource, profile: InfrastructureSizeProfile, 
   const sg = logicalResourceId(componentId, 'security-group');
   const subnetGroup = logicalResourceId(componentId, 'subnet-group');
   const instance = logicalResourceId(componentId, 'instance');
+  // A driver-specific scheme (`mysql+pymysql`) from the analysis, else the engine's own.
+  const configuredScheme = dbResource.configuration['urlScheme'];
+  const urlScheme = typeof configuredScheme === 'string' ? configuredScheme : engine.urlScheme;
 
   out.push(res({
     componentId, componentKind: 'database', capability: engine.capability, resourceRole: 'master-secret',
@@ -512,7 +515,7 @@ function compileRds(dbResource: IrResource, profile: InfrastructureSizeProfile, 
     cfnType: 'AWS::SecretsManager::Secret', stateful: true, retention: 'retain', purgeStrategy: 'require_manual',
     properties: {
       Description: engine.urlSecretDescription,
-      SecretString: join('', [`${engine.urlScheme}://${DB_USER}:{{resolve:secretsmanager:`, ref(secret), `:SecretString:password::}}@`, getAtt(instance, 'Endpoint.Address'), `:${engine.port}/${DB_NAME}${engine.urlSuffix}`]),
+      SecretString: join('', [`${urlScheme}://${DB_USER}:{{resolve:secretsmanager:`, ref(secret), `:SecretString:password::}}@`, getAtt(instance, 'Endpoint.Address'), `:${engine.port}/${DB_NAME}${engine.urlSuffix}`]),
       Tags: tags(componentId),
     },
   }));

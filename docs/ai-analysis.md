@@ -193,7 +193,10 @@ Repository (GitHub tree, bounded)
   does not count. A Laravel app that lists a `pgsql` connection keeps
   PostgreSQL. A MariaDB-only client (`mariadb-java-client`, a Laravel
   default of `mariadb`) stays unsupported. A MySQL driver next to a
-  MariaDB image or client is MySQL.
+  MariaDB image or client is MySQL. When a SQLAlchemy app declares PyMySQL
+  and not `mysqlclient`, the manifest sets `database.urlScheme` to
+  `mysql+pymysql`: SQLAlchemy reads a plain `mysql://` URL as the
+  `mysqlclient` driver, which the image does not have.
 - **Redis requirement:** Deployz provisions Redis only on strong
   evidence: a Redis client that the app builds at boot from a configured
   connection variable, or a queue library that needs Redis (BullMQ, Bull,
