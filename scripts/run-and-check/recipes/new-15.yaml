@@ -1,0 +1,19 @@
+id: new-15
+set: tuning
+source:
+  kind: git
+  repository: homarr-labs/homarr
+  commit: 69e3976297b0f7df9aec42c61ecfd82dbd100de3
+vendorInputs:
+  - name: DB_DRIVER
+    source: { kind: fixed, value: node-postgres }
+  - name: DB_DIALECT
+    source: { kind: fixed, value: postgresql }
+  - name: SECRET_ENCRYPTION_KEY
+    source: { kind: generated, format: hex64 }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch dev, committed 2026-10-17T15:16:22Z. Turborepo monorepo. The root Dockerfile builds one app, @homarr/nextjs, with turbo run build --filter (Dockerfile:28-31)."
+  - "Source build confirmed: root Dockerfile with a builder stage and an alpine runner stage that also installs nginx and redis (Dockerfile:33-37). No build override. EXPOSE 7575 (Dockerfile:61)."
+  - "The Dockerfile sets DB_URL=/appdata/db/db.sqlite, DB_DIALECT=sqlite and DB_DRIVER=better-sqlite3 (Dockerfile:55-57). Only the drivers better-sqlite3 and node-postgres exist (packages/core/src/infrastructure/db/env.ts:18-21). MySQL stops the start (same file, lines 5-16)."
+  - "DB_DRIVER and DB_DIALECT: scripts/run.sh:53 runs the migration bundle ./db/migrations/$DB_DIALECT. With DB_DRIVER=node-postgres the code accepts DB_HOST, DB_PORT, DB_USER, DB_PASSWORD and DB_NAME instead of DB_URL (db/env.ts:23-27, 49-60). Fixed non-secret values."
+  - "SECRET_ENCRYPTION_KEY: .env.example:11-13 says it must be 64 hex characters. Homarr rejects an empty or invalid value."

@@ -1,0 +1,17 @@
+id: new-26
+set: holdout
+source:
+  kind: git
+  repository: teslamate-org/teslamate
+  commit: 33032c83051086b28cb1da0d84e835018a5e50a8
+vendorInputs:
+  - name: ENCRYPTION_KEY
+    source: { kind: generated, format: hex32 }
+  - name: DISABLE_MQTT
+    source: { kind: fixed, value: "true" }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-15T11:33:46Z. Elixir Phoenix application, source is in the elixir/ folder."
+  - "Root Dockerfile builds from source: elixir 1.20 builder, npm ci and mix assets.deploy, mix release, then a debian runtime. It starts through entrypoint.sh, which runs migrations before the server. No build override."
+  - "ENCRYPTION_KEY: elixir/config/runtime.exs reads it with no fallback outside the test environment (TeslaMate.Vault key). The name is specific to this app."
+  - "DISABLE_MQTT: runtime.exs configures an MQTT client unless DISABLE_MQTT is true, and the MQTT host defaults to localhost. Fixed non-secret value."
+  - "Database settings are read from DATABASE_USER, DATABASE_PASS, DATABASE_HOST, DATABASE_NAME and DATABASE_PORT (runtime.exs). The HTTP port is PORT (default 4000)."

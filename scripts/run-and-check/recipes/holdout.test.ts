@@ -7,7 +7,28 @@ import { describe, expect, it } from 'vitest';
 
 import { recipeSchema } from '../src/contract.js';
 
-const HOLDOUT_IDS = ['repo-201', 'repo-203', 'repo-204', 'repo-205', 'repo-209', 'new-1', 'new-2', 'new-3'];
+const HOLDOUT_IDS = [
+  'repo-201',
+  'repo-203',
+  'repo-204',
+  'repo-205',
+  'repo-209',
+  'new-1',
+  'new-2',
+  'new-3',
+  'new-20',
+  'new-21',
+  'new-22',
+  'new-23',
+  'new-24',
+  'new-25',
+  'new-26',
+  'new-27',
+  'new-28',
+  'new-29',
+  'new-30',
+  'new-31',
+];
 const recipesDirectory = dirname(fileURLToPath(import.meta.url));
 
 describe('holdout recipes', () => {

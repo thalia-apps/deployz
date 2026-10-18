@@ -1,0 +1,14 @@
+id: new-28
+set: holdout
+source:
+  kind: git
+  repository: featbit/featbit
+  commit: 9e3bda4bfe9f082736f54702c86b6c74c620e7a4
+build:
+  dockerfile: modules/back-end/deploy/Dockerfile
+  context: modules/back-end
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-18T06:37:54Z. Polyglot monorepo: .NET services under modules/ (back-end, evaluation-server, control-plane) and an Angular front end (modules/front-end)."
+  - "There is no root Dockerfile. Each module has its own. This recipe builds the .NET back-end API: build.dockerfile is modules/back-end/deploy/Dockerfile and the context is modules/back-end, because the file copies Backend.slnx, src/ and start.sh relative to that folder."
+  - "The image publishes src/Api and runs start.sh (exec dotnet Api.dll) on port 5000. The runtime stage downloads the OpenTelemetry auto-instrumentation script from GitHub at build time."
+  - "modules/back-end/src/Api/appsettings.json sets DbProvider Postgres, MqProvider Postgres and CacheProvider None, and has default Postgres and Redis connection strings with host names postgresql and redis."

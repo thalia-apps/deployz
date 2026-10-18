@@ -1,0 +1,10 @@
+id: new-14
+set: tuning
+source:
+  kind: git
+  repository: logto-io/logto
+  commit: e459fb6de84fe31921a3a92173f43493263fa68d
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-16T10:47:46Z. pnpm workspace monorepo. The Dockerfile builds every package with pnpm -r build."
+  - "Source build confirmed: root Dockerfile. The builder stage runs pnpm i and pnpm -r build for the whole workspace, then links connectors and prunes the dependencies (Dockerfile:4-45). The app stage runs npm run start (lines 48-59). No build override. EXPOSE 3001."
+  - "The reference docker-compose.yml overrides the entrypoint to run npm run cli db seed -- --swe before npm start (docker-compose.yml:8). It sets DB_URL, ENDPOINT and ADMIN_ENDPOINT (lines 14, 28, 29). The Dockerfile CMD runs only start."

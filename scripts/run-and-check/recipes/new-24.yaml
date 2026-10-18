@@ -1,0 +1,11 @@
+id: new-24
+set: holdout
+source:
+  kind: git
+  repository: nopSolutions/nopCommerce
+  commit: 77d112f365e210ebdfa2f9790c8202a0e3b1c74e
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch develop, committed 2026-10-16T13:04:50Z. ASP.NET Core e-commerce application."
+  - "Root Dockerfile builds from source: dotnet sdk 10.0 image, COPY ./src, dotnet build NopCommerce.sln, dotnet publish Nop.Web.csproj, then the aspnet 10.0 alpine runtime. No build override."
+  - "The runtime stage installs tiff and libgdiplus from the Alpine edge repositories with --allow-untrusted."
+  - "The container listens on port 80 (ENV ASPNETCORE_URLS=http://+:80). The Dockerfile sets no database connection. Application settings are in src/Libraries/Nop.Core/Configuration/AppSettings.cs and the folder App_Data."

@@ -1,0 +1,13 @@
+id: new-16
+set: tuning
+source:
+  kind: git
+  repository: geneweb/geneweb
+  commit: 84b2c17e24e7e0268830557b58c5d5958ad7ac6a
+build:
+  dockerfile: docker/Dockerfile
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-17T13:37:13Z. OCaml genealogy server."
+  - "Source build confirmed: docker/Dockerfile. The builder stage uses the ocaml/opam image, installs the opam dependencies and runs make distrib (docker/Dockerfile:5-35). The last stage, container, is the default target (lines 48-88). The Dockerfile is not at the root, so build.dockerfile names it. The COPY . . line takes the repository root as context. EXPOSE 2316-2317."
+  - "The database is a set of files. The image declares VOLUME for the data path and the etc directory (docker/Dockerfile:86)."
+  - "The image writes the setup address into etc/gwsetup_only (docker/Dockerfile:69)."

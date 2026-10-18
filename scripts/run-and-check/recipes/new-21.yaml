@@ -1,0 +1,11 @@
+id: new-21
+set: holdout
+source:
+  kind: git
+  repository: kanboard/kanboard
+  commit: ec3398d0d2b31d5051e2a077f475e286b5dd1228
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, API commit date 2026-10-12. Plain PHP application, no framework."
+  - "Root Dockerfile builds from source on alpine:3.24 with nginx and php84-fpm. It runs ADD . /var/www/app. It does not run composer. No build override."
+  - "The Dockerfile sets no database. app/common.php reads a database URL from the environment when one is defined. app/constants.php defaults DB_DRIVER to sqlite, a file under the data directory (VOLUME /var/www/app/data)."
+  - "The container listens on port 80 and 443 (EXPOSE 80 443)."

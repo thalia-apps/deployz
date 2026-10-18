@@ -1,0 +1,23 @@
+id: new-12
+set: tuning
+source:
+  kind: git
+  repository: pentacent/keila
+  commit: 2308bebd2b54edc8ac8d484be5c9b4e972aed7cc
+build:
+  dockerfile: ops/Dockerfile
+vendorInputs:
+  - name: SECRET_KEY_BASE
+    source: { kind: generated, format: hex64 }
+  - name: MAILER_SMTP_HOST
+    source: { kind: fixed, value: smtp.example.com }
+  - name: MAILER_SMTP_FROM_EMAIL
+    source: { kind: fixed, value: noreply@example.com }
+  - name: MAILER_SMTP_AUTH_METHOD
+    source: { kind: fixed, value: none }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-02T08:39:56Z. Elixir Phoenix application with PostgreSQL."
+  - "Source build confirmed: ops/Dockerfile. It runs mix release in an elixir:1.18-alpine stage and copies the release to a runtime stage (ops/Dockerfile:1-41). The compose file builds it with context .. and dockerfile ops/Dockerfile (ops/docker-compose.yml:13-15), so the context is the repository root. EXPOSE 4000."
+  - "SECRET_KEY_BASE: config/runtime.exs:236 reads it with no default. Phoenix needs at least 64 bytes, so the format is hex64."
+  - "MAILER_SMTP_HOST and MAILER_SMTP_FROM_EMAIL: config/runtime.exs:122-123 reads both with fetch_env!, and the boot stops when the mailer settings fail (lines 170-183). Fixed non-secret test values. MAILER_SMTP_AUTH_METHOD none skips the SMTP password (lines 113-125)."
+  - "The database setting is DB_URL, read with fetch_env! (config/runtime.exs:27). The code has no DATABASE_URL name."

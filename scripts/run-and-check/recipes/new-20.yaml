@@ -1,0 +1,15 @@
+id: new-20
+set: holdout
+source:
+  kind: git
+  repository: grokability/snipe-it
+  commit: d98baec311438e0818988c130eefa8e813a34c22
+vendorInputs:
+  - name: APP_KEY
+    source: { kind: generated, format: alnum-32 }
+databaseEngine: mysql
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-17T00:20:20Z. Laravel application."
+  - "Root Dockerfile builds from source: ubuntu:24.04 with Apache and PHP 8.3, COPY . /var/www/html, composer install. Dockerfile.alpine and Dockerfile.fpm-alpine are other variants and are not used."
+  - "databaseEngine mysql: the Dockerfile installs only php8.3-mysql (no pgsql extension) and docker/docker.env sets DB_CONNECTION=mysql."
+  - "APP_KEY: docker/startup.sh prints a message and exits when APP_KEY is empty. Laravel accepts a raw 32-byte key, so the input is 32 random alphanumeric characters. The usual base64: prefix form cannot be produced by the generator formats."
