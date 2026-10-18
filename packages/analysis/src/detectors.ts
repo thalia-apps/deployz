@@ -1001,6 +1001,10 @@ function runtimeDockerfilePort(content: string): { value: string; source: 'env' 
   if (envPort) return { value: envPort, source: 'env', via: 'ENV PORT' };
   const port = exposedPort(runtime);
   if (port) return { value: port, source: 'dockerfile-expose', via: 'EXPOSE' };
+  // The image's own check of itself names its port variable and default
+  // (`HEALTHCHECK CMD wget http://localhost:${LIVEBOOK_PORT-8080}/health`).
+  const checked = /^\s*HEALTHCHECK\b[^\n]*\b(?:localhost|127\.0\.0\.1):\$\{\w+:?-(\d{2,5})\}/m.exec(runtime);
+  if (checked) return { value: checked[1]!, source: 'dockerfile-expose', via: 'HEALTHCHECK' };
   return FRONT_SERVER_BASE_IMAGE_REGEX.test(runtime) ? { value: '80', source: 'dockerfile-expose', via: 'base image default' } : null;
 }
 

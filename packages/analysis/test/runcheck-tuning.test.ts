@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FileTree } from '../src/analyser.js';
-import { detectEnvVarModel, detectGitCopyInDockerfile } from '../src/detectors.js';
+import { detectEnvVarModel, detectGitCopyInDockerfile, detectPort } from '../src/detectors.js';
 
 // Defects the Docker run-and-check test found in the tuning set: each claim
 // was CONTRADICTED by the running application.
@@ -47,18 +47,12 @@ describe('kutt (repo-003): optional variables', () => {
 
 describe('chatwoot (repo-071): a RUN step that reads git history', () => {
   const dockerfile = (run: string): FileTree => ({
-    Dockerfile: `FROM ruby:3.4-alpine
-RUN apk add --no-cache git
-COPY . /app
-${run}
-CMD ["bundle", "exec", "rails", "s"]
-`,
+    Dockerfile: `FROM ruby:3.4-alpine\nRUN apk add --no-cache git\nCOPY . /app\n${run}\nCMD ["bundle", "exec", "rails", "s"]\n`,
   });
 
   it('flags `RUN git rev-parse` without a fallback: the source archive has no .git', () => {
     expect(detectGitCopyInDockerfile(dockerfile('RUN git rev-parse HEAD > /app/.git_sha')).detected).toBe(true);
-    expect(detectGitCopyInDockerfile(dockerfile('RUN bundle install && \
-  git describe --tags > VERSION')).detected).toBe(true);
+    expect(detectGitCopyInDockerfile(dockerfile('RUN bundle install && \\\n  git describe --tags > VERSION')).detected).toBe(true);
   });
 
   it('does not flag a git read with a fallback, a clone, or a command substitution', () => {
@@ -94,5 +88,23 @@ describe('docuseal (repo-051): Active Storage service credentials', () => {
   it('keeps ENV.fetch without a default required: it raises at boot', () => {
     const fetched = "amazon:\n  service: S3\n  secret_access_key: <%= ENV.fetch('AWS_SECRET_ACCESS_KEY') %>\n";
     expect(requiredKeys({ Gemfile: gemfile, 'config/storage.yml': fetched })).toContain('AWS_SECRET_ACCESS_KEY');
+  });
+});
+
+describe('livebook (repo-050): the port the image checks itself on', () => {
+  const tree = (healthcheck: string): FileTree => ({
+    'mix.exs': 'defmodule Livebook.MixProject do\n  defp deps, do: [{:phoenix, "~> 1.7"}]\nend\n',
+    Dockerfile: `FROM hexpm/elixir:1.18 AS build\nRUN mix release\nFROM ubuntu:24.04\nENV LIVEBOOK_IP="::"\n${healthcheck}\nCMD [ "/app/bin/server" ]\n`,
+  });
+
+  it('reads the port of a localhost HEALTHCHECK before the Phoenix default', () => {
+    const port = detectPort(tree('HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://localhost:${LIVEBOOK_PORT-8080}/public/health || exit 1'));
+    expect(port).toMatchObject({ value: '8080', portSource: 'dockerfile-expose' });
+    expect(detectPort(tree('HEALTHCHECK CMD curl -f http://127.0.0.1:${PORT:-9000}/health')).value).toBe('9000');
+  });
+
+  it('keeps the framework default without a HEALTHCHECK port variable', () => {
+    expect(detectPort(tree(''))).toMatchObject({ value: '4000', portSource: 'framework-default' });
+    expect(detectPort(tree('HEALTHCHECK CMD curl -f http://localhost:4000/health'))).toMatchObject({ portSource: 'framework-default' });
   });
 });
