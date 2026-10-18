@@ -41,6 +41,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
 | 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
+| 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Proposed (release gate not passed) |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -879,3 +880,55 @@ What would change it: an observation method that is less expensive than a
 Docker run and as trustworthy (for example production telemetry from real
 customer deployments), or a release gate that real-AWS runs can give at an
 acceptable cost.
+
+## AI-first application Analysis (2026-10-19)
+
+Status: proposed. The switch waits for the release gate and a shadow period
+in production.
+
+The rules Analysis (`analyseRepo`) is a large set of hand-written detectors.
+Each new stack, framework or repository layout needs new rules, and the
+run-and-check exam shows that the long tail (PHP, Java, .NET, Elixir,
+monorepos, unusual frameworks) is where the rules fail most. A model reads
+these repositories better than a new rule per case.
+
+Decision:
+
+- An AI analyst (`claude-opus-5-5`) reads an evidence pack and proposes the
+  manifest facts. Each fact has a value, a confidence and `file:line`
+  evidence.
+- The evidence pack comes from the existing detectors. They select the
+  relevant files and signals within a size limit. Secrets are redacted
+  before any model call. Repository files are untrusted data.
+- Fixed checks verify each fact: the cited line exists and supports the
+  claim; a required variable is an unguarded read with no default; the port
+  agrees with the Dockerfile, the `HEALTHCHECK` or the `PORT` handling. The
+  existing rejections stay deterministic and always win.
+- A fact that passes the checks enters the `DeploymentManifest`. A fact that
+  fails becomes a vendor question (NEEDS_CONFIGURATION). The AI never makes a
+  silent guess.
+- A reviewer model (GPT-6 Astra) reads the same evidence pack and the
+  analyst's facts and returns objections only. A fixed check decides an
+  objection. An objection that no check can decide becomes a vendor question.
+- Both models go through Cloudflare AI Gateway with a token budget, a
+  timeout and a spend log for each call. The Analysis runs in the background
+  analysis job (the worker Lambda) and its result is cached per commit.
+- `ANALYSIS_ENGINE=rules|shadow|ai` selects the engine. The default is
+  `rules`. `shadow` runs the AI next to the rules, stores its result and
+  changes nothing. Any AI failure (an outage, a timeout, invalid output, a
+  failed check) falls back to the rules Analysis. `ANALYSIS_ENGINE=rules` is
+  the one-setting rollback.
+- The operating principle does not change: the AI infers, deterministic code
+  provisions. The AI never calls AWS, never generates infrastructure, never
+  writes a secret value and never sets deployment or job state.
+
+Release gate: the AI engine must pass the gate in
+[`../testing/compatibility.md`](../testing/compatibility.md#release-gate) in
+two full exam runs, on the tuning set and on the holdout set (at least 10
+holdout repositories). Then it runs in shadow mode in production. The switch
+needs the user's go after the shadow measurements.
+
+What would change it: the AI fails the gate after four tuning rounds (then
+the AI role stays limited to the open questions, as today), the cost or the
+time per analysis is above the budget, or shadow mode shows a new class of
+failed deploy.

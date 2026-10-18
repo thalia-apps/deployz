@@ -2,6 +2,7 @@
 import { main as analyse } from './analysis/cli.js';
 import { main as claims } from './claims/cli.js';
 import { main as preflight } from './docker/preflight-cli.js';
+import { main as fetch } from './exam-fetch.js';
 import { main as fixtures } from './fixtures-cli.js';
 import { main as full } from './full-cli.js';
 import { main as observe } from './observe/cli.js';
@@ -13,6 +14,7 @@ const COMMANDS: Record<string, (argv: string[]) => Promise<unknown> | unknown> =
   claims: (argv) => {
     process.exitCode = claims(argv);
   },
+  fetch,
   full,
   fixtures,
   observe,

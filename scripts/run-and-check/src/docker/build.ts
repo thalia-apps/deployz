@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import type { Architecture, Evidence } from '../contract.js';
@@ -47,8 +48,10 @@ export function gitContextUrl(repository: string, commit: string, context?: stri
   return `https://github.com/${repository}.git#${commit}${subdir}`;
 }
 
-function archOf(platform: BuildRequest['platform']): Architecture {
-  return platform === 'linux/amd64' ? 'amd64-emulated' : 'arm64-native';
+/** linux/amd64 is native on an x86_64 host (a GitHub runner) and emulated on an ARM host. */
+export function archOf(platform: BuildRequest['platform'], hostArch: string = os.arch()): Architecture {
+  if (platform === 'linux/arm64') return 'arm64-native';
+  return hostArch === 'x64' ? 'amd64-native' : 'amd64-emulated';
 }
 
 function evidenceOf(lines: readonly string[]): Evidence[] {

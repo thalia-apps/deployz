@@ -31,6 +31,7 @@ pnpm runcheck:observe [--repo <id>] [--force]
 pnpm runcheck:claims [--repo <id>] [--analysis <dir>]
 pnpm runcheck:full [--repo <id>] [--analysis <dir>] [--force]
 pnpm runcheck:fixtures [--no-observe]
+pnpm runcheck:fetch --run <run id>       # results of a runcheck-exam.yml run
 ```
 
 ### Three modes
@@ -134,14 +135,35 @@ BuildKit, never on the host.
 
 ### CPU architecture
 
-Deployz runs Fargate tasks on x86_64. On an ARM machine, the application
-images build and run as `linux/amd64` under QEMU emulation, and the services
-run natively. Emulation makes startup slower: the harness multiplies the
+Deployz runs Fargate tasks on x86_64. On an x86_64 machine, the application
+images build and run natively (`amd64-native`). On an ARM machine, the
+application images build and run as `linux/amd64` under QEMU emulation, and
+the services run natively. Emulation makes startup slower: the harness multiplies the
 health grace time by 3 and records the measured times. A heavy repository,
 or one whose build crashes under emulation, builds on an x86_64 GitHub
 runner with the manual workflow `runcheck-build.yml` ([`ci.md`](ci.md)), and
 the harness loads that image. Every fact records its architecture
-(`amd64-emulated`, `amd64-ci-build` or `arm64-native`). A fact from a native
+(`amd64-native`, `amd64-emulated`, `amd64-ci-build` or `arm64-native`).
+
+### The exam on x86_64 runners
+
+The manual workflow `runcheck-exam.yml` ([`ci.md`](ci.md)) runs observations
+or full runs as a matrix: one x86_64 GitHub runner for each recipe, up to 20
+at the same time. A full exam then takes about as long as its slowest
+repository. The runners use no repository secrets.
+
+1. Commit the Analysis files to test under `analyses/<analyser>/` and push
+   the branch.
+2. Start the workflow on that branch with `mode` (`observe` or `full`),
+   `repos` (`all` or recipe ids) and, for `full`, `analysis` (the analyser
+   folder).
+3. Download the results with `pnpm runcheck:fetch --run <run id>`. An
+   observation goes to `observations/<id>.json`. A full run goes to
+   `.runs/full/<analyser>/<id>.json`.
+4. Run `pnpm runcheck:claims --analysis <dir>` locally for the report.
+
+Keep the ARM machine for local checks: the claim check, one repository, and
+the fixtures. A fact from a native
 arm64 run is evidence for behaviour only. It never confirms a Dockerfile
 claim.
 
@@ -155,20 +177,27 @@ changes timing, CPU and memory use. An x86_64 machine gives exact parity.
 ### Release gate
 
 A new Analysis implementation (a rules change, a prompt change or a model
-change) passes only when, compared with the baseline:
+change) passes only when, compared with the rules baseline, in **two full
+exam runs** (every repository of the tuning set and of the holdout set, on
+x86_64 runners):
 
 1. Hidden problems are **0** in the tuning set and in the holdout set. An
    unstable full run is reported, not counted as a hidden problem. It blocks
    a release only when the repository is in the holdout set and the
    Analysis said READY.
-2. CONTRADICTED claims are fewer than or equal to the baseline, for each
-   claim type.
-3. False problems are fewer than the baseline.
+2. CONTRADICTED claims are fewer than or equal to the rules baseline, for
+   each claim type.
+3. False problems are fewer than the rules baseline.
 4. All fixtures pass.
+5. For an AI engine: no fact changes between two analyses of the same
+   commit. Run the AI Analysis twice and compare the manifests.
 
-Use the claim check for quick evaluation. Use a full run on every
-repository for the final decision. Never use the holdout set to tune rules
-or prompts.
+The report gives each criterion per set (tuning and holdout apart) and per
+claim type. Use the claim check for quick evaluation. Use the two full exam
+runs for the final decision. Never use the holdout set to tune rules,
+prompts or checks. A harness defect that a holdout repository shows may be
+fixed. The AI-first decision is in
+[`../decisions/README.md`](../decisions/README.md).
 
 ## Stage B — repository-deployment audit
 

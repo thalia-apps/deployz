@@ -1,0 +1,131 @@
+# Runs the Docker run-and-check exam (scripts/run-and-check) on x86_64
+# runners: one matrix job per recipe, so a full exam takes about as long as
+# its slowest repository. It starts only by hand (workflow_dispatch), uses no
+# repository secrets, and uploads one small JSON result per recipe. Fetch the
+# results with `pnpm runcheck:fetch --run <run id>`.
+name: runcheck-exam
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: observe (write observations) or full (run the analysed settings twice)
+        required: true
+        type: choice
+        options: [observe, full]
+      repos:
+        description: Recipe ids separated by spaces, or "all"
+        required: true
+        default: all
+        type: string
+      analysis:
+        description: Analyser folder under scripts/run-and-check/analyses (full mode), for example rules@0fc073b8
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.ids.outputs.ids }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Select recipes
+        id: ids
+        env:
+          MODE: ${{ inputs.mode }}
+          REPOS: ${{ inputs.repos }}
+          ANALYSIS: ${{ inputs.analysis }}
+        run: |
+          cd scripts/run-and-check
+          if [[ "$MODE" == full ]]; then
+            [[ "$ANALYSIS" =~ ^[A-Za-z0-9_.@-]+$ && -d "analyses/$ANALYSIS" ]] || { echo "invalid analysis folder"; exit 1; }
+          fi
+          if [[ "$REPOS" == all ]]; then
+            ids=$(ls recipes/*.yaml | xargs -n1 basename | sed 's/\.yaml$//')
+          else
+            ids=$REPOS
+          fi
+          for id in $ids; do
+            [[ "$id" =~ ^(repo-[0-9]{3}|new-[0-9]+|F[0-9]{1,2})$ ]] || { echo "invalid id $id"; exit 1; }
+          done
+          echo "ids=$(printf '%s\n' $ids | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        id: ${{ fromJson(needs.plan.outputs.ids) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=./packages/* --filter=@deployz/api
+
+      - name: Preflight
+        run: pnpm runcheck:preflight
+
+      - name: Observe
+        if: inputs.mode == 'observe'
+        env:
+          ID: ${{ matrix.id }}
+        run: pnpm runcheck:observe --repo "$ID" --force
+
+      - name: Full run
+        if: inputs.mode == 'full'
+        env:
+          ID: ${{ matrix.id }}
+          ANALYSIS: ${{ inputs.analysis }}
+        run: pnpm runcheck:full --repo "$ID" --analysis "scripts/run-and-check/analyses/$ANALYSIS" --force
+
+      - name: Upload observation
+        if: always() && inputs.mode == 'observe'
+        uses: actions/upload-artifact@v4
+        with:
+          name: runcheck-observe-${{ matrix.id }}
+          path: scripts/run-and-check/observations/${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload full run
+        if: always() && inputs.mode == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: runcheck-full-${{ inputs.analysis }}-${{ matrix.id }}
+          path: scripts/run-and-check/.runs/full/${{ inputs.analysis }}/${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 14

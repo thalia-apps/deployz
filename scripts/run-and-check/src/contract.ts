@@ -18,7 +18,7 @@ const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 // ── Shared ─────────────────────────────────────────────────────────────────
 
 /** How the image of a fact was built and run (prompt 3.4 step 8). */
-export const ARCHITECTURES = ['amd64-emulated', 'amd64-ci-build', 'arm64-native'] as const;
+export const ARCHITECTURES = ['amd64-emulated', 'amd64-ci-build', 'amd64-native', 'arm64-native'] as const;
 export const architectureSchema = z.enum(ARCHITECTURES);
 export type Architecture = z.infer<typeof architectureSchema>;
 
