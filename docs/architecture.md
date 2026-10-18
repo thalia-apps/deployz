@@ -248,7 +248,8 @@ than the database rule. Detection tiers and the supported/unsupported
 matrix are in [`ai-analysis.md`](ai-analysis.md).
 
 Database details: the task's `DATABASE_URL` (`sslmode=require` for
-PostgreSQL, `mysql://` for MySQL) is assembled
+PostgreSQL, `mysql://` for MySQL, or `mysql+pymysql://` when the manifest
+has `database.urlScheme`) is assembled
 through a CloudFormation dynamic reference, so the generated password is
 alphanumeric only; an init container mounts the RDS CA bundle for clients
 that verify the chain, and the CA environment is shared by every workload,

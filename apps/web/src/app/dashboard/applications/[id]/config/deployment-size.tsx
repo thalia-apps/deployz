@@ -243,6 +243,7 @@ export function DeploymentSize({
               }}
               disabled={saving}
               describedBy={defaultHelpId}
+              showCompute={false}
             />
             <p id={defaultHelpId} className="text-xs text-muted-foreground">
               Preselected for customers.
@@ -257,6 +258,7 @@ export function DeploymentSize({
               onValueChange={changeMinimum}
               disabled={saving}
               describedBy={minimumHelpId}
+              showCompute={false}
             />
             <p id={minimumHelpId} className="text-xs text-muted-foreground">
               Smallest size customers can select.

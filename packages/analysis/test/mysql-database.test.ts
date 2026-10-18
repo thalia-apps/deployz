@@ -177,3 +177,53 @@ describe('mysql database — weak evidence needs input', () => {
     expect((analyseRepo(infraOnly).metadata.mysql as { detected: boolean }).detected).toBe(false);
   });
 });
+
+describe('mysql database — SQLAlchemy driver scheme', () => {
+  const PYTHON: FileTree = {
+    'Dockerfile': [
+      'FROM python:3.11-slim',
+      'WORKDIR /app',
+      'COPY . .',
+      'RUN pip install -r requirements.txt',
+      'EXPOSE 8000',
+      'CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000"]',
+    ].join('\n'),
+    'requirements.txt': 'flask==3.0.0\nflask-sqlalchemy==3.1.1\nsqlalchemy==2.0.30\npymysql==1.1.1\ngunicorn==22.0.0\n',
+    'app.py': [
+      'import os',
+      'from flask import Flask',
+      'app = Flask(__name__)',
+      "app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://ctfd@db/ctfd')",
+      "@app.route('/health')",
+      'def health():',
+      "    return 'ok'",
+    ].join('\n'),
+  };
+
+  it('PyMySQL without mysqlclient gets mysql+pymysql through manifest, graph and plan', () => {
+    const manifest = normalizeDeploymentManifest(analyseRepo(PYTHON), {});
+    expect(manifest.database.engine).toBe('mysql');
+    expect(manifest.database.urlScheme).toBe('mysql+pymysql');
+    const graph = manifestToApplicationGraph(manifest);
+    expect(graph.resources.find((r) => r.id === 'primary-db')?.urlScheme).toBe('mysql+pymysql');
+    const ir = planApplicationGraph({ graph, region: null });
+    expect(ir.resources.find((r) => r.componentId === 'primary-db')?.configuration).toMatchObject({ urlScheme: 'mysql+pymysql' });
+  });
+
+  it('mysqlclient keeps the standard mysql scheme', () => {
+    const manifest = normalizeDeploymentManifest(
+      analyseRepo({ ...PYTHON, 'requirements.txt': `${PYTHON['requirements.txt']}mysqlclient==2.2.4\n` }),
+      {},
+    );
+    expect(manifest.database.engine).toBe('mysql');
+    expect(manifest.database.urlScheme).toBeUndefined();
+  });
+
+  it('a Node MySQL app keeps the standard mysql scheme', () => {
+    const manifest = normalizeDeploymentManifest(
+      analyseRepo({ ...BASE, '.env.example': 'DATABASE_URL=mysql://localhost:3306/shop\n' }),
+      {},
+    );
+    expect(manifest.database.urlScheme).toBeUndefined();
+  });
+});

@@ -116,9 +116,11 @@ function ConfigScreen() {
 
 type ConfigTab = 'resources' | 'sizes' | 'variables' | 'settings';
 
-const CONFIG_TABS: readonly { value: ConfigTab; label: string }[] = [
+// `shortLabel` replaces the label below the sm breakpoint, so the four tabs
+// fit a phone without a scrolling tab row.
+const CONFIG_TABS: readonly { value: ConfigTab; label: string; shortLabel?: string }[] = [
   { value: 'resources', label: 'Resources' },
-  { value: 'sizes', label: 'Size presets' },
+  { value: 'sizes', label: 'Size presets', shortLabel: 'Sizes' },
   { value: 'variables', label: 'Variables' },
   { value: 'settings', label: 'Settings' },
 ];
@@ -220,17 +222,24 @@ function ConfigurationTabs({
 
   return (
     <Tabs value={tab} onValueChange={selectTab} className="gap-6">
-      <TabsList aria-label="Configuration sections" className="w-full justify-start overflow-x-auto sm:w-fit">
+      <TabsList aria-label="Configuration sections" className="w-full sm:w-fit">
         {CONFIG_TABS.map((option) => {
           const count = counts[option.value] ?? 0;
           return (
             <TabsTrigger
               key={option.value}
               value={option.value}
-              className="flex-none px-2"
+              className="px-1 sm:flex-none sm:px-2"
               data-testid={`config-tab-${option.value}`}
             >
-              {option.label}
+              {option.shortLabel ? (
+                <>
+                  <span className="sm:hidden">{option.shortLabel}</span>
+                  <span className="max-sm:hidden">{option.label}</span>
+                </>
+              ) : (
+                option.label
+              )}
               {count > 0 ? (
                 <Badge variant="warning" className="h-4 min-w-4 px-1 tabular-nums" data-testid={`config-tab-${option.value}-count`}>
                   {count}
