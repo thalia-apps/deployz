@@ -120,6 +120,30 @@ refuses to deploy if any is missing: `CLOUDFLARE_ZONE_ID`,
 `api.deployz.dev` CNAME must be DNS-only (not proxied) or TLS to the API
 fails with a Cloudflare 525.
 
+`DEPLOYZ_DEFAULT_HOSTNAME_PREFIX` controls which names the control plane
+mints and which names its namespace guard lets it write. Every control plane
+that shares the zone therefore needs its own prefix: staging uses `s-`, so it
+can never write or delete a production `d-` record.
+
+### Staging configuration
+
+Cloudflare Universal SSL covers the zone and one label below it. It does not
+cover a host two labels deep. Each of the three staging hosts is two labels
+deep, so each staging record must be DNS only (grey cloud). A proxied record
+answers 525.
+
+| Host | Record type | Target | Cloud |
+| --- | --- | --- | --- |
+| `api.staging.deployz.dev` | CNAME | the regional API domain that the staging stack exports | DNS only |
+| `app.staging.deployz.dev` | CNAME | the staging container-service host | DNS only |
+| `staging.deployz.dev` | CNAME | the staging container-service host | DNS only |
+
+The deploy of each service makes the target it uses. The three records
+therefore cannot exist before the first staging deploy of each service. Each
+deploy prints the record to make, and fails until the record exists. Each
+deploy also tests the answer against the proxy addresses that Cloudflare
+publishes, so it reports whether the host is proxied or is an A record.
+
 ### Cloudflare client behaviour
 
 Search-then-create/update (Cloudflare has no upsert; a concurrent-create
@@ -184,3 +208,7 @@ injectable transport; nothing in the test suite reaches Cloudflare.
   still `CONFIGURING`, before the probe has passed.
 - Regional or wildcard certificates are not implemented; one ACM certificate
   is issued per deployment in the deployment's Region.
+- Universal SSL covers the zone and one label below it. A host two labels
+  deep has no edge certificate, so its record must be DNS only. Cloudflare
+  Advanced Certificate Manager removes this limit, and the MVP does not use
+  it.

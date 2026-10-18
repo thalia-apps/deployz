@@ -230,6 +230,7 @@ export async function createDeploymentRecord(
     manifest,
     region: params.region,
     sizeProfile,
+    templateBucketPrefix: env.templateBucketPrefix,
   });
   // The customer approved one exact plan. The compiled stack must be that
   // plan, else the caller's transaction rolls back and nothing is created.
@@ -249,7 +250,12 @@ export async function createDeploymentRecord(
   }
   const publisher = compilerDeps?.templatePublisher ?? NO_OP_TEMPLATE_PUBLISHER;
   await publisher.publishTemplate(
-    compilerArtifactPublishInput(params.region, templateHash, JSON.stringify(template)),
+    compilerArtifactPublishInput(
+      params.region,
+      templateHash,
+      JSON.stringify(template),
+      env.templateBucketPrefix,
+    ),
   );
   const relayCredential = mintRelayCredential();
   const [row] = await db

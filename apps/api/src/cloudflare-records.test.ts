@@ -72,6 +72,7 @@ interface RecordedCall {
 
 function makeClient(
   handle: (url: string, init: RequestInit) => Response | Promise<Response>,
+  prefix?: string,
 ): { client: ReturnType<typeof createCloudflareDnsClient>; calls: RecordedCall[] } {
   const calls: RecordedCall[] = [];
   const fetchFn: CloudflareFetchFn = async (url, init) => {
@@ -89,6 +90,7 @@ function makeClient(
     zoneName: ZONE_NAME,
     apiBaseUrl: API_BASE_URL,
     fetchFn,
+    ...(prefix === undefined ? {} : { prefix }),
   });
   return { client, calls };
 }
@@ -333,6 +335,27 @@ describe('createCloudflareDnsClient — namespace protection before transport', 
     }
 
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('createCloudflareDnsClient — hostname prefix', () => {
+  it('an s- plane writes s-<id>.<zone> and refuses a validation name under d-<id>', async () => {
+    const { client, calls } = makeClient(async (_url, init) => {
+      if (init.method === 'GET') return okList();
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+      return okResult(record('rec-new', body['content'] as string, { name: body['name'] as string }));
+    }, 's-');
+
+    await client.upsertDefaultDeploymentRecord('dep-1', TARGET);
+
+    expect(calls[0]!.url).toBe(
+      `${API_BASE_URL}/zones/${ZONE_ID}/dns_records?type=CNAME&name.exact=s-dep-1.${ZONE_NAME}`,
+    );
+    expect(JSON.parse(calls[1]!.body!)).toMatchObject({ name: `s-dep-1.${ZONE_NAME}` });
+    expect((await failure(client.upsertDefaultValidationRecord('dep-1', VALIDATION_NAME, VALIDATION_VALUE))).code).toBe(
+      'CLOUDFLARE_DNS_CONFLICT',
+    );
+    expect(calls).toHaveLength(2);
   });
 });
 
@@ -610,6 +633,16 @@ describe('listDefaultRecords (Phase 11 sweep)', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(
       `${API_BASE_URL}/zones/${ZONE_ID}/dns_records?type=CNAME&name.startswith=d-&per_page=100&page=1`,
+    );
+  });
+
+  it('lists only the s- prefix for a plane configured with s-', async () => {
+    const { client, calls } = makeClient(async () => okList(), 's-');
+
+    await client.listDefaultRecords();
+
+    expect(calls[0]!.url).toBe(
+      `${API_BASE_URL}/zones/${ZONE_ID}/dns_records?type=CNAME&name.startswith=s-&per_page=100&page=1`,
     );
   });
 

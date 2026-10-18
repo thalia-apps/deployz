@@ -93,6 +93,28 @@ describe('auth (Better Auth over PGlite)', () => {
     expect(session?.user.email).toBe('ada@example.com');
   });
 
+  // Staging and production share the '.deployz.dev' cookie domain, so the
+  // cookie NAME is the only isolation left: a shared name lets a production
+  // cookie reach staging and a staging sign-in overwrite production's.
+  it('names the session cookie after the configured prefix', async () => {
+    const prefixed = createAuth(db, { cookiePrefix: 'deployz-staging' });
+    const response = await prefixed.api.signInEmail({
+      body: { email: 'ada@example.com', password: 'super-secret-1' },
+      asResponse: true,
+    });
+    const cookie = response.headers.get('set-cookie');
+    expect(cookie?.split('=')[0]).toContain('deployz-staging.session_token');
+  });
+
+  it('keeps the default session-cookie name without a prefix', async () => {
+    const response = await auth.api.signInEmail({
+      body: { email: 'ada@example.com', password: 'super-secret-1' },
+      asResponse: true,
+    });
+    const cookie = response.headers.get('set-cookie');
+    expect(cookie?.split('=')[0]).toContain('better-auth.session_token');
+  });
+
   it('rejects a wrong password', async () => {
     await expect(
       auth.api.signInEmail({

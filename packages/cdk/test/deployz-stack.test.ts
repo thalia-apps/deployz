@@ -9,6 +9,11 @@ import { DeployzStack } from '../src/deployz-stack.js';
 // per-test RPC (60-second "Timeout calling onTaskUpdate"); every later synth
 // reuses CDK's in-process asset cache and takes seconds.
 const baseline = Template.fromStack(new DeployzStack(new App(), 'DeployzTest'));
+// Synthesized here for the same reason as the baseline above, not inside the
+// staging tests below.
+const staging = Template.fromStack(
+  new DeployzStack(new App(), 'DeployzStagingTest', { stage: 'staging' }),
+);
 
 describe('DeployzStack', () => {
   it('synthesizes without errors', () => {
@@ -476,6 +481,92 @@ describe('DeployzStack', () => {
     });
 
     it('omits BILLING_ENFORCEMENT when unset (absent = enforced)', () => {
+      const previous = process.env[KEY];
+      delete process.env[KEY];
+      try {
+        const template = Template.fromStack(new DeployzStack(new App(), 'DeployzTest'));
+        const environments = Object.values(template.findResources('AWS::Lambda::Function')).map(
+          (resource) =>
+            (resource.Properties as { Environment?: { Variables?: Record<string, unknown> } })
+              .Environment?.Variables ?? {},
+        );
+        expect(environments.some((env) => KEY in env)).toBe(false);
+      } finally {
+        if (previous === undefined) delete process.env[KEY];
+        else process.env[KEY] = previous;
+      }
+    });
+  });
+
+  // A staging control plane stands in the SAME account and Region as
+  // production, so every account-unique name has to differ (src/stage.ts).
+  describe('stage-derived names', () => {
+    it('gives staging its own KMS alias and ECR repository', () => {
+      staging.hasResourceProperties('AWS::KMS::Alias', {
+        AliasName: 'alias/deployz-staging-config-secrets',
+      });
+      staging.hasResourceProperties('AWS::ECR::Repository', {
+        RepositoryName: 'deployz-staging-images',
+      });
+    });
+
+    it('scopes the compiled-artifact grant to the staging template buckets', () => {
+      staging.hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 's3:PutObject',
+              Resource: 'arn:aws:s3:::deployz-staging-templates-*/compiler-v2/*',
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('tells the staging API Lambda which template buckets to publish into', () => {
+      staging.hasResourceProperties('AWS::Lambda::Function', {
+        Environment: Match.objectLike({
+          Variables: Match.objectLike({
+            DEPLOYZ_TEMPLATE_BUCKET_PREFIX: 'deployz-staging-templates',
+          }),
+        }),
+      });
+    });
+
+    // Absent on the default stack on purpose: env.ts defaults the key to
+    // `deployz-templates`, which keeps production's template unchanged.
+    it('omits the prefix variable on the production default', () => {
+      const environments = Object.values(baseline.findResources('AWS::Lambda::Function')).map(
+        (resource) =>
+          (resource.Properties as { Environment?: { Variables?: Record<string, unknown> } })
+            .Environment?.Variables ?? {},
+      );
+      expect(environments.some((env) => 'DEPLOYZ_TEMPLATE_BUCKET_PREFIX' in env)).toBe(false);
+    });
+  });
+
+  // COOKIE_PREFIX (apps/api/src/env.ts) renames the session cookie, which is
+  // the only thing that keeps a staging control plane out of production's
+  // session while both share the '.deployz.dev' cookie domain. Unset must stay
+  // absent, because production keeps Better Auth's default cookie name.
+  describe('COOKIE_PREFIX session isolation', () => {
+    const KEY = 'COOKIE_PREFIX';
+
+    it('passes COOKIE_PREFIX into the API Lambda environment when set', () => {
+      process.env[KEY] = 'deployz-staging';
+      try {
+        const template = Template.fromStack(new DeployzStack(new App(), 'DeployzTest'));
+        template.hasResourceProperties('AWS::Lambda::Function', {
+          Environment: Match.objectLike({
+            Variables: Match.objectLike({ [KEY]: 'deployz-staging' }),
+          }),
+        });
+      } finally {
+        delete process.env[KEY];
+      }
+    });
+
+    it('omits COOKIE_PREFIX when unset (absent = the default cookie name)', () => {
       const previous = process.env[KEY];
       delete process.env[KEY];
       try {

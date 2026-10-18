@@ -22,7 +22,7 @@ the git history of this file (first commit). It is not kept here.
 | --- | --- | --- |
 | Connect repository | Home (first use) → Add application | Add application |
 | Analysis | Application › Overview | none (progress) |
-| Fix what is required | Overview → Configuration › Needs attention | Review required changes |
+| Fix what is required | Overview → Configuration › Resources | Review required changes |
 | Test | Overview | Start test deployment |
 | Share | Overview | Copy install link |
 | Later releases | Application › Releases | Create release → Test release → Make available to new customers |
@@ -33,8 +33,8 @@ the git history of this file (first commit). It is not kept here.
   is not a lifecycle step. The Test card says that it builds the first
   release from `branch@sha`. Releases stays a first-class tab for later
   releases.
-- Remove the unlinked `/dashboard/onboarding` route. Home's first-use card and
-  the application lifecycle are the only setup guidance.
+- Remove the unlinked `/dashboard/onboarding` route. Home's onboarding
+  checklist and the application lifecycle are the only setup guidance.
 - **Shareable release.** New customers install only the application's
   shareable release. A release becomes shareable only after a test
   deployment of that exact release succeeds. A newer READY release never
@@ -104,16 +104,17 @@ Header overflow menu: **Re-analyse application** (its home in normal states).
 exists, and one line "N services detected · View" that opens Configuration ›
 Services.
 
-**Configuration** — sections with anchors, in this order:
+**Configuration** — four secondary tabs, Resources first:
 
-1. Needs attention (only when present) — each item once, linked to its row.
-2. Deployment size — the recommended size (one segmented control), its resources and estimated AWS cost per customer deployment, and the minimum allowed size.
-3. Services & resources — the canonical vendor resource view (§8), with
-   build & runtime (port, health path, migration, start and build command)
-   as indented rows under the web application.
-4. Environment variables — one table for detected variables and vendor
-   defaults, value entry per row.
-5. Settings — name, repository, branch, danger zone.
+1. Resources — the canonical vendor resource view (§8): one flat row per
+   service, with build & runtime (port, health path, migration, start and
+   build command) as indented rows under the web application. Each issue
+   shows on its row, beside the action that opens its editor.
+2. Size presets — the Small / Medium / Large presets side by side
+   (read-only), then the default size and the minimum allowed size.
+3. Variables — one table for detected variables and vendor defaults,
+   filtered to the vendor and customer inputs by default, with search.
+4. Settings — name, repository, branch, re-analysis, danger zone.
 
 **Releases** — list and "Create release" (commit, version, optional
 migration override). A failed row opens its failure details.
@@ -269,7 +270,7 @@ no purpose in that context.
 | Context | Representation |
 | --- | --- |
 | Vendor Overview | "N services detected · View" |
-| Vendor Configuration › Services & resources | Canonical vendor view: one row per service with its sizing, its AWS resources (each once, collapsed), estimated AWS cost, Kept / Removed on removal, and issues (Needs input); Detected / Confirmed states under Technical details (UX-BACKEND-007) |
+| Vendor Configuration › Resources | Canonical vendor view: one row per service with its sizing, its AWS resources (each once, collapsed), estimated AWS cost, Kept after removal, and issues (Needs input); Detected / Confirmed states under Technical details (UX-BACKEND-007) |
 | Vendor deployment page | Live status per service; resource inventory under Technical details |
 | Customer pre-deploy | Concise customer summary grouped under generic headings; the full AWS resource table, with Kept / Removed, under "View AWS resources" |
 | Customer during deploy | Component progress, only after the first infrastructure event, under "Deployment details" |

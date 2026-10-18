@@ -380,6 +380,12 @@ describe('bootstrapTemplateBucketName', () => {
     expect(bootstrapTemplateBucketName('us-east-1')).toBe('deployz-templates-us-east-1');
     expect(bootstrapTemplateBucketName('us-east-2')).toBe('deployz-templates-us-east-2');
   });
+
+  it('honours a non-production prefix', () => {
+    expect(bootstrapTemplateBucketName('us-east-1', 'deployz-staging-templates')).toBe(
+      'deployz-staging-templates-us-east-1',
+    );
+  });
 });
 
 describe('resolveBootstrapTemplate', () => {

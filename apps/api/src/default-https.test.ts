@@ -127,6 +127,7 @@ describe('default-https service', () => {
   }
 
   const apex = 'deployz.test';
+  const prefix = 'd-';
 
   class FakeDnsClient implements CloudflareDnsClient {
     upserts: Array<{ name: string; value: string }> = [];
@@ -140,11 +141,11 @@ describe('default-https service', () => {
     }
     async upsertDefaultDeploymentRecord(deploymentId: string, target: string) {
       if (this.failUpserts) throw new Error('boom');
-      this.upserts.push({ name: defaultHttpsHostname(deploymentId, apex), value: target });
+      this.upserts.push({ name: defaultHttpsHostname(deploymentId, apex, prefix), value: target });
       return { op: 'noop' as const, record: null };
     }
     async deleteDefaultDeploymentRecord(deploymentId: string) {
-      this.deletes.push(defaultHttpsHostname(deploymentId, apex));
+      this.deletes.push(defaultHttpsHostname(deploymentId, apex, prefix));
       return { op: 'deleted' as const };
     }
     async deleteDefaultValidationRecord(deploymentId: string, validationName: string) {
@@ -161,6 +162,7 @@ describe('default-https service', () => {
     return {
       enabled: true,
       apex,
+      prefix,
       dns: new FakeDnsClient(),
       probeHttps: async () => ({ ok: true }),
       ...overrides,
@@ -181,7 +183,7 @@ describe('default-https service', () => {
 
       const state = await stateOf(deployment.id);
       expect(state?.status).toBe('PENDING');
-      expect(state?.hostname).toBe(defaultHttpsHostname(deployment.id, apex));
+      expect(state?.hostname).toBe(defaultHttpsHostname(deployment.id, apex, prefix));
       expect(state?.lastError).toBeNull();
 
       const jobs = await jobsFor(deployment.id);
@@ -189,9 +191,19 @@ describe('default-https service', () => {
       expect(jobs[0]!.type).toBe('CONFIGURE_DOMAIN');
       expect(jobs[0]!.idempotencyKey).toBe(`${deployment.id}:CONFIGURE_DOMAIN:default-https:0`);
       expect(jobs[0]!.payload).toMatchObject({
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         domainId: deployment.id,
       });
+    });
+
+    it('mints the hostname with the control plane prefix', async () => {
+      const deployment = await seedDeployment();
+      await runDefaultHttpsCheck(db, deployment, deps({ prefix: 's-' }));
+
+      const state = await stateOf(deployment.id);
+      expect(state?.hostname).toBe(`s-${deployment.id}.${apex}`);
+      const jobs = await jobsFor(deployment.id);
+      expect(jobs[0]!.payload).toMatchObject({ hostname: `s-${deployment.id}.${apex}` });
     });
 
     it('starts even while an ACTIVE custom domain serves (the default URL is the permanent fallback)', async () => {
@@ -439,7 +451,7 @@ describe('default-https service', () => {
       const dns = new FakeDnsClient();
       await settleNewestConfigureJob(deployment.id, {
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
-        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
         validationValue: '_y1.acm-validations.aws.',
         routingTarget: 'alb.us-east-1.elb.amazonaws.com',
       });
@@ -448,10 +460,10 @@ describe('default-https service', () => {
       await runDefaultHttpsCheck(db, deployment, deps({ dns }));
       expect(dns.upserts).toEqual([
         {
-          name: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+          name: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
           value: '_y1.acm-validations.aws.',
         },
-        { name: defaultHttpsHostname(deployment.id, apex), value: 'alb.us-east-1.elb.amazonaws.com' },
+        { name: defaultHttpsHostname(deployment.id, apex, prefix), value: 'alb.us-east-1.elb.amazonaws.com' },
       ]);
       const jobs = (await jobsFor(deployment.id)).filter((job) => job.type === 'CONFIGURE_DOMAIN');
       expect(jobs).toHaveLength(2);
@@ -464,7 +476,7 @@ describe('default-https service', () => {
       dns.failUpserts = true;
       await settleNewestConfigureJob(deployment.id, {
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
-        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
         validationValue: '_y1.acm-validations.aws.',
         routingTarget: 'alb.us-east-1.elb.amazonaws.com',
       });
@@ -481,7 +493,7 @@ describe('default-https service', () => {
       const deployment = await install();
       await settleNewestConfigureJob(deployment.id, {
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
-        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
         validationValue: '_y1.acm-validations.aws.',
       });
       const stateBefore = await stateOf(deployment.id);
@@ -524,7 +536,7 @@ describe('default-https service', () => {
         const deployment = await install();
         await settleNewestConfigureJob(deployment.id, {
           certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
-          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
           validationValue: '_y1.acm-validations.aws.',
           routingTarget: 'alb.us-east-1.elb.amazonaws.com',
         });
@@ -569,7 +581,7 @@ describe('default-https service', () => {
       const deployment = await install();
       await settleNewestConfigureJob(deployment.id, {
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
-        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
         validationValue: '_y1.acm-validations.aws.',
         routingTarget: 'alb.us-east-1.elb.amazonaws.com',
       });
@@ -592,7 +604,7 @@ describe('default-https service', () => {
     async function seedWithState(extra: Record<string, unknown> = {}) {
       const deployment = await seedDeployment();
       const state = {
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         status: 'PENDING',
         checkCycle: 0,
         lastError: null,
@@ -677,7 +689,7 @@ describe('default-https service', () => {
     it('marks REMOVING and mints one REMOVE_DOMAIN job carrying the certificate arn', async () => {
       const deployment = await seedDeployment();
       const state = {
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         status: 'ACTIVE',
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
         checkCycle: 2,
@@ -694,7 +706,7 @@ describe('default-https service', () => {
       const removeJobs = (await jobsFor(deployment.id)).filter((job) => job.type === 'REMOVE_DOMAIN');
       expect(removeJobs).toHaveLength(1);
       expect(removeJobs[0]!.payload).toMatchObject({
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         domainId: deployment.id,
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
       });
@@ -715,7 +727,7 @@ describe('default-https service', () => {
     });
 
     it('parseDefaultHttps accepts a full state and rejects garbage', () => {
-      const hostname = defaultHttpsHostname('dep-1', DEFAULT_HTTPS_APEX);
+      const hostname = defaultHttpsHostname('dep-1', DEFAULT_HTTPS_APEX, prefix);
       const parsed = parseDefaultHttps({ hostname, status: 'ACTIVE', checkCycle: 1, lastError: null });
       expect(parsed?.status).toBe('ACTIVE');
       expect(parseDefaultHttps(null)).toBeNull();
@@ -726,7 +738,7 @@ describe('default-https service', () => {
     it('ensureDefaultHttpsConfigureJob with a finished job at the current cycle bumps the cycle', async () => {
       const deployment = await seedDeployment();
       const state = {
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         status: 'PENDING',
         checkCycle: 0,
         lastError: null,
@@ -773,7 +785,7 @@ describe('default-https service', () => {
     });
 
     it('uses the production apex by default', () => {
-      expect(defaultHttpsHostname('dep-1', DEFAULT_HTTPS_APEX)).toBe('d-dep-1.deployz.dev');
+      expect(defaultHttpsHostname('dep-1', DEFAULT_HTTPS_APEX, prefix)).toBe('d-dep-1.deployz.dev');
     });
   });
 
@@ -808,7 +820,7 @@ describe('default-https service', () => {
         `d-dep-1.${DEFAULT_HTTPS_FIXTURE_APEX}`,
       );
       expect(getDefaultDeploymentHostname('dep-1', fixtureConfig)).toMatch(/\.deployz-fixture\.test$/);
-      expect(defaultHttpsHostname('dep-1', DEFAULT_HTTPS_FIXTURE_APEX)).toBe(
+      expect(defaultHttpsHostname('dep-1', DEFAULT_HTTPS_FIXTURE_APEX, prefix)).toBe(
         getDefaultDeploymentHostname('dep-1', fixtureConfig),
       );
       // prefix + zone together.
@@ -919,7 +931,7 @@ describe('default-https service', () => {
     async function installWithAlbTarget(client: CloudflareDnsClient) {
       const deployment = await seedDeployment();
       await runDefaultHttpsCheck(db, deployment, deps({ dns: client }));
-      const validationName = `_x1.${defaultHttpsHostname(deployment.id, apex)}`;
+      const validationName = `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`;
       await settleConfigure(deployment.id, {
         certificateArn: 'arn:aws:acm:us-east-1:1:certificate/abc',
         validationName,
@@ -945,7 +957,7 @@ describe('default-https service', () => {
       expect(state?.lastError).toBeNull();
       expect(state?.lastDnsCheckAt).toBeTruthy();
 
-      const hostname = defaultHttpsHostname(deployment.id, apex);
+      const hostname = defaultHttpsHostname(deployment.id, apex, prefix);
       const records = fake.listRecords();
       expect(records.some((record) => record.name === hostname && record.content === ALB_TARGET && record.proxied === true)).toBe(
         true,
@@ -1035,7 +1047,7 @@ describe('default-https service', () => {
         { record: 'validation', op: 'noop' },
         { record: 'routing', op: 'updated' },
       ]);
-      const hostname = defaultHttpsHostname(deployment.id, apex);
+      const hostname = defaultHttpsHostname(deployment.id, apex, prefix);
       const routing = fake.listRecords().find((record) => record.name === hostname);
       expect(routing?.content).toBe(newTarget);
     });
@@ -1047,9 +1059,9 @@ describe('default-https service', () => {
     async function seedWaitingForDns(configureAttempts = 0) {
       const deployment = await seedDeployment();
       const state = {
-        hostname: defaultHttpsHostname(deployment.id, apex),
+        hostname: defaultHttpsHostname(deployment.id, apex, prefix),
         status: 'WAITING_FOR_DNS' as const,
-        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+        validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
         validationValue: '_y1.acm-validations.aws.',
         routingTarget: 'alb.us-east-1.elb.amazonaws.com',
         checkCycle: 0,
@@ -1200,7 +1212,7 @@ describe('default-https service', () => {
         success: true,
         output: {
           certificateArn: 'arn:aws:acm:us-east-1:1:certificate/retry',
-          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
           validationValue: '_y1.acm-validations.aws.',
           routingTarget: 'alb.us-east-1.elb.amazonaws.com',
         },
@@ -1238,13 +1250,13 @@ describe('default-https service', () => {
       await applyDefaultHttpsJobResult(db, deployment.id, job, {
         success: true,
         output: {
-          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex)}`,
+          validationName: `_x1.${defaultHttpsHostname(deployment.id, apex, prefix)}`,
           validationValue: '_y1.acm-validations.aws.',
           routingTarget: 'alb.us-east-1.elb.amazonaws.com',
         },
       });
       await runDefaultHttpsCheck(db, deployment, deps({ dns: goodDns })); // writes both records
-      const hostname = defaultHttpsHostname(deployment.id, apex);
+      const hostname = defaultHttpsHostname(deployment.id, apex, prefix);
       expect(goodDns.listRecords().some((record) => record.name === hostname)).toBe(true);
 
       // Someone deleted the routing record at Cloudflare — the next upsert
@@ -1261,10 +1273,10 @@ describe('default-https service', () => {
   // over the in-memory fake + PGlite.
   describe('reconcileOrphanedDefaultRecords (Phase 11)', () => {
     const orphanId = crypto.randomUUID();
-    const orphanHostname = defaultHttpsHostname(orphanId, apex);
+    const orphanHostname = defaultHttpsHostname(orphanId, apex, prefix);
 
-    function clientWithListing(listing: CloudflareDnsRecord[]) {
-      const fake = createFakeCloudflareDnsClient({ zoneId: 'zone-1', zoneName: apex });
+    function clientWithListing(listing: CloudflareDnsRecord[], listingPrefix = prefix) {
+      const fake = createFakeCloudflareDnsClient({ zoneId: 'zone-1', zoneName: apex, prefix: listingPrefix });
       const deleted: string[] = [];
       const client: CloudflareDnsClient = {
         getRecord: async (id) => fake.getRecord(id),
@@ -1295,7 +1307,7 @@ describe('default-https service', () => {
     it('keeps the record of a live deployment (row exists, deletedAt null)', async () => {
       const deployment = await seedDeployment();
       const { client, deleted } = clientWithListing([
-        listingRecord(defaultHttpsHostname(deployment.id, apex)),
+        listingRecord(defaultHttpsHostname(deployment.id, apex, prefix)),
       ]);
       const result = await reconcileOrphanedDefaultRecords(db, client, { zone: apex });
       expect(result).toEqual({ deleted: 0, kept: 1 });
@@ -1311,6 +1323,21 @@ describe('default-https service', () => {
       const result = await reconcileOrphanedDefaultRecords(db, client, { zone: apex });
       expect(result).toEqual({ deleted: 0, kept: 3 });
       expect(deleted).toEqual([]);
+    });
+
+    it.each([
+      { own: 's-', other: 'd-' },
+      { own: 'd-', other: 's-' },
+    ])('a $own plane deletes only its own orphans and never the $other ones', async ({ own, other }) => {
+      const ownOrphan = crypto.randomUUID();
+      const otherOrphan = crypto.randomUUID();
+      const { client, deleted } = clientWithListing(
+        [listingRecord(`${own}${ownOrphan}.${apex}`), listingRecord(`${other}${otherOrphan}.${apex}`)],
+        own,
+      );
+      const result = await reconcileOrphanedDefaultRecords(db, client, { zone: apex, prefix: own });
+      expect(result).toEqual({ deleted: 1, kept: 1 });
+      expect(deleted).toEqual([ownOrphan]);
     });
 
     it('is idempotent: a second run after a successful one has nothing left to delete', async () => {
@@ -1358,6 +1385,9 @@ describe('default-https service', () => {
       expect(parseDefaultDeploymentId('d-dep-1.deployz.dev')).toBeNull(); // not a uuid
       expect(parseDefaultDeploymentId('app.deployz.dev')).toBeNull(); // not d-
       expect(parseDefaultDeploymentId(`d-${uuid}.evil.example`)).toBeNull(); // wrong zone
+      expect(parseDefaultDeploymentId(`s-${uuid}.${DEFAULT_HTTPS_APEX}`, { prefix: 'd-' })).toBeNull(); // other plane
+      expect(parseDefaultDeploymentId(`d-${uuid}.${DEFAULT_HTTPS_APEX}`, { prefix: 's-' })).toBeNull(); // other plane
+      expect(parseDefaultDeploymentId(`s-${uuid}.${DEFAULT_HTTPS_APEX}`, { prefix: 's-' })).toBe(uuid);
     });
   });
 });

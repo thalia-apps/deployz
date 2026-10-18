@@ -413,12 +413,14 @@ describe('Phase 13 — zone id, token and probe provenance guards', () => {
   });
 });
 
-// Phase 15 — static verification of the PRODUCTION Cloudflare configuration.
+// Phase 15 — static verification of the Cloudflare deploy configuration.
 // Pure text scans of .github/workflows/deploy-api.yml: no network, no
 // provider call, and no secret value is ever read or printed (the token is
 // asserted only as the `${{ secrets.… }}` expression the workflow itself
-// carries).
-describe('Phase 15 — production Cloudflare deploy configuration', () => {
+// carries). Every environment-specific value is a variable on the GitHub
+// Environment of the deploy job, so the workflow holds a key name, never a
+// stage's own value.
+describe('Phase 15 — Cloudflare deploy configuration', () => {
   const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
   const workflowPath = join(repoRoot, '.github', 'workflows', 'deploy-api.yml');
   // Normalise line endings — the file is checked out CRLF on Windows.
@@ -431,17 +433,37 @@ describe('Phase 15 — production Cloudflare deploy configuration', () => {
     'CLOUDFLARE_ZONE_EDIT_API_TOKEN',
   ];
 
-  it('the Lambda env block binds all four Cloudflare keys with the plan-mandated values', () => {
+  it('the Lambda env block binds all four Cloudflare keys to the GitHub Environment', () => {
     const envStart = workflow.indexOf('\n    env:\n');
     const envEnd = workflow.indexOf('\n    steps:\n', envStart);
     expect(envStart, 'could not locate the job-level env: block').toBeGreaterThan(-1);
     expect(envEnd, 'could not locate the steps: block after env:').toBeGreaterThan(envStart);
     const envBlock = workflow.slice(envStart, envEnd);
 
-    expect(envBlock).toContain(`CLOUDFLARE_ZONE_ID: ${ZONE_ID_HEX}`);
-    expect(envBlock).toContain('CLOUDFLARE_ZONE_NAME: deployz.dev');
-    expect(envBlock).toContain('DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: d-');
+    expect(envBlock).toContain('CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}');
+    expect(envBlock).toContain('CLOUDFLARE_ZONE_NAME: ${{ vars.CLOUDFLARE_ZONE_NAME }}');
+    expect(envBlock).toContain(
+      'DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: ${{ vars.DEPLOYZ_DEFAULT_HOSTNAME_PREFIX }}',
+    );
     expect(envBlock).toContain('CLOUDFLARE_ZONE_EDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_ZONE_EDIT_API_TOKEN }}');
+  });
+
+  // A literal here is what the Environment work removes: the same file
+  // deploys every stage now, so a production host or zone id left in the
+  // block would reach a staging deploy. Read with the comments removed: a
+  // comment holds no value, and a comment that names the host which goes
+  // offline is worth keeping.
+  it('the deployed-env block carries no environment-specific literal', () => {
+    const envStart = workflow.indexOf('\n    env:\n');
+    const envEnd = workflow.indexOf('\n    steps:\n', envStart);
+    expect(envStart, 'could not locate the job-level env: block').toBeGreaterThan(-1);
+    expect(envEnd, 'could not locate the steps: block after env:').toBeGreaterThan(envStart);
+    const envValues = workflow.slice(envStart, envEnd).replace(/^\s*#.*$/gm, '');
+
+    for (const literal of [ZONE_ID_HEX, 'api.deployz.dev', 'app.deployz.dev', '.deployz.dev', 'deployz.dev']) {
+      expect(envValues, `the env block must not carry the literal ${literal}`).not.toContain(literal);
+    }
+    expect(envValues).not.toMatch(/DEPLOYZ_DEFAULT_HOSTNAME_PREFIX:\s*d-/);
   });
 
   it('the deploy completeness-gate loop lists all four Cloudflare keys (a missing binding fails the deploy)', () => {
@@ -478,11 +500,12 @@ describe('the deploy republishes bootstrap artifacts to every deployable region'
     expect(steps).toMatch(/run:[\s\S]*?publish:bootstrap/);
   });
 
-  // The publisher needs s3:GetBucketLocation, s3:PutObject and
+  // The publisher needs s3:GetBucketLocation, s3:PutObject, s3:GetObject and
   // cloudformation:ValidateTemplate across every regional bucket, and the
-  // deploy user has none of them yet. Ungated, the step failed every deploy
-  // after the stack had already gone out. The switch is what lets the
-  // permissions land first and the invariant be turned on deliberately.
+  // deploy role grants them (.github/aws/github-oidc.yaml). Ungated, the step
+  // failed every deploy after the stack had already gone out. The switch is
+  // what lets the permissions land first and the invariant be turned on
+  // deliberately.
   it('runs only when BOOTSTRAP_REPUBLISH is switched on', () => {
     const steps = workflow.slice(workflow.indexOf('\n    steps:\n'));
     const start = steps.indexOf('- name: Republish the bootstrap template');

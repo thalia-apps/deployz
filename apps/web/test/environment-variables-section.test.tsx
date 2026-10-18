@@ -22,7 +22,7 @@ Element.prototype.setPointerCapture = () => {};
 Element.prototype.releasePointerCapture = () => {};
 
 // The Configuration page's "Environment variables" section (docs/environment-variables.md):
-// summary counts, grouped order with nothing collapsed, bulk classification,
+// summary counts, grouped order, the filters and search, bulk classification,
 // custom values in the same table, truthful save failures, the
 // provider-select constraints (customer disallowed at build stage, Deployz
 // only for a providable key), the vendor runtime-secret warning, the
@@ -171,9 +171,19 @@ async function renderSection(vendorDefaults: MaskedConfigEntry[] = []): Promise<
   });
 }
 
+async function showAll(): Promise<void> {
+  await click(byTestId('environment-variables-filter-all'));
+}
+
+const groupIds = (): (string | null)[] =>
+  Array.from(document.querySelectorAll('[data-testid^="environment-variables-group-"]')).map((el) =>
+    el.getAttribute('data-testid'),
+  );
+
 describe('Environment variables section', () => {
   it('shows the summary counts and lists unresolved required rows first', async () => {
     await renderSection();
+    await showAll();
 
     const summary = byTestId('environment-variables-summary')?.textContent ?? '';
     expect(summary).toContain('2 need');
@@ -192,13 +202,16 @@ describe('Environment variables section', () => {
     );
   });
 
-  it('shows every variable in ordered groups — nothing collapsed, nothing paged', async () => {
+  it('opens on the vendor and customer variables, and All shows every group in order', async () => {
     await renderSection();
 
-    const groups = Array.from(document.querySelectorAll('[data-testid^="environment-variables-group-"]')).map((el) =>
-      el.getAttribute('data-testid'),
-    );
-    expect(groups).toEqual([
+    expect(byTestId('environment-variables-filter-inputs')?.getAttribute('aria-pressed')).toBe('true');
+    expect(groupIds()).toEqual(['environment-variables-group-attention']);
+    expect(byTestId('environment-variable-row-LOG_LEVEL')).toBeNull();
+    expect(byTestId('environment-variables-filter-attention')?.textContent).toBe('Needs input2');
+
+    await showAll();
+    expect(groupIds()).toEqual([
       'environment-variables-group-attention',
       'environment-variables-group-deployz',
       'environment-variables-group-optional',
@@ -207,6 +220,73 @@ describe('Environment variables section', () => {
     expect(byTestId('environment-variable-row-NEXT_PUBLIC_ANALYTICS_ID')).not.toBeNull();
     expect(byTestId('environment-variable-value-INTERNAL_SECRET')?.textContent).toBe('Set by Deployz at install');
     expect(byTestId('environment-variable-row-DATABASE_URL')?.textContent).toContain('Needs a decision');
+  });
+
+  it('filters to Managed and Optional, and keeps edits made under another filter', async () => {
+    await renderSection();
+    await click(byTestId('environment-variable-edit-DATABASE_URL'));
+    await click(byTestId('environment-variable-DATABASE_URL-provider'));
+    await click(
+      Array.from(document.querySelectorAll('[data-slot="select-item"]')).find((el) => el.textContent === 'Optional / not needed') ??
+        null,
+    );
+
+    await click(byTestId('environment-variables-filter-managed'));
+    expect(groupIds()).toEqual(['environment-variables-group-deployz']);
+    await click(byTestId('environment-variables-filter-optional'));
+    expect(groupIds()).toEqual(['environment-variables-group-optional']);
+
+    // The hidden row's draft is still saved.
+    const saveButton = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Save changes');
+    await click(saveButton ?? null);
+    const [, settings] = mocks.saveEnvironmentSettings.mock.calls[0] as [string, { key: string; provider: string }[]];
+    expect(settings.find((setting) => setting.key === 'DATABASE_URL')?.provider).toBe('none');
+  });
+
+  it('searches variable names across the selected filter', async () => {
+    await renderSection();
+    await showAll();
+    const search = document.querySelector('input[aria-label="Search variables"]');
+    await setValue(search, 'log');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    expect(Array.from(document.querySelectorAll('[data-testid^="environment-variable-row-"]')).map((el) => el.getAttribute('data-testid'))).toEqual([
+      'environment-variable-row-LOG_LEVEL',
+    ]);
+
+    await setValue(search, 'nothing-matches');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    expect(byTestId('environment-variables-no-matches')?.textContent).toContain('No variables match.');
+  });
+
+  it('renders a long list one page at a time', async () => {
+    mocks.fetchEnvironmentSettings.mockResolvedValue(
+      response({
+        variables: Array.from({ length: 120 }, (_, index) => ({
+          key: `VAR_${String(index).padStart(3, '0')}`,
+          required: true,
+          secret: index % 2 === 0,
+          source: ['read in app.py'],
+        })),
+        deployzKeys: [],
+      }),
+    );
+    await renderSection();
+
+    const rows = () => document.querySelectorAll('[data-testid^="environment-variable-row-"]').length;
+    expect(rows()).toBe(50);
+    expect(byTestId('environment-variables-show-more')?.textContent).toBe('Show 50 more');
+    await click(byTestId('environment-variables-show-more'));
+    expect(rows()).toBe(100);
+    await click(byTestId('environment-variables-show-more'));
+    expect(rows()).toBe(120);
+    expect(byTestId('environment-variables-show-more')).toBeNull();
+    // A secret's value is never rendered, only its state.
+    expect(document.body.textContent).not.toContain('••');
   });
 
   it('bulk-marks selected rows optional and saves them with provider none', async () => {
@@ -324,6 +404,7 @@ describe('Environment variables section', () => {
 
   it('disables the customer provider option for a build-stage variable', async () => {
     await renderSection();
+    await showAll();
     await click(byTestId('environment-variable-edit-NEXT_PUBLIC_ANALYTICS_ID'));
 
     const trigger = byTestId('environment-variable-NEXT_PUBLIC_ANALYTICS_ID-provider');
@@ -387,6 +468,7 @@ describe('Environment variables section', () => {
       response({ provisioned: { database: true, cache: false, storage: false } }),
     );
     await renderSection();
+    await showAll();
     await click(byTestId('environment-variable-edit-INTERNAL_SECRET'));
     expect(byTestId('environment-variable-INTERNAL_SECRET-binding')).toBeNull();
   });

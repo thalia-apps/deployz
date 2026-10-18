@@ -13,6 +13,7 @@ import { findEnvFile, moduleDirectory } from '@deployz/api/find-env-file';
 import { App } from 'aws-cdk-lib';
 import { checkDeployGate } from '../src/deploy-gate.js';
 import { DeployzStack } from '../src/deployz-stack.js';
+import { resolveStage, stageNames } from '../src/stage.js';
 
 const envFile = findEnvFile(moduleDirectory(import.meta.url));
 if (envFile) {
@@ -41,4 +42,13 @@ if (!gate.allowed) {
   throw new Error(gate.reason);
 }
 
-new DeployzStack(app, 'Deployz');
+// `-c stage=staging` or DEPLOYZ_STAGE lets a caller deploy the staging
+// control plane, whose stack id and account-unique resource names differ from
+// production's (see src/stage.ts). Defaults to the unchanged production names
+// when unset, and throws on an unknown stage rather than deploying those names
+// by accident.
+const stage = resolveStage(
+  (app.node.tryGetContext('stage') as string | undefined) ?? process.env.DEPLOYZ_STAGE,
+);
+
+new DeployzStack(app, stageNames(stage).stackId, { stage });

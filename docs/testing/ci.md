@@ -34,10 +34,15 @@ so every selected Vitest project runs in one parallel invocation. Runs
 
 - `pnpm typecheck:e2e` — typechecks `e2e/` (Playwright strips types, so
   this is the only place the simulation harness's TypeScript is checked).
-- `pnpm test:static` — the static production-safety guards (no AWS SDK
-  value-import under `e2e/simulation/`, no fixture-mode env var in
-  `deploy-api.yml`'s deployed-environment block, no product import of
-  `e2e/`).
+- `pnpm test:static` — the static production-safety guards. They check: no
+  AWS SDK value-import under `e2e/simulation/`; no product import of `e2e/`;
+  no fixture-mode env var, environment-specific value or AWS access key in
+  `deploy-api.yml`, `deploy-web.yml` or `release.yml`; each deploy workflow's
+  `PATHS` dependency closure; and the per-environment workflow structure (the
+  deploy job's Environment and stage gate, no Environment on the gate job,
+  the concurrency group, the dispatch default, the tag name, `release.yml`'s
+  calling jobs and its staging gate, `id-token: write`, `secrets: inherit`
+  only in `release.yml`, and one `COOKIE_PREFIX` for both services).
 - `pnpm vitest run` (every project) on a push, a manual run, or a
   `critical` PR; otherwise `pnpm vitest run --project <p>` for each
   project the plan selected (`unit_projects`).
@@ -210,19 +215,44 @@ the same set a `critical` pull request runs. `pr-gate` does not run either
 (it is `if: github.event_name == 'pull_request'`).
 
 Deploying is a separate concern from testing, but it does gate on CI now:
-`deploy-api.yml` and `deploy-web.yml` each trigger on `workflow_run` of a
-successful `CI` run for `main` (a pull-request CI run has the PR branch as
-`head_branch` and is filtered out). Each workflow's own `gate` job then
-checks two things before anything deploys: the commit is still the tip of
-`main` (an older run must not deploy over a newer one), and the commit
-touches that service's runtime dependency closure (a path filter, not
-`ci.yml`'s risk classification — see `.github/workflows/deploy-api.yml` /
-`deploy-web.yml` and
-[`../operations/control-plane.md`](../operations/control-plane.md)). A
-manual `workflow_dispatch` run always deploys the checked-out ref, skipping
-both checks. When validating a production change, record the SHA and
-confirm both the CI run and the relevant deploy run finished, rather than
-assuming one implies the other.
+`release.yml` triggers on `workflow_run` of a successful `CI` run for `main`
+(a pull-request CI run has the PR branch as `head_branch` and is filtered
+out). It calls `deploy-api.yml` and `deploy-web.yml`, which are reusable
+workflows that take an environment and a commit. Each one keeps its own
+`gate` job, which checks two things before anything deploys: the commit is
+still the tip of `main` (an older run must not deploy over a newer one), and
+the commit touches that service's runtime dependency closure (a path filter,
+not `ci.yml`'s risk classification — see
+`.github/workflows/deploy-api.yml` / `deploy-web.yml` and
+[`../operations/control-plane.md`](../operations/control-plane.md)).
+
+Staging deploys first. `staging-verify` then polls the staging hosts, and the
+two production jobs wait for a reviewer's approval on the `production`
+Environment. The deploy job re-checks the tip of `main` after the approval, so
+a commit that is no longer current fails instead of deploying. Each deploy
+holds a concurrency group for its own environment and service, so a staging
+deploy never waits for a production deploy. The deploy tag is `deployed/api`
+and `deployed/web` for production, and `deployed/staging/api` and
+`deployed/staging/web` for staging.
+
+The `deploy` job also runs two fail-closed gates of its own before it changes
+anything: it refuses a blank required value from its GitHub Environment, and
+it refuses a value that belongs to another stage (the rules are in
+[`../operations/control-plane.md`](../operations/control-plane.md#environments-and-the-stage-gate)).
+A direct `workflow_dispatch` run on one deploy workflow is the per-service
+path, and it still skips both `gate` checks. When validating a production
+change, record the SHA and confirm both the CI run and the release run
+finished, rather than assuming one implies the other.
+
+## The run-and-check image build
+
+`.github/workflows/runcheck-build.yml` builds one third-party repository
+image on an x86_64 runner for the Docker run-and-check test. It starts only
+by hand (`workflow_dispatch`) with `repo`, `commit`, `dockerfile`, `context`
+and `build_args`. It validates each input, uses no repository secrets and
+has only `contents: read`. It uploads the image as a `docker save` artifact
+for 7 days. Use it for the heavy repositories and after an emulation failure
+on an ARM machine.
 
 ## Timing expectations
 

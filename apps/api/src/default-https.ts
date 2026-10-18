@@ -207,9 +207,9 @@ export function resolvePreferredPublicUrl(urls: DefaultUrls): string {
 
 /** Back-compat seam used by the default-HTTPS state machine (hostname minted
  *  when a PENDING state is first created). Wraps the Phase 2 helper with the
- *  state machine's apex as the zone. */
-export function defaultHttpsHostname(deploymentId: string, apex: string): string {
-  return getDefaultDeploymentHostname(deploymentId, { zone: apex });
+ *  state machine's prefix and apex as the zone. */
+export function defaultHttpsHostname(deploymentId: string, apex: string, prefix: string): string {
+  return getDefaultDeploymentHostname(deploymentId, { prefix, zone: apex });
 }
 
 const DEFAULT_HTTPS_STATUSES: ReadonlySet<string> = new Set([
@@ -520,6 +520,9 @@ export interface DefaultHttpsDeps {
   enabled: boolean;
   /** The DNS apex the deployz hostname is minted under. */
   apex: string;
+  /** Hostname label prefix of this control plane (`d-` in production). Each
+   *  plane that shares the zone mints, lists and sweeps only its own prefix. */
+  prefix: string;
   /** Deployment-keyed DNS client (Cloudflare in production; the fixture
    *  provider under E2E; the no-op writer when off). */
   dns: CloudflareDnsClient;
@@ -638,7 +641,7 @@ export async function runDefaultHttpsCheck(
     // later fail or be removed, and the default is the always-present
     // fallback, so it must never be disabled while a custom domain exists.
     const initial: DefaultHttpsState = {
-      hostname: defaultHttpsHostname(deployment.id, deps.apex),
+      hostname: defaultHttpsHostname(deployment.id, deps.apex, deps.prefix),
       status: 'PENDING',
       checkCycle: 0,
       lastError: null,

@@ -107,9 +107,11 @@ re-litigated:
 
 `scripts/production-safety.test.mjs` also asserts none of these
 fixture-mode variables (plus `DEPLOYZ_E2E_MODE`/`DEPLOYZ_E2E_SCENARIO`)
-appear in `deploy-api.yml`'s deployed-environment block — that block
-becomes the deployed Lambda's entire environment, so a leaked
-fixture-mode variable would ship live.
+appear in any `env:` block or `run:` body of `deploy-api.yml`,
+`deploy-web.yml` or `release.yml`. The API deploy job's `env:` block becomes
+the deployed Lambda's entire environment, and the web deploy writes the
+container's environment and its client build args inside `run:` bodies, so a
+leaked fixture-mode variable would ship live.
 
 ## The runner CLI
 

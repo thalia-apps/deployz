@@ -31,9 +31,16 @@ export function compilerArtifactKey(templateHash: string): string {
   return `${COMPILER_ARTIFACT_KEY_PREFIX}/${templateHash}.json`;
 }
 
-/** The deterministic public https URL of a published compiled artifact. */
-export function compilerArtifactUrl(region: string, templateHash: string): string {
-  return `https://${bootstrapTemplateBucketName(region)}.s3.${region}.amazonaws.com/${compilerArtifactKey(templateHash)}`;
+/** The deterministic public https URL of a published compiled artifact.
+ *  `templateBucketPrefix` is optional — omitted it names production's own
+ *  regional bucket, which is what every caller but the stage-aware creation
+ *  path needs. */
+export function compilerArtifactUrl(
+  region: string,
+  templateHash: string,
+  templateBucketPrefix?: string,
+): string {
+  return `https://${bootstrapTemplateBucketName(region, templateBucketPrefix)}.s3.${region}.amazonaws.com/${compilerArtifactKey(templateHash)}`;
 }
 
 /** Everything the publisher needs to freeze one compiled template. */
@@ -87,10 +94,11 @@ export function compilerArtifactPublishInput(
   region: Region,
   templateHash: string,
   body: string,
+  templateBucketPrefix?: string,
 ): PublishTemplateInput {
   return {
     region,
-    bucket: bootstrapTemplateBucketName(region),
+    bucket: bootstrapTemplateBucketName(region, templateBucketPrefix),
     key: compilerArtifactKey(templateHash),
     body,
   };
@@ -112,6 +120,8 @@ export function compileDeploymentIntent(input: {
   manifest: DeploymentManifest;
   region: Region;
   sizeProfile?: InfrastructureSizeProfile;
+  /** Omitted names production's own regional bucket. */
+  templateBucketPrefix?: string;
 }): CompiledDeploymentIntent {
   const sizeProfile = input.sizeProfile ?? defaultInfrastructureSizeProfile();
   const graph = manifestToApplicationGraph(input.manifest);
@@ -125,7 +135,11 @@ export function compileDeploymentIntent(input: {
     compilation: {
       compilerVersion: compilation.artifact.compilerVersion,
       templateHash: compilation.artifact.templateHash,
-      artifactLocation: compilerArtifactUrl(input.region, compilation.artifact.templateHash),
+      artifactLocation: compilerArtifactUrl(
+        input.region,
+        compilation.artifact.templateHash,
+        input.templateBucketPrefix,
+      ),
       verificationContract: compilation.verificationContract,
       ownershipRecords: compilation.ownershipRecords,
       footprint: compilation.footprint,

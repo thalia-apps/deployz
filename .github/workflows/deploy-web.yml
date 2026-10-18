@@ -1,80 +1,91 @@
 # Builds apps/web into a container image and ships it to the Lightsail
-# container service that serves deployz.dev and app.deployz.dev.
+# container service that serves the dashboard and the marketing site.
 #
 # The build happens here rather than on a developer machine because the image
 # must be linux/amd64 and because `aws lightsail push-container-image` needs
 # the lightsailctl plugin, which is trivial to install on a runner and
 # annoying everywhere else.
+#
+# .github/workflows/release.yml calls this workflow and gives it the
+# environment and the commit to deploy. A direct workflow_dispatch run is the
+# per-service path: a rollback, or a new staging deploy of this service alone.
 name: Deploy web
 
 on:
-  # After the CI workflow succeeds for a push to main (a pull-request CI run
-  # has the PR branch as head_branch and is filtered out). The gate job
-  # below checks the commit is still the tip of main and touches a runtime
+  # release.yml calls this workflow once for each stage it releases. The gate
+  # job below checks the commit is still the tip of main and touches a runtime
   # dependency of the web app before anything deploys.
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
+    inputs:
+      environment:
+        description: The GitHub Environment to deploy
+        type: string
+        required: true
+      sha:
+        description: The commit to deploy
+        type: string
+        required: true
+  # The per-service path. staging is the default on purpose: an operator who
+  # forgets the flag must get staging, not production.
   workflow_dispatch:
     inputs:
-      service_name:
-        description: Lightsail container service name
-        default: deployz-web
-      api_url:
-        description: Public API origin baked into the client bundle
-        default: https://api.deployz.dev
-      marketing_host:
-        description: Marketing hostname
-        default: deployz.dev
-      app_host:
-        description: Dashboard hostname
-        default: app.deployz.dev
-
-# One deployment at a time. Lightsail replaces the running container in place,
-# and two overlapping deployments race each other's health checks.
-concurrency:
-  group: deploy-web
-  cancel-in-progress: false
-
-env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_REGION: us-east-1
-  SERVICE: ${{ inputs.service_name || 'deployz-web' }}
-  API_URL: ${{ inputs.api_url || 'https://api.deployz.dev' }}
-  MARKETING_HOST: ${{ inputs.marketing_host || 'deployz.dev' }}
-  APP_HOST: ${{ inputs.app_host || 'app.deployz.dev' }}
+      environment:
+        description: The GitHub Environment to deploy
+        type: choice
+        default: staging
+        options: [staging, production]
+      sha:
+        description: The commit to deploy. Empty deploys the tip of the chosen ref.
+        type: string
+        required: false
+        default: ''
 
 jobs:
   # Deploys only a commit that CI has proven on main, and only while it is
   # still the tip of main (an older run must not deploy over a newer one).
   # The path filter is the runtime dependency closure of the service, so a
   # change to a package it bundles redeploys it even when nothing under its
-  # own directory changed. A manual run always deploys the checked-out ref.
+  # own directory changed. A manual run always deploys the requested commit.
   gate:
     name: Check the commit
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     outputs:
       deploy: ${{ steps.decide.outputs.deploy }}
       sha: ${{ steps.decide.outputs.sha }}
+      tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
 
       - name: Decide
         id: decide
         env:
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # workflow_call declares sha as required, so the fallback fires only
+          # on a dispatch with no sha. There github.sha is the tip of the
+          # chosen ref, which is what that input promises.
+          SHA: ${{ inputs.sha || github.sha }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          # A release.yml dispatch is still a manual run: the github context
+          # inside a called workflow is the caller's.
           MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
           PATHS: apps/web/* packages/copy-map/* packages/contracts/* pnpm-lock.yaml .github/workflows/deploy-web.yml
         run: |
           set -euo pipefail
+          # Production keeps the original repository-wide tag name. Every other
+          # stage carries its own name. Both refs can exist together, because
+          # `deployed/staging/web` adds a directory beside the file
+          # `deployed/web`. The reverse shape `deployed/web/staging` is not
+          # possible.
+          if [ "$ENVIRONMENT" = "production" ]; then
+            tag="deployed/web"
+          else
+            tag="deployed/$ENVIRONMENT/web"
+          fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if [ "$MANUAL" = "true" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -85,20 +96,21 @@ jobs:
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Compare against the last successful deploy (the deployed/web tag),
-          # so a change whose own run was skipped is picked up by the next
-          # one. Without the tag (first run) the commit's own diff decides.
-          if git fetch -q origin "refs/tags/deployed/web:refs/tags/deployed/web" 2>/dev/null; then
-            base=$(git rev-parse "refs/tags/deployed/web")
+          # Compare against the last successful deploy of this environment
+          # (the tag above), so a change whose own run was skipped is picked up
+          # by the next one. Without the tag (first run) the commit's own diff
+          # decides.
+          if git fetch -q origin "refs/tags/$tag:refs/tags/$tag" 2>/dev/null; then
+            base=$(git rev-parse "refs/tags/$tag")
           else
-            echo "::notice::No deployed/web tag yet; deploying this commit."
+            echo "::notice::No $tag tag yet; deploying this commit."
             echo "deploy=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "Comparing $base..$SHA"
           changed=$(git diff --name-only "$base" "$SHA")
           match=false
-          # No pathname expansion: `apps/api/*` must stay a case pattern, not
+          # No pathname expansion: `apps/web/*` must stay a case pattern, not
           # expand to the checkout's top-level entries (which no nested file
           # matches).
           set -f
@@ -119,16 +131,158 @@ jobs:
     needs: gate
     if: needs.gate.outputs.deploy == 'true'
     runs-on: ubuntu-latest
-    # contents: write moves the deployed/web tag after a successful deploy.
+    # One deployment at a time for each environment. Lightsail replaces the
+    # running container in place, and two overlapping deployments race each
+    # other's health checks. The group carries the environment, so a staging
+    # deploy no longer waits for a production deploy. cancel-in-progress stays
+    # false: GitHub cancels the RUNNING member of the group, which is the one
+    # thing that must never happen in the middle of a deploy.
+    concurrency:
+      group: deploy-${{ inputs.environment }}-web
+      cancel-in-progress: false
+    # contents: write moves the deploy tag after a successful deploy.
+    # id-token: write lets the job ask GitHub for the OIDC token it assumes
+    # the AWS deploy role with.
     permissions:
       contents: write
+      id-token: write
+    # Every environment-specific value below comes from this GitHub
+    # Environment. A job without this key resolves only repository values, so
+    # the Environment variables would arrive empty.
+    environment: ${{ inputs.environment }}
     env:
+      # The role this job assumes with OIDC (.github/aws/github-oidc.yaml).
+      # A variable and not a secret: a role ARN is no credential, and a masked
+      # value would hide which role the run assumed.
+      AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+      AWS_REGION: us-east-1
       DEPLOY_SHA: ${{ needs.gate.outputs.sha }}
+      LIGHTSAIL_SERVICE_NAME: ${{ vars.LIGHTSAIL_SERVICE_NAME }}
+      API_URL: ${{ vars.API_URL }}
+      APP_HOST: ${{ vars.APP_HOST }}
+      MARKETING_HOST: ${{ vars.MARKETING_HOST }}
+      # Must equal the API's COOKIE_PREFIX for the same environment: the
+      # dashboard reads the cookie name the API writes, and nothing in CI can
+      # compare the two workflows against each other.
+      COOKIE_PREFIX: ${{ vars.COOKIE_PREFIX }}
+      DEPLOYZ_STAGE: ${{ vars.DEPLOYZ_STAGE }}
+      # The stage this job is allowed to deploy. It must stay equal to the
+      # job's environment: value above, and both come from the same workflow
+      # input.
+      EXPECTED_ENVIRONMENT: ${{ inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.gate.outputs.sha }}
+
+      # The gate checked this before the approval, because the gate declares
+      # no environment. An approval can arrive after a newer merge, so a stale
+      # commit must not deploy. A manual run deploys the sha the operator
+      # chose, so it is not checked.
+      - name: Check the commit is still the tip of main
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          if [ "$MANUAL" = "true" ]; then
+            echo "A manual run deploys the chosen commit; the tip of main is not checked."
+            exit 0
+          fi
+          # The checkout is shallow and pinned to the commit, so there is no
+          # origin/main to read. ls-remote needs no fetch.
+          tip=$(git ls-remote origin refs/heads/main | cut -f1) || tip=""
+          # An empty answer must not compare equal to a missing tip: a failed
+          # read is no proof that the commit is current.
+          if [ -z "$tip" ]; then
+            problem="the tip of main could not be read, so this run cannot prove the commit is current. Re-run this job."
+          elif [ "$tip" != "$DEPLOY_SHA" ]; then
+            problem="main is now at $tip. Approve the pending run for the newer commit, or dispatch this workflow with sha=$tip."
+          else
+            echo "$DEPLOY_SHA is still the tip of main."
+            exit 0
+          fi
+          echo "::error::$DEPLOY_SHA is not deployed: $problem"
+          {
+            echo "### The commit is no longer the tip of main"
+            echo
+            echo "$DEPLOY_SHA is not deployed: $problem"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      # GitHub delivers a variable it does not hold as an empty string, so an
+      # Environment that misses a key fails here rather than building an image
+      # with blank hosts in its client bundle.
+      - name: Verify the deploy environment is complete
+        run: |
+          set -euo pipefail
+          missing=()
+          for key in LIGHTSAIL_SERVICE_NAME API_URL APP_HOST MARKETING_HOST \
+                     DEPLOYZ_STAGE AWS_DEPLOY_ROLE_ARN; do
+            if [ -z "${!key:-}" ]; then missing+=("$key"); fi
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Missing GitHub Environment values for: ${missing[*]}" >&2
+            exit 1
+          fi
+          echo "Every required value is present."
+
+      # A non-production stage must carry its own name in every host and name
+      # it owns. A value without the stage name in it can only belong to
+      # another stage, so this is what stops a production host or a production
+      # service name reaching a staging deploy. Every rule compares the values
+      # against each other and against the stage name: no production value is
+      # written in this file, so there is none here to copy into the wrong
+      # Environment.
+      - name: Verify the environment values match the stage
+        run: |
+          set -euo pipefail
+          # Every stage other than production. A third stage is one edit here.
+          OTHER_STAGES="staging"
+          STAGE_OWNED="API_URL APP_HOST MARKETING_HOST LIGHTSAIL_SERVICE_NAME COOKIE_PREFIX"
+          problems=()
+
+          if [ "${DEPLOYZ_STAGE}" != "${EXPECTED_ENVIRONMENT}" ]; then
+            problems+=("DEPLOYZ_STAGE is \"${DEPLOYZ_STAGE}\"; this job may deploy only \"${EXPECTED_ENVIRONMENT}\".")
+          fi
+          case "${API_URL}" in
+            https://*/*) problems+=("API_URL must carry no path.") ;;
+            https://*) ;;
+            *) problems+=("API_URL must start with https://.") ;;
+          esac
+          for key in APP_HOST MARKETING_HOST; do
+            case "${!key}" in
+              *://*|*/*) problems+=("$key must be a bare hostname, with no scheme and no slash.") ;;
+            esac
+          done
+
+          if [ "${DEPLOYZ_STAGE}" != "production" ]; then
+            for key in $STAGE_OWNED; do
+              case "${!key:-}" in
+                *"${DEPLOYZ_STAGE}"*) ;;
+                *) problems+=("$key must contain the stage name \"${DEPLOYZ_STAGE}\".") ;;
+              esac
+            done
+          else
+            for key in $STAGE_OWNED; do
+              for stage in $OTHER_STAGES; do
+                case "${!key:-}" in
+                  *"$stage"*) problems+=("$key must not contain the stage name \"$stage\".") ;;
+                esac
+              done
+            done
+            if [ -n "${COOKIE_PREFIX:-}" ]; then
+              problems+=("COOKIE_PREFIX must be empty in production.")
+            fi
+          fi
+
+          if [ ${#problems[@]} -ne 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::$problem"
+            done
+            exit 1
+          fi
+          echo "Every value matches the stage."
 
       # push-container-image is an AWS CLI *plugin*, not a built-in
       # subcommand. Without lightsailctl on PATH it fails with an opaque
@@ -141,17 +295,29 @@ jobs:
             -o /usr/local/bin/lightsailctl
           sudo chmod +x /usr/local/bin/lightsailctl
 
+      # The deploy holds no long-lived AWS key any more. This step trades the
+      # job's OIDC token for a session on the role the Environment names. The
+      # session lasts two hours, because a long deploy must not lose its
+      # credentials in the middle; MaxSessionDuration on the role is the same
+      # value. It runs directly before the first AWS call.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-duration-seconds: 7200
+
       - name: Ensure the container service exists and is ready
         run: |
           set -euo pipefail
-          if ! aws lightsail get-container-services --service-name "$SERVICE" >/dev/null 2>&1; then
-            echo "Creating container service $SERVICE"
+          if ! aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME" >/dev/null 2>&1; then
+            echo "Creating container service $LIGHTSAIL_SERVICE_NAME"
             aws lightsail create-container-service \
-              --service-name "$SERVICE" --power micro --scale 1
+              --service-name "$LIGHTSAIL_SERVICE_NAME" --power micro --scale 1
           fi
           # push-container-image rejects a service that is still PENDING.
           for _ in $(seq 1 60); do
-            state=$(aws lightsail get-container-services --service-name "$SERVICE" \
+            state=$(aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME" \
               --query 'containerServices[0].state' --output text)
             echo "service state: $state"
             if [ "$state" = "READY" ] || [ "$state" = "RUNNING" ]; then
@@ -168,6 +334,9 @@ jobs:
       #
       # The NEXT_PUBLIC_* values are inlined into the client bundle here and
       # cannot be changed by a deployment environment variable afterwards.
+      #
+      # The local tag carries the service name, so an image built for one stage
+      # cannot be pushed under another stage's name.
       - name: Build the image
         run: |
           set -euo pipefail
@@ -178,7 +347,8 @@ jobs:
             --build-arg "NEXT_PUBLIC_APP_HOST=$APP_HOST" \
             --build-arg "NEXT_PUBLIC_MARKETING_HOST=$MARKETING_HOST" \
             --build-arg "NEXT_PUBLIC_SITE_URL=https://$MARKETING_HOST" \
-            -t "deployz-web:${DEPLOY_SHA}" .
+            --build-arg "NEXT_PUBLIC_COOKIE_PREFIX=$COOKIE_PREFIX" \
+            -t "${LIGHTSAIL_SERVICE_NAME}:${DEPLOY_SHA}" .
 
       # Every push stores a new image (":<service>.web.<N>") and Lightsail
       # refuses a push once the service holds its maximum number of images
@@ -189,24 +359,24 @@ jobs:
           KEEP_IMAGES: 10
         run: |
           set -euo pipefail
-          in_use=" $(aws lightsail get-container-services --service-name "$SERVICE" \
+          in_use=" $(aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --query 'containerServices[0].[currentDeployment.containers.web.image, nextDeployment.containers.web.image]' \
             --output text | tr '\t' ' ') "
-          old=$(aws lightsail get-container-images --service-name "$SERVICE" \
+          old=$(aws lightsail get-container-images --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --query "sort_by(containerImages, &createdAt)[:-${KEEP_IMAGES}].image" --output text)
           for image in $old; do
             case "$in_use" in *" $image "*) continue ;; esac
             echo "deleting $image"
-            aws lightsail delete-container-image --service-name "$SERVICE" --image "$image"
+            aws lightsail delete-container-image --service-name "$LIGHTSAIL_SERVICE_NAME" --image "$image"
           done
 
       - name: Push the image to Lightsail
         run: |
           set -euo pipefail
           aws lightsail push-container-image \
-            --service-name "$SERVICE" \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --label web \
-            --image "deployz-web:${DEPLOY_SHA}"
+            --image "${LIGHTSAIL_SERVICE_NAME}:${DEPLOY_SHA}"
 
       # A deployment spec cannot reference a local docker tag. It has to use
       # the reference Lightsail assigned on push — ":<service>.web.<N>", where
@@ -216,7 +386,7 @@ jobs:
         id: image
         run: |
           set -euo pipefail
-          ref=$(aws lightsail get-container-images --service-name "$SERVICE" \
+          ref=$(aws lightsail get-container-images --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --query 'sort_by(containerImages, &createdAt)[-1].image' --output text)
           echo "resolved image: $ref"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
@@ -253,7 +423,7 @@ jobs:
           }
           JSON
           aws lightsail create-container-service-deployment \
-            --service-name "$SERVICE" \
+            --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --containers file://containers.json \
             --public-endpoint file://endpoint.json
 
@@ -266,14 +436,14 @@ jobs:
           set -euo pipefail
           for _ in $(seq 1 60); do
             state=$(aws lightsail get-container-service-deployments \
-              --service-name "$SERVICE" \
+              --service-name "$LIGHTSAIL_SERVICE_NAME" \
               --query 'sort_by(deployments, &version)[-1].state' --output text)
             echo "deployment state: $state"
             case "$state" in
               ACTIVE) exit 0 ;;
               FAILED|INACTIVE)
                 aws lightsail get-container-log \
-                  --service-name "$SERVICE" --container-name web || true
+                  --service-name "$LIGHTSAIL_SERVICE_NAME" --container-name web || true
                 exit 1
                 ;;
             esac
@@ -281,6 +451,127 @@ jobs:
           done
           echo "Deployment did not become ACTIVE in time" >&2
           exit 1
+
+      # The deployment is live on the service URL now, but vendors reach the
+      # two public hostnames, and nothing creates those records. Without this
+      # check the dashboard poll below times out and reports the deploy as
+      # broken, which hides the real cause.
+      #
+      # The record type matters, and it is the one rule that depends on the
+      # stage. Cloudflare Universal SSL covers the zone and one label below it.
+      # A host two labels deep gets no certificate, so a proxied record answers
+      # 525. Outside production every public host is therefore a DNS-only CNAME
+      # to the service. Production's hosts are at most one label deep and are
+      # proxied on purpose, and production's marketing host is the zone apex,
+      # which can never answer a CNAME. The expectation comes from
+      # DEPLOYZ_STAGE, so no production value is written in this file.
+      - name: Verify the public hostnames resolve to the container service
+        run: |
+          set -euo pipefail
+          url=$(aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME" \
+            --query 'containerServices[0].url' --output text)
+          service_host="${url#https://}"
+          service_host="${service_host%/}"
+          # A host with no record answers nothing, so an empty target would
+          # compare equal to it and pass a missing record. The AWS CLI prints
+          # "None" for a URL the service does not hold yet.
+          if [ -z "$service_host" ] || [ "$service_host" = "None" ]; then
+            echo "::error::The container service $LIGHTSAIL_SERVICE_NAME reports no URL, so there is no target to compare the public hostnames with."
+            exit 1
+          fi
+          echo "service host: $service_host"
+          problems=()
+          rows=()
+          # The two hosts share one read of the proxy ranges below.
+          ranges=""
+          ranges_read="no"
+          for key in APP_HOST MARKETING_HOST; do
+            host="${!key}"
+            problem=""
+            # dig exits 0 with no output for a name that does not exist, and 9
+            # when it reaches no resolver. Keep the exit code, like the curl
+            # poll below, so a broken resolver cannot look like a missing
+            # record.
+            status=0
+            answer=$(dig +short +time=5 +tries=2 CNAME "$host" | head -1) || status=$?
+            answer="${answer%.}"
+            if [ "$status" -ne 0 ]; then
+              problem="the runner reached no DNS resolver (dig exit code $status). This is a resolver problem, not a missing record. The record must be a DNS-only CNAME to \"$service_host\"."
+            elif [ "$answer" = "$service_host" ]; then
+              echo "$host is a CNAME to $service_host."
+            elif [ -n "$answer" ]; then
+              problem="wrong target: the CNAME answers \"$answer\". The record must be a DNS-only CNAME to \"$service_host\"."
+            else
+              status=0
+              address=$(dig +short +time=5 +tries=2 A "$host" | head -1) || status=$?
+              if [ "$status" -ne 0 ]; then
+                problem="the runner reached no DNS resolver (dig exit code $status). This is a resolver problem, not a missing record. The record must be a DNS-only CNAME to \"$service_host\"."
+              elif [ -z "$address" ]; then
+                problem="the host does not resolve. Make a DNS-only CNAME record to \"$service_host\"."
+              elif [ "${DEPLOYZ_STAGE}" = "production" ]; then
+                echo "::notice::$host answers with an address and no CNAME. Production proxies this host on purpose."
+              else
+                # Cloudflare publishes the addresses that its proxy answers
+                # from. An address in those ranges shows a proxied record.
+                # This block only names what the host answers. The record is
+                # already wrong, so a failed fetch keeps the general wording
+                # and the same exit code.
+                kind="proxied, or it is an A record"
+                if [ "$ranges_read" = "no" ]; then
+                  ranges_read="yes"
+                  ranges=$(curl -fsS --max-time 10 https://www.cloudflare.com/ips-v4) || ranges=""
+                  # A 200 answer that is not a list of ranges must not reach
+                  # the arithmetic below.
+                  ranges=$(printf '%s\n' "$ranges" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$') || ranges=""
+                fi
+                case "$address" in
+                  ""|*[!0-9.]*|.*|*.|*..*|*.*.*.*.*) ;;
+                  *.*.*.*)
+                    if [ -n "$ranges" ]; then
+                      kind="an A record to $address, which is in none of the proxy ranges Cloudflare publishes"
+                      IFS=. read -r o1 o2 o3 o4 <<< "$address"
+                      value=$(( (10#$o1 << 24) + (10#$o2 << 16) + (10#$o3 << 8) + 10#$o4 ))
+                      for cidr in $ranges; do
+                        IFS=. read -r b1 b2 b3 b4 <<< "${cidr%/*}"
+                        base=$(( (10#$b1 << 24) + (10#$b2 << 16) + (10#$b3 << 8) + 10#$b4 ))
+                        mask=$(( (0xFFFFFFFF << (32 - 10#${cidr#*/})) & 0xFFFFFFFF ))
+                        if [ $(( value & mask )) -eq $(( base & mask )) ]; then
+                          kind="proxied: $address is in $cidr, which Cloudflare publishes as a proxy range"
+                          break
+                        fi
+                      done
+                    fi
+                    ;;
+                esac
+                problem="the host is $kind. Outside production it must be a DNS-only CNAME to \"$service_host\"."
+              fi
+            fi
+            if [ -n "$problem" ]; then
+              problems+=("$host: $problem")
+              rows+=("| \`$host\` | CNAME | \`$service_host\` |")
+            fi
+          done
+          if [ ${#problems[@]} -ne 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::$problem"
+            done
+            {
+              echo "### A public hostname does not point at the container service"
+              echo
+              echo "| Host | Record type | Target |"
+              echo "| --- | --- | --- |"
+              for row in "${rows[@]}"; do
+                echo "$row"
+              done
+              echo
+              for problem in "${problems[@]}"; do
+                echo "- $problem"
+              done
+              echo
+              echo "Each record above must be DNS only (grey cloud). A proxied record answers 525."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       # Lightsail's own health check answers on the service URL; this is the
       # public hostname vendors use.
@@ -296,15 +587,16 @@ jobs:
           echo "https://$APP_HOST/healthz did not return 200 after deploying" >&2
           exit 1
 
-      # The gate job compares the next commit against this tag.
+      # The gate job compares the next commit against this tag, which is the
+      # tag for this environment.
       - name: Record the deployed commit
         run: |
           set -euo pipefail
-          git tag -f deployed/web "$DEPLOY_SHA"
-          git push -f origin refs/tags/deployed/web
+          git tag -f "${{ needs.gate.outputs.tag }}" "$DEPLOY_SHA"
+          git push -f origin "refs/tags/${{ needs.gate.outputs.tag }}"
 
       - name: Report the service URL
         run: |
-          url=$(aws lightsail get-container-services --service-name "$SERVICE" \
+          url=$(aws lightsail get-container-services --service-name "$LIGHTSAIL_SERVICE_NAME" \
             --query 'containerServices[0].url' --output text)
           echo "Deployed: $url" >> "$GITHUB_STEP_SUMMARY"

@@ -1,17 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Application } from '../src/lib/applications';
+import { filterDeployments, parseDeploymentQuery } from '../src/lib/deployment-list';
+import { DEPLOYMENT_STATES } from '../src/lib/deployment-vocabulary';
 import type { FleetDeployment } from '../src/lib/deployments';
-import type { DeploymentState } from '../src/lib/deployment-vocabulary';
 import {
   attentionReason,
   deriveHomeState,
-  firstDeploymentCopy,
   isApplicationReady,
-  preparationChecks,
+  nextSteps,
+  onboardingSteps,
+  OVERVIEW_METRIC_HREFS,
   primaryApplication,
-  sortForHomepage,
   summarise,
+  type HomeState,
+  type OverviewSummary,
 } from '../src/lib/home-state';
 
 function application(overrides: Partial<Application> = {}): Application {
@@ -111,53 +114,6 @@ describe('attentionReason', () => {
   });
 });
 
-describe('summarise', () => {
-  it('counts each deployment exactly once, attention first', () => {
-    const summary = summarise([
-      deployment({ id: 'a' }),
-      deployment({ id: 'b', state: 'UPDATE_AVAILABLE' }),
-      deployment({ id: 'c', state: 'FAILED' }),
-      deployment({ id: 'd', state: 'INSTALLING' }),
-      deployment({ id: 'e', state: 'NOT_INSTALLED' }),
-      deployment({ id: 'g', state: 'WAITING_FOR_RELAY' }),
-      // Unhealthy but still in the HEALTHY state: counted as attention, not healthy.
-      deployment({ id: 'f', healthStatus: 'UNHEALTHY' }),
-    ]);
-    // WAITING_FOR_RELAY counts as deploying (setting up), not waiting — the
-    // connector is already being created in the customer's account.
-    expect(summary).toEqual({ total: 7, healthy: 1, attention: 2, deploying: 2, waiting: 1, updates: 1 });
-  });
-});
-
-describe('sortForHomepage', () => {
-  it('puts problems first, then in-flight, then waiting, then the rest', () => {
-    const rows = sortForHomepage([
-      deployment({ id: 'healthy' }),
-      deployment({ id: 'waiting', state: 'NOT_INSTALLED' }),
-      deployment({ id: 'waiting-relay', state: 'WAITING_FOR_RELAY' }),
-      deployment({ id: 'failed', state: 'FAILED' }),
-      deployment({ id: 'installing', state: 'INSTALLING' }),
-    ]);
-    // WAITING_FOR_RELAY ranks with in-flight installs (setting up), ahead of
-    // a deployment nobody has installed yet.
-    expect(rows.map((row) => row.id)).toEqual([
-      'failed',
-      'waiting-relay',
-      'installing',
-      'waiting',
-      'healthy',
-    ]);
-  });
-
-  it('breaks ties by most recently updated', () => {
-    const rows = sortForHomepage([
-      deployment({ id: 'older', updatedAt: '2026-08-01T00:00:00.000Z' }),
-      deployment({ id: 'newer', updatedAt: '2026-08-02T00:00:00.000Z' }),
-    ]);
-    expect(rows.map((row) => row.id)).toEqual(['newer', 'older']);
-  });
-});
-
 describe('isApplicationReady / primaryApplication', () => {
   it('requires both a finished analysis and a READY verdict', () => {
     expect(isApplicationReady(application())).toBe(true);
@@ -189,97 +145,167 @@ describe('isApplicationReady / primaryApplication', () => {
   });
 });
 
-describe('preparationChecks', () => {
-  it('reports nothing as detected while analysis is still running', () => {
-    const checks = preparationChecks(
-      application({ analysisStatus: 'ANALYZING', compatibilityStatus: null }),
-    );
-    expect(checks.map((check) => check.state)).toEqual([
-      'complete',
-      'pending',
-      'pending',
-      'pending',
-      'pending',
+describe('summarise', () => {
+  it('counts each deployment exactly once, in the four Overview metrics', () => {
+    const summary = summarise([
+      deployment({ id: 'a' }),
+      deployment({ id: 'b', state: 'UPDATE_AVAILABLE' }),
+      deployment({ id: 'c', state: 'FAILED' }),
+      deployment({ id: 'd', state: 'INSTALLING' }),
+      deployment({ id: 'e', state: 'NOT_INSTALLED' }),
+      deployment({ id: 'g', state: 'WAITING_FOR_RELAY' }),
+      // Unhealthy but still in the HEALTHY state: counted as attention, not live.
+      deployment({ id: 'f', healthStatus: 'UNHEALTHY' }),
+    ]);
+    // A live deployment with an update available is still live; WAITING_FOR_RELAY
+    // is deploying — the customer already approved the connector.
+    expect(summary).toEqual({ live: 2, attention: 2, deploying: 2, awaiting: 1 });
+  });
+
+  it('counts a recovered deployment as live: an earlier failed attempt is history', () => {
+    // The API clears `failure` once a later attempt succeeds; only the
+    // current state and health decide.
+    const recovered = deployment({ attemptNumber: 3, deploymentStatus: { failure: null } } as never);
+    expect(summarise([recovered])).toEqual({ live: 1, attention: 0, deploying: 0, awaiting: 0 });
+  });
+
+  it('counts a state this build does not know as attention, never as live', () => {
+    const unknown = deployment({ state: 'SOMETHING_NEW' as FleetDeployment['state'] });
+    expect(summarise([unknown]).attention).toBe(1);
+  });
+});
+
+// Every metric links to a filtered Deployments view. The count must equal the
+// rows that view shows, for every state and attention overlay.
+describe('Overview metrics agree with their filtered Deployments views', () => {
+  const fleet: FleetDeployment[] = [
+    ...DEPLOYMENT_STATES.filter((state) => state !== 'DELETED').map((state) =>
+      deployment({ id: `state-${state}`, state }),
+    ),
+    deployment({ id: 'lost', relayStatus: 'DISCONNECTED' }),
+    deployment({ id: 'degraded', state: 'UPDATE_AVAILABLE', healthStatus: 'DEGRADED' }),
+    deployment({ id: 'unknown-health', healthStatus: 'UNKNOWN' }),
+    deployment({ id: 'day-two', deploymentStatus: { failure: { message: 'x' } } } as never),
+  ];
+  const summary = summarise(fleet);
+
+  it.each(Object.keys(OVERVIEW_METRIC_HREFS) as (keyof OverviewSummary)[])('%s', (metric) => {
+    const query = parseDeploymentQuery(new URL(OVERVIEW_METRIC_HREFS[metric], 'https://x').searchParams);
+    expect(query.status).not.toBeNull();
+    expect(filterDeployments(fleet, query)).toHaveLength(summary[metric]);
+  });
+
+  it('covers the whole active fleet', () => {
+    const total = summary.live + summary.attention + summary.deploying + summary.awaiting;
+    expect(total).toBe(fleet.length);
+  });
+});
+
+describe('onboardingSteps', () => {
+  const states = (app: Application | null) => onboardingSteps(app).map((step) => step.state);
+  const actions = (app: Application | null) =>
+    onboardingSteps(app).flatMap((step) => (step.action === null ? [] : [step.action]));
+
+  it('a new workspace starts at Add application, with only that action', () => {
+    expect(states(null)).toEqual(['current', 'upcoming', 'upcoming']);
+    expect(actions(null)).toEqual([{ label: 'Add application', href: '/dashboard/applications' }]);
+  });
+
+  it('never reports configuration as done while the analysis is running', () => {
+    const analysing = application({ analysisStatus: 'ANALYZING', compatibilityStatus: null });
+    expect(states(analysing)).toEqual(['complete', 'current', 'upcoming']);
+    expect(onboardingSteps(analysing)[1]?.detail).toBe('Analyzing MyApp…');
+    expect(actions(analysing)).toEqual([{ label: 'View application', href: '/dashboard/applications/app-1' }]);
+  });
+
+  it('routes required changes to the configuration and a failed analysis to the application', () => {
+    expect(actions(application({ compatibilityStatus: 'NEEDS_ATTENTION' }))).toEqual([
+      { label: 'Review configuration', href: '/dashboard/applications/app-1/config#required-changes' },
+    ]);
+    expect(actions(application({ analysisStatus: 'FAILED', compatibilityStatus: null }))).toEqual([
+      { label: 'Review application', href: '/dashboard/applications/app-1' },
     ]);
   });
 
-  it('reports the values the analyser actually persisted', () => {
-    const checks = preparationChecks(application());
-    expect(checks).toEqual([
-      { label: 'Repository connected', detail: 'acme/myapp', state: 'complete' },
-      { label: 'Runtime detected', detail: 'Docker', state: 'complete' },
-      { label: 'Database detected', detail: 'PostgreSQL', state: 'complete' },
-      { label: 'Health endpoint detected', detail: '/healthz', state: 'complete' },
-      { label: 'Preparing deployment setup', detail: null, state: 'complete' },
+  it('a ready application guides the vendor to the first deployment', () => {
+    expect(states(application())).toEqual(['complete', 'complete', 'current']);
+    expect(actions(application())).toEqual([
+      { label: 'Create deployment', href: '/dashboard/deployments/new?applicationId=app-1' },
+    ]);
+  });
+});
+
+describe('nextSteps', () => {
+  function steps(deployments: FleetDeployment[], applications: Application[] = [application()]) {
+    return nextSteps({ deployments, applications, summary: summarise(deployments) });
+  }
+
+  it('is empty when everything is live, and hides zero counts', () => {
+    expect(steps([deployment({ id: 'a' }), deployment({ id: 'b' })])).toEqual([]);
+  });
+
+  it('does not treat normal in-progress deployments as tasks', () => {
+    expect(
+      steps([deployment({ id: 'a', state: 'INSTALLING' }), deployment({ id: 'b', state: 'UPDATING' })]),
+    ).toEqual([]);
+  });
+
+  it('groups every deployment that needs attention into one row', () => {
+    const fleet = Array.from({ length: 6 }, (_, i) => deployment({ id: `f-${i}`, state: 'FAILED' }));
+    expect(steps(fleet)).toEqual([
+      {
+        id: 'attention',
+        title: '6 deployments need attention',
+        action: { label: 'Review deployments', href: '/dashboard/deployments?status=attention' },
+      },
+    ]);
+    expect(steps(fleet.slice(0, 1))[0]?.title).toBe('1 deployment needs attention');
+  });
+
+  it('counts customers, not deployments, that have not completed setup', () => {
+    const result = steps([
+      deployment({ id: 'a', customerId: 'c-1', state: 'NOT_INSTALLED' }),
+      deployment({ id: 'b', customerId: 'c-1', state: 'NOT_INSTALLED' }),
+    ]);
+    expect(result).toEqual([
+      {
+        id: 'awaiting-customer',
+        title: '1 customer hasn’t completed setup',
+        action: { label: 'View pending setups', href: '/dashboard/deployments?status=waiting' },
+      },
     ]);
   });
 
-  it('marks undetected things missing rather than inventing them, and reports no-DB as not required', () => {
-    const checks = preparationChecks(
-      application({ detectedMetadata: {}, databaseRequired: false, healthPath: null }),
+  it('adds an application task only when no application can be deployed', () => {
+    const fleet = [deployment()];
+    const blocked = application({ compatibilityStatus: 'NEEDS_ATTENTION' });
+    expect(steps(fleet, [blocked]).map((step) => step.id)).toEqual(['configuration']);
+    expect(steps(fleet, [blocked, application({ id: 'ok' })])).toEqual([]);
+    // A running analysis is not a task yet.
+    expect(steps(fleet, [application({ analysisStatus: 'ANALYZING', compatibilityStatus: null })])).toEqual([]);
+  });
+
+  it('orders the rows by urgency and shows at most three', () => {
+    const result = steps(
+      [
+        deployment({ id: 'a', state: 'NOT_INSTALLED', customerId: 'c-2' }),
+        deployment({ id: 'b', state: 'FAILED' }),
+      ],
+      [application({ compatibilityStatus: 'NOT_COMPATIBLE' })],
     );
-    // Runtime (no Dockerfile) and Health (no healthPath) are genuinely
-    // missing; a database the app does not use is a complete "Not required"
-    // state, not a missing detection.
-    expect(checks.slice(1, 4).map((check) => check.state)).toEqual([
-      'missing',
-      'complete',
-      'missing',
-    ]);
-    expect(checks[2]).toEqual({
-      label: 'Database detected',
-      detail: 'Not required',
-      state: 'complete',
-    });
+    expect(result.map((step) => step.id)).toEqual(['attention', 'awaiting-customer', 'configuration']);
   });
 });
 
 describe('deriveHomeState', () => {
-  it('A — no application at all', () => {
-    expect(deriveHomeState({ applications: [], deployments: [] })).toEqual({ kind: 'setup' });
-  });
+  function overview(home: HomeState) {
+    if (home.kind !== 'overview') throw new Error(`expected overview, got ${home.kind}`);
+    return home;
+  }
 
-  it('B — an application that is not ready yet', () => {
-    const state = deriveHomeState({
-      applications: [application({ analysisStatus: 'ANALYZING', compatibilityStatus: null })],
-      deployments: [],
-    });
-    expect(state.kind).toBe('preparing');
-  });
-
-  it('C — a ready application with no deployments', () => {
-    const state = deriveHomeState({ applications: [application()], deployments: [] });
-    expect(state.kind).toBe('ready');
-  });
-
-  it('D — a single deployment that is still being set up', () => {
-    for (const state of [
-      'NOT_INSTALLED',
-      'WAITING_FOR_RELAY',
-      'INSTALLING',
-    ] satisfies DeploymentState[]) {
-      const home = deriveHomeState({
-        applications: [application()],
-        deployments: [deployment({ state })],
-      });
-      expect(home.kind).toBe('first-deployment');
-    }
-  });
-
-  it('E — a single deployment that is past setup', () => {
-    const home = deriveHomeState({
-      applications: [application()],
-      deployments: [deployment()],
-    });
-    expect(home.kind).toBe('operational');
-  });
-
-  it('E — deployments win over an application that is still being prepared', () => {
-    const home = deriveHomeState({
-      applications: [application({ analysisStatus: 'ANALYZING', compatibilityStatus: null })],
-      deployments: [deployment({ id: 'a' }), deployment({ id: 'b' })],
-    });
-    expect(home.kind).toBe('operational');
+  it('shows the onboarding checklist until a customer deployment exists', () => {
+    expect(deriveHomeState({ applications: [], deployments: [] }).kind).toBe('onboarding');
+    expect(deriveHomeState({ applications: [application()], deployments: [] }).kind).toBe('onboarding');
   });
 
   it('ignores deleted deployments entirely', () => {
@@ -290,46 +316,66 @@ describe('deriveHomeState', () => {
         deployment({ id: 'also-gone', deletedAt: '2026-08-03T00:00:00.000Z' }),
       ],
     });
-    expect(home.kind).toBe('ready');
+    expect(home.kind).toBe('onboarding');
   });
 
-  it('surfaces attention items and only names applications when there are several', () => {
-    const home = deriveHomeState({
-      applications: [application()],
-      deployments: [
-        deployment({ id: 'ok' }),
-        deployment({ id: 'bad', state: 'FAILED' }),
-        deployment({ id: 'other-app', applicationId: 'app-2' }),
-      ],
-    });
-    if (home.kind !== 'operational') throw new Error(`expected operational, got ${home.kind}`);
-    expect(home.attention.map((item) => item.deployment.id)).toEqual(['bad']);
-    expect(home.attention[0]?.reason).toBe('Deployment failed');
-    expect(home.showApplication).toBe(true);
-    expect(home.deployments[0]?.id).toBe('bad');
-  });
-});
-
-// The homepage's single-deployment card. Telling a vendor to send a link the
-// customer has already used reads as if their install never started — the
-// canary saw exactly that while the connector stack was being created.
-describe('firstDeploymentCopy', () => {
-  it('asks the vendor to send the link only before the customer opens it', () => {
-    const copy = firstDeploymentCopy({ state: 'NOT_INSTALLED', customerName: 'Acme' });
-    expect(copy.title).toBe('Waiting for Acme to install');
-    expect(copy.body).toContain('install link');
-  });
-
-  it('says the customer approved the setup once the connector is being created', () => {
-    const copy = firstDeploymentCopy({ state: 'WAITING_FOR_RELAY', customerName: 'Acme' });
-    expect(copy.title).toContain('Connecting');
-    expect(copy.body).not.toContain('install link');
-    expect(copy.body).toContain('Approved');
-  });
-
-  it('falls back to deploying for every state past the connector', () => {
-    for (const state of ['INSTALLING', 'HEALTHY', 'UPDATE_AVAILABLE'] as const) {
-      expect(firstDeploymentCopy({ state, customerName: 'Acme' }).title).toBe('Deploying Acme');
+  it('switches to the overview at the first deployment, whatever its state', () => {
+    for (const state of ['NOT_INSTALLED', 'INSTALLING', 'HEALTHY'] as const) {
+      expect(deriveHomeState({ applications: [application()], deployments: [deployment({ state })] }).kind).toBe(
+        'overview',
+      );
     }
   });
+
+  it('claims all healthy only when every deployment is live and reports HEALTHY', () => {
+    const healthy = overview(
+      deriveHomeState({
+        applications: [application()],
+        deployments: [deployment({ id: 'a' }), deployment({ id: 'b', state: 'UPDATE_AVAILABLE' })],
+      }),
+    );
+    expect(healthy.allHealthy).toBe(true);
+    expect(healthy.nextSteps).toEqual([]);
+
+    const installing = overview(
+      deriveHomeState({
+        applications: [application()],
+        deployments: [deployment({ id: 'a' }), deployment({ id: 'b', state: 'INSTALLING' })],
+      }),
+    );
+    expect(installing.allHealthy).toBe(false);
+    expect(installing.nextSteps).toEqual([]);
+  });
+
+  it('never claims health a deployment has not reported', () => {
+    const home = overview(
+      deriveHomeState({
+        applications: [application()],
+        deployments: [deployment({ id: 'a' }), deployment({ id: 'b', healthStatus: 'UNKNOWN' })],
+      }),
+    );
+    expect(home.summary.live).toBe(2);
+    expect(home.healthUnknown).toBe(1);
+    expect(home.allHealthy).toBe(false);
+  });
+
+  it('keeps checking back quickly only while something is being set up', () => {
+    const analysing = deriveHomeState({
+      applications: [application({ analysisStatus: 'ANALYZING', compatibilityStatus: null })],
+      deployments: [],
+    });
+    expect(analysing.settled).toBe(false);
+    expect(deriveHomeState({ applications: [application()], deployments: [] }).settled).toBe(true);
+    expect(
+      deriveHomeState({ applications: [application()], deployments: [deployment({ state: 'INSTALLING' })] })
+        .settled,
+    ).toBe(false);
+    expect(
+      deriveHomeState({
+        applications: [application()],
+        deployments: [deployment({ id: 'a', state: 'INSTALLING' }), deployment({ id: 'b' })],
+      }).settled,
+    ).toBe(true);
+  });
 });
+

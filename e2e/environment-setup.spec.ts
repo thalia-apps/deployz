@@ -209,7 +209,7 @@ test('vendor configures a customer-provided secret, publishes an install link, a
   const licenseOverride = configBody.customerOverrides.find((entry) => entry.key === 'LICENSE_KEY');
   expect(licenseOverride).toMatchObject({ isSecret: true, value: null });
 
-  await page.goto(`/dashboard/applications/${application.id}/config?customer=${customerId}`);
+  await page.goto(`/dashboard/applications/${application.id}/config?customer=${customerId}#environment-variables`);
   const configPageText = await page.locator('body').innerText();
   expect(configPageText).not.toContain(secretValue);
 

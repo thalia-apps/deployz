@@ -8,6 +8,10 @@ import { resolveHostRoute } from '@/lib/host-routing';
 // they must be present as build arguments, not deployment env vars.
 const MARKETING_HOST = process.env.NEXT_PUBLIC_MARKETING_HOST;
 const APP_HOST = process.env.NEXT_PUBLIC_APP_HOST;
+// Must equal the API's COOKIE_PREFIX, or this looks for a cookie name the API
+// never sets. `|| undefined` is load-bearing: the build passes an empty string
+// for production, and an empty prefix breaks the cookie lookup.
+const COOKIE_PREFIX = process.env.NEXT_PUBLIC_COOKIE_PREFIX || undefined;
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -47,7 +51,7 @@ export function middleware(request: NextRequest) {
   // layout's redirect-to-/sign-in on an invalid session.
   if (
     (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) &&
-    !getSessionCookie(request)
+    !getSessionCookie(request, COOKIE_PREFIX ? { cookiePrefix: COOKIE_PREFIX } : undefined)
   ) {
     const signIn = request.nextUrl.clone();
     signIn.pathname = '/sign-in';

@@ -96,13 +96,13 @@ describe('filterDeployments', () => {
   });
 
   it.each([
-    ['healthy', ['healthy', 'healthy-new']],
+    ['healthy', ['healthy', 'healthy-new', 'update']],
     ['in-progress', ['progress']],
     ['attention', ['failed', 'lost']],
     ['waiting', ['waiting']],
     ['update-available', ['update']],
     ['removed', ['removed']],
-  ] as const)('the %s status filter keeps exactly its group', (status, expected) => {
+  ] as const)('the %s status filter keeps its group', (status, expected) => {
     expect(ids(filterDeployments(FLEET, { ...NO_FILTERS, status })).sort()).toEqual([...expected].sort());
   });
 
@@ -192,7 +192,7 @@ describe('sortDeployments — user-chosen columns', () => {
 
   it('applies a sort on top of a filter', () => {
     const filtered = filterDeployments(FLEET, { ...NO_FILTERS, status: 'healthy' });
-    expect(ids(sortDeployments(filtered, { key: 'updated', dir: 'asc' }))).toEqual(['healthy', 'healthy-new']);
+    expect(ids(sortDeployments(filtered, { key: 'updated', dir: 'asc' }))).toEqual(['healthy', 'update', 'healthy-new']);
   });
 
   it('does not mutate its input', () => {

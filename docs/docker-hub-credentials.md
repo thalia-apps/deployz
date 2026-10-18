@@ -49,8 +49,11 @@ from the repository variable `DOCKERHUB_SECRET_NAME`, read by
 
 ```bash
 gh variable set DOCKERHUB_SECRET_NAME --body deployz-codebuild
-gh workflow run deploy-api.yml --ref main
+gh workflow run deploy-api.yml --ref main -f environment=production
 ```
+
+The dispatch must name the environment: the input defaults to `staging`, so a
+run without it deploys staging.
 
 For a local `cdk diff -c local=true`, `DOCKERHUB_SECRET_NAME=<name>` in the
 environment or `-c dockerHubSecretName=<name>` has the same effect. With
@@ -62,11 +65,12 @@ a failed login fails every build in `pre_build`:
 
 ```bash
 gh variable delete DOCKERHUB_SECRET_NAME
-gh workflow run deploy-api.yml --ref main
+gh workflow run deploy-api.yml --ref main -f environment=production
 ```
 
-The next deploy removes both environment variables and the Secrets Manager
-statement, and builds return to anonymous pulls. Verified 2026-09-10.
+Name the environment here too, for the same reason. The next deploy removes
+both environment variables and the Secrets Manager statement, and builds
+return to anonymous pulls. Verified 2026-09-10.
 
 > Deploying the control-plane stack from a workstation can revert other
 > production configuration. Read the deploy notes before running it.

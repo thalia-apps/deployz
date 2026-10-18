@@ -14,7 +14,6 @@ import {
   statusGroupRank,
 } from '../src/lib/deployment-status-groups';
 import type { FleetDeployment } from '../src/lib/deployments';
-import { summarise } from '../src/lib/home-state';
 import { fleetDeployment } from './fixtures/fleet-deployment';
 
 function withState(state: string, overrides: Parameters<typeof fleetDeployment>[0] = {}) {
@@ -207,36 +206,4 @@ describe('customerBucket', () => {
   it('has a badge for every bucket', () => {
     for (const bucket of CUSTOMER_BUCKETS) expect(CUSTOMER_BUCKET_BADGE[bucket]).toBeDefined();
   });
-});
-
-// The homepage counts the fleet with its own classification. This pins the two
-// together: the group a deployment sits in on the list is the tile it is
-// counted in on Home, for every state and every attention overlay.
-describe('agreement with the homepage fleet summary', () => {
-  const cases: FleetDeployment[] = [
-    ...DEPLOYMENT_STATES.filter((state) => state !== 'DELETED' && state !== 'DELETING').map((state) =>
-      withState(state),
-    ),
-    withState('HEALTHY', { relayStatus: 'DISCONNECTED' }),
-    withState('UPDATE_AVAILABLE', { healthStatus: 'DEGRADED' }),
-    withState('INSTALLING', { healthStatus: 'UNHEALTHY' }),
-  ];
-
-  it.each(cases.map((d) => [`${d.state}/${d.relayStatus}/${d.healthStatus}`, d] as const))(
-    '%s lands in the same bucket',
-    (_name, d) => {
-      const summary = summarise([d]);
-      const tile =
-        summary.attention > 0
-          ? 'attention'
-          : summary.deploying > 0
-            ? 'in-progress'
-            : summary.waiting > 0
-              ? 'waiting'
-              : summary.updates > 0
-                ? 'update-available'
-                : 'healthy';
-      expect(deploymentDisplayStatus(d).group).toBe(tile);
-    },
-  );
 });

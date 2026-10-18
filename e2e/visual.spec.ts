@@ -365,7 +365,7 @@ test.describe('dashboard visual regression', () => {
     await signUp(page);
     await mockFleet(page, []);
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Get your first customer deployed' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Add application' })).toBeVisible();
     await expect(page).toHaveScreenshot('home-setup.png', {
       mask: [page.getByTestId('org-name'), page.getByTestId('deployment-updated'), page.getByTestId('customer-activity')],
     });
@@ -391,7 +391,7 @@ test.describe('dashboard visual regression', () => {
       }),
     ]);
     await page.goto('/dashboard');
-    await expect(page.getByTestId('fleet-summary')).toBeVisible();
+    await expect(page.getByTestId('overview-summary')).toBeVisible();
     await expect(page).toHaveScreenshot('home-operational.png', {
       mask: [page.getByTestId('org-name'), page.getByTestId('deployment-updated'), page.getByTestId('customer-activity')],
     });
@@ -412,7 +412,7 @@ test.describe('dashboard visual regression', () => {
       }),
     ]);
     await page.goto('/dashboard');
-    await expect(page.getByTestId('fleet-summary')).toContainText('Failed or needs attention');
+    await expect(page.getByTestId('next-steps')).toContainText('1 deployment needs attention');
     await expect(page).toHaveScreenshot('home-attention.png', {
       mask: [page.getByTestId('org-name'), page.getByTestId('deployment-updated'), page.getByTestId('customer-activity')],
     });
@@ -477,7 +477,7 @@ test.describe('dashboard visual regression', () => {
       }),
     ]);
     await page.goto('/dashboard');
-    await expect(page.getByTestId('fleet-summary')).toBeVisible();
+    await expect(page.getByTestId('overview-summary')).toBeVisible();
     await expect(page).toHaveScreenshot('home-operational-mobile.png', {
       mask: [page.getByTestId('org-name'), page.getByTestId('deployment-updated'), page.getByTestId('customer-activity')],
     });

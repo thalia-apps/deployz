@@ -13,7 +13,7 @@ import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { getConfig, type ConfigStore, type EffectiveConfigEntry } from './config.js';
-import { getDefaultDeploymentUrl } from './default-https.js';
+import { getDefaultDeploymentUrl, type DefaultHostnameConfig } from './default-https.js';
 import { readEnvironmentSettings } from './environment-setup.js';
 import { ApiError } from './errors.js';
 import { DESIRED_COUNT_PARAMETER, buildInstallParameters } from './install-parameters.js';
@@ -83,6 +83,9 @@ export async function buildRelayConfigEntries(
     customerId: string;
     region: string;
     desiredState: Record<string, unknown> | null;
+    /** The running control plane's prefix and zone for the derived default
+     *  URL (production `d-` / `deployz.dev` when absent). */
+    defaultHostname?: DefaultHostnameConfig;
   },
   store: ConfigStore,
   vault?: PendingSecretVault,
@@ -151,7 +154,7 @@ export async function buildRelayConfigEntries(
   // Precedence: an explicit vendor/customer value (above) always wins over a
   // derived value.
   if (manifest !== null) {
-    const defaultUrl = deployment.id === undefined ? null : getDefaultDeploymentUrl(deployment.id);
+    const defaultUrl = deployment.id === undefined ? null : getDefaultDeploymentUrl(deployment.id, deployment.defaultHostname);
     for (const variable of manifest.environment.variables) {
       if (configured.has(variable.key)) continue;
       const value =

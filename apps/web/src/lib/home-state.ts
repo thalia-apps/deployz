@@ -1,12 +1,12 @@
-// Homepage state derivation. The homepage renders one of five states from
-// the organization's real applications and deployments — there is no separate
-// "homepage" endpoint, and nothing here invents data the backend does not
-// have. Kept pure (no fetching, no React) so it is unit-testable.
+// Homepage (Overview) state derivation. The homepage renders one of two
+// states from the organization's real applications and deployments — there
+// is no separate "homepage" endpoint, and nothing here invents data the
+// backend does not have. Kept pure (no fetching, no React) so it is
+// unit-testable.
 
 import type { Application } from './applications';
-import type { DeploymentState } from './deployment-vocabulary';
+import { deploymentDisplayStatus } from './deployment-status-groups';
 import type { FleetDeployment } from './deployments';
-import { databaseEngineName } from './readiness';
 
 // ── Deployments that need the vendor to act ────────────────────────────────
 
@@ -34,32 +34,37 @@ export function attentionReason(deployment: FleetDeployment): string | null {
   if (!notStarted && deployment.healthStatus === 'UNHEALTHY') return 'Health check failing';
   if (!notStarted && deployment.healthStatus === 'DEGRADED') return 'Health check degraded';
   // The latest day-2 attempt failed while the previous release still serves
-  // (the API only sets this once a later release fails after an earlier one
-  // succeeded — see apps/api/src/deployment-status.ts).
+  // (the API only sets this while the most recent attempt is the failed one —
+  // a later success clears it; see apps/api/src/deployment-status.ts).
   if (deployment.deploymentStatus?.failure) return 'Update failed';
   return null;
 }
 
-/** A deployment that needs the vendor to act, paired with the reason to show. */
-export interface AttentionItem {
-  deployment: FleetDeployment;
-  reason: string;
-}
+// ── Overview summary ───────────────────────────────────────────────────────
 
-// ── Fleet summary ──────────────────────────────────────────────────────────
-
-/** The compact fleet counts shown above the list. Deployment health only. */
-export interface FleetSummary {
-  /** Customer deployments that still exist (deleted ones are excluded). */
-  total: number;
-  healthy: number;
+/**
+ * The four Overview counts. Each is one status group of
+ * lib/deployment-status-groups, so a count always equals the rows its
+ * filtered Deployments view shows.
+ */
+export interface OverviewSummary {
+  /** `status=healthy`: live, including live deployments with an update available. */
+  live: number;
+  /** `status=attention`: failed, unreachable, unhealthy or of unknown status. */
   attention: number;
+  /** `status=in-progress`: setting up, updating or removing. */
   deploying: number;
-  /** Created, but the customer has not installed it yet. */
-  waiting: number;
-  /** A newer READY release exists and can be deployed. */
-  updates: number;
+  /** `status=waiting`: created, but the customer has not installed it yet. */
+  awaiting: number;
 }
+
+/** Each Overview metric's filtered Deployments view. */
+export const OVERVIEW_METRIC_HREFS: Record<keyof OverviewSummary, string> = {
+  live: '/dashboard/deployments?status=healthy',
+  attention: '/dashboard/deployments?status=attention',
+  deploying: '/dashboard/deployments?status=in-progress',
+  awaiting: '/dashboard/deployments?status=waiting',
+};
 
 /** Deployments the vendor still has: deleted ones leave the homepage. */
 function activeDeployments(deployments: FleetDeployment[]): FleetDeployment[] {
@@ -68,62 +73,27 @@ function activeDeployments(deployments: FleetDeployment[]): FleetDeployment[] {
   );
 }
 
-export function summarise(deployments: FleetDeployment[]): FleetSummary {
-  const summary: FleetSummary = {
-    total: deployments.length,
-    healthy: 0,
-    attention: 0,
-    deploying: 0,
-    waiting: 0,
-    updates: 0,
-  };
+export function summarise(deployments: FleetDeployment[]): OverviewSummary {
+  const summary: OverviewSummary = { live: 0, attention: 0, deploying: 0, awaiting: 0 };
   for (const deployment of deployments) {
-    if (attentionReason(deployment) !== null) {
-      summary.attention += 1;
-    } else if (
-      deployment.state === 'INSTALLING' ||
-      deployment.state === 'UPDATING' ||
-      deployment.state === 'WAITING_FOR_RELAY'
-    ) {
-      summary.deploying += 1;
-    } else if (deployment.state === 'NOT_INSTALLED') {
-      summary.waiting += 1;
-    } else if (deployment.state === 'UPDATE_AVAILABLE') {
-      summary.updates += 1;
-    } else if (deployment.state === 'HEALTHY') {
-      summary.healthy += 1;
-    }
+    const { group } = deploymentDisplayStatus(deployment);
+    if (group === 'healthy' || group === 'update-available') summary.live += 1;
+    else if (group === 'attention') summary.attention += 1;
+    else if (group === 'in-progress') summary.deploying += 1;
+    else if (group === 'waiting') summary.awaiting += 1;
   }
   return summary;
 }
 
-/** Actionable first, then in-flight, then waiting, then the rest — newest first inside each group. */
-export function sortForHomepage(deployments: FleetDeployment[]): FleetDeployment[] {
-  return [...deployments].sort((a, b) => {
-    const rankDiff = homeRank(a) - homeRank(b);
-    if (rankDiff !== 0) return rankDiff;
-    return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-  });
-}
-
-function homeRank(deployment: FleetDeployment): number {
-  if (attentionReason(deployment) !== null) return 0;
-  if (
-    deployment.state === 'INSTALLING' ||
-    deployment.state === 'UPDATING' ||
-    deployment.state === 'WAITING_FOR_RELAY'
-  ) {
-    return 1;
-  }
-  if (deployment.state === 'NOT_INSTALLED') return 2;
-  return 3;
-}
-
-// ── Application preparation ────────────────────────────────────────────────
+// ── Applications ───────────────────────────────────────────────────────────
 
 /** An application is deployable once analysis finished and the verdict is READY. */
 export function isApplicationReady(application: Application): boolean {
   return application.analysisStatus === 'COMPLETE' && application.compatibilityStatus === 'READY';
+}
+
+function isAnalysing(application: Application): boolean {
+  return application.analysisStatus === 'PENDING' || application.analysisStatus === 'ANALYZING';
 }
 
 /**
@@ -137,132 +107,204 @@ export function primaryApplication(applications: Application[]): Application | n
   return [...pool].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0] ?? null;
 }
 
-/** One line of the preparation checklist. `detail` is the detected value, when there is one. */
-export interface PreparationCheck {
+/** One link: the single action a step or task offers. */
+export interface HomeAction {
   label: string;
+  href: string;
+}
+
+/** Where the vendor fixes an application whose analysis did not pass. */
+function configurationAction(application: Application): HomeAction {
+  return application.analysisStatus === 'FAILED'
+    ? { label: 'Review application', href: `/dashboard/applications/${application.id}` }
+    : {
+        label: 'Review configuration',
+        href: `/dashboard/applications/${application.id}/config#required-changes`,
+      };
+}
+
+// ── Onboarding checklist ───────────────────────────────────────────────────
+
+export type OnboardingStepState = 'complete' | 'current' | 'upcoming';
+
+export interface OnboardingStep {
+  label: string;
+  state: OnboardingStepState;
+  /** One line about the step, shown only on the current step. */
   detail: string | null;
-  state: 'complete' | 'pending' | 'missing';
+  /** Only the current step carries an action, and only when there is one. */
+  action: HomeAction | null;
 }
 
 /**
- * The preparation checklist, built only from fields the analyser actually
- * persists (§18 detectors backfill the §35 contract columns). While analysis
- * is still running every detection row is pending — an undetected value is
- * never reported as detected.
+ * Add application → Review configuration → Create deployment, from the
+ * application's real analysis state. A step is complete only when the data
+ * says so; nothing is reported as configured while analysis is still running.
  */
-export function preparationChecks(application: Application): PreparationCheck[] {
-  const analysed = application.analysisStatus === 'COMPLETE';
-  const metadata = application.detectedMetadata ?? {};
-
-  return [
-    { label: 'Repository connected', detail: application.repoFullName, state: 'complete' },
-    detectionCheck(
-      'Runtime detected',
-      analysed,
-      metadata['hasDockerfile'] === true ? 'Docker' : null,
-    ),
-    analysed
-      ? {
-          label: 'Database detected',
-          detail: application.databaseRequired ? databaseEngineName(metadata['databaseState']) : 'Not required',
-          state: 'complete',
-        }
-      : { label: 'Database detected', detail: null, state: 'pending' },
-    detectionCheck('Health endpoint detected', analysed, application.healthPath),
-    { label: 'Preparing deployment setup', detail: null, state: analysed ? 'complete' : 'pending' },
+export function onboardingSteps(application: Application | null): OnboardingStep[] {
+  const steps: OnboardingStep[] = [
+    { label: 'Add application', state: 'upcoming', detail: null, action: null },
+    { label: 'Review configuration', state: 'upcoming', detail: null, action: null },
+    { label: 'Create deployment', state: 'upcoming', detail: null, action: null },
   ];
+  let current: number;
+  if (application === null) {
+    current = 0;
+    steps[0] = {
+      ...steps[0]!,
+      detail: 'Connect the GitHub repository you want to deploy.',
+      action: { label: 'Add application', href: '/dashboard/applications' },
+    };
+  } else if (!isApplicationReady(application)) {
+    current = 1;
+    steps[1] = {
+      ...steps[1]!,
+      ...(isAnalysing(application)
+        ? {
+            detail: `Analyzing ${application.name}…`,
+            action: { label: 'View application', href: `/dashboard/applications/${application.id}` },
+          }
+        : {
+            detail:
+              application.analysisStatus === 'FAILED'
+                ? `The analysis of ${application.name} failed.`
+                : `${application.name} needs changes before it can be deployed.`,
+            action: configurationAction(application),
+          }),
+    };
+  } else {
+    current = 2;
+    steps[2] = {
+      ...steps[2]!,
+      detail: `Deploy ${application.name} into a customer's AWS account.`,
+      action: {
+        label: 'Create deployment',
+        href: `/dashboard/deployments/new?applicationId=${application.id}`,
+      },
+    };
+  }
+  return steps.map((step, index) => ({
+    ...step,
+    state: index < current ? 'complete' : index === current ? 'current' : 'upcoming',
+  }));
 }
 
-function detectionCheck(label: string, analysed: boolean, detail: string | null): PreparationCheck {
-  if (!analysed) return { label, detail: null, state: 'pending' };
-  return detail === null
-    ? { label, detail: null, state: 'missing' }
-    : { label, detail, state: 'complete' };
+// ── Next steps ─────────────────────────────────────────────────────────────
+
+export interface NextStep {
+  id: 'attention' | 'awaiting-customer' | 'configuration';
+  title: string;
+  action: HomeAction;
+}
+
+/**
+ * At most three actionable rows, most urgent first. Zero counts are hidden,
+ * and normal in-progress deployments are not tasks. An application task
+ * appears only when it blocks onboarding: no application can be deployed and
+ * none is still being analysed.
+ */
+export function nextSteps(input: {
+  deployments: FleetDeployment[];
+  applications: Application[];
+  summary: OverviewSummary;
+}): NextStep[] {
+  const steps: NextStep[] = [];
+  const { attention } = input.summary;
+  if (attention > 0) {
+    steps.push({
+      id: 'attention',
+      title: attention === 1 ? '1 deployment needs attention' : `${attention} deployments need attention`,
+      action: { label: 'Review deployments', href: OVERVIEW_METRIC_HREFS.attention },
+    });
+  }
+
+  const awaitingCustomers = new Set(
+    input.deployments
+      .filter((deployment) => deploymentDisplayStatus(deployment).group === 'waiting')
+      .map((deployment) => deployment.customerId),
+  ).size;
+  if (awaitingCustomers > 0) {
+    steps.push({
+      id: 'awaiting-customer',
+      title:
+        awaitingCustomers === 1
+          ? '1 customer hasn’t completed setup'
+          : `${awaitingCustomers} customers haven’t completed setup`,
+      action: { label: 'View pending setups', href: OVERVIEW_METRIC_HREFS.awaiting },
+    });
+  }
+
+  const blocked =
+    input.applications.length > 0 &&
+    !input.applications.some((application) => isApplicationReady(application) || isAnalysing(application));
+  const application = blocked ? primaryApplication(input.applications) : null;
+  if (application !== null) {
+    steps.push({
+      id: 'configuration',
+      title: `${application.name} can’t be deployed to new customers`,
+      action: configurationAction(application),
+    });
+  }
+
+  return steps.slice(0, 3);
 }
 
 // ── The homepage state ─────────────────────────────────────────────────────
 
 export type HomeState =
-  /** A — nothing connected yet. */
-  | { kind: 'setup' }
-  /** B — an application exists, but it is not ready to deploy yet. */
-  | { kind: 'preparing'; application: Application }
-  /** C — ready to deploy, no customer deployment yet. */
-  | { kind: 'ready'; application: Application }
-  /** D — the organization's only deployment is still being set up. */
-  | { kind: 'first-deployment'; deployment: FleetDeployment }
-  /** E — the operational fleet view. */
+  /** No customer deployment yet: the onboarding checklist. */
   | {
-      kind: 'operational';
-      deployments: FleetDeployment[];
-      summary: FleetSummary;
-      attention: AttentionItem[];
-      /** Only worth naming the application when the org has more than one. */
-      showApplication: boolean;
+      kind: 'onboarding';
+      steps: OnboardingStep[];
+      /** False while an analysis is running, so the page checks back sooner. */
+      settled: boolean;
+    }
+  /** At least one customer deployment: the summary and next steps. */
+  | {
+      kind: 'overview';
+      summary: OverviewSummary;
+      nextSteps: NextStep[];
+      /** Live deployments whose health has not been reported yet. */
+      healthUnknown: number;
+      /** True only when every deployment is live and reports HEALTHY. */
+      allHealthy: boolean;
+      /** False while the organization's only deployment is still being set up. */
+      settled: boolean;
     };
-
-/**
- * Headline and supporting line for the homepage's single-deployment card.
- *
- * The three cases are three different asks. NOT_INSTALLED is the only one
- * where the vendor still has to send the link; once the customer has opened
- * it and approved the stack the deployment is WAITING_FOR_RELAY, and telling
- * the vendor to send a link they already sent reads as if nothing happened
- * (observed on a live install whose connector was already being created).
- */
-export function firstDeploymentCopy(input: {
-  state: DeploymentState;
-  customerName: string;
-}): { title: string; body: string } {
-  if (input.state === 'NOT_INSTALLED') {
-    return {
-      title: `Waiting for ${input.customerName} to install`,
-      body: 'Send them the install link.',
-    };
-  }
-  if (input.state === 'WAITING_FOR_RELAY') {
-    return {
-      title: `Connecting ${input.customerName}'s AWS account`,
-      body: 'Approved. AWS is creating the Deployz connector.',
-    };
-  }
-  return {
-    title: `Deploying ${input.customerName}`,
-    body: 'Setting up in the customer’s AWS account.',
-  };
-}
 
 export function deriveHomeState(input: {
   applications: Application[];
   deployments: FleetDeployment[];
 }): HomeState {
-  const deployments = sortForHomepage(activeDeployments(input.deployments));
+  const deployments = activeDeployments(input.deployments);
 
   if (deployments.length === 0) {
     const application = primaryApplication(input.applications);
-    if (application === null) return { kind: 'setup' };
-    return isApplicationReady(application)
-      ? { kind: 'ready', application }
-      : { kind: 'preparing', application };
+    return {
+      kind: 'onboarding',
+      steps: onboardingSteps(application),
+      settled: application === null || !isAnalysing(application),
+    };
   }
 
+  const summary = summarise(deployments);
+  const healthUnknown = deployments.filter((deployment) => {
+    const { group } = deploymentDisplayStatus(deployment);
+    return (group === 'healthy' || group === 'update-available') && deployment.healthStatus !== 'HEALTHY';
+  }).length;
   const only = deployments.length === 1 ? deployments[0]! : null;
-  if (
-    only !== null &&
-    (only.state === 'NOT_INSTALLED' ||
-      only.state === 'WAITING_FOR_RELAY' ||
-      only.state === 'INSTALLING')
-  ) {
-    return { kind: 'first-deployment', deployment: only };
-  }
 
   return {
-    kind: 'operational',
-    deployments,
-    summary: summarise(deployments),
-    attention: deployments
-      .map((deployment) => ({ deployment, reason: attentionReason(deployment) }))
-      .filter((item): item is AttentionItem => item.reason !== null),
-    showApplication: new Set(deployments.map((deployment) => deployment.applicationId)).size > 1,
+    kind: 'overview',
+    summary,
+    nextSteps: nextSteps({ deployments, applications: input.applications, summary }),
+    healthUnknown,
+    allHealthy: summary.live === deployments.length && healthUnknown === 0,
+    settled: !(
+      only !== null &&
+      (only.state === 'NOT_INSTALLED' ||
+        only.state === 'WAITING_FOR_RELAY' ||
+        only.state === 'INSTALLING')
+    ),
   };
 }

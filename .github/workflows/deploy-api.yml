@@ -6,56 +6,91 @@
 # against an API several releases behind and expected fields it could not
 # return.
 #
-# The deploying identity only assumes the CDK bootstrap roles — it holds no
-# raw service permissions of its own. See .github/aws-cdk-deploy-policy.json.
+# The deploying identity is one IAM role for each GitHub Environment, assumed
+# with OIDC. It assumes the CDK bootstrap roles and publishes the bootstrap
+# templates — it holds no raw service permissions of its own. See
+# .github/aws/github-oidc.yaml.
+#
+# .github/workflows/release.yml calls this workflow and gives it the
+# environment and the commit to deploy. A direct workflow_dispatch run is the
+# per-service path: a rollback, or a new staging deploy of this service alone.
 name: Deploy API
 
 on:
-  # After the CI workflow succeeds for a push to main (a pull-request CI run
-  # has the PR branch as head_branch and is filtered out). The gate job
-  # below checks the commit is still the tip of main and touches a runtime
+  # release.yml calls this workflow once for each stage it releases. The gate
+  # job below checks the commit is still the tip of main and touches a runtime
   # dependency of the API before anything deploys.
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
+    inputs:
+      environment:
+        description: The GitHub Environment to deploy
+        type: string
+        required: true
+      sha:
+        description: The commit to deploy
+        type: string
+        required: true
+  # The per-service path. staging is the default on purpose: an operator who
+  # forgets the flag must get staging, not production.
   workflow_dispatch:
-
-# One deployment at a time. Two overlapping `cdk deploy` runs against the same
-# stack leave CloudFormation in UPDATE_IN_PROGRESS and the second one fails.
-concurrency:
-  group: deploy-api
-  cancel-in-progress: false
+    inputs:
+      environment:
+        description: The GitHub Environment to deploy
+        type: choice
+        default: staging
+        options: [staging, production]
+      sha:
+        description: The commit to deploy. Empty deploys the tip of the chosen ref.
+        type: string
+        required: false
+        default: ''
 
 jobs:
   # Deploys only a commit that CI has proven on main, and only while it is
   # still the tip of main (an older run must not deploy over a newer one).
   # The path filter is the runtime dependency closure of the service, so a
   # change to a package it bundles redeploys it even when nothing under its
-  # own directory changed. A manual run always deploys the checked-out ref.
+  # own directory changed. A manual run always deploys the requested commit.
   gate:
     name: Check the commit
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     outputs:
       deploy: ${{ steps.decide.outputs.deploy }}
       sha: ${{ steps.decide.outputs.sha }}
+      tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
 
       - name: Decide
         id: decide
         env:
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # workflow_call declares sha as required, so the fallback fires only
+          # on a dispatch with no sha. There github.sha is the tip of the
+          # chosen ref, which is what that input promises.
+          SHA: ${{ inputs.sha || github.sha }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          # A release.yml dispatch is still a manual run: the github context
+          # inside a called workflow is the caller's.
           MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
           PATHS: apps/api/* packages/cdk/* packages/db/* packages/contracts/* packages/analysis/* packages/infrastructure-compiler/* packages/relay/* packages/copy-map/* pnpm-lock.yaml .github/workflows/deploy-api.yml
         run: |
           set -euo pipefail
+          # Production keeps the original repository-wide tag name. Every other
+          # stage carries its own name. Both refs can exist together, because
+          # `deployed/staging/api` adds a directory beside the file
+          # `deployed/api`. The reverse shape `deployed/api/staging` is not
+          # possible.
+          if [ "$ENVIRONMENT" = "production" ]; then
+            tag="deployed/api"
+          else
+            tag="deployed/$ENVIRONMENT/api"
+          fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           if [ "$MANUAL" = "true" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -66,13 +101,14 @@ jobs:
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Compare against the last successful deploy (the deployed/api tag),
-          # so a change whose own run was skipped is picked up by the next
-          # one. Without the tag (first run) the commit's own diff decides.
-          if git fetch -q origin "refs/tags/deployed/api:refs/tags/deployed/api" 2>/dev/null; then
-            base=$(git rev-parse "refs/tags/deployed/api")
+          # Compare against the last successful deploy of this environment
+          # (the tag above), so a change whose own run was skipped is picked up
+          # by the next one. Without the tag (first run) the commit's own diff
+          # decides.
+          if git fetch -q origin "refs/tags/$tag:refs/tags/$tag" 2>/dev/null; then
+            base=$(git rev-parse "refs/tags/$tag")
           else
-            echo "::notice::No deployed/api tag yet; deploying this commit."
+            echo "::notice::No $tag tag yet; deploying this commit."
             echo "deploy=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -100,39 +136,74 @@ jobs:
     needs: gate
     if: needs.gate.outputs.deploy == 'true'
     runs-on: ubuntu-latest
-    # contents: write moves the deployed/api tag after a successful deploy.
+    # One deployment at a time for each environment. Two overlapping
+    # `cdk deploy` runs against the same stack leave CloudFormation in
+    # UPDATE_IN_PROGRESS and the second one fails. The group carries the
+    # environment, so a staging deploy no longer waits for a production
+    # deploy. cancel-in-progress stays false: GitHub cancels the RUNNING
+    # member of the group, which is the one thing that must never happen in
+    # the middle of a deploy.
+    concurrency:
+      group: deploy-${{ inputs.environment }}-api
+      cancel-in-progress: false
+    # contents: write moves the deploy tag after a successful deploy.
+    # id-token: write lets the job ask GitHub for the OIDC token it assumes
+    # the AWS deploy role with.
     permissions:
       contents: write
+      id-token: write
+    # Every environment-specific value below comes from this GitHub
+    # Environment. A job without this key resolves only repository values, so
+    # the Environment variables would arrive empty.
+    environment: ${{ inputs.environment }}
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # The role this job assumes with OIDC (.github/aws/github-oidc.yaml).
+      # A variable and not a secret: a role ARN is no credential, and a masked
+      # value would hide which role the run assumed.
+      AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
       AWS_REGION: us-east-1
       CDK_DEFAULT_REGION: us-east-1
       CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      # Selects the stack id and every stage-derived resource name (KMS alias,
+      # ECR repository, template-bucket prefix; packages/cdk/src/stage.ts).
+      DEPLOYZ_STAGE: ${{ vars.DEPLOYZ_STAGE }}
+      # The stage this job is allowed to deploy. It must stay equal to the
+      # job's environment: value above, and both come from the same workflow
+      # input. The stage gate below compares DEPLOYZ_STAGE against it, so an
+      # Environment that carries another stage's values fails.
+      EXPECTED_ENVIRONMENT: ${{ inputs.environment }}
+      # Prefix of the regional template buckets this stage publishes into.
+      # Read by the republish step below; the Lambda's own copy comes from CDK.
+      DEPLOYZ_TEMPLATE_BUCKET_PREFIX: ${{ vars.DEPLOYZ_TEMPLATE_BUCKET_PREFIX }}
 
       # Everything below is read by packages/cdk collectEnvVars() and becomes
       # the deployed Lambda's environment. That function builds the
       # environment from what is present, so a value missing here is REMOVED
       # from the running function rather than left alone — which is why the
       # verification step below refuses to deploy on a missing one.
-      API_URL: https://api.deployz.dev
-      WEB_URL: https://app.deployz.dev
-      MARKETING_URL: https://deployz.dev
-      COOKIE_DOMAIN: .deployz.dev
-      EMAIL_FROM: info@e.deployz.dev
-      API_DOMAIN_NAME: api.deployz.dev
+      API_URL: ${{ vars.API_URL }}
+      WEB_URL: ${{ vars.WEB_URL }}
+      MARKETING_URL: ${{ vars.MARKETING_URL }}
+      COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+      API_DOMAIN_NAME: ${{ vars.API_DOMAIN_NAME }}
       API_CERTIFICATE_ARN: ${{ secrets.API_CERTIFICATE_ARN }}
-      # Cloudflare DNS (Phase 1 runtime config). The deployz.dev zone lives on
-      # Cloudflare, so the API needs the zone id/name plus a scoped edit token
-      # before any default-HTTPS DNS flow can write records. Zone id/name and
-      # hostname prefix are public (hardcoded); the edit token is a secret and
-      # required — the completeness gate below fails the deploy if it is missing.
-      CLOUDFLARE_ZONE_ID: bf69c0d8524ef2c5cfbc6e5d33fb7cae
-      CLOUDFLARE_ZONE_NAME: deployz.dev
-      DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: d-
+      # Optional. It changes the session-cookie name, which keeps another
+      # control plane in the same cookie domain out of this one's session.
+      # Production leaves it empty, so Better Auth keeps its default name.
+      COOKIE_PREFIX: ${{ vars.COOKIE_PREFIX }}
+      # Cloudflare DNS (Phase 1 runtime config). The zone lives on Cloudflare,
+      # so the API needs the zone id/name plus a scoped edit token before any
+      # default-HTTPS DNS flow can write records. Zone id/name and hostname
+      # prefix are public values on the Environment; the edit token is a secret.
+      # All four are required — the completeness gate below fails the deploy on
+      # a missing one.
+      CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      CLOUDFLARE_ZONE_NAME: ${{ vars.CLOUDFLARE_ZONE_NAME }}
+      DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: ${{ vars.DEPLOYZ_DEFAULT_HOSTNAME_PREFIX }}
       CLOUDFLARE_ZONE_EDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_ZONE_EDIT_API_TOKEN }}
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-      BETTER_AUTH_URL: https://api.deployz.dev
+      BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
       GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
       GITHUB_APP_ID: ${{ secrets.GH_APP_ID }}
@@ -211,6 +282,41 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.sha }}
 
+      # The gate checked this before the approval, because the gate declares
+      # no environment. An approval can arrive after a newer merge, so a stale
+      # commit must not deploy. A manual run deploys the sha the operator
+      # chose, so it is not checked.
+      - name: Check the commit is still the tip of main
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+          DEPLOY_SHA: ${{ needs.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$MANUAL" = "true" ]; then
+            echo "A manual run deploys the chosen commit; the tip of main is not checked."
+            exit 0
+          fi
+          # The checkout is shallow and pinned to the commit, so there is no
+          # origin/main to read. ls-remote needs no fetch.
+          tip=$(git ls-remote origin refs/heads/main | cut -f1) || tip=""
+          # An empty answer must not compare equal to a missing tip: a failed
+          # read is no proof that the commit is current.
+          if [ -z "$tip" ]; then
+            problem="the tip of main could not be read, so this run cannot prove the commit is current. Re-run this job."
+          elif [ "$tip" != "$DEPLOY_SHA" ]; then
+            problem="main is now at $tip. Approve the pending run for the newer commit, or dispatch this workflow with sha=$tip."
+          else
+            echo "$DEPLOY_SHA is still the tip of main."
+            exit 0
+          fi
+          echo "::error::$DEPLOY_SHA is not deployed: $problem"
+          {
+            echo "### The commit is no longer the tip of main"
+            echo
+            echo "$DEPLOY_SHA is not deployed: $problem"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
@@ -228,6 +334,8 @@ jobs:
       # EMAIL_FROM stops every invitation being delivered, an unset
       # API_CERTIFICATE_ARN deletes the api.deployz.dev domain mapping and
       # takes the API offline until the Cloudflare CNAME is repointed by hand.
+      # GitHub delivers a variable it does not hold as an empty string, so an
+      # Environment that misses a key fails here.
       - name: Verify the deploy environment is complete
         run: |
           set -euo pipefail
@@ -238,15 +346,123 @@ jobs:
                      GITHUB_APP_INSTALL_URL AWS_SES_ACCESS_KEY_ID \
                      AWS_SES_SECRET_ACCESS_KEY CLOUDFLARE_ZONE_ID \
                      CLOUDFLARE_ZONE_NAME DEPLOYZ_DEFAULT_HOSTNAME_PREFIX \
-                     CLOUDFLARE_ZONE_EDIT_API_TOKEN; do
+                     CLOUDFLARE_ZONE_EDIT_API_TOKEN DEPLOYZ_STAGE API_URL \
+                     WEB_URL MARKETING_URL COOKIE_DOMAIN EMAIL_FROM \
+                     API_DOMAIN_NAME BETTER_AUTH_URL \
+                     DEPLOYZ_TEMPLATE_BUCKET_PREFIX AWS_DEPLOY_ROLE_ARN; do
             if [ -z "${!key:-}" ]; then missing+=("$key"); fi
           done
           if [ ${#missing[@]} -ne 0 ]; then
-            echo "Missing repository secrets for: ${missing[*]}" >&2
+            echo "Missing GitHub Environment values for: ${missing[*]}" >&2
             echo "Deploying without them would remove these values from the running API." >&2
             exit 1
           fi
           echo "Every required value is present."
+
+      # A non-production stage must carry its own name in every host, cookie
+      # and bucket name it owns. A value without the stage name in it can only
+      # belong to another stage, so this is what stops a production host, a
+      # production cookie domain or a production hostname prefix reaching a
+      # staging deploy. Every rule compares the values against each other and
+      # against the stage name: no production value is written in this file, so
+      # there is none here to copy into the wrong Environment.
+      - name: Verify the environment values match the stage
+        run: |
+          set -euo pipefail
+          # Every stage other than production. A third stage is one edit here.
+          OTHER_STAGES="staging"
+          STAGE_OWNED="API_DOMAIN_NAME WEB_URL MARKETING_URL COOKIE_DOMAIN COOKIE_PREFIX DEPLOYZ_TEMPLATE_BUCKET_PREFIX"
+          # Optional values: checked with the same rule, but only when set. An
+          # Environment that declares no value of its own inherits the
+          # repository one, which belongs to production, and the required-key
+          # list cannot catch that because the inherited value is not empty.
+          STAGE_OWNED_IF_SET="BOOTSTRAP_TEMPLATE_URL"
+          problems=()
+
+          if [ "${DEPLOYZ_STAGE}" != "${EXPECTED_ENVIRONMENT}" ]; then
+            problems+=("DEPLOYZ_STAGE is \"${DEPLOYZ_STAGE}\"; this job may deploy only \"${EXPECTED_ENVIRONMENT}\".")
+          fi
+          if [ "${API_URL}" != "https://${API_DOMAIN_NAME}" ]; then
+            problems+=("API_URL must be https:// followed by API_DOMAIN_NAME.")
+          fi
+          if [ "${BETTER_AUTH_URL}" != "${API_URL}" ]; then
+            problems+=("BETTER_AUTH_URL must equal API_URL.")
+          fi
+          case "${API_DOMAIN_NAME}" in
+            *://*|*/*) problems+=("API_DOMAIN_NAME must be a bare hostname, with no scheme and no slash.") ;;
+          esac
+          # WEB_URL and MARKETING_URL reach the Lambda and end up in links sent
+          # to vendors, so a missing scheme or a trailing slash is a live defect.
+          for key in WEB_URL MARKETING_URL; do
+            case "${!key}" in
+              https://*/*) problems+=("$key must carry no path.") ;;
+              https://*) ;;
+              *) problems+=("$key must start with https://.") ;;
+            esac
+          done
+          case "${COOKIE_DOMAIN}" in
+            .*) ;;
+            *) problems+=("COOKIE_DOMAIN must start with a dot.") ;;
+          esac
+          case "${API_DOMAIN_NAME}" in
+            *"${COOKIE_DOMAIN}") ;;
+            *) problems+=("API_DOMAIN_NAME must end with COOKIE_DOMAIN.") ;;
+          esac
+          if ! printf '%s' "${DEPLOYZ_DEFAULT_HOSTNAME_PREFIX}" | grep -Eq '^[a-z0-9]+-$'; then
+            problems+=("DEPLOYZ_DEFAULT_HOSTNAME_PREFIX must be lowercase letters or digits and a trailing dash.")
+          fi
+
+          if [ "${DEPLOYZ_STAGE}" != "production" ]; then
+            for key in $STAGE_OWNED; do
+              case "${!key:-}" in
+                *"${DEPLOYZ_STAGE}"*) ;;
+                *) problems+=("$key must contain the stage name \"${DEPLOYZ_STAGE}\".") ;;
+              esac
+            done
+            for key in $STAGE_OWNED_IF_SET; do
+              if [ -n "${!key:-}" ]; then
+                case "${!key}" in
+                  *"${DEPLOYZ_STAGE}"*) ;;
+                  *) problems+=("$key must contain the stage name \"${DEPLOYZ_STAGE}\"; this value is another stage's, inherited from the repository.") ;;
+                esac
+              fi
+            done
+            # Every control plane in the shared Cloudflare zone must mint its
+            # default hostnames under its own prefix. A stage that keeps
+            # another stage's prefix writes into that stage's DNS namespace.
+            # The rule ties the prefix to the stage name instead of comparing
+            # it with another stage's prefix, so production's prefix stays out
+            # of this file. A later stage whose name starts with the same
+            # letter as production's prefix fails this rule. That is the
+            # intended signal: two control planes in one zone cannot share a
+            # prefix.
+            case "${DEPLOYZ_STAGE}" in
+              "${DEPLOYZ_DEFAULT_HOSTNAME_PREFIX%-}"*) ;;
+              *) problems+=("DEPLOYZ_DEFAULT_HOSTNAME_PREFIX must abbreviate the stage name \"${DEPLOYZ_STAGE}\".") ;;
+            esac
+            if [ "${DEPLOYABLE_AWS_REGIONS:-}" != "${AWS_REGION}" ]; then
+              problems+=("DEPLOYABLE_AWS_REGIONS must be AWS_REGION only outside production.")
+            fi
+          else
+            for key in $STAGE_OWNED $STAGE_OWNED_IF_SET; do
+              for stage in $OTHER_STAGES; do
+                case "${!key:-}" in
+                  *"$stage"*) problems+=("$key must not contain the stage name \"$stage\".") ;;
+                esac
+              done
+            done
+            if [ -n "${COOKIE_PREFIX:-}" ]; then
+              problems+=("COOKIE_PREFIX must be empty in production.")
+            fi
+          fi
+
+          if [ ${#problems[@]} -ne 0 ]; then
+            for problem in "${problems[@]}"; do
+              echo "::error::$problem"
+            done
+            exit 1
+          fi
+          echo "Every value matches the stage."
 
       # Paddle is optional (the sandbox/production catalog from Phase 4 does
       # not exist yet), so it is not in the unconditional gate above — an
@@ -295,14 +511,167 @@ jobs:
           id=$(pnpm --filter @deployz/cdk run --silent bootstrap:build-id)
           echo "Connector build id: ${id}"
           echo "BOOTSTRAP_BUILD_ID=${id}" >> "$GITHUB_ENV"
+      # The deploy holds no long-lived AWS key any more. This step trades the
+      # job's OIDC token for a session on the role the Environment names. The
+      # session lasts two hours, because a long `cdk deploy` must not lose its
+      # credentials in the middle; MaxSessionDuration on the role is the same
+      # value. It runs after the build, so the build spends no session time.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-duration-seconds: 7200
 
+
+      # `--all` instead of a stack name: the app holds exactly one stack, and
+      # its id now comes from DEPLOYZ_STAGE.
+      #
+      # The outputs file holds the regional API domain the next step reads. The
+      # CDK CLI reads the outputs through the bootstrap deploy role, so this
+      # needs no new permission, and it writes the file with the real values
+      # even when the stack has no update. An operator who creates the DNS
+      # record and re-runs the same commit therefore still gets the check below.
       - name: Deploy the control-plane stack
         working-directory: packages/cdk
         run: |
           set -euo pipefail
-          npx cdk deploy Deployz \
+          npx cdk deploy --all \
             --require-approval never \
-            --app "npx tsx bin/deployz.ts"
+            --app "npx tsx bin/deployz.ts" \
+            --outputs-file "$RUNNER_TEMP/cdk-outputs.json"
+
+      # The stack exports the API Gateway regional domain, which is the target
+      # the public API hostname must point at. The output name carries the stack
+      # name, so this matches on the ApiRegionalDomainName suffix instead of a
+      # full key: no stage name and no hostname belongs in this file. The stack
+      # publishes the output only with a custom domain, and a stack with no
+      # output at all is absent from the file, so every unexpected shape fails
+      # here rather than later with a confusing DNS message.
+      - name: Read the API regional domain from the stack outputs
+        id: origin
+        run: |
+          set -euo pipefail
+          OUTPUTS_FILE="$RUNNER_TEMP/cdk-outputs.json" node -e '
+            const fs = require("node:fs");
+            const file = process.env.OUTPUTS_FILE;
+            if (!fs.existsSync(file)) {
+              console.log("::error::The CDK outputs file is missing. The deploy wrote no outputs, so the API origin is unknown.");
+              process.exit(1);
+            }
+            const stacks = JSON.parse(fs.readFileSync(file, "utf8"));
+            const found = [];
+            for (const [stack, outputs] of Object.entries(stacks)) {
+              for (const [key, value] of Object.entries(outputs)) {
+                if (key.endsWith("ApiRegionalDomainName")) found.push([stack + "." + key, value]);
+              }
+            }
+            if (found.length === 0) {
+              console.log("::error::No stack output name ends in ApiRegionalDomainName. The stack publishes this output only when API_DOMAIN_NAME and API_CERTIFICATE_ARN are both set.");
+              process.exit(1);
+            }
+            if (found.length > 1) {
+              console.log("::error::More than one stack output name ends in ApiRegionalDomainName: " + found.map(([key]) => key).join(", ") + ". The deploy cannot select one API origin.");
+              process.exit(1);
+            }
+            const [key, value] = found[0];
+            if (value.trim() === "") {
+              console.log("::error::The stack output " + key + " is empty. The deploy cannot check the DNS record against an empty target.");
+              process.exit(1);
+            }
+            console.log("The API origin comes from " + key + ".");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "target=" + value + "\n");
+          '
+
+      # A first deploy of a new stage creates the custom domain, but nothing
+      # creates the DNS record that sends traffic to it. Without this check the
+      # readiness poll below times out and reports the API as broken, which
+      # hides the real cause.
+      #
+      # The record must be a DNS-only CNAME in every stage, so there is no
+      # stage branch here. Cloudflare sends the origin hostname as SNI on a
+      # proxied record, and the API Gateway domain answers 525 to a name it
+      # does not hold.
+      - name: Verify the API hostname resolves to the deployed API
+        env:
+          TARGET: ${{ steps.origin.outputs.target }}
+        run: |
+          set -euo pipefail
+          target="${TARGET%.}"
+          # A host with no record answers nothing, so an empty target would
+          # compare equal to it and pass a missing record.
+          if [ -z "$target" ]; then
+            echo "::error::The API origin is empty, so there is no target to compare $API_DOMAIN_NAME with."
+            exit 1
+          fi
+          problem=""
+          # dig exits 0 with no output for a name that does not exist, and 9
+          # when it reaches no resolver. Keep the exit code, like the curl
+          # polls above, so a broken resolver cannot look like a missing record.
+          status=0
+          answer=$(dig +short +time=5 +tries=2 CNAME "$API_DOMAIN_NAME" | head -1) || status=$?
+          answer="${answer%.}"
+          if [ "$status" -ne 0 ]; then
+            problem="the runner reached no DNS resolver (dig exit code $status). This is a resolver problem, not a missing record. The record must be a DNS-only CNAME to \"$target\"."
+          elif [ "$answer" = "$target" ]; then
+            echo "$API_DOMAIN_NAME is a CNAME to $target."
+          elif [ -n "$answer" ]; then
+            problem="wrong target: the CNAME answers \"$answer\". The record must be a DNS-only CNAME to \"$target\"."
+          else
+            status=0
+            address=$(dig +short +time=5 +tries=2 A "$API_DOMAIN_NAME" | head -1) || status=$?
+            if [ "$status" -ne 0 ]; then
+              problem="the runner reached no DNS resolver (dig exit code $status). This is a resolver problem, not a missing record. The record must be a DNS-only CNAME to \"$target\"."
+            elif [ -z "$address" ]; then
+              problem="the host does not resolve. Make a DNS-only CNAME record to \"$target\"."
+            else
+              # Cloudflare publishes the addresses that its proxy answers from.
+              # An address in those ranges shows a proxied record. This block
+              # only names what the host answers. The record is already wrong,
+              # so a failed fetch keeps the general wording and the same exit
+              # code.
+              kind="proxied, or it is an A record"
+              ranges=$(curl -fsS --max-time 10 https://www.cloudflare.com/ips-v4) || ranges=""
+              # A 200 answer that is not a list of ranges must not reach the
+              # arithmetic below.
+              ranges=$(printf '%s\n' "$ranges" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$') || ranges=""
+              case "$address" in
+                ""|*[!0-9.]*|.*|*.|*..*|*.*.*.*.*) ;;
+                *.*.*.*)
+                  if [ -n "$ranges" ]; then
+                    kind="an A record to $address, which is in none of the proxy ranges Cloudflare publishes"
+                    IFS=. read -r o1 o2 o3 o4 <<< "$address"
+                    value=$(( (10#$o1 << 24) + (10#$o2 << 16) + (10#$o3 << 8) + 10#$o4 ))
+                    for cidr in $ranges; do
+                      IFS=. read -r b1 b2 b3 b4 <<< "${cidr%/*}"
+                      base=$(( (10#$b1 << 24) + (10#$b2 << 16) + (10#$b3 << 8) + 10#$b4 ))
+                      mask=$(( (0xFFFFFFFF << (32 - 10#${cidr#*/})) & 0xFFFFFFFF ))
+                      if [ $(( value & mask )) -eq $(( base & mask )) ]; then
+                        kind="proxied: $address is in $cidr, which Cloudflare publishes as a proxy range"
+                        break
+                      fi
+                    done
+                  fi
+                  ;;
+              esac
+              problem="the host is $kind. It must be a DNS-only CNAME to \"$target\"."
+            fi
+          fi
+          if [ -n "$problem" ]; then
+            echo "::error::$API_DOMAIN_NAME: $problem"
+            {
+              echo "### The API hostname does not point at the deployed API"
+              echo
+              echo "| Host | Record type | Target |"
+              echo "| --- | --- | --- |"
+              echo "| \`$API_DOMAIN_NAME\` | CNAME | \`$target\` |"
+              echo
+              echo "$API_DOMAIN_NAME: $problem"
+              echo
+              echo "The record must be DNS only (grey cloud). A proxied record answers 525."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       # The stack can report CREATE_COMPLETE while the function itself dies at
       # INIT — a migration that cannot apply does exactly that, and it is how
@@ -312,10 +681,10 @@ jobs:
           set -euo pipefail
           for _ in $(seq 1 20); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-              https://api.deployz.dev/health/ready || true)
+              "$API_URL/health/ready" || true)
             echo "readiness: $code"
             if [ "$code" = "200" ]; then
-              echo "API ready (DB and schema usable) at https://api.deployz.dev" >> "$GITHUB_STEP_SUMMARY"
+              echo "API ready (DB and schema usable) at $API_URL" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             sleep 15
@@ -323,12 +692,13 @@ jobs:
           echo "API did not return 200 after deploying" >&2
           exit 1
 
-      # The gate job compares the next commit against this tag.
+      # The gate job compares the next commit against this tag, which is the
+      # tag for this environment.
       - name: Record the deployed commit
         run: |
           set -euo pipefail
-          git tag -f deployed/api "${{ needs.gate.outputs.sha }}"
-          git push -f origin refs/tags/deployed/api
+          git tag -f "${{ needs.gate.outputs.tag }}" "${{ needs.gate.outputs.sha }}"
+          git push -f origin "refs/tags/${{ needs.gate.outputs.tag }}"
 
       # The relay that drives every install ships inside this template's Lambda
       # assets, and each region serves its own copy from
@@ -337,12 +707,13 @@ jobs:
       # except us-east-1 ran relay code older than the deployed control plane
       # and silently missed relay fixes.
       #
-      # Gated, and OFF until the deploy user can actually publish. The
-      # publisher needs s3:GetBucketLocation, s3:PutObject and
+      # Gated by a repository variable. The publisher needs
+      # s3:GetBucketLocation, s3:PutObject, s3:GetObject and
       # cloudformation:ValidateTemplate on the legacy bucket and on every
-      # deployz-templates-<region> bucket; without them this fails after the
-      # stack has already gone out. Grant those, then set the repository
-      # variable BOOTSTRAP_REPUBLISH to `on`.
+      # <prefix>-<region> bucket; without them this fails after the stack has
+      # already gone out. The deploy role grants them
+      # (.github/aws/github-oidc.yaml), so the variable only decides whether a
+      # stage republishes.
       #
       # Runs AFTER the API verification on purpose: publishing artifacts must
       # never decide whether the API that just went out gets checked.
@@ -376,4 +747,9 @@ jobs:
           bucket="${BOOTSTRAP_TEMPLATE_URL#https://}"
           bucket="${bucket%%.s3.*}"
           echo "Publishing into bucket: ${bucket}"
-          TEMPLATE_BUCKET="${bucket}" pnpm --filter @deployz/cdk run publish:bootstrap
+          # Every region other than us-east-1 publishes into
+          # <prefix>-<region>, so the prefix has to name THIS stage's buckets.
+          # It comes from the Environment, which holds one prefix per stage, so
+          # a staging publish cannot write into production's buckets.
+          TEMPLATE_BUCKET="${bucket}" TEMPLATE_BUCKET_PREFIX="${DEPLOYZ_TEMPLATE_BUCKET_PREFIX}" \
+            pnpm --filter @deployz/cdk run publish:bootstrap

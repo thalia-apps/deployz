@@ -31,9 +31,14 @@ Three decisions with substantial detail have their own files:
 | 2026-10-02 | A pending INSTALL carries command authority; only authorized recovery may recreate a stack ([`pending-command-authority.md`](pending-command-authority.md)) | Active |
 | 2026-10-02 | A migration correction rides the migration seat as a new revision of the same family | Active |
 | 2026-10-02 | A configuration update settles on its rollout; service mutations never overlap | Active |
+| 2026-10-08 | Staging is a second stack in the same account and Cloudflare zone, with the `s-` hostname prefix, and promotion to production needs an approval | Active |
+| 2026-10-09 | Every environment-specific deploy value is a GitHub Environment variable, and the stage gate derives its rules from the stage name | Active |
+| 2026-10-09 | GitHub Actions authenticates to AWS with OIDC and one IAM role for each Environment | Active |
+| 2026-10-09 | One release workflow promotes a commit through staging to production, and the production deploy jobs wait for an approval | Active |
 | 2026-10-10 | A repository with no buildable Dockerfile is NOT_COMPATIBLE when the evidence is complete | Active |
 | 2026-10-10 | An image that runs several supervised application processes (s6-overlay, supervisord) is NOT_COMPATIBLE | Active |
 | 2026-10-12 | A deploy fails closed when the application needs a database or cache that the deployment does not have | Active |
+| 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
 | 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
 
@@ -635,6 +640,197 @@ configured first start at zero tasks are excluded for the same reason.
 
 What would change it: a heartbeat-independent deadline (a scheduled sweep), or
 a window per application size.
+## Staging shares the production account and zone (2026-10-08)
+
+The staging control plane is a second stack of the same CDK app in the
+**same AWS account and Region** as production, and it shares the
+`deployz.dev` Cloudflare zone. A second account and a second zone were
+rejected for the MVP: both add a bootstrap, a billing surface and a
+credential set to operate, for an environment whose only job is to prove a
+change before it reaches customers.
+
+What keeps the two apart is naming, not isolation by account:
+
+- The stage selects the stack id, the config-secret KMS alias, the ECR
+  repository and the prefix of the regional template buckets. Each stage's
+  names are written out, never derived with a suffix, because the KMS key and
+  the ECR repository are retained — a renamed key leaves stored ciphertext
+  unreadable. An unknown stage value fails the synth instead of falling back
+  to production's names.
+- Staging's default hostnames carry the prefix `s-`, so its namespace guard
+  can never write or delete a production `d-` record in the shared zone.
+- Staging has its own `COOKIE_PREFIX`, GitHub App, OAuth app, auth secret and
+  Cloudflare token.
+
+Promotion to production needs an approval: a change is deployed to staging
+first, and a human approves before the same commit reaches production.
+
+What would change it: a staging workload heavy enough to contend with
+production for account-level quota, or a compliance requirement to separate
+non-production data, would need a second account.
+
+
+## Environment values are GitHub Environment variables (2026-10-09)
+
+Both deploy workflows carried production's own values as literals: the API
+host, the dashboard host, the cookie domain, the Cloudflare zone id, the
+default-hostname prefix and the Lightsail service name. A second stage could
+then only be added by copying the file, and a literal left behind would
+deploy a production value into staging — or push a staging image under
+production's service name.
+
+- Every environment-specific value is now a variable on the GitHub
+  Environment that carries the stage's name, and each `deploy` job declares
+  that Environment. A job without `environment:` resolves repository values
+  only, so the declaration is what makes an Environment variable resolve.
+  The key names did not change, so the existing secrets keep resolving.
+- GitHub delivers a variable it does not hold as an empty string, and
+  `collectEnvVars()` replaces the Lambda's whole environment, so a blank
+  value deletes a capability from the running API. Both workflows therefore
+  check every required key before `cdk deploy` and before the image build.
+- The stage gate derives its rules from the stage name: outside production
+  every host, cookie and service name the stage owns must carry the stage
+  name, and production must carry no other stage's name. The rules compare
+  the values against each other and against the stage name, so no production
+  value is written in a workflow file. A production literal in a workflow
+  file is what this change removes, and a rule that named production's values
+  would put one back.
+
+What would change it: a stage whose hosts cannot carry the stage name — a
+separate domain per stage, for example — would need the gate to compare each
+value against a per-Environment expected value instead of the stage name.
+
+
+## GitHub Actions authenticates to AWS with OIDC (2026-10-09)
+
+Both deploy workflows signed in to AWS with one long-lived access key, held as
+a repository secret. The same key deployed every stage, a key that leaks does
+not expire, and one key cannot separate staging from production.
+
+- Each GitHub Environment has its own IAM role, and the `deploy` job assumes
+  it with OIDC (`id-token: write`). The trust policy holds one statement, with
+  `StringEquals` only: the subject must be
+  `repo:thalia-apps@342445206/deployz@1339375286:environment:<name>` and the
+  audience must be `sts.amazonaws.com`. A `StringLike` would also match
+  another Environment. The repository uses GitHub's immutable subject, so the
+  subject carries the owner and repository ids. A repository that someone
+  creates again with the same name gets other ids and no credentials.
+- The role ARN is the Environment variable `AWS_DEPLOY_ROLE_ARN`, not a
+  secret. A role ARN is no credential, and a masked value would hide which
+  role a run assumed. The completeness gate fails a run that misses the value,
+  before any AWS call.
+- `.github/aws/github-oidc.yaml` creates both roles, so the grant is reviewed
+  in this repository instead of edited in the console. The account owner
+  deploys that template by hand, with an admin identity: CI must not be able
+  to widen its own permissions.
+- Each role still holds no raw service permission on the stack. It assumes the
+  CDK bootstrap roles, publishes the template objects of its own stage, and
+  makes the Lightsail calls the web deploy needs.
+
+Two limits stay. Both roles may assume the shared `cdk-hnb659fds-*` bootstrap
+roles, so the staging role could deploy the production stack. The Lightsail
+statement is account-wide, because a container-service ARN carries the service
+id and not the service name and the services carry no tag, so no condition can
+scope it. The live control is the stage gate and the protection rules on the
+`production` Environment. IAM is the second layer here, and it is partial.
+
+What would change it: a second AWS account, the post-MVP fix, would scope each
+stage's role by account. A cheaper partial fix is to tag each container
+service and add an `aws:ResourceTag` condition to the three taggable Lightsail
+actions; that needs the owner to tag the existing production service by hand.
+
+
+## One release workflow promotes a commit through staging to production (2026-10-09)
+
+Both deploy workflows started from the same successful CI run on `main` and
+deployed production directly. There was no promotion rule, and nothing in the
+repository could add one: the `deployed/api` and `deployed/web` tags and the
+`deploy-api` and `deploy-web` concurrency groups were repository-wide. A
+staging deploy would move production's tag, so the next production gate would
+compare against the staging commit, see no change and skip. A shared group
+would make a staging deploy wait for a production deploy for no reason.
+
+- `.github/workflows/release.yml` is the one entry point. It triggers on a
+  successful CI run for `main` and releases the staging API and web app, then
+  `staging-verify`, then the production API and web app. `staging-verify`
+  polls staging's API, dashboard and marketing hosts. It is the single node
+  both production jobs depend on, and the only check of the marketing host.
+- The two deploy workflows are reusable workflows that take an `environment`
+  and a `sha`. They keep their own `workflow_dispatch` path for one service, a
+  rollback or a second staging deploy, and that input defaults to `staging`:
+  an operator who forgets the flag must get staging, not production.
+- The approval is the required reviewers on the `production` Environment,
+  which both called deploy jobs declare. A calling job may not declare
+  `environment:`, so the orchestrator cannot hold the approval itself. Both
+  production jobs therefore wait together, and one approval releases both.
+- The deploy tag comes from the environment: `deployed/api` and
+  `deployed/web` for production, `deployed/staging/api` and
+  `deployed/staging/web` for staging. The stage goes before the service in the
+  name, because `refs/tags/deployed/api` is a file and `deployed/api/staging`
+  cannot exist beside it. Each environment's gate compares against its own
+  tag.
+- The concurrency group moved from the workflow to the deploy job and carries
+  the environment. A production job waiting for an approval must not hold a
+  lock that stops the next staging deploy, and workflow-level `concurrency`
+  cannot read `inputs`. `cancel-in-progress` stays `false`: GitHub cancels the
+  running member of a group, which is the one thing that must never happen in
+  the middle of a deploy.
+- Every calling job passes `secrets: inherit` and declares `contents: write`
+  and `id-token: write`. Inherit is needed because an explicit secrets mapping
+  in a job that cannot declare an Environment would resolve every value at the
+  repository level and pass production's secrets into the staging deploy. The
+  permissions are a ceiling, never an elevation: a calling job that declares
+  none hands the called workflow the default token, and both the OIDC step and
+  the tag push fail.
+- The gate's tip-of-`main` check runs before the approval, because the gate
+  declares no Environment. The deploy job therefore re-reads the tip after the
+  approval and fails a commit that has moved, instead of deploying a stale
+  commit.
+
+What would change it: a third stage, or a stage that must be released on its
+own schedule, would need the release order to come from a list of stages
+instead of the two pairs of jobs written out here.
+
+## The per-environment workflow guards parse the workflows (2026-10-12)
+
+`scripts/production-safety.test.mjs` found the deployed-environment block with
+`indexOf('\n    env:\n')`, which is the first four-space `env:` in the file. A
+job-level `env:` on a job before `deploy` would make the guard read the wrong
+block and pass without checking anything, so the one rule that stops a
+fixture-mode variable shipping to the live Lambda could go silent.
+
+- Every per-environment guard now parses the workflow with the `yaml` package
+  and reads a key path. A new job, a reordered job or a reformatted block
+  cannot move what a guard inspects. The guards also cover `deploy-web.yml`
+  and `release.yml`, not `deploy-api.yml` alone.
+- The production Cloudflare zone id is matched by shape, `\b[0-9a-fA-F]{32}\b`,
+  and never as a literal. `apps/api/src/env.test.ts` allows that literal only
+  under `.github`, `.env.example` and `docs`, and it does not skip a
+  `.test.mjs` file under `scripts/`. A shape keeps the guard file free of the
+  production value, so the repository-wide zone-id guard keeps holding.
+- Each guard names the files it covers. `aws-canary.yml` legitimately holds
+  production values and the canary's own credentials, and `ci.yml` holds the
+  simulator's fake credentials, so a repository-wide rule for either would
+  fail today.
+- The expected file set is pinned: the only `deploy-*` workflows the guards
+  accept are `deploy-api.yml` and `deploy-web.yml`. A third deploy workflow
+  fails that test until somebody gives it a `PATHS` dependency closure, a
+  concurrency group and a service name, and names it in the guard file.
+- The `workflow_dispatch` default of `staging` and `cancel-in-progress: false`
+  are now guards, because an edit to either one is silent and reaches
+  production. The bare `deployed/api` tag name for production and the absence
+  of `release.yml` from the `PATHS` sets stay decisions, not defects: the tag
+  name is the original repository-wide name, and `release.yml` only chooses
+  what to release.
+- `apps/api/src/env.test.ts` keeps its positional locators and stays out of
+  scope. One guard protects the precondition they depend on instead: no job
+  declared before `deploy` may carry a job-level `env:`. A job declared after
+  `deploy` cannot move a forward `indexOf`, so the rule stops there.
+
+What would change it: making the locators in `apps/api/src/env.test.ts`
+structural would retire the precondition guard. A third stage, or a third
+deploy workflow, would make the pinned file set and the two-file concurrency
+comparison a list instead.
 
 ## Docker run-and-check replaces the label benchmarks (2026-10-16)
 

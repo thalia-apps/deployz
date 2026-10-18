@@ -1,26 +1,26 @@
 'use client';
 
 import { ChevronDown, Info, TriangleAlert } from 'lucide-react';
-import { Fragment, forwardRef, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, forwardRef, useEffect, useRef, useState } from 'react';
 
 import { FixInstructionsDialog } from '@/components/fix-instructions-dialog';
 import { TechnicalDetails } from '@/components/technical-details';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import type { Application, AnalysisStatus } from '@/lib/applications';
-import { deriveAnalysisDetails, deriveRequiredChanges, type AnalysisDetail, type RequiredChange } from '@/lib/application-configuration';
+import { deriveAnalysisDetails, deriveRequiredChanges, type AnalysisDetail } from '@/lib/application-configuration';
 import {
   deriveServiceInventory,
   formatRowCost,
   type InventoryAction,
   type InventoryGroup,
   type InventoryRow,
+  type RowAfterRemoval,
   type RowCost,
 } from '@/lib/configuration-inventory';
 import type {
@@ -34,7 +34,7 @@ import { useApplicationPage } from '../application-page-context';
 import { EditDialog, RequirementDriftNotice } from '../readiness-components';
 import { DeploymentSize } from './deployment-size';
 
-const COLUMN_COUNT = 6;
+const COLUMN_COUNT = 3;
 
 const NODE_STATE_COPY: Record<'detected' | 'confirmed', string> = {
   detected: 'Detected automatically',
@@ -82,10 +82,19 @@ export function ConfigurationDialogs({
   );
 }
 
-// The Configuration tab's analysis-driven part: the attention summary, the
-// deployment size and estimate, then the one "Services & resources" table.
-// `children` (the environment variables table) follows the services table.
-export function DeploymentConfiguration({ children }: { children?: ReactNode }) {
+/**
+ * How many items on the Resources tab need the vendor: the required changes
+ * and the unresolved architecture questions. Recommended findings and
+ * external services stay on their rows without a count.
+ */
+export function resourceAttentionCount(readiness: ApplicationReadiness): number {
+  return deriveRequiredChanges(readiness).length + (readiness.architecture?.unresolved.length ?? 0);
+}
+
+// The Configuration tab's "Resources" panel: a short attention line, then
+// one flat row per service, setting and integration. Each issue shows on the
+// row it belongs to, beside the action that opens that row's editor.
+export function ResourcesPanel() {
   const { data, loading, presentation, refresh, reanalyse } = useApplicationPage();
   const [editingField, setEditingField] = useState<EditableReadinessField | null>(null);
   const [fixOpen, setFixOpen] = useState(false);
@@ -96,37 +105,34 @@ export function DeploymentConfiguration({ children }: { children?: ReactNode }) 
   const openerRef = useRef<HTMLElement | null>(null);
 
   const inventory = data ? deriveServiceInventory(data) : null;
-  const requiredChanges = data ? deriveRequiredChanges(data.readiness) : [];
-  const attentionItems = data && inventory ? deriveAttentionItems(data.readiness, inventory.groups) : [];
-  const hasAttention = requiredChanges.length > 0 || attentionItems.length > 0;
+  const attentionCount = data ? resourceAttentionCount(data.readiness) : 0;
+  const setup = data?.readiness.environmentSetup ?? null;
+  const variableCount = setup ? setup.needsDecision + setup.missingValue : 0;
+  const hasAttention = attentionCount > 0 || variableCount > 0;
 
   // A link into this page (from the Overview tab, or a bookmarked URL) can
   // carry `#required-changes` — on load, and whenever the hash changes again
   // without a full navigation, scroll to and focus the summary. With nothing
-  // to fix, focus the services heading instead of a summary that is gone.
+  // to fix, focus the resources heading instead of a summary that is gone.
+  // The next frame lets the tab switch to Resources first.
   useEffect(() => {
     if (!data) return;
     function focusRequiredChanges(): void {
       if (window.location.hash !== '#required-changes') return;
-      const target = hasAttention ? panelRef.current : headingRef.current;
-      // jsdom (unit tests) has no `scrollIntoView` implementation.
-      target?.scrollIntoView?.({ block: 'start' });
-      target?.focus();
+      requestAnimationFrame(() => {
+        const target = hasAttention ? panelRef.current : headingRef.current;
+        // jsdom (unit tests) has no `scrollIntoView` implementation.
+        target?.scrollIntoView?.({ block: 'start' });
+        target?.focus();
+      });
     }
     focusRequiredChanges();
     window.addEventListener('hashchange', focusRequiredChanges);
     return () => window.removeEventListener('hashchange', focusRequiredChanges);
   }, [data, hasAttention]);
 
-  if (loading) {
-    return (
-      <>
-        <DeploymentConfigurationSkeleton />
-        {children}
-      </>
-    );
-  }
-  if (!data || !inventory) return <>{children}</>;
+  if (loading) return <DeploymentConfigurationSkeleton />;
+  if (!data || !inventory) return null;
 
   const { application, readiness } = data;
   const analyzing = application.analysisStatus === 'ANALYZING';
@@ -138,25 +144,15 @@ export function DeploymentConfiguration({ children }: { children?: ReactNode }) 
     const opener = openerRef.current;
     requestAnimationFrame(() => opener?.focus());
   }
-  function runAction(action: InventoryAction | RequiredChange['fix']): void {
+  function runAction(action: InventoryAction): void {
     rememberOpener();
     if (action.kind === 'edit') setEditingField(action.field);
     else setFixOpen(true);
   }
 
   return (
-    <>
-      <AttentionSummary ref={panelRef} changes={requiredChanges} items={attentionItems} onAction={runAction} />
-
-      {application.analysisStatus === 'COMPLETE' ? (
-        <DeploymentSize
-          application={application}
-          plan={data.plan}
-          externalServices={inventory.externalServices}
-          unestimatedWorkload={inventory.unestimatedWorkload}
-          onSaved={refresh}
-        />
-      ) : null}
+    <div className="flex flex-col gap-4">
+      <AttentionSummary ref={panelRef} count={attentionCount} variableCount={variableCount} />
 
       <ServicesSection
         ref={headingRef}
@@ -170,8 +166,6 @@ export function DeploymentConfiguration({ children }: { children?: ReactNode }) 
         drifts={readiness.deploymentRequirementDrift}
         onAction={runAction}
       />
-
-      {children}
 
       <ConfigurationDialogs
         applicationId={application.id}
@@ -193,126 +187,67 @@ export function DeploymentConfiguration({ children }: { children?: ReactNode }) 
         }}
         onSaved={refresh}
       />
-    </>
-  );
-}
-
-/** One line of the attention summary that is not a required change: a link to the affected row. */
-interface AttentionItem {
-  id: string;
-  text: string;
-  href: string;
-}
-
-function rowAnchor(row: InventoryRow): string {
-  return `#config-row-${row.id}`;
-}
-
-/**
- * Everything that needs the vendor, once each: the architecture questions
- * and the environment variables that still need a decision or a value.
- * Recommended findings and external services stay on their own rows.
- * Required findings render separately above these, with their Fix action.
- */
-function deriveAttentionItems(readiness: ApplicationReadiness, groups: InventoryGroup[]): AttentionItem[] {
-  const rows = groups.flatMap((group) => group.rows);
-  const items: AttentionItem[] = [];
-  const unresolved = readiness.architecture?.unresolved ?? [];
-
-  unresolved.forEach((item, index) => {
-    const row = rows.find((candidate) => candidate.questionIndexes.includes(index));
-    items.push({ id: `question-${index}`, text: item.question, href: row ? rowAnchor(row) : '#services' });
-  });
-  const setup = readiness.environmentSetup ?? null;
-  if (setup && setup.needsDecision > 0) {
-    items.push({
-      id: 'env-decisions',
-      text: `${setup.needsDecision} environment ${setup.needsDecision === 1 ? 'variable needs' : 'variables need'} a decision`,
-      href: '#environment-variables',
-    });
-  }
-  if (setup && setup.missingValue > 0) {
-    items.push({
-      id: 'env-values',
-      text: `${setup.missingValue} environment ${setup.missingValue === 1 ? 'variable needs' : 'variables need'} a value`,
-      href: '#environment-variables',
-    });
-  }
-  return items;
-}
-
-const AttentionSummary = forwardRef<
-  HTMLDivElement,
-  {
-    changes: RequiredChange[];
-    items: AttentionItem[];
-    onAction: (fix: RequiredChange['fix']) => void;
-  }
->(function AttentionSummary({ changes, items, onAction }, ref) {
-  if (changes.length === 0 && items.length === 0) return null;
-  return (
-    <div
-      ref={ref}
-      id="required-changes"
-      tabIndex={-1}
-      className="scroll-mt-20 rounded-xl border border-destructive/40 bg-card outline-none"
-      aria-labelledby="required-changes-heading"
-      data-testid="attention-summary"
-    >
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex items-center gap-2">
-          <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden />
-          <h2 id="required-changes-heading" className="text-base font-semibold">
-            Needs attention
-          </h2>
-        </div>
-        {changes.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {changes.length} {changes.length === 1 ? 'change' : 'changes'} needed before deploy.
-          </p>
-        ) : null}
-        <ul className="flex flex-col gap-2">
-          {changes.map((change) => (
-            <li
-              key={change.finding.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"
-              data-testid={`required-change-${change.finding.id}`}
-            >
-              <div className="flex flex-col gap-0.5">
-                <p className="text-sm font-medium">{change.label}</p>
-                <p className="text-sm text-muted-foreground">{change.explanation}</p>
-                {change.fix.kind === 'instructions' ? (
-                  <p className="text-xs text-muted-foreground">Change your repository, then re-analyse.</p>
-                ) : null}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => onAction(change.fix)}
-                data-testid={`required-change-fix-${change.finding.id}`}
-              >
-                {change.fix.kind === 'edit' ? 'Fix' : 'Get fix instructions'}
-              </Button>
-            </li>
-          ))}
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2"
-              data-testid={`attention-item-${item.id}`}
-            >
-              <p className="min-w-0 text-sm">{item.text}</p>
-              <Button asChild variant="ghost" size="sm" className="shrink-0">
-                <a href={item.href}>Go to row</a>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
-});
+}
+
+// The "Size presets" panel: the three fixed presets side by side, then the
+// default and minimum sizes. Shown once an analysis has completed, because
+// each preset's resources and cost come from its plan.
+export function SizePresetsPanel() {
+  const { data, loading, refresh } = useApplicationPage();
+  if (loading) return <DeploymentConfigurationSkeleton />;
+  if (!data) return null;
+  if (data.application.analysisStatus !== 'COMPLETE') {
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="deployment-size-empty">
+        {data.application.analysisStatus === 'ANALYZING'
+          ? 'Size presets show when the analysis finishes.'
+          : 'Size presets show after a successful analysis.'}
+      </p>
+    );
+  }
+  const inventory = deriveServiceInventory(data);
+  return (
+    <DeploymentSize
+      application={data.application}
+      plan={data.plan}
+      externalServices={inventory.externalServices}
+      unestimatedWorkload={inventory.unestimatedWorkload}
+      onSaved={refresh}
+    />
+  );
+}
+
+const AttentionSummary = forwardRef<HTMLDivElement, { count: number; variableCount: number }>(
+  function AttentionSummary({ count, variableCount }, ref) {
+    if (count === 0 && variableCount === 0) return null;
+    return (
+      <div
+        ref={ref}
+        id="required-changes"
+        tabIndex={-1}
+        className="flex scroll-mt-20 flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-destructive/40 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        data-testid="attention-summary"
+      >
+        <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden />
+        {count > 0 ? (
+          <p data-testid="attention-summary-resources">
+            {count} {count === 1 ? 'item needs' : 'items need'} attention. Fix {count === 1 ? 'it' : 'them'} on the
+            marked {count === 1 ? 'row' : 'rows'}.
+          </p>
+        ) : null}
+        {variableCount > 0 ? (
+          <Button asChild variant="link" size="sm" className="h-auto p-0" data-testid="attention-summary-variables">
+            <a href="#environment-variables">
+              {variableCount} {variableCount === 1 ? 'variable needs' : 'variables need'} input
+            </a>
+          </Button>
+        ) : null}
+      </div>
+    );
+  },
+);
 
 const ServicesSection = forwardRef<
   HTMLHeadingElement,
@@ -338,51 +273,49 @@ const ServicesSection = forwardRef<
 
   return (
     <section id="services" aria-labelledby="services-heading" className="flex scroll-mt-20 flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 id="services-heading" ref={ref} tabIndex={-1} className="text-base font-semibold outline-none">
-            Services & resources
-          </h2>
-          {readinessSummary ? <p className="text-sm text-muted-foreground">{readinessSummary}</p> : null}
-        </div>
-        {analyzedCommitSha ? (
-          <span className="shrink-0 text-sm text-muted-foreground" data-testid="readiness-commit">
-            Analysed commit {analyzedCommitSha.slice(0, 7)}
-          </span>
-        ) : null}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 id="services-heading" ref={ref} tabIndex={-1} className="text-base font-semibold outline-none">
+          Resources
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {[readinessSummary, analyzedCommitSha ? `Analysed commit ${analyzedCommitSha.slice(0, 7)}` : null]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
       </div>
 
-      <Card className="py-0">
-        <CardContent className="p-0">
-          <Table data-testid="services-table" className="min-w-[56rem] max-md:block max-md:min-w-0">
-            <TableHeader className="max-md:hidden">
-              <TableRow>
-                <TableHead className="w-48">Item</TableHead>
-                <TableHead>Configuration / resources</TableHead>
-                <TableHead className="w-32">Est. AWS/month</TableHead>
-                <TableHead className="w-28">After removal</TableHead>
-                <TableHead className="w-56">Issues</TableHead>
-                <TableHead className="w-44">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody aria-busy={analyzing || undefined} className="max-md:block">
-              {groups.map((group) => (
-                <Fragment key={group.id}>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50 max-md:block" data-testid={`services-group-${group.id}`}>
-                    <TableHead colSpan={COLUMN_COUNT} scope="colgroup" className="text-foreground max-md:block">
-                      {group.label}
-                    </TableHead>
-                  </TableRow>
-                  {group.rows.map((row) => (
-                    <ServiceRow key={row.id} row={row} onAction={onAction} />
-                  ))}
-                </Fragment>
-              ))}
-              {groups.length === 0 ? <ServicesTablePlaceholder analysisStatus={analysisStatus} /> : null}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border">
+        <Table data-testid="services-table" className="max-md:block">
+          <TableHeader className="max-md:hidden">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-56">Resource</TableHead>
+              <TableHead>Configuration</TableHead>
+              <TableHead className="w-40">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody aria-busy={analyzing || undefined} className="max-md:block">
+            {groups.map((group) => (
+              <Fragment key={group.id}>
+                <TableRow className="hover:bg-transparent max-md:block" data-testid={`services-group-${group.id}`}>
+                  <TableHead
+                    colSpan={COLUMN_COUNT}
+                    scope="colgroup"
+                    className="h-8 text-xs font-medium tracking-wide text-muted-foreground uppercase max-md:block max-md:pt-2"
+                  >
+                    {group.label}
+                  </TableHead>
+                </TableRow>
+                {group.rows.map((row) => (
+                  <ServiceRow key={row.id} row={row} onAction={onAction} />
+                ))}
+              </Fragment>
+            ))}
+            {groups.length === 0 ? <ServicesTablePlaceholder analysisStatus={analysisStatus} /> : null}
+          </TableBody>
+        </Table>
+      </div>
 
       {hasKept ? (
         <p className="text-xs text-muted-foreground">
@@ -429,19 +362,26 @@ const ServicesSection = forwardRef<
 function costText(cost: RowCost): string | null {
   if (cost === null) return null;
   if (cost === 'billed-separately') return 'Billed separately';
-  if (cost === 'not-estimated') return 'Not estimated';
-  return formatRowCost(cost);
+  if (cost === 'not-estimated') return 'Cost not estimated';
+  return `Est. AWS/month: ${formatRowCost(cost)}`;
+}
+
+function afterRemovalText(afterRemoval: RowAfterRemoval): string | null {
+  if (afterRemoval === 'Kept') return 'Kept after removal';
+  if (afterRemoval === 'Mixed') return 'Partly kept after removal';
+  if (afterRemoval === 'Not determined') return 'After removal not determined';
+  return null;
 }
 
 function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: InventoryAction) => void }) {
-  const cost = costText(row.cost);
   const action = row.action;
   const mixed = row.afterRemoval === 'Mixed';
+  const meta = [costText(row.cost), afterRemovalText(row.afterRemoval)].filter(Boolean).join(' · ');
 
   return (
     <TableRow
       id={`config-row-${row.id}`}
-      className="scroll-mt-20 max-md:flex max-md:flex-col max-md:gap-1.5 max-md:py-2"
+      className="scroll-mt-20 hover:bg-transparent max-md:flex max-md:flex-col max-md:gap-1.5 max-md:py-2"
       data-testid={row.testId}
     >
       <TableCell
@@ -451,7 +391,7 @@ function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: I
             : 'align-top font-medium max-md:py-0'
         }
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span>{row.label}</span>
           {row.help ? (
             <Popover>
@@ -476,9 +416,14 @@ function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: I
               </PopoverContent>
             </Popover>
           ) : null}
+          {row.issues.map((issue, index) => (
+            <Badge key={index} variant={issue.variant}>
+              {issue.label}
+            </Badge>
+          ))}
         </div>
       </TableCell>
-      <TableCell className="align-top max-md:py-0">
+      <TableCell className="align-top whitespace-normal max-md:py-0">
         <div className="flex min-w-0 flex-col gap-1">
           {row.configuration ? (
             row.command ? (
@@ -488,6 +433,18 @@ function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: I
             )
           ) : null}
           {row.detail ? <span className="text-xs text-muted-foreground">{row.detail}</span> : null}
+          {row.issues.map((issue, index) =>
+            issue.text ? (
+              <span key={index} className="text-xs text-muted-foreground">
+                {issue.text}
+              </span>
+            ) : null,
+          )}
+          {meta ? (
+            <span className="text-xs text-muted-foreground tabular-nums" data-testid={`${row.testId}-meta`}>
+              {meta}
+            </span>
+          ) : null}
           {row.resources.length > 0 ? (
             // AWS resource names stay one click away, so the page's top-level
             // copy stays free of AWS terms (ux-guidelines §65).
@@ -510,37 +467,7 @@ function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: I
           ) : null}
         </div>
       </TableCell>
-      <TableCell
-        data-label="Est. AWS/month: "
-        className="align-top tabular-nums max-md:py-0 max-md:before:text-muted-foreground max-md:before:content-[attr(data-label)] max-md:empty:hidden"
-      >
-        {cost}
-      </TableCell>
-      <TableCell
-        data-label="After removal: "
-        className="align-top max-md:py-0 max-md:before:text-muted-foreground max-md:before:content-[attr(data-label)] max-md:empty:hidden"
-      >
-        {row.afterRemoval === 'Kept' ? (
-          <Badge variant="secondary">Kept</Badge>
-        ) : row.afterRemoval === 'Removed' || mixed ? (
-          <Badge variant="outline">{row.afterRemoval}</Badge>
-        ) : row.afterRemoval === 'Not determined' ? (
-          <span className="text-muted-foreground">Not determined</span>
-        ) : null}
-      </TableCell>
-      <TableCell className="align-top max-md:py-0 max-md:empty:hidden">
-        {row.issues.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            {row.issues.map((issue, index) => (
-              <div key={index} className="flex flex-col items-start gap-0.5">
-                <Badge variant={issue.variant}>{issue.label}</Badge>
-                {issue.text ? <span className="text-xs text-muted-foreground">{issue.text}</span> : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </TableCell>
-      <TableCell className="align-top max-md:py-0 max-md:empty:hidden">
+      <TableCell className="align-top max-md:py-0 max-md:empty:hidden md:text-right">
         {action?.kind === 'link' ? (
           <Button asChild variant="outline" size="sm" data-testid={action.testId}>
             <a href={action.href}>{action.label}</a>
@@ -575,13 +502,6 @@ function ServicesTablePlaceholder({ analysisStatus }: { analysisStatus: Analysis
             <TableCell>
               <Skeleton className="h-4 w-48" />
             </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-16" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-5 w-16 rounded-full" />
-            </TableCell>
-            <TableCell />
             <TableCell />
           </TableRow>
         ))}

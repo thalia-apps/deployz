@@ -1,0 +1,226 @@
+# Creates the AWS identity the two deploy workflows use. Each GitHub
+# Environment gets one IAM role, and GitHub Actions assumes that role with
+# OIDC. The workflows hold no AWS access key.
+#
+# The account owner deploys this template by hand, with an admin identity:
+#
+#   aws cloudformation deploy \
+#     --template-file .github/aws/github-oidc.yaml \
+#     --stack-name deployz-github-oidc \
+#     --capabilities CAPABILITY_NAMED_IAM
+#
+# Each role is assumable only from this repository, and only from a job that
+# declares the GitHub Environment with the same name as the role. A job in
+# another repository gets no credentials, and neither does a job without that
+# Environment.
+#
+# One role serves both workflows of one stage, because one Environment holds
+# one AWS_DEPLOY_ROLE_ARN. Each role therefore holds the CDK, S3 and Lightsail
+# permissions together.
+#
+# Known limit: both roles may assume the shared cdk-hnb659fds-* bootstrap
+# roles, so the staging role could deploy the production stack. The Lightsail
+# statement is account-wide for the reason given below, so the staging role
+# could also deploy production's container service. IAM is the second layer
+# here, and it is partial. The live control is the stage gate in both deploy
+# workflows and the protection rules on the production Environment. A second
+# AWS account is the post-MVP fix.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GitHub Actions deploy roles, one for each GitHub Environment.
+
+Parameters:
+  # An account holds at most one provider for one issuer, and a second one
+  # fails the whole deploy. List the providers first with
+  # `aws iam list-open-id-connect-providers`, and pass `no` when the account
+  # already holds token.actions.githubusercontent.com.
+  CreateOidcProvider:
+    Type: String
+    AllowedValues: ['yes', 'no']
+    Default: 'yes'
+    Description: Create the GitHub OIDC provider. Pass "no" when the account already holds it.
+
+Conditions:
+  MakeOidcProvider: !Equals [!Ref CreateOidcProvider, 'yes']
+
+Resources:
+  # No ThumbprintList: the property is optional, and IAM then reads the
+  # thumbprint of the issuer itself. A thumbprint written here needs an edit
+  # every time GitHub rotates its certificate.
+  GithubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: MakeOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  ProductionDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: deployz-github-deploy-production
+      # A `cdk deploy` runs longer than the one-hour default session. A
+      # session that ends in the middle of a stack update leaves the deploy
+      # without credentials.
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # One statement, and StringEquals only. A StringLike on the sub
+          # claim also matches another Environment or another branch.
+          #
+          # The repository uses GitHub's immutable subject, so the sub claim
+          # names the owner and repository by name and by numeric id
+          # (`gh api repos/thalia-apps/deployz/actions/oidc/customization/sub`).
+          # A subject without the ids matches no token.
+          - Effect: Allow
+            Principal:
+              # !If instead of DependsOn: the !Ref makes the order certain
+              # when this stack creates the provider, and both branches give
+              # the same ARN.
+              Federated: !If
+                - MakeOidcProvider
+                - !Ref GithubOidcProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: repo:thalia-apps@342445206/deployz@1339375286:environment:production
+      Policies:
+        - PolicyName: deployz-github-deploy-production
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadCdkBootstrapVersion
+                Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cdk-bootstrap/hnb659fds/version
+              # The role holds no raw service permission of its own. It
+              # assumes the CDK bootstrap roles, and those roles change the
+              # stack.
+              - Sid: AssumeCdkBootstrapRoles
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-*-${AWS::AccountId}-${AWS::Region}
+              # Production's two template buckets: the us-east-1 bucket the
+              # stack owns, and the regional buckets. Neither pattern matches
+              # a staging bucket, because of the dash after `deployz`.
+              - Sid: LocateTemplateBuckets
+                Effect: Allow
+                Action: s3:GetBucketLocation
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-templatebucket*
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-templates-*
+              # s3:GetObject as well as s3:PutObject: the region verifier
+              # calls HeadObject
+              # (packages/cdk/src/quick-create/publish.ts:334), and IAM
+              # authorizes that call as s3:GetObject.
+              - Sid: PublishTemplateObjects
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-templatebucket*/*
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-templates-*/*
+              # Resource `*` because cloudformation:ValidateTemplate supports
+              # no resource type.
+              - Sid: ValidatePublishedTemplates
+                Effect: Allow
+                Action: cloudformation:ValidateTemplate
+                Resource: '*'
+              # Resource `*` because a Lightsail container-service ARN carries
+              # the service id and not the service name, and most of these
+              # actions support no resource type at all. The services carry no
+              # tag, so an aws:ResourceTag condition cannot scope them either.
+              - Sid: DeployTheWebContainerService
+                Effect: Allow
+                Action:
+                  - lightsail:GetContainerServices
+                  - lightsail:CreateContainerService
+                  - lightsail:CreateContainerServiceRegistryLogin
+                  - lightsail:RegisterContainerImage
+                  - lightsail:GetContainerImages
+                  - lightsail:DeleteContainerImage
+                  - lightsail:CreateContainerServiceDeployment
+                  - lightsail:GetContainerServiceDeployments
+                  - lightsail:GetContainerLog
+                Resource: '*'
+
+  StagingDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: deployz-github-deploy-staging
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - MakeOidcProvider
+                - !Ref GithubOidcProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: repo:thalia-apps@342445206/deployz@1339375286:environment:staging
+      Policies:
+        - PolicyName: deployz-github-deploy-staging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadCdkBootstrapVersion
+                Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cdk-bootstrap/hnb659fds/version
+              - Sid: AssumeCdkBootstrapRoles
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - sts:TagSession
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-*-${AWS::AccountId}-${AWS::Region}
+              # Staging's two template buckets. Neither pattern matches a
+              # production bucket.
+              - Sid: LocateTemplateBuckets
+                Effect: Allow
+                Action: s3:GetBucketLocation
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::deployzstaging-templatebucket*
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-staging-templates-*
+              - Sid: PublishTemplateObjects
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::deployzstaging-templatebucket*/*
+                  - !Sub arn:${AWS::Partition}:s3:::deployz-staging-templates-*/*
+              - Sid: ValidatePublishedTemplates
+                Effect: Allow
+                Action: cloudformation:ValidateTemplate
+                Resource: '*'
+              - Sid: DeployTheWebContainerService
+                Effect: Allow
+                Action:
+                  - lightsail:GetContainerServices
+                  - lightsail:CreateContainerService
+                  - lightsail:CreateContainerServiceRegistryLogin
+                  - lightsail:RegisterContainerImage
+                  - lightsail:GetContainerImages
+                  - lightsail:DeleteContainerImage
+                  - lightsail:CreateContainerServiceDeployment
+                  - lightsail:GetContainerServiceDeployments
+                  - lightsail:GetContainerLog
+                Resource: '*'
+
+Outputs:
+  ProductionDeployRoleArn:
+    Description: Set this value as the variable AWS_DEPLOY_ROLE_ARN on the GitHub Environment "production".
+    Value: !GetAtt ProductionDeployRole.Arn
+  StagingDeployRoleArn:
+    Description: Set this value as the variable AWS_DEPLOY_ROLE_ARN on the GitHub Environment "staging".
+    Value: !GetAtt StagingDeployRole.Arn

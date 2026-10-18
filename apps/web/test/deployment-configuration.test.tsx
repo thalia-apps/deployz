@@ -22,10 +22,10 @@ Element.prototype.hasPointerCapture = () => false as never;
 Element.prototype.setPointerCapture = () => {};
 Element.prototype.releasePointerCapture = () => {};
 
-// The Configuration tab's "Required changes" panel and its Fix routing — a
-// required finding either opens the matching setting's edit dialog
-// (port-unresolved only, today) or the fix-instructions dialog (everything
-// else), and the panel is reachable and focusable via `#required-changes`.
+// The Configuration tab's Resources and Size presets panels. A required
+// finding shows on its row, whose action either opens the matching setting's
+// edit dialog (port-unresolved only, today) or the fix-instructions dialog
+// (everything else); the attention line is reachable via `#required-changes`.
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
@@ -157,9 +157,25 @@ vi.mock('../src/app/dashboard/applications/[id]/application-page-context', () =>
   }),
 }));
 
-const { DeploymentConfiguration } = await import(
+const { ResourcesPanel, SizePresetsPanel } = await import(
   '../src/app/dashboard/applications/[id]/config/deployment-configuration'
 );
+
+/** Both analysis-driven panels, as the Configuration tab mounts them. */
+function DeploymentConfiguration() {
+  return (
+    <>
+      <ResourcesPanel />
+      <SizePresetsPanel />
+    </>
+  );
+}
+
+async function nextFrame(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  });
+}
 
 function byTestId(id: string): Element | null {
   return document.body.querySelector(`[data-testid="${id}"]`);
@@ -195,8 +211,8 @@ afterEach(() => {
   window.location.hash = '';
 });
 
-describe('Required changes panel', () => {
-  it('lists each required finding with its plain-language label and explanation', async () => {
+describe('Required changes on their rows', () => {
+  it('counts the required findings once and marks each affected row', async () => {
     currentReadiness = readinessFixture({
       findings: [
         finding({ id: 'health-check', category: 'health', severity: 'required' }),
@@ -214,18 +230,13 @@ describe('Required changes panel', () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    const panel = byTestId('required-change-health-check')?.closest('#required-changes');
-    expect(panel).not.toBeNull();
-    expect(byTestId('required-change-health-check')?.textContent).toContain('Add a health check route');
-    expect(byTestId('required-change-health-check')?.textContent).toContain(
-      'Deployz requires an HTTP health endpoint.',
-    );
-    expect(byTestId('required-change-port-unresolved')?.textContent).toContain(
-      'Set the port your app listens on',
-    );
+    expect(byTestId('attention-summary')?.id).toBe('required-changes');
+    expect(byTestId('attention-summary-resources')?.textContent).toContain('2 items need attention');
+    expect(byTestId('readiness-setting-health')?.querySelector('[data-slot="badge"]')?.textContent).toBe('Change required');
+    expect(byTestId('readiness-setting-port')?.querySelector('[data-slot="badge"]')).not.toBeNull();
   });
 
-  it('does not render when there are no required findings', async () => {
+  it('does not render the attention line when nothing needs the vendor', async () => {
     currentReadiness = readinessFixture({ findings: [] });
 
     await act(async () => {
@@ -235,7 +246,7 @@ describe('Required changes panel', () => {
     expect(document.getElementById('required-changes')).toBeNull();
   });
 
-  it('an instructions-type finding opens the fix-instructions dialog and notes the change is made in the repository', async () => {
+  it('an instructions-type finding opens the fix-instructions dialog from its row', async () => {
     currentReadiness = readinessFixture({
       findings: [finding({ id: 'container-setup', category: 'container', severity: 'required', title: 'No Dockerfile found' })],
     });
@@ -244,29 +255,10 @@ describe('Required changes panel', () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    expect(byTestId('required-change-container-setup')?.textContent).toContain(
-      'Change your repository, then re-analyse.',
-    );
-    await click(byTestId('required-change-fix-container-setup'));
+    await click(byTestId('readiness-finding-fix-container-setup'));
 
     expect(byTestId('fix-instructions-dialog')).not.toBeNull();
     expect(mocks.generateFixInstructions).toHaveBeenCalled();
-  });
-
-  it('an edit-type finding (port-unresolved) opens the port editor, not fix instructions', async () => {
-    currentReadiness = readinessFixture({
-      findings: [finding({ id: 'port-unresolved', category: 'network', severity: 'required', title: 'Port not detected' })],
-    });
-
-    await act(async () => {
-      root.render(<DeploymentConfiguration />);
-    });
-
-    await click(byTestId('required-change-fix-port-unresolved'));
-
-    expect(byTestId('edit-dialog-containerPort')).not.toBeNull();
-    expect(byTestId('fix-instructions-dialog')).toBeNull();
-    expect(mocks.generateFixInstructions).not.toHaveBeenCalled();
   });
 });
 
@@ -343,6 +335,7 @@ describe('#required-changes hash focus', () => {
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
+    await nextFrame();
 
     expect(document.activeElement?.id).toBe('required-changes');
   });
@@ -354,6 +347,7 @@ describe('#required-changes hash focus', () => {
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
+    await nextFrame();
 
     expect(document.activeElement?.id).toBe('services-heading');
   });
@@ -395,28 +389,30 @@ describe('Deployment size and estimate', () => {
     ) as HTMLElement;
   }
 
-  const sizeOption = (tier: string) => byTestId(`deployment-size-${tier}-option`);
+  async function choose(label: string, option: string): Promise<void> {
+    await press(selectTrigger(label));
+    await press(Array.from(document.querySelectorAll('[role="option"]')).find((item) => item.textContent?.startsWith(option)) ?? null);
+  }
 
-  it('selects the recommended size in one segmented control with a compact summary and no duplicate controls', async () => {
+  it('shows the presets read-only, apart from the default and minimum controls', async () => {
     currentPlan = standardPlan();
 
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    const tablist = document.querySelector('[data-testid="deployment-size"] [role="tablist"]');
-    expect(tablist?.getAttribute('aria-labelledby')).toBeTruthy();
-    expect(document.getElementById(tablist!.getAttribute('aria-labelledby')!)?.textContent).toBe('Recommended size');
-    expect(sizeOption('small')?.getAttribute('aria-selected')).toBe('true');
-    // Only one size select remains: the minimum.
+    expect(byTestId('deployment-size-presets')).not.toBeNull();
+    expect(byTestId('deployment-size-small')?.textContent).toBe('SmallDefault');
+    expect(byTestId('deployment-size-medium')?.textContent).toBe('Medium');
+    // The presets have no inputs: the only controls are the two size selects.
+    expect(document.querySelectorAll('[data-testid="deployment-size-presets"] button, [data-testid="deployment-size-presets"] input')).toHaveLength(0);
     expect(Array.from(document.querySelectorAll('[data-testid="deployment-size"] label')).map((label) => label.textContent)).toEqual([
-      'Recommended size',
+      'Default size',
       'Minimum allowed size',
     ]);
     expect(document.body.textContent).toContain('Smallest size customers can select.');
+    expect(selectTrigger('Default size').getAttribute('aria-describedby')).toBeTruthy();
     expect(selectTrigger('Minimum allowed size').getAttribute('aria-describedby')).toBeTruthy();
-    expect(document.body.textContent).not.toContain('Not available yet');
-    expect(document.body.textContent).not.toContain('Only the');
     expect(byTestId('deployment-cost')?.textContent).toContain('Estimates only.');
     expect(byTestId('deployment-cost-details')).toBeNull();
   });
@@ -433,17 +429,13 @@ describe('Deployment size and estimate', () => {
     expect(mocks.fetchApplicationPlan).toHaveBeenCalledWith('app-1', 'small');
     expect(mocks.fetchApplicationPlan).toHaveBeenCalledWith('app-1', 'medium');
     expect(mocks.fetchApplicationPlan).toHaveBeenCalledWith('app-1', 'large');
-    // Only the selected size's panel is shown; the others stay hidden.
-    expect(byTestId('deployment-size-small')?.getAttribute('data-state')).toBe('active');
-    expect(byTestId('deployment-size-medium')?.getAttribute('data-state')).toBe('inactive');
-    expect(byTestId('deployment-size-medium')?.className).toContain('data-[state=inactive]:hidden');
-    const small = byTestId('deployment-size-small')?.textContent ?? '';
-    // The mocked plan is the Small footprint for every size: the summary shows the plan's resources.
-    expect(small).toContain('Compute0.25 vCPU · 512 MiB per service');
-    expect(small).toContain('Databasedb.t3.micro');
+    // The mocked plan is the Small footprint for every size: the presets show the plan's resources.
+    expect(byTestId('deployment-size-small-compute')?.textContent).toBe('0.25 vCPU · 512 MiB per service');
+    expect(byTestId('deployment-size-small-database')?.textContent).toBe('db.t3.micro');
+    expect(byTestId('deployment-size-small-storage')?.textContent).toBe('20 GB database storage');
     // The plan has a database and no cache.
-    expect(small).not.toContain('Cache');
-    expect(small).not.toContain('Workers');
+    expect(byTestId('deployment-size-small-cache')).toBeNull();
+    expect(byTestId('deployment-size-small-workers')).toBeNull();
     for (const tier of ['small', 'medium', 'large']) {
       expect(byTestId(`deployment-size-${tier}-cost`)?.textContent).toMatch(/^~\$\d+–\d+\/month \+ usage$/);
     }
@@ -454,35 +446,38 @@ describe('Deployment size and estimate', () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    expect(byTestId('deployment-size-medium')?.textContent).toContain('Compute1 vCPU · 2 GiB per service');
-    expect(byTestId('deployment-size-medium')?.textContent).not.toContain('Database');
-    expect(byTestId('deployment-size-medium')?.textContent).not.toContain('Cache');
+    expect(byTestId('deployment-size-medium-compute')?.textContent).toBe('1 vCPU · 2 GiB per service');
+    expect(byTestId('deployment-size-medium-database')).toBeNull();
+    expect(byTestId('deployment-size-medium-cache')).toBeNull();
     expect(byTestId('deployment-size-medium-cost')?.textContent).toBe('Estimate unavailable');
   });
 
-  it('raises the recommended size to the minimum and disables sizes below it', async () => {
+  it('raises the default size to the minimum and offers no size below it', async () => {
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
     expect(byTestId('deployment-size-save')?.hasAttribute('disabled')).toBe(true);
 
-    await press(selectTrigger('Minimum allowed size'));
-    await press(Array.from(document.querySelectorAll('[role="option"]')).find((item) => item.textContent?.startsWith('Medium')) ?? null);
+    await choose('Minimum allowed size', 'Medium');
 
-    expect(sizeOption('medium')?.getAttribute('aria-selected')).toBe('true');
-    expect(sizeOption('small')?.hasAttribute('disabled')).toBe(true);
-    expect(sizeOption('large')?.hasAttribute('disabled')).toBe(false);
+    expect(selectTrigger('Default size').textContent).toContain('Medium');
+    await press(selectTrigger('Default size'));
+    expect(Array.from(document.querySelectorAll('[role="option"]')).map((item) => item.textContent?.split(' ')[0])).toEqual([
+      'Medium',
+      'Large',
+    ]);
+    // The saved default stays marked until Save.
+    expect(byTestId('deployment-size-small')?.textContent).toBe('SmallDefault');
   });
 
-  it('saves the recommended and minimum sizes with one PATCH body and refreshes the page', async () => {
+  it('saves the default and minimum sizes with one PATCH body and refreshes the page', async () => {
     mocks.updateApplicationSizes.mockResolvedValue(applicationFixture());
     mocks.refresh.mockResolvedValue(undefined);
 
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
-    await press(sizeOption('large'));
-    expect(sizeOption('large')?.getAttribute('aria-selected')).toBe('true');
+    await choose('Default size', 'Large');
     expect(byTestId('deployment-size-save')?.hasAttribute('disabled')).toBe(false);
 
     await click(byTestId('deployment-size-save'));
@@ -503,7 +498,7 @@ describe('Deployment size and estimate', () => {
     await act(async () => {
       root.render(<DeploymentConfiguration />);
     });
-    await press(sizeOption('medium'));
+    await choose('Default size', 'Medium');
     await click(byTestId('deployment-size-save'));
 
     expect(byTestId('deployment-size-error')?.textContent).toBe(
@@ -538,13 +533,13 @@ describe('Deployment size and estimate', () => {
     });
 
     expect(byTestId('deployment-size-small-cost')?.textContent).toBe('Estimate unavailable');
-    expect(byTestId('inventory-row-web')?.textContent).toContain('Price unavailable');
+    expect(byTestId('inventory-row-web-meta')?.textContent).toBe('Est. AWS/month: Price unavailable');
     expect(document.body.textContent).not.toContain('$0');
   });
 });
 
 describe('Attention summary', () => {
-  it('links environment decisions to the variables table and leaves external services out', async () => {
+  it('links the variables that need input to the Variables tab and leaves external services out', async () => {
     currentReadiness = readinessFixture({
       environmentSetup: { needsDecision: 2, missingValue: 1, missingBuildValue: 0, customer: 0, total: 5 },
       architecture: { groups: [], unresolved: [], externalServices: ['stripe', 'resend'] },
@@ -554,9 +549,9 @@ describe('Attention summary', () => {
       root.render(<DeploymentConfiguration />);
     });
 
-    expect(document.querySelectorAll('[data-testid^="attention-item-"]')).toHaveLength(2);
-    expect(byTestId('attention-item-env-decisions')?.querySelector('a')?.getAttribute('href')).toBe('#environment-variables');
-    expect(byTestId('attention-item-env-values')?.textContent).toContain('1 environment variable needs a value');
+    expect(byTestId('attention-summary-resources')).toBeNull();
+    expect(byTestId('attention-summary-variables')?.getAttribute('href')).toBe('#environment-variables');
+    expect(byTestId('attention-summary-variables')?.textContent).toBe('3 variables need input');
     // External services are information on their own rows, never an issue.
     expect(byTestId('inventory-row-integration-0')?.textContent).not.toContain('Needs');
     expect(byTestId('inventory-row-integration-0')?.textContent).toContain('Billed separately');

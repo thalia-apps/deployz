@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -25,11 +25,11 @@ import { deleteApplication, updateApplication, type Application } from '@/lib/ap
 
 import { useApplicationPage } from '../application-page-context';
 
-// The Configuration tab's "Settings" section — the application name, its
-// (read-only) repository, and the danger zone. Moved here as is from the old
+// The Configuration tab's "Settings" panel — the application name, its
+// (read-only) repository, re-analysis, and the danger zone. Moved here as is from the old
 // overview page: same requests, same copy, same safeguards.
 export function GeneralSettings() {
-  const { data, loading, refresh } = useApplicationPage();
+  const { data, loading, refresh, reanalyse, reanalysing } = useApplicationPage();
 
   if (loading) return <GeneralSettingsSkeleton />;
   if (!data) return null;
@@ -38,12 +38,30 @@ export function GeneralSettings() {
     <div id="settings" className="flex scroll-mt-20 flex-col gap-6">
       <section aria-labelledby="general" className="flex flex-col gap-3">
         <h2 id="general" className="text-base font-semibold">
-          Settings
+          General
         </h2>
         <Card>
           <CardContent className="flex flex-col gap-4 py-4">
             <ApplicationNameField application={data.application} onRenamed={refresh} />
             <RepositoryDetails application={data.application} />
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+              <div>
+                <p className="text-sm font-medium">Repository analysis</p>
+                <p className="text-sm text-muted-foreground">Analyse the default branch again.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={data.application.analysisStatus === 'ANALYZING'}
+                loading={reanalysing}
+                loadingText="Starting analysis…"
+                onClick={() => void reanalyse()}
+                data-testid="settings-reanalyse"
+              >
+                <RefreshCw aria-hidden />
+                Re-analyse
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -147,10 +165,10 @@ function DangerZone({ application, hasDeployments }: { application: Application;
 
   if (hasDeployments) {
     return (
-      <section aria-labelledby="danger-heading" className="flex flex-col gap-3">
-        <h3 id="danger-heading" className="text-base font-semibold">
+      <section aria-labelledby="danger-heading" className="flex flex-col gap-3 border-t pt-6">
+        <h2 id="danger-heading" className="text-base font-semibold text-destructive">
           Danger zone
-        </h3>
+        </h2>
         <Card className="border-destructive/40">
           <CardContent className="flex flex-col gap-2 py-4" data-testid="delete-app-unavailable">
             <p className="text-sm font-medium">Removal unavailable</p>
@@ -164,10 +182,10 @@ function DangerZone({ application, hasDeployments }: { application: Application;
   }
 
   return (
-    <section aria-labelledby="danger-heading" className="flex flex-col gap-3">
-      <h3 id="danger-heading" className="text-base font-semibold">
+    <section aria-labelledby="danger-heading" className="flex flex-col gap-3 border-t pt-6">
+      <h2 id="danger-heading" className="text-base font-semibold text-destructive">
         Danger zone
-      </h3>
+      </h2>
       <Card className="border-destructive/40">
         <CardContent className="flex flex-col gap-3 py-4">
           <p className="text-sm font-medium text-destructive">Remove this application?</p>

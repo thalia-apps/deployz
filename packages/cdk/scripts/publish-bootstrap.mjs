@@ -60,13 +60,19 @@
  *                         template copy is keyed by. Defaults to the content
  *                         hash of the template (`bootstrap:build-id`).
  *   AWS_REGION            region of the legacy bucket.
+ *   TEMPLATE_BUCKET_PREFIX
+ *                         prefix of the regional buckets to publish into
+ *                         (`<prefix>-<region>`). Set it for a non-production
+ *                         control plane, whose buckets carry its own prefix
+ *                         (see packages/cdk/src/stage.ts). Unset keeps the
+ *                         production `deployz-templates-<region>` names.
  */
 import { CloudFormationClient, ListExportsCommand } from '@aws-sdk/client-cloudformation';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { SUPPORTED_AWS_REGIONS } from '@deployz/contracts';
+import { bootstrapTemplateBucketName, SUPPORTED_AWS_REGIONS } from '@deployz/contracts';
 import {
   createRealRegionVerifier,
   createRealS3Client,
@@ -81,6 +87,7 @@ const controlPlaneUrl = process.env.API_URL ?? 'https://api.deployz.dev';
 const stackName = process.env.CONTROL_PLANE_STACK ?? 'Deployz';
 const keyPrefix = process.env.TEMPLATE_KEY_PREFIX ?? 'bootstrap/v1';
 const legacyBucketRegion = process.env.BOOTSTRAP_LEGACY_BUCKET_REGION;
+const bucketPrefix = process.env.TEMPLATE_BUCKET_PREFIX;
 const publishRegions = parsePublishRegions(
   process.env.BOOTSTRAP_PUBLISH_REGIONS,
   SUPPORTED_AWS_REGIONS,
@@ -116,7 +123,8 @@ const synth = await synthesizeBootstrapStack({ outdir, controlPlaneUrl, buildId 
 // endpoint), assets built once and reused everywhere. When
 // BOOTSTRAP_LEGACY_BUCKET_REGION is set, that region publishes into the
 // resolved TEMPLATE_BUCKET instead of its deployz-templates-<region> bucket
-// (see the file header); every other requested region keeps the default.
+// (see the file header); every other requested region keeps the default, or
+// this stage's own prefix when TEMPLATE_BUCKET_PREFIX is set.
 const results = await publishBootstrapToAllRegions(
   (r) => createRealS3Client(r),
   (r) => createRealRegionVerifier(r),
@@ -125,7 +133,12 @@ const results = await publishBootstrapToAllRegions(
     keyPrefix,
     controlPlaneUrl,
     regions: publishRegions,
-    bucketFor: (r) => (r === legacyBucketRegion ? bucket : undefined),
+    bucketFor: (r) =>
+      r === legacyBucketRegion
+        ? bucket
+        : bucketPrefix
+          ? bootstrapTemplateBucketName(r, bucketPrefix)
+          : undefined,
   },
 );
 
