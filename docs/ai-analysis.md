@@ -237,11 +237,16 @@ and the release gate are in `docs/decisions/README.md`.
   re-runs a stored row.
 - **Evidence pack** (`evidence-pack.ts`): the Dockerfile candidates, the
   scripts they start, the manifests and process files, and every file that
-  a rules finding names. At most 90,000 characters. Real `.env` files,
+  a rules finding names. At most 90,000 characters. The pack starts with
+  the Deployz binding contract (`bindingContractOf`): the variables Deployz
+  sets always, the ones it sets for this repository by the env-var model,
+  and the standard names it sets when it provisions a database, Redis or S3,
+  so the analyst never lists a supplied name as a vendor variable. The rules
+  signals follow, marked as an unverified first guess. Real `.env` files,
   key files, lockfiles and vendored code are never included. Secrets are
   redacted line by line, env sample values are removed, and a file with a
   private key is left out. Each line keeps its repository line number.
-- **Analyst** (`analyst.ts`, prompt version 4): Claude Opus 5.5 returns the
+- **Analyst** (`analyst.ts`, prompt version 5): Claude Opus 5.5 returns the
   facts under a strict schema: Dockerfile and context, port, start command,
   health path, database engine, Redis, S3, migration mode and command,
   workers and required variables. Each fact has a value, a confidence and
@@ -249,8 +254,11 @@ and the release gate are in `docs/decisions/README.md`.
   and the evidence pack is the user message. They state what Deployz
   provides, what each kind of error costs (a missing resource crashes the
   deployment; an extra variable is a needless vendor question), that the
-  rules signals are an unverified first guess, and that a mixed case takes
-  the safe value with lower confidence. Reasoning effort: medium. The
+  rules signals are an unverified first guess, that "unknown" is a vendor
+  question and never a safe default, and how to decide each fact from the
+  effective production start path (a registered health route is enough;
+  the migration modes exclude each other; workers only from the production
+  setup). Reasoning effort: medium. The
   provider is held to a flat list (one entry per fact, a plain value; JSON
   only for the Dockerfile and the migration), because Anthropic refuses the
   grammar of the typed schema; the strict typed schema then validates the

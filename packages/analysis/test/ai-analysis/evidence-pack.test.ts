@@ -4,6 +4,7 @@ import { analyseRepo } from '../../src/analyser.js';
 import {
   MAX_FILE_CHARS,
   MAX_PACK_CHARS,
+  bindingContractOf,
   buildEvidencePack,
   isExcludedPath,
   renderEvidencePack,
@@ -176,5 +177,29 @@ describe('renderEvidencePack', () => {
   it('marks a truncated file', () => {
     const tree: FileTree = { ...baseTree, 'requirements.txt': Array.from({ length: 5000 }, (_, i) => `l${i}`).join('\n') };
     expect(renderEvidencePack(pack(tree))).toContain('<<<FILE requirements.txt (first lines only)');
+  });
+});
+
+describe('the Deployz binding contract', () => {
+  const tree: FileTree = {
+    Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "dist/index.js"]',
+    'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
+    'src/index.ts': 'const db = new Pool({ connectionString: process.env.DATABASE_URL });\nconst s = process.env.SESSION_SECRET;\napp.listen(process.env.PORT);',
+  };
+
+  it('lists what Deployz sets always, for this repository, and for each resource it can add', () => {
+    const contract = bindingContractOf(analyseRepo(tree));
+    expect(contract.always).toEqual(['PORT', 'HOSTNAME']);
+    expect(contract.forThisRepository).toContain('DATABASE_URL');
+    expect(contract.forThisRepository).toContain('SESSION_SECRET');
+    expect(contract.whenDatabase).toContain('DATABASE_PASSWORD');
+    expect(contract.whenRedis).toEqual(expect.arrayContaining(['REDIS_URL', 'REDIS_HOST', 'REDIS_PORT']));
+    expect(contract.whenStorage).toContain('S3_BUCKET');
+  });
+
+  it('is rendered before the rules signals, which are marked as unverified', () => {
+    const rendered = renderEvidencePack(buildEvidencePack(tree, analyseRepo(tree)));
+    expect(rendered.indexOf('## Deployz binding contract')).toBeGreaterThanOrEqual(0);
+    expect(rendered.indexOf('## Deployz binding contract')).toBeLessThan(rendered.indexOf('## Rules Analysis signals (JSON, unverified first guess)'));
   });
 });

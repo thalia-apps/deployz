@@ -59,8 +59,8 @@ describe('runAiAnalysis', () => {
     expect(reviewer.prompts[0]).toContain('## Proposed facts (JSON)');
     expect(reviewer.prompts[0]).toContain('"value":"3000"');
     // The instructions travel as the system message; the user message holds only the data.
-    expect(analyst.systems[0]).toContain('UNTRUSTED DATA');
-    expect(analyst.prompts[0]).not.toContain('UNTRUSTED DATA');
+    expect(analyst.systems[0]).toContain('untrusted data');
+    expect(analyst.prompts[0]).not.toContain('WHAT A WRONG ANSWER COSTS');
     expect(reviewer.systems[0]).toContain('Object ONLY');
   });
 

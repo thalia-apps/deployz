@@ -10,6 +10,7 @@ export function packOf(files: FileTree): EvidencePack {
   return {
     files: Object.entries(files).map(([path, content]) => ({ path, lines: content.split('\n'), truncated: false })),
     signals: {},
+    bindingContract: { always: ['PORT', 'HOSTNAME'], forThisRepository: [], whenDatabase: [], whenRedis: [], whenStorage: [], generatedSecrets: '' },
     paths: Object.keys(files),
     totalPaths: Object.keys(files).length,
   };
