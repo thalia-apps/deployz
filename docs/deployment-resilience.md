@@ -822,7 +822,7 @@ active, the latest mutating job is a settled INSTALL, DEPLOY_RELEASE or
 CONFIG_UPDATE that finished at least 30 minutes ago, and this heartbeat's
 release verdict is a refusal that blames the application. The window covers
 the 300-second load-balancer health-check grace, a 3-5 minute ECS rollout and
-a first-start migration, and is six five-minute heartbeats long. The latest
+a first-start migration. The latest
 settled job anchors the window, so a deploy that follows the install restarts
 it.
 

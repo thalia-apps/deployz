@@ -19,7 +19,7 @@
  *   ERROR            last attempt failed; terminal — explicit vendor retry required
  *   REMOVING         destroy/remove in progress
  *
- * Driver cadence: the relay heartbeat (~5 min, the same existing background
+ * Driver cadence: the relay heartbeat (~1 min, the same existing background
  * cadence the custom-domain auto-check rides) plus one immediate kick after a
  * successful INSTALL result. All transitions are idempotent.
  *

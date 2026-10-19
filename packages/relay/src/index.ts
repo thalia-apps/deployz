@@ -1,7 +1,7 @@
 /**
  * Relay Lambda handler — the outbound actor in the customer's AWS account.
  *
- * Invoked by EventBridge on a fixed 5-minute schedule (defined in the
+ * Invoked by EventBridge on a fixed one-minute schedule (defined in the
  * bootstrap stack, todo 8). On each invocation:
  *
  *   1. Reads the bootstrap-generated credential from Secrets Manager
@@ -184,7 +184,7 @@ export function relayBootstrapStackName(): string {
 // constructed on first use, not at module load — so importing this module
 // never touches AWS, and unit tests that never trigger the INSTALL executor
 // or the `observe` hook construct nothing. This matters more here than for
-// INSTALL alone: `observe` runs on every poll, once every 5 minutes, forever,
+// INSTALL alone: `observe` runs on every poll, once a minute, forever,
 // whereas INSTALL runs at most once or twice per container's lifetime.
 
 let cloudFormationReader: CloudFormationReader | undefined;
@@ -1326,7 +1326,7 @@ export function createInstallExecutor(deps: InstallExecutorDeps): CommandExecuto
  * The other half of `createInstallExecutor`: finish an install that an
  * earlier invocation started and report it against its original command id.
  *
- * Wired into the poll loop's `resume` hook, so it runs once per five-minute
+ * Wired into the poll loop's `resume` hook, so it runs once per one-minute
  * tick until the stack settles.
  */
 export function createInstallResumer(

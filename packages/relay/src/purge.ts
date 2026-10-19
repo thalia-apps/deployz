@@ -10,17 +10,13 @@
  * its own execution role (CANARY-014). It only ever runs for a deployment
  * whose vendor typed its name to confirm, and
  * only after the control plane accepted the request (deployment already
- * DELETED with SKIPPED_RELAY_OFFLINE leftovers).
+ * DELETED, cleanup not yet COMPLETE).
  *
  * Safety: every resource is touched only after it verifies as THIS
  * installation's — the APPLICATION stack by its `deployz:installation`
  * stack tag, orphaned RDS/ElastiCache/S3 resources by their resource tags
  * (the ownership check lives inside the clients: `listOwned*` returns only
- * verified resources). The bootstrap/relay stack is deleted by its KNOWN
- * NAME (baked into this relay's environment by the stack itself) — it is
- * created before the installation id exists and so can never carry a
- * readable installation tag; a name-based ownership proof is the only
- * feasible one. An untagged or mismatched resource is refused, never
+ * verified resources). An untagged or mismatched resource is refused, never
  * deleted.
  *
  * Idempotent by construction: a pass only deletes what a fresh read shows

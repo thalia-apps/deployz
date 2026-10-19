@@ -1699,9 +1699,9 @@ const UNDEPLOYABLE_STATES = new Set<DeploymentRow['state']>([
   'DELETED',
 ]);
 
-// An in-flight INSTALL older than this is dead: the relay polls every 5
-// minutes and a single executor pass fits well inside it, so six missed
-// cycles mean the invocation is never coming back (crashed Lambda, expired
+// An in-flight INSTALL older than this is dead: a single executor pass fits
+// well inside the relay's 5-minute timeout, so 30 minutes without a result
+// mean the invocation is never coming back (crashed Lambda, expired
 // container). Only then may retry-install supersede the job.
 const INSTALL_JOB_STALE_AFTER_MS = 30 * 60 * 1000;
 
@@ -9532,7 +9532,7 @@ export async function buildServer({
         ),
       );
 
-    // Custom-domain auto-check piggybacks on the ~5-minute relay heartbeat —
+    // Custom-domain auto-check piggybacks on the ~1-minute relay heartbeat —
     // the existing background cadence, no new scheduler. Best-effort: a DNS
     // hiccup must never fail a health report.
     const activeDomain = await findActiveDomain(db, deployment.id);

@@ -801,7 +801,7 @@ export const vendorDeploymentStatusSchema = z
 export type VendorDeploymentStatus = z.infer<typeof vendorDeploymentStatusSchema>;
 
 /**
- * How long a relay may stay silent (three missed five-minute polls) before it
+ * How long a relay may stay silent (15 missed one-minute polls) before it
  * counts as DISCONNECTED. Shared by the API's liveness module and the worker's
  * scheduled sweep — the sweep persists it, every read afterwards trusts the
  * persisted column, so the two must agree on the threshold.

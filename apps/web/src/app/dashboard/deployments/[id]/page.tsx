@@ -1776,10 +1776,10 @@ function RemovedDeploymentNotes({
   return null;
 }
 
-// P2 purge: the explicit destructive action for resources a force-completed
-// disconnect left behind. Typed application-name confirmation, because this
-// permanently deletes the retained resources — and the bootstrap/relay stack
-// itself.
+// P2 purge: the explicit destructive action for resources a disconnect left
+// behind. Typed application-name confirmation, because this permanently
+// deletes the retained resources. The bootstrap/relay stack stays; the
+// customer deletes it.
 function PurgeRetainedResources({
   deploymentId,
   applicationName,
