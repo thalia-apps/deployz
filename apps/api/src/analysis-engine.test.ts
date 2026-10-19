@@ -38,7 +38,19 @@ function gateway(answer: () => unknown): AiGateway {
   };
 }
 
-const analyst = gateway(() => ANALYST);
+// The provider answers in the flat wire format: one entry per fact, the value as JSON text.
+const SCALARS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'database', 'redis', 'storage', 'migration'] as const;
+const WIRE = {
+  facts: SCALARS.map((fact) => ({
+    fact,
+    subject: null,
+    value: JSON.stringify(ANALYST[fact].value),
+    confidence: ANALYST[fact].confidence,
+    evidence: ANALYST[fact].evidence,
+  })),
+};
+
+const analyst = gateway(() => WIRE);
 const reviewer = gateway(() => ({ objections: [] }));
 const broken: AiGateway = {
   async generate() {

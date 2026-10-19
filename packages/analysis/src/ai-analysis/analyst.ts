@@ -79,35 +79,6 @@ export const analystOutputSchema = z
   .strict();
 export type AnalystOutput = z.infer<typeof analystOutputSchema>;
 
-/**
- * The shape the provider is held to: structure only. With its patterns and
- * limits, `analystOutputSchema` compiles to a grammar that Anthropic refuses
- * ("The compiled grammar is too large"). The strict schema still validates
- * every answer after the call.
- */
-export const wireEvidenceSchema = z.object({ path: z.string(), line: z.number().int(), quote: z.string() }).strict();
-
-function wireFact<T extends z.ZodType>(value: T) {
-  return z.object({ value, confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict();
-}
-
-const analystWireSchema = z
-  .object({
-    dockerfile: wireFact(z.object({ path: z.string(), context: z.string() }).strict().nullable()),
-    port: wireFact(z.number().int().nullable()),
-    startCommand: wireFact(z.string().nullable()),
-    healthPath: wireFact(z.string().nullable()),
-    database: wireFact(z.enum(['postgres', 'mysql', 'none'])),
-    redis: wireFact(z.boolean()),
-    storage: wireFact(z.boolean()),
-    migration: wireFact(z.object({ mode: z.enum(['pre_deploy', 'startup', 'none', 'unknown']), command: z.string().nullable() }).strict()),
-    workers: z.array(
-      z.object({ id: z.string(), command: z.string(), confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict(),
-    ),
-    requiredVariables: z.array(z.object({ name: z.string(), confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict()),
-  })
-  .strict();
-
 export const FACT_NAMES = [
   'dockerfile',
   'port',
@@ -121,6 +92,53 @@ export const FACT_NAMES = [
   'requiredVariables',
 ] as const;
 export type FactName = (typeof FACT_NAMES)[number];
+
+/**
+ * The shape the provider is held to: one flat entry per fact, the value as
+ * JSON text. Anthropic refuses the typed schema ("The compiled grammar is too
+ * large"), even without its patterns and limits. `fromWire` rebuilds the facts
+ * and `analystOutputSchema` validates them.
+ */
+export const wireEvidenceSchema = z.object({ path: z.string(), line: z.number().int(), quote: z.string() }).strict();
+
+export const analystWireSchema = z
+  .object({
+    facts: z.array(
+      z
+        .object({
+          fact: z.enum(FACT_NAMES),
+          subject: z.string().nullable(),
+          value: z.string(),
+          confidence: confidenceSchema,
+          evidence: z.array(wireEvidenceSchema),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type AnalystWire = z.infer<typeof analystWireSchema>;
+
+function parseValue(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** The facts in the analyst shape. A missing or repeated scalar fact makes the strict parse fail. */
+export function fromWire(wire: AnalystWire): unknown {
+  const output: Record<string, unknown> = { workers: [], requiredVariables: [] };
+  for (const entry of wire.facts) {
+    const value = parseValue(entry.value);
+    const item = { confidence: entry.confidence, evidence: entry.evidence };
+    if (entry.fact === 'workers') (output['workers'] as unknown[]).push({ id: entry.subject, command: value, ...item });
+    else if (entry.fact === 'requiredVariables') (output['requiredVariables'] as unknown[]).push({ name: entry.subject, ...item });
+    else if (entry.fact in output) throw new Error(`the analyst gave ${entry.fact} twice`);
+    else output[entry.fact] = { value, ...item };
+  }
+  return output;
+}
 
 export function buildAnalystPrompt(pack: EvidencePack): string {
   return [
@@ -141,6 +159,8 @@ export function buildAnalystPrompt(pack: EvidencePack): string {
     '- workers: only processes that the repository declares as separate long-running processes (a Procfile entry, a Compose service on the same image, a documented worker command). Each needs a command the image can run.',
     '- requiredVariables: environment variables the app cannot start or serve without, that the vendor must supply: an unguarded read with no default that fails or crashes when the value is missing. Do not list variables with a default, optional features, or the database, Redis, S3, PORT and public-URL variables that Deployz provides.',
     '- confidence: "high" only when the evidence is explicit; "medium" when it is strong but indirect; "low" otherwise.',
+    '',
+    'Answer format: a list `facts` with exactly one entry for each of dockerfile, port, startCommand, healthPath, database, redis, storage and migration, plus one entry per worker and per required variable. Each entry has fact (the name), subject (the worker id or the variable name, else null), value (JSON text of the value), confidence and evidence. Value examples: dockerfile "{\\"path\\":\\"Dockerfile\\",\\"context\\":\\".\\"}" or "null"; port "8080" or "null"; startCommand "\\"node server.js\\"" or "null"; healthPath "\\"/healthz\\"" or "null"; database "\\"postgres\\"", "\\"mysql\\"" or "\\"none\\""; redis and storage "true" or "false"; migration "{\\"mode\\":\\"startup\\",\\"command\\":null}"; a worker "\\"bundle exec sidekiq\\"" with subject "sidekiq"; a required variable "true" with subject "SECRET_KEY". Evidence may be empty for a null, false or none value.',
     '',
     renderEvidencePack(pack),
   ].join('\n');
@@ -171,5 +191,6 @@ export async function runAnalyst(
   if (used > ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS) {
     throw new SpendLimitExceededError(used, ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS);
   }
-  return { output: analystOutputSchema.parse(response.object), usage: response.usage, model: response.model };
+  const output = analystOutputSchema.parse(fromWire(analystWireSchema.parse(response.object)));
+  return { output, usage: response.usage, model: response.model };
 }

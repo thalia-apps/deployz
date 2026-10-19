@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { AiGateway, AiGatewayResponse } from '../../src/ai-gateway.js';
-import type { AnalystOutput } from '../../src/ai-analysis/analyst.js';
+import type { AnalystOutput, AnalystWire } from '../../src/ai-analysis/analyst.js';
 import type { EvidencePack } from '../../src/ai-analysis/evidence-pack.js';
 import type { FileTree } from '../../src/detectors.js';
 
@@ -30,6 +30,24 @@ export function factsOf(overrides: Partial<AnalystOutput> = {}): AnalystOutput {
     workers: [],
     requiredVariables: [],
     ...overrides,
+  };
+}
+
+/** The analyst facts in the flat wire format the provider returns. */
+export function toWire(output: AnalystOutput): AnalystWire {
+  const scalar = (['dockerfile', 'port', 'startCommand', 'healthPath', 'database', 'redis', 'storage', 'migration'] as const).map((fact) => ({
+    fact,
+    subject: null,
+    value: JSON.stringify(output[fact].value),
+    confidence: output[fact].confidence,
+    evidence: output[fact].evidence,
+  }));
+  return {
+    facts: [
+      ...scalar,
+      ...output.workers.map((w) => ({ fact: 'workers' as const, subject: w.id, value: JSON.stringify(w.command), confidence: w.confidence, evidence: w.evidence })),
+      ...output.requiredVariables.map((v) => ({ fact: 'requiredVariables' as const, subject: v.name, value: 'true', confidence: v.confidence, evidence: v.evidence })),
+    ],
   };
 }
 
