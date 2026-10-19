@@ -1,0 +1,533 @@
+{
+  "schemaVersion": 1,
+  "id": "new-26",
+  "set": "holdout",
+  "repository": "teslamate-org/teslamate",
+  "commit": "33032c83051086b28cb1da0d84e835018a5e50a8",
+  "recipeHash": "8628922a05e0069096e15180bcf337df39f78c99f48cea932d1c36588819e99e",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:40:20.036Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 121,
+          "imageBytes": 194521338,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#31 1.702 \n#31 1.702     /opt/built/bin/teslamate\n#31 1.702 \n#31 DONE 1.8s\n#32 [builder 24/24] COPY --chmod=444 NOTICE LICENSE /opt/legal/\n#32 DONE 0.0s\n#33 [app 4/7] COPY --from=builder /opt/legal/ /usr/share/doc/teslamate/\n#33 DONE 0.0s\n#34 [app 5/7] COPY --chown=nonroot:nonroot --chmod=555 entrypoint.sh /\n#34 DONE 0.0s\n#35 [app 6/7] COPY --from=builder --chown=nonroot:nonroot --chmod=555 /opt/built .\n#35 DONE 0.5s\n#36 [app 7/7] RUN mkdir /opt/app/.srtm_cache\n#36 DONE 0.1s\n#37 exporting to image\n#37 exporting layers\n#37 exporting layers 0.8s done\n#37 writing image sha256:e3cbad5e2b5f9cc14c116f34af8b34fc96909054691cc53657c4958d16045a14 done\n#37 naming to docker.io/deployz-runcheck/new-26:33032c83051086b28cb1da0d84e835018a5e50a8 done\n#37 DONE 0.8s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, ENCRYPTION_KEY, DISABLE_MQTT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n4000/ none\n4000/health none\n4000/healthz none\n4000/up none\n4000/api/health none\n4000/status none\n4000/ping none\n4000/_health none\n4000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "ERROR! Config provider Config.Reader failed with:\n** (System.EnvError) could not fetch environment variable \"DATABASE_PASS\" because it is not set\n    (elixir 1.20.3) lib/system.ex:731: System.fetch_env!/1\n    releases/4.4.0-dev/runtime.exs:119: (file)\n    (elixir 1.20.3) src/elixir.erl:382: :elixir.eval_external_handler/3\n    (stdlib 8.0.3) erl_eval.erl:1048: :erl_eval.do_apply/7\n    (stdlib 8.0.3) erl_eval.erl:1664: :erl_eval.expr_list/7\n    (stdlib 8.0.3) erl_eval.erl:1660: :erl_eval.expr_list/5\n    (stdlib 8.0.3) erl_eval.erl:451: :erl_eval.expr/6\n    (stdlib 8.0.3) erl_eval.erl:441: :erl_eval.expr/6\n\nRuntime terminating during boot ({#{env=><<\"DATABASE_PASS\">>,'__struct__'=>'Elixir.System.EnvError','__exception__'=>true},[{'Elixir.System','fetch_env!',1,[{file,\"lib/system.ex\"},{line,731}]},{elixir_compiler,'__FILE__',1,[{file,\"releases/4.4.0-dev/runtime.exs\"},{line,119}]},{elixir,eval_external_handler,3,[{file,\"src/elixir.erl\"},{line,382}]},{erl_eval,do_apply,7,[{file,\"erl_eval.erl\"},{line,1048}]},{erl_eval,expr_list,7,[{file,\"erl_eval.erl\"},{line,1664}]},{erl_eval,expr_list,5,[{file,\"erl_eval.erl\"},{line,1660}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,451}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,441}]}]})\r\n\r\nCrash dump is being written to: erl_crash.dump...done\r\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-26: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-26: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/opt/app/erl_crash.dump"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/opt/app/erl_crash.dump"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n4000/ none\n4000/health none\n4000/healthz none\n4000/up none\n4000/api/health none\n4000/status none\n4000/ping none\n4000/_health none\n4000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "ERROR! Config provider Config.Reader failed with:\n** (System.EnvError) could not fetch environment variable \"DATABASE_PASS\" because it is not set\n    (elixir 1.20.3) lib/system.ex:731: System.fetch_env!/1\n    releases/4.4.0-dev/runtime.exs:119: (file)\n    (elixir 1.20.3) src/elixir.erl:382: :elixir.eval_external_handler/3\n    (stdlib 8.0.3) erl_eval.erl:1048: :erl_eval.do_apply/7\n    (stdlib 8.0.3) erl_eval.erl:1664: :erl_eval.expr_list/7\n    (stdlib 8.0.3) erl_eval.erl:1660: :erl_eval.expr_list/5\n    (stdlib 8.0.3) erl_eval.erl:451: :erl_eval.expr/6\n    (stdlib 8.0.3) erl_eval.erl:441: :erl_eval.expr/6\n\nRuntime terminating during boot ({#{env=><<\"DATABASE_PASS\">>,'__struct__'=>'Elixir.System.EnvError','__exception__'=>true},[{'Elixir.System','fetch_env!',1,[{file,\"lib/system.ex\"},{line,731}]},{elixir_compiler,'__FILE__',1,[{file,\"releases/4.4.0-dev/runtime.exs\"},{line,119}]},{elixir,eval_external_handler,3,[{file,\"src/elixir.erl\"},{line,382}]},{erl_eval,do_apply,7,[{file,\"erl_eval.erl\"},{line,1048}]},{erl_eval,expr_list,7,[{file,\"erl_eval.erl\"},{line,1664}]},{erl_eval,expr_list,5,[{file,\"erl_eval.erl\"},{line,1660}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,451}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,441}]}]})\r\n\r\nCrash dump is being written to: erl_crash.dump...done\r\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "ENCRYPTION_KEY",
+          "DISABLE_MQTT"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 128.032,
+        "setA": 32.341,
+        "sizes": 16.745
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:43:17.165Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 121,
+          "imageBytes": 194521338,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-26:33032c83051086b28cb1da0d84e835018a5e50a8 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, ENCRYPTION_KEY, DISABLE_MQTT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n4000/ none\n4000/health none\n4000/healthz none\n4000/up none\n4000/api/health none\n4000/status none\n4000/ping none\n4000/_health none\n4000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "ERROR! Config provider Config.Reader failed with:\n** (System.EnvError) could not fetch environment variable \"DATABASE_PASS\" because it is not set\n    (elixir 1.20.3) lib/system.ex:731: System.fetch_env!/1\n    releases/4.4.0-dev/runtime.exs:119: (file)\n    (elixir 1.20.3) src/elixir.erl:382: :elixir.eval_external_handler/3\n    (stdlib 8.0.3) erl_eval.erl:1048: :erl_eval.do_apply/7\n    (stdlib 8.0.3) erl_eval.erl:1664: :erl_eval.expr_list/7\n    (stdlib 8.0.3) erl_eval.erl:1660: :erl_eval.expr_list/5\n    (stdlib 8.0.3) erl_eval.erl:451: :erl_eval.expr/6\n    (stdlib 8.0.3) erl_eval.erl:441: :erl_eval.expr/6\n\nRuntime terminating during boot ({#{env=><<\"DATABASE_PASS\">>,'__struct__'=>'Elixir.System.EnvError','__exception__'=>true},[{'Elixir.System','fetch_env!',1,[{file,\"lib/system.ex\"},{line,731}]},{elixir_compiler,'__FILE__',1,[{file,\"releases/4.4.0-dev/runtime.exs\"},{line,119}]},{elixir,eval_external_handler,3,[{file,\"src/elixir.erl\"},{line,382}]},{erl_eval,do_apply,7,[{file,\"erl_eval.erl\"},{line,1048}]},{erl_eval,expr_list,7,[{file,\"erl_eval.erl\"},{line,1664}]},{erl_eval,expr_list,5,[{file,\"erl_eval.erl\"},{line,1660}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,451}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,441}]}]})\r\n\r\nCrash dump is being written to: erl_crash.dump...done\r\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-26: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-26: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/opt/app/erl_crash.dump"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/opt/app/erl_crash.dump"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n4000/ none\n4000/health none\n4000/healthz none\n4000/up none\n4000/api/health none\n4000/status none\n4000/ping none\n4000/_health none\n4000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "ERROR! Config provider Config.Reader failed with:\n** (System.EnvError) could not fetch environment variable \"DATABASE_PASS\" because it is not set\n    (elixir 1.20.3) lib/system.ex:731: System.fetch_env!/1\n    releases/4.4.0-dev/runtime.exs:119: (file)\n    (elixir 1.20.3) src/elixir.erl:382: :elixir.eval_external_handler/3\n    (stdlib 8.0.3) erl_eval.erl:1048: :erl_eval.do_apply/7\n    (stdlib 8.0.3) erl_eval.erl:1664: :erl_eval.expr_list/7\n    (stdlib 8.0.3) erl_eval.erl:1660: :erl_eval.expr_list/5\n    (stdlib 8.0.3) erl_eval.erl:451: :erl_eval.expr/6\n    (stdlib 8.0.3) erl_eval.erl:441: :erl_eval.expr/6\n\nRuntime terminating during boot ({#{env=><<\"DATABASE_PASS\">>,'__struct__'=>'Elixir.System.EnvError','__exception__'=>true},[{'Elixir.System','fetch_env!',1,[{file,\"lib/system.ex\"},{line,731}]},{elixir_compiler,'__FILE__',1,[{file,\"releases/4.4.0-dev/runtime.exs\"},{line,119}]},{elixir,eval_external_handler,3,[{file,\"src/elixir.erl\"},{line,382}]},{erl_eval,do_apply,7,[{file,\"erl_eval.erl\"},{line,1048}]},{erl_eval,expr_list,7,[{file,\"erl_eval.erl\"},{line,1664}]},{erl_eval,expr_list,5,[{file,\"erl_eval.erl\"},{line,1660}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,451}]},{erl_eval,expr,6,[{file,\"erl_eval.erl\"},{line,441}]}]})\r\n\r\nCrash dump is being written to: erl_crash.dump...done\r\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "ENCRYPTION_KEY",
+          "DISABLE_MQTT"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.991,
+        "setA": 17.412,
+        "sizes": 16.664
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

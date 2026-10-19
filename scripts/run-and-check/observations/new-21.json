@@ -1,0 +1,811 @@
+{
+  "schemaVersion": 1,
+  "id": "new-21",
+  "set": "holdout",
+  "repository": "kanboard/kanboard",
+  "commit": "ec3398d0d2b31d5051e2a077f475e286b5dd1228",
+  "recipeHash": "aa724b209699a621aff7d1892271dab9634e566d1ca64cec54eb8f10206f13ab",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:27:29.040Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 12,
+          "imageBytes": 94980412,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#5 1.835   Executing s6-2.15.0.0-r0.pre-install\n#5 1.853 (90/92) Installing ssmtp (2.64-r23)\n#5 1.857 (91/92) Installing tzdata (2026e-r0)\n#5 1.910 (92/92) Installing unzip (6.0-r16)\n#5 1.917 Executing busybox-1.37.0-r31.trigger\n#5 1.924 Executing ca-certificates-20260909-r0.trigger\n#5 1.960 OK: 68.1 MiB in 106 packages\n#5 DONE 2.1s\n#6 [3/5] ADD . /var/www/app\n#6 DONE 0.4s\n#7 [4/5] ADD docker/ /\n#7 DONE 0.0s\n#8 [5/5] RUN rm -rf /var/www/app/docker && echo $VERSION > /var/www/app/app/version.txt\n#8 DONE 0.1s\n#9 exporting to image\n#9 exporting layers\n#9 exporting layers 0.5s done\n#9 writing image sha256:a480d04111f9201fbec3897916fe6145ee801ebe891c0aea6ec92337a1aaddaa done\n#9 naming to docker.io/deployz-runcheck/new-21:ec3398d0d2b31d5051e2a077f475e286b5dd1228 done\n#9 DONE 0.6s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=0.809\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "..+.........+.+..+.........+.............+...+++++++++++++++++++++++++++++++++++++++*...+......+.+...+.....+......+.+.........+...+++++++++++++++++++++++++++++++++++++++*.......+..+...+....+............+.........+.................+...+.+...+...+.........+........+......+.........+......+............+.........+....+..............+...+...+.++++++\n...+...........+.+...+......+...+......+++++++++++++++++++++++++++++++++++++++*....+.........+......+....+++++++++++++++++++++++++++++++++++++++*.+.+.........+...........+.......+.....+...+.......+......+..+............+.+..+...+.+...+...........+.+..................+........+...+.+......+..............+.+...+.........+..+................+..+...+...+......+.+...+...........+....+.........+........+...+.+.....+.+.....+.......+.....+..........+.....+.+.....+.+......+..+.+.....+.+...+..+.........+......+..................+............+.+..............+...+.+..+.......+......+.....+.+........+.+.........+..+.+...+......+........+..........+...+........+....+..+.+...+...........+......+.......+.....+.............+..+......+....+..+.........+.......+..+............+.........+....+......+.........+...+..+.+......+.....+......+.......+...........+.+........+.+...........+....+.........+..++++++\n-----\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 443,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 42639,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n443 all reachable=true\n42639 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthcheck.php",
+            "status": 503
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 200
+          },
+          {
+            "port": 443,
+            "path": "/",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/healthcheck.php",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/healthz",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/up",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/api/health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/status",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/ping",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/_health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/actuator/health",
+            "status": 400
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n443/ 400\n443/healthcheck.php 400\n443/health 400\n443/healthz 400\n443/up 400\n443/api/health 400\n443/status 400\n443/ping 400\n443/_health 400\n443/actuator/health 400"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 200
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 200"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-21: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-21: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate variable"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=1.198\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "................+..+.......+...+........+....+...+...+..+.+......+.....+.+...+......+...........+.........+.............+..+.+........+......+.+.........+........+.+..+..........+..............+....+.....+......+.+...+......+...+.....+..........+...+........+......+.+..+.+..+.............+..+....+......+..+.............+...+......+......+...............+..+............+...............+...............+...+.+..+.......+.....+...............+......+.+.....+...+......+.......+.....+.........+....+.....+.........+.+......+........+.+..............+.......+...+..+.+..+.+.....+......+...+..........+...+.........+.....+.............+.....+...+....+.....+...................+..+.......+...+..+............+.+..+......+.+......+.....+...+............+.........+..........+...+........+....+...+......+..+....+.....+.+..+.......+...............+........+...+...+.+...+..+.+...+..+.........+.+...+..............+......+.......+..+.......+......+..+.......+..............+............+...+......+.+..............+.+.........+........+.+..+.......+.....+......+....+...........+.+...........+...+.......+........+.+.....+....+..+...+.....................+..........+..............+.+.........+.....+...............................+...+..................+.........+...+..+...+.+.....+.......+........+......+...............+...+.+..+...............+...+....+........++++++\n........+.+........+.+.....+++++++++++++++++++++++++++++++++++++++*.....+.+..+..........+...+..............+....+......+...........+....+++++++++++++++++++++++++++++++++++++++*....+....+..+.........+......+....+.....+....+.....+......+......+.......+..+...+.+.....+.+......+.....+...+...............+.......+...+.....+.+...+..+.........+....+........+..........+..+.......+.....+....+......+.........+...........+....+..............+.......+...+...+..............+......+...+.......+...+......+.........+.....+....+...+.....+............+............+.+..+......+.+...+..+.+.........+.........+..+..........+.....+.......++++++\n-----\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=1.164\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "...+....+...+.....+++++++++++++++++++++++++++++++++++++++*.+.....+.............+.........+.....+..........+..+...+.+.........+...+.....+............+.+.....+.+++++++++++++++++++++++++++++++++++++++*....+..+...+....+.....+.+..+.......++++++\n..............+..+...+.........+...+......+..........+++++++++++++++++++++++++++++++++++++++*........+.....+....+.................+...+.+.....+.+++++++++++++++++++++++++++++++++++++++*....+...............+....+.........+.....+.......+.....+.........+.........+.+..+.......+..................+.....+...+.+.....+......+....+.....+.+........+....+..+.+..+.+....................+....+.....+.+............+..+.......+......+...+.....+.........+......+......+.........+....+..+.+........................+...+...+..+.......+.....+.+........+......+.+..+...+...................+...........+...+.......+...+..............+.......+........+.+............+...+...........+.+..+......+....+...+..+............+.............+...+.....+....+...+.....+.+..+...+..........+.....+.......+..+.......+.....+...+.+......+.....+..........+.........+..+...+......+..........+...........+...+....+...+............+...+...+.....+...............+......+.........+....+......+............+..+...+.............+......+...+......+..+.........+...+.+..............+.+.........+..+.+.....+...+.+...+......+............+............+........+..........+.....+...+.......+..+.+............+..+...+...+.+........+.......+...+........+...+......+...+...+....+...+......+......+...............+.........+...........+.+...++++++\n-----\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=0.796\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "......+...+...+++++++++++++++++++++++++++++++++++++++*...+..+............+.+.....+.........+...+.........+....+......+.........+.....+......+......+...+.+...+..+......+++++++++++++++++++++++++++++++++++++++*.+..+.......+.....+......++++++\n.....+...+++++++++++++++++++++++++++++++++++++++*.+.+.........+..+++++++++++++++++++++++++++++++++++++++*.......+.+.....+.+........+....+..+.+............+...............+...+...+...........+.+..+.+............+.....+....+...........+...+.+...........+...+....+......+.........+.....................+.....+.+.....+.+..............+.+...+..+....+...+..+.+........+.....................++++++\n-----\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 0.809,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthcheck.php",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 15.431,
+        "setA": 28.071,
+        "twoCopies": 12.204
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:28:24.756Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 12,
+          "imageBytes": 94980412,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-21:ec3398d0d2b31d5051e2a077f475e286b5dd1228 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=0.81\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "..+.................+....+........+.+.........+++++++++++++++++++++++++++++++++++++++*.....+...+..+.+.................+...+....+.........+.....+...................+.....+++++++++++++++++++++++++++++++++++++++*......+..+....+........+......+....+.....+.+..+....+...+..+.+..+.+............+..+...+....+..............+......+.....................+.........+...+.+....................+.+...+......+...........+......+.......+...+..+................+.....+.........+.+..+.......+.....+..........+.....+............+....+.....+.......+...+.....+....+..+......+...+....+..+.+..............+.+..............+................+........+.+........+.......+.....+.+..+.+.....+.+...+.....+......+...............+......+...+.+.........+........+.......+.................+.+.................+.+..............+...+....+...+..+...............+...+.+...........+....+.....+.+...+...+.................+.............+..+......+.+.....+......+.......+...+.....+..........+..+.+.........+........+....+......+...++++++\n.+....+.....+...+...+....+...+...............+......+.....+.+.....+......+++++++++++++++++++++++++++++++++++++++*..+...+.....+..........+...+...+...........+...+.+++++++++++++++++++++++++++++++++++++++*...............+...............+...++++++\n-----\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 443,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 42013,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n443 all reachable=true\n42013 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthcheck.php",
+            "status": 503
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 200
+          },
+          {
+            "port": 443,
+            "path": "/",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/healthcheck.php",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/healthz",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/up",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/api/health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/status",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/ping",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/_health",
+            "status": 400
+          },
+          {
+            "port": 443,
+            "path": "/actuator/health",
+            "status": 400
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n443/ 400\n443/healthcheck.php 400\n443/health 400\n443/healthz 400\n443/up 400\n443/api/health 400\n443/status 400\n443/ping 400\n443/_health 400\n443/actuator/health 400"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 200
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 200"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-21: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-21: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate variable"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=1.095\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": ".+...+.......+..+......+.........+..................+.+++++++++++++++++++++++++++++++++++++++*...+.+++++++++++++++++++++++++++++++++++++++*.....+.+...........+....+.....+.+..+............+...+..........+.....+.......+.....+.+........+....+........+.......+......+............+..+...+....+.........+.....+.+.....................+............+...+........+......+.+.....+....+...+......+......+...+.....+...+...+.....................+.+..+.......+...+.....+......+.+......+............+..+......+....+...+..................+..+.+.....+....+..+.+..+.+...........+....+......+......+.........+...+.................+...+..........+........+....+......+..+...+.........+..........+.....+.+.........+......+.....+.......+..+.+...+..............+...+......................+.....+...+....+...+..+...+...............+.+.........+..+......+...+.+..............+....+.....+..........+......+............+...+.....+....+......+.....+.+.....+......+...+.........+...+....+...........+.............+.....................+...+...+........+.......+..+.+......++++++\n..+....+++++++++++++++++++++++++++++++++++++++*....+...+..........+..+.........+.+......+............+.....+.+......+.........+..+.........+++++++++++++++++++++++++++++++++++++++*.....+.+..+.+..............+.......+.....+....+..+..........+.....+..................+.+......+...+.....+....+..+.+..+................+.....+.+...+..+...+.............+...............+..+...+....+...............+......+.....+...+.+.....+...+.+......+........+......+.......+............+...+...+...........+...+................+..++++++\n-----\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=1.13\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": ".+...........+.......+.....+...+++++++++++++++++++++++++++++++++++++++*.+........+.+......+........+...+.......+++++++++++++++++++++++++++++++++++++++*........+....+...+........+..........+............+.....+............+...............+...+....+...+..+...+.......+......+.....+...+......+..........+...+........+.......+.....+.+......+.....+....+..+...+.+...+...+...+..+.........+.........+.........+............+.+.....+..................+....+......+.........+....................+...+.......+...........++++++\n......+.......+...+...+..+.+..+.......+..+.+..................+.........+..+.+++++++++++++++++++++++++++++++++++++++*.........+++++++++++++++++++++++++++++++++++++++*...........+...+.......+..+...+......+............+....+........+.+......+......+..+.+...........+.............+......+.....+......+..........+...........+...+.......+..+.+.....+.......+.........+.....+.+..+.+.....+....+.....+..........+..+.+.....+.........+.+..+.+..+.......+............+...+.....+.+..+.........+.+..............+......+...+.......+..+...+...+.......+..............+.+....................+............++++++\n-----\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=0.815\n18080/ none\n18080/healthcheck.php none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/healthcheck.php 503\n80/health 200\n80/healthz 200\n80/up 200\n80/api/health 200\n80/status 200\n80/ping 200\n80/_health 200\n80/actuator/health 200\n8080/ none\n8080/healthcheck.php none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck.php none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": ".+...............+...+...+.........+...+++++++++++++++++++++++++++++++++++++++*.......+......+.....+.+...+++++++++++++++++++++++++++++++++++++++*..........+............+..+.+..+.........+...+...+....+.........+..+.........+...+.+.....+.+.....+.+.....+...+......+................+........+....+..+....+...............+......+...+......+......+...+...........+.+...........+....+...+........+...+.......+...+.....+....+.....+.+..+.............+.........+......+.....+................+.....+...+.+..+....+......+..+...++++++\n........+...+.+.....+++++++++++++++++++++++++++++++++++++++*.............+...+......+.....+.+++++++++++++++++++++++++++++++++++++++*.+.....................+.+........+.+...........+.+..+.+...........+..........+.....+...+...+....+.....+.+...+..+...........................+.+.....+.+......+.....+...+.......+........+...................+..+.+..+.............+...+..+...+.......+..+...+....+.....+....+..+....+...+.....+...+....+.....+...+.+...........+................+.....+...+.+.....+.........+....+..+..........+...+.....+..........+......+.....+.+.....+.+...+.....+.+...............+...+...+.....+....+...+........+.........+...+...............+...+.......+........+...+....+..+.+..+.............+............+..+......+...+......+....+.........+...+.....+.........+...+...+....+...+.....+...............+...............+.+..+............+......+.+......+...............+..+.+......+...+......+.....+...................+......+......+.....+...+.......+.....+...+..........+...+...+..+.......+........+....+...+......+.....+............+....+...+............+...........+....+.....++++++\n-----\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 0.81,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthcheck.php",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.023,
+        "setA": 14.4,
+        "twoCopies": 12.049
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

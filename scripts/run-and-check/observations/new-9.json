@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 1,
+  "id": "new-9",
+  "set": "tuning",
+  "repository": "tess1o/geopulse",
+  "commit": "99e6255d386128bb16c2d57ddab33673bcb6a27c",
+  "recipeHash": "fce29432044f9a227cabbe749bc86c9abd850c43204ed87ef8b0b3a31bdb6b22",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:41:43.090Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 130,
+          "imageBytes": 405322417,
+          "dockerfile": "backend/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#18 38.34 [INFO] ------------------------------------------------------------------------\n#18 DONE 39.6s\n#19 [app 2/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/lib/ /app/lib/\n#19 DONE 0.6s\n#20 [app 3/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/*.jar /app/\n#20 DONE 0.0s\n#21 [app 4/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/app/ /app/app/\n#21 DONE 0.0s\n#22 [app 5/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/quarkus/ /app/quarkus/\n#22 DONE 0.0s\n#23 [stage-2 5/6] COPY --from=app /app /app\n#23 DONE 0.5s\n#24 [stage-2 6/6] COPY --chmod=755 backend/src/main/docker/geopulse /usr/local/bin/geopulse\n#24 DONE 0.0s\n#25 exporting to image\n#25 exporting layers\n#25 exporting layers 0.3s done\n#25 writing image sha256:611f58aaa5dd78fd9894591a92d92ea6ffd3865041e73661cb1ef9bd0929cf38 done\n#25 naming to docker.io/deployz-runcheck/new-9:99e6255d386128bb16c2d57ddab33673bcb6a27c done\n#25 DONE 0.3s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, GEOPULSE_POSTGRES_DB, GEOPULSE_POSTGRES_HOST, GEOPULSE_POSTGRES_PORT, GEOPULSE_POSTGRES_USERNAME, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, DEMO_DATABASE_URL, GEOPULSE_POSTGRES_PASSWORD, GEOPULSE_POSTGRES_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/system/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/api/v1/system/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/system/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/system/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "mes\":[{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"connectionSetup\",\"line\":242},{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"createConnection\",\"line\":226},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"createAndPoolConnection\",\"line\":663},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"handlerFromSharedCache\",\"line\":378},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"internalGetConnection\",\"line\":319},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"getConnection\",\"line\":292},{\"class\":\"io.agroal.pool.DataSource\",\"method\":\"getConnection\",\"line\":86},{\"class\":\"io.agroal.api.AgroalDataSource_83v3mgZs1bc75ou7lAXNtJCAcLA_Synthetic_ClientProxy\",\"method\":\"getConnection\"},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcUtils\",\"method\":\"openConnection\",\"line\":73},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcConnectionFactory\",\"method\":\"<init>\",\"line\":76},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"init\",\"line\":273},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"execute\",\"line\":118},{\"class\":\"org.flywaydb.core.Flyway\",\"method\":\"migrate\",\"line\":187},{\"class\":\"io.quarkus.flyway.runtime.FlywayRecorder\",\"method\":\"doStartActions\",\"line\":153},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy_0\"},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy\"},{\"class\":\"io.quarkus.runner.ApplicationImpl\",\"method\":\"doStart\"},{\"class\":\"io.quarkus.runtime.Application\",\"method\":\"start\",\"line\":112},{\"class\":\"io.quarkus.runtime.ApplicationLifecycleManager\",\"method\":\"run\",\"line\":129},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":79},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":50},{\"class\":\"org.github.tess1o.geopulse.maintenance.GeoPulseMain\",\"method\":\"main\",\"line\":18},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"doRun\",\"line\":70},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"main\",\"line\":36}]}}}}}}\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-9: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-9: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/system/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/api/v1/system/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/system/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/system/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "mes\":[{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"connectionSetup\",\"line\":242},{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"createConnection\",\"line\":226},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"createAndPoolConnection\",\"line\":663},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"handlerFromSharedCache\",\"line\":378},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"internalGetConnection\",\"line\":319},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"getConnection\",\"line\":292},{\"class\":\"io.agroal.pool.DataSource\",\"method\":\"getConnection\",\"line\":86},{\"class\":\"io.agroal.api.AgroalDataSource_83v3mgZs1bc75ou7lAXNtJCAcLA_Synthetic_ClientProxy\",\"method\":\"getConnection\"},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcUtils\",\"method\":\"openConnection\",\"line\":73},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcConnectionFactory\",\"method\":\"<init>\",\"line\":76},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"init\",\"line\":273},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"execute\",\"line\":118},{\"class\":\"org.flywaydb.core.Flyway\",\"method\":\"migrate\",\"line\":187},{\"class\":\"io.quarkus.flyway.runtime.FlywayRecorder\",\"method\":\"doStartActions\",\"line\":153},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy_0\"},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy\"},{\"class\":\"io.quarkus.runner.ApplicationImpl\",\"method\":\"doStart\"},{\"class\":\"io.quarkus.runtime.Application\",\"method\":\"start\",\"line\":112},{\"class\":\"io.quarkus.runtime.ApplicationLifecycleManager\",\"method\":\"run\",\"line\":129},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":79},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":50},{\"class\":\"org.github.tess1o.geopulse.maintenance.GeoPulseMain\",\"method\":\"main\",\"line\":18},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"doRun\",\"line\":70},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"main\",\"line\":36}]}}}}}}\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/api/v1/system/health",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 142.996,
+        "setA": 46.632,
+        "sizes": 23.284
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:45:16.010Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 130,
+          "imageBytes": 405322417,
+          "dockerfile": "backend/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-9:99e6255d386128bb16c2d57ddab33673bcb6a27c from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, GEOPULSE_POSTGRES_DB, GEOPULSE_POSTGRES_HOST, GEOPULSE_POSTGRES_PORT, GEOPULSE_POSTGRES_USERNAME, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, DEMO_DATABASE_URL, GEOPULSE_POSTGRES_PASSWORD, GEOPULSE_POSTGRES_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/system/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/api/v1/system/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/system/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/system/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "mes\":[{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"connectionSetup\",\"line\":242},{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"createConnection\",\"line\":226},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"createAndPoolConnection\",\"line\":663},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"handlerFromSharedCache\",\"line\":378},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"internalGetConnection\",\"line\":319},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"getConnection\",\"line\":292},{\"class\":\"io.agroal.pool.DataSource\",\"method\":\"getConnection\",\"line\":86},{\"class\":\"io.agroal.api.AgroalDataSource_83v3mgZs1bc75ou7lAXNtJCAcLA_Synthetic_ClientProxy\",\"method\":\"getConnection\"},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcUtils\",\"method\":\"openConnection\",\"line\":73},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcConnectionFactory\",\"method\":\"<init>\",\"line\":76},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"init\",\"line\":273},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"execute\",\"line\":118},{\"class\":\"org.flywaydb.core.Flyway\",\"method\":\"migrate\",\"line\":187},{\"class\":\"io.quarkus.flyway.runtime.FlywayRecorder\",\"method\":\"doStartActions\",\"line\":153},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy_0\"},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy\"},{\"class\":\"io.quarkus.runner.ApplicationImpl\",\"method\":\"doStart\"},{\"class\":\"io.quarkus.runtime.Application\",\"method\":\"start\",\"line\":112},{\"class\":\"io.quarkus.runtime.ApplicationLifecycleManager\",\"method\":\"run\",\"line\":129},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":79},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":50},{\"class\":\"org.github.tess1o.geopulse.maintenance.GeoPulseMain\",\"method\":\"main\",\"line\":18},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"doRun\",\"line\":70},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"main\",\"line\":36}]}}}}}}\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-9: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-9: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/system/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/api/v1/system/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/system/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/system/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "mes\":[{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"connectionSetup\",\"line\":242},{\"class\":\"io.agroal.pool.ConnectionFactory\",\"method\":\"createConnection\",\"line\":226},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"createAndPoolConnection\",\"line\":663},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"handlerFromSharedCache\",\"line\":378},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"internalGetConnection\",\"line\":319},{\"class\":\"io.agroal.pool.ConnectionPool\",\"method\":\"getConnection\",\"line\":292},{\"class\":\"io.agroal.pool.DataSource\",\"method\":\"getConnection\",\"line\":86},{\"class\":\"io.agroal.api.AgroalDataSource_83v3mgZs1bc75ou7lAXNtJCAcLA_Synthetic_ClientProxy\",\"method\":\"getConnection\"},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcUtils\",\"method\":\"openConnection\",\"line\":73},{\"class\":\"org.flywaydb.core.internal.jdbc.JdbcConnectionFactory\",\"method\":\"<init>\",\"line\":76},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"init\",\"line\":273},{\"class\":\"org.flywaydb.core.FlywayExecutor\",\"method\":\"execute\",\"line\":118},{\"class\":\"org.flywaydb.core.Flyway\",\"method\":\"migrate\",\"line\":187},{\"class\":\"io.quarkus.flyway.runtime.FlywayRecorder\",\"method\":\"doStartActions\",\"line\":153},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy_0\"},{\"class\":\"io.quarkus.runner.recorded.FlywayProcessor$startActions1575138505\",\"method\":\"deploy\"},{\"class\":\"io.quarkus.runner.ApplicationImpl\",\"method\":\"doStart\"},{\"class\":\"io.quarkus.runtime.Application\",\"method\":\"start\",\"line\":112},{\"class\":\"io.quarkus.runtime.ApplicationLifecycleManager\",\"method\":\"run\",\"line\":129},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":79},{\"class\":\"io.quarkus.runtime.Quarkus\",\"method\":\"run\",\"line\":50},{\"class\":\"org.github.tess1o.geopulse.maintenance.GeoPulseMain\",\"method\":\"main\",\"line\":18},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"doRun\",\"line\":70},{\"class\":\"io.quarkus.bootstrap.runner.QuarkusEntryPoint\",\"method\":\"main\",\"line\":36}]}}}}}}\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/api/v1/system/health",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 2.916,
+        "setA": 55.217,
+        "sizes": 23.811
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}
