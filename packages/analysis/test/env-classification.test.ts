@@ -90,6 +90,22 @@ describe('classifyEnvVariables', () => {
     expect(all.every((v) => v.classification === 'deployz_managed')).toBe(true);
   });
 
+  it('never asks for static AWS SDK keys: the task role supplies the credentials', () => {
+    const model = [
+      variable('AWS_ACCESS_KEY_ID', { secret: true }),
+      variable('AWS_SECRET_ACCESS_KEY', { secret: true }),
+      variable('AWS_SESSION_TOKEN', { secret: true }),
+      variable('STRIPE_SECRET_KEY', { secret: true }),
+    ];
+    const classified = classifyEnvVariables(model, { ...NO_REQUIREMENTS, storageRequired: true });
+    expect(classified.map((v) => [v.required, v.classification])).toEqual([
+      [false, 'optional'],
+      [false, 'optional'],
+      [false, 'optional'],
+      [true, 'customer_required'],
+    ]);
+  });
+
   it('generates app-internal secrets, never a third-party or service credential', () => {
     const model = [
       variable('SESSION_SECRET', { secret: true }),

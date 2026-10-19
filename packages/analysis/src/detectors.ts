@@ -2334,11 +2334,48 @@ function composeMountTarget(volume: string): string {
   return volume.includes(':') ? volume.slice(volume.indexOf(':') + 1).replace(/:(?:rw|ro|z|Z)+$/, '') : volume;
 }
 
+const EMBEDDED_DATABASE_FILE_REGEX = /\.(?:sqlite3?|db)$|sqlite/i;
+
+/** The paths that `texts` name under `volume`. */
+function volumeContents(volume: string, texts: string[]): string[] {
+  const escaped = volume.replace(/\/$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return texts.flatMap((text) => [...text.matchAll(new RegExp(`['"= ]${escaped}/([^'"\\s;)]+)`, 'g'))].map((m) => m[1]!));
+}
+
 /** Every value under `volume` is a SQLite/DB file path: the volume only holds the embedded database. */
 function holdsOnlyEmbeddedDatabase(volume: string, texts: string[]): boolean {
-  const escaped = volume.replace(/\/$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const contents = texts.flatMap((text) => [...text.matchAll(new RegExp(`['"= ]${escaped}/([^'"\\s]+)`, 'g'))].map((m) => m[1]!));
-  return contents.length > 0 && contents.every((content) => /\.(?:sqlite3?|db)$|sqlite/i.test(content));
+  const contents = volumeContents(volume, texts);
+  return contents.length > 0 && contents.every((content) => EMBEDDED_DATABASE_FILE_REGEX.test(content));
+}
+
+// A framework storage directory (Laravel `storage/`: logs, caches, sessions) or a marker file (`installed`).
+const FRAMEWORK_STORAGE_CONTENT_REGEX = /^(?:storage|logs?|cache)(?:\/|$)/;
+
+/**
+ * The image keeps its embedded SQLite database under `volume` (2fauth's
+ * entrypoint links `/2fauth/database.sqlite`), and the rest is framework
+ * storage or a marker file, never an upload directory. With PostgreSQL the
+ * database file is not used.
+ */
+function holdsEmbeddedDatabase(volume: string, texts: string[]): boolean {
+  const contents = volumeContents(volume, texts);
+  return (
+    contents.some((content) => EMBEDDED_DATABASE_FILE_REGEX.test(content)) &&
+    contents.every(
+      (content) =>
+        EMBEDDED_DATABASE_FILE_REGEX.test(content) ||
+        FRAMEWORK_STORAGE_CONTENT_REGEX.test(content) ||
+        (/^[\w-]+$/.test(content) && !UPLOAD_VOLUME_REGEX.test(`/${content}`)),
+    )
+  );
+}
+
+/** The Dockerfile and the scripts that it names, where an image sets up its data paths. */
+function imageSetupTexts(tree: FileTree, dockerfile: { path: string; content: string } | null): string[] {
+  if (!dockerfile) return [];
+  const dockerDir = dockerfile.path.includes('/') ? dockerfile.path.split('/').slice(0, -1).join('/') : '';
+  const scripts = extractCmdScriptPaths(dockerfile.content, tree, dockerDir, new Set());
+  return [dockerfile.content, ...scripts.map((path) => tree[path] ?? '')];
 }
 // Container-side paths that hold only transient state — logs, caches, search
 // indexes and temp dirs. A volume mounted there is a log/cache volume, not
@@ -2390,6 +2427,7 @@ export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
 
   const compose = composeApplicationServices(tree);
   const mountTargets: string[] = [];
+  let setupTexts: string[] | undefined;
   for (const service of compose?.services ?? []) {
     // A service that builds a different Dockerfile packages the app another
     // way (a compose-only wrapper image); its volumes are not this image's.
@@ -2410,6 +2448,7 @@ export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
       if (source && !source.startsWith('/') && Object.keys(tree).some((path) => path.startsWith(`${source}/`))) continue;
       if (EPHEMERAL_CONTAINER_PATH_REGEX.test(target)) continue;
       if (hasPostgresDriver && holdsOnlyEmbeddedDatabase(target, [service.body])) continue;
+      if (hasPostgresDriver && holdsEmbeddedDatabase(target, (setupTexts ??= imageSetupTexts(tree, dockerfile)))) continue;
       if (UPLOAD_VOLUME_REGEX.test(volume) && hasObjectStorageOption()) continue;
       detected.push(`volume ${volume} (${compose?.file} ${service.name})`);
     }
@@ -4043,7 +4082,14 @@ function detectBaseImageBuildArgs(tree: FileTree): Map<string, string> {
   if (stages.length === 0) return found;
   const firstFrom = content.search(/^\s*FROM\s/im);
   const globalArgs = firstFrom > 0 ? content.slice(0, firstFrom) : '';
-  const baseImages = stageLineage(stages, productionStageIndex(stages)).map((index) => stages[index]!.image);
+  const lineage = stageLineage(stages, productionStageIndex(stages)).map((index) => stages[index]!);
+  // `FROM base-${VARIANT}` selects one of the stages named `base-…` (livebook): their base images count too.
+  const stagePatterns = lineage
+    .map((stage) => stage.image.toLowerCase().split(/\$\{?\w+\}?/))
+    .filter((parts) => parts.length > 1 && parts.some((part) => part.length > 0))
+    .map((parts) => new RegExp(`^${parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.+')}$`));
+  const selectable = stages.filter((stage) => stage.name !== null && stagePatterns.some((pattern) => pattern.test(stage.name!)));
+  const baseImages = [...lineage, ...selectable].map((stage) => stage.image);
   for (const [, name] of globalArgs.matchAll(/^\s*ARG\s+([A-Z][A-Z0-9_]*)\s*$/gm)) {
     const referenced = baseImages.some((image) => new RegExp(`\\$(?:${name}\\b|\\{${name}\\})`).test(image));
     if (referenced) found.set(name!, `${dockerfile.path} build arg ${name} selects the base image; the build fails without it`);
@@ -5771,6 +5817,33 @@ export function detectDockerfileBuildContext(tree: FileTree): DetectorFinding {
     detected: true,
     value: '.',
     details: `${dockerfile.path} is written for the repository root as its build context: ${[...evidence].join('; ')}`,
+    source: 'dockerfile',
+  };
+}
+
+// A last stage that only packages or publishes build output (uptime-kuma's `upload-artifact`).
+const TOOLING_LAST_STAGE_REGEX = /(?:^|[-_.])(?:artifacts?|upload|export|publish|lint)(?:[-_.]|$)/i;
+
+/**
+ * The stage to build when the Dockerfile's last stage is a tooling stage and
+ * an earlier named stage starts the application. `docker build` builds the
+ * last stage by default, so the build needs `--target <stage>`.
+ */
+export function detectDockerfileBuildTarget(tree: FileTree): DetectorFinding {
+  const dockerfile = selectedDockerfile(tree);
+  if (!dockerfile) return { detector: 'dockerfile-build-target', detected: false };
+  const stages = parseDockerfileStages(normalizeDockerfile(dockerfile.content));
+  const last = stages[stages.length - 1];
+  if (last?.name == null || !(NON_RUNTIME_STAGE_NAME_REGEX.test(last.name) || TOOLING_LAST_STAGE_REGEX.test(last.name))) {
+    return { detector: 'dockerfile-build-target', detected: false };
+  }
+  const target = stages[productionStageIndex(stages)];
+  if (target === last || target?.name == null) return { detector: 'dockerfile-build-target', detected: false };
+  return {
+    detector: 'dockerfile-build-target',
+    detected: true,
+    value: target.name,
+    details: `${dockerfile.path} ends with the tooling stage ${last.name}; the application stage is ${target.name}`,
     source: 'dockerfile',
   };
 }

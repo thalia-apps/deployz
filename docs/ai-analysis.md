@@ -89,7 +89,11 @@ Repository (GitHub tree, bounded)
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
   EXPOSE) ranks first, then one that declares a port. Dockerfiles that still
   tie are recorded as `dockerfileSelectionTied` and give the recommended
-  finding `dockerfile-target-unresolved`. The runtime comes from the
+  finding `dockerfile-target-unresolved`. When the last stage is a tooling
+  stage (an artifact, upload, export, publish, lint, build or test stage) and
+  an earlier named stage is the production stage, the analysis records
+  `dockerfileBuildTarget`. The build then runs `docker build --target <stage>`
+  (not for a vendor-overridden Dockerfile). The runtime comes from the
   production stage and the stages it is built `FROM` (leaf to root);
   `COPY --from` counts only when that lineage names no runtime image. A
   `go.mod` with no Go source and a `package.json` with no dependencies are
@@ -139,7 +143,8 @@ Repository (GitHub tree, bounded)
   command, or no build step). A global `ARG` with no default that a `FROM`
   of the production stage lineage reads (`ARG BASE_IMAGE` with
   `FROM ${BASE_IMAGE}`) is a required build variable: the build fails
-  without it. A `go.mod` line marked `// indirect` is not evidence that the
+  without it. A `FROM base-${VARIANT}` also reads the base images of the
+  stages that it can select (`base-default`, `base-cuda`). A `go.mod` line marked `// indirect` is not evidence that the
   app uses S3. A package.json `start` script is
   the container command only when it belongs to a package that the image
   runs (the root, the Dockerfile directory or the runtime WORKDIR), the
@@ -383,7 +388,11 @@ describe the production deployment:
   Compose volume only from the production file and the application service.
   Static, build, source, cache, log and socket mounts do not count. A volume
   that holds only the SQLite file is not local state when PostgreSQL can be
-  selected. An uploads, media or attachments volume is not local state when
+  selected. A Compose volume that holds the SQLite file and otherwise only
+  framework storage (`storage/`, logs, caches) or marker files, as the
+  Dockerfile and its start scripts name them, is not local state when
+  PostgreSQL can be selected. An upload or files directory under it keeps it
+  local state. An uploads, media or attachments volume is not local state when
   the app has an S3 SDK and a variable that selects it (`UPLOAD_PROVIDER`,
   `ACTIVE_STORAGE_SERVICE`, `STORAGE_TYPE`, an `S3_*_BUCKET` name). A
   `VOLUME $VAR` that only the base image sets is decided from the Compose

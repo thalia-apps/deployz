@@ -16,7 +16,7 @@
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
 import { isDerivedS3EnvVariable, postgresSemantic } from '../bindings.js';
 import { isDerivedUrlEnvVariable } from '../derived-url.js';
-import { isGeneratableSecretName } from '../env-classification.js';
+import { isGeneratableSecretName, isTaskRoleCredentialName } from '../env-classification.js';
 import { resolveRedisEnvBindings } from '../redis.js';
 import type { DetectorFinding, FileTree } from '../detectors.js';
 import type { AnalystOutput, FactName } from './analyst.js';
@@ -95,7 +95,7 @@ const CLIENT_BUILD_VARIABLE = /^(?:NEXT_PUBLIC|VITE|REACT_APP|NUXT_PUBLIC|PUBLIC
  * app's own URL, or PORT/HOSTNAME. Such a variable never becomes the vendor's.
  */
 function deployzProvides(name: string, meta: Meta, evidencePaths: readonly string[]): boolean {
-  if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name)) return true;
+  if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name) || isTaskRoleCredentialName(name)) return true;
   // Inlined into the client bundle at build time: the running server never needs it.
   if (CLIENT_BUILD_VARIABLE.test(name)) return true;
   const variable = { key: name, required: true, secret: false, source: evidencePaths.map((path) => `read in ${path}`) };
@@ -169,6 +169,7 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
     // The missing-source and tie signals describe the rules' Dockerfile.
     delete meta['dockerfileMissingSources'];
     delete meta['dockerfileSelectionTied'];
+    delete meta['dockerfileBuildTarget'];
     findings = replaceFinding(findings, 'dockerfile', { detected: true, value: dockerfile.path });
   }
 

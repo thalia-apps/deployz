@@ -68,6 +68,9 @@ type ReleaseBuildFailureCode =
  */
 const REGISTRY_RATE_LIMIT_PATTERN = /rate limit \(HTTP 429\)/i;
 
+/** A Dockerfile stage name that is safe to pass to `docker build --target`. */
+const DOCKER_STAGE_NAME = /^[a-z0-9][a-z0-9._-]*$/i;
+
 /**
  * Map a CodeBuild terminal status onto the stable vocabulary. Anything not
  * clearly a cancel, a timeout or a registry rate limit is a plain build
@@ -236,6 +239,7 @@ const RESERVED_BUILD_VARIABLE_NAMES = new Set<string>([
   'RELEASE_ID',
   'DOCKERFILE_PATH',
   'BUILD_CONTEXT',
+  'BUILD_TARGET',
   'DEPLOYZ_BUILD_ARG_NAMES',
 ]);
 
@@ -367,6 +371,12 @@ async function buildRelease(deps: WorkerDeps, releaseId: string): Promise<void> 
     ];
     if (buildContext !== undefined) {
       environmentVariables.push({ name: 'BUILD_CONTEXT', value: buildContext });
+    }
+    // The detected application stage of a Dockerfile that ends with a tooling
+    // stage. It describes the detected Dockerfile only, like the build context.
+    const detectedBuildTarget = application.detectedMetadata?.['dockerfileBuildTarget'];
+    if (overrideDockerfile === undefined && typeof detectedBuildTarget === 'string' && DOCKER_STAGE_NAME.test(detectedBuildTarget)) {
+      environmentVariables.push({ name: 'BUILD_TARGET', value: detectedBuildTarget });
     }
 
     // §31 env setup: vendor-configured build-stage variables become

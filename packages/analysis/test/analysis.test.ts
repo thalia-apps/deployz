@@ -15,6 +15,7 @@ import {
   detectPackageManager,
   detectBuildCommand,
   detectDockerfileBuildContext,
+  detectDockerfileBuildTarget,
   detectGitCopyInDockerfile,
   type FileTree,
   type DetectorFinding,
@@ -1180,6 +1181,30 @@ describe('§18 detectors', () => {
         'apps/web/Dockerfile': ['FROM node:20', 'COPY --from=base /turbo.json ./', 'COPY $SRC_DIR ./', 'CMD ["node"]'].join('\n'),
       };
       expect(detectDockerfileBuildContext(tree).detected).toBe(false);
+    });
+  });
+
+  describe('detectDockerfileBuildTarget', () => {
+    const kuma = [
+      'FROM node:22 AS build',
+      'RUN npm ci && npm run build',
+      'FROM node:22-slim AS release',
+      'COPY --from=build /app /app',
+      'EXPOSE 3001',
+      'CMD ["node", "server/server.js"]',
+      'FROM louislam/uptime-kuma:base2 AS upload-artifact',
+      'RUN chmod +x /app/extra/upload-github-release-asset.sh',
+    ].join('\n');
+
+    it('names the application stage when the last stage is a tooling stage (uptime-kuma)', () => {
+      const result = detectDockerfileBuildTarget({ 'docker/dockerfile': kuma });
+      expect(result.detected).toBe(true);
+      expect(result.value).toBe('release');
+    });
+
+    it('builds the last stage when it is the application or has a runtime name', () => {
+      expect(detectDockerfileBuildTarget({ Dockerfile: ['FROM node:22 AS build', 'RUN x', 'FROM node:22-slim AS app', 'CMD ["node"]'].join('\n') }).detected).toBe(false);
+      expect(detectDockerfileBuildTarget({ Dockerfile: ['FROM node:22 AS app', 'CMD ["node"]', 'FROM nginx:alpine', 'COPY --from=app /a /usr/share/nginx/html'].join('\n') }).detected).toBe(false);
     });
   });
 });

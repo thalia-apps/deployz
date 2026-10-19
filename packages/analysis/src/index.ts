@@ -36,6 +36,7 @@ export {
   migrationRunnerVerdict,
   detectBindAddress,
   detectDockerfileBuildContext,
+  detectDockerfileBuildTarget,
   detectGitCopyInDockerfile,
   detectExternalServices,
   detectExternalServiceRequirements,

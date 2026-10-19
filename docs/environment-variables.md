@@ -239,6 +239,9 @@ frozen manifest.
 - **Credentials:** Deployz never creates AWS access keys or IAM users, and
   never derives a public bucket URL (`S3_PUBLIC_BASE_URL`). The AWS SDK gets
   credentials from the ECS task role through the default credential chain.
+  So the SDK credential names `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+  and `AWS_SESSION_TOKEN` are always optional: the vendor is never asked for
+  them.
   An app that requires static keys (`S3_ACCESS_KEY_ID`) needs a vendor or
   customer value, or a code change to use the default chain.
 
