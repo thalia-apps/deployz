@@ -23,6 +23,8 @@ export const REVIEWER_PROMPT_VERSION = 1;
 export const REVIEWER_MAX_PROMPT_TOKENS = 45_000;
 export const REVIEWER_MAX_OUTPUT_TOKENS = 12_000;
 export const REVIEWER_TIMEOUT_MS = 180_000;
+/** The spend check on the reported usage: the pack (see `ANALYST_MAX_TOTAL_TOKENS`) plus the facts. */
+export const REVIEWER_MAX_TOTAL_TOKENS = 90_000;
 
 export const objectionSchema = z
   .object({
@@ -93,9 +95,7 @@ export async function runReviewer(
     maxOutputTokens: REVIEWER_MAX_OUTPUT_TOKENS,
   });
   const used = response.usage.promptTokens + response.usage.completionTokens;
-  if (used > REVIEWER_MAX_PROMPT_TOKENS + REVIEWER_MAX_OUTPUT_TOKENS) {
-    throw new SpendLimitExceededError(used, REVIEWER_MAX_PROMPT_TOKENS + REVIEWER_MAX_OUTPUT_TOKENS);
-  }
+  if (used > REVIEWER_MAX_TOTAL_TOKENS) throw new SpendLimitExceededError(used, REVIEWER_MAX_TOTAL_TOKENS);
   return { output: reviewerOutputSchema.parse(response.object), usage: response.usage, model: response.model };
 }
 

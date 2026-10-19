@@ -245,13 +245,16 @@ and the release gate are in `docs/decisions/README.md`.
   strict schema: Dockerfile and context, port, start command, health path,
   database engine, Redis, S3, migration mode and command, workers and
   required variables. Each fact has a value, a confidence and
-  `{path, line, quote}` evidence. Budget: 40,000 prompt and 16,000
-  completion tokens, 240 s.
+  `{path, line, quote}` evidence. The provider is held to a flat list (one
+  entry per fact, the value as JSON text), because Anthropic refuses the
+  grammar of the typed schema; the strict typed schema then validates the
+  rebuilt facts. Budget: 16,000 completion tokens,
+  80,000 tokens in total by the reported usage, 240 s.
 - **Reviewer** (`reviewer.ts`): GPT-6 Astra reads the same pack and the
   facts and returns objections only. An objection whose proposed value
   passes the checks replaces the fact. Any other objection makes the fact a
-  vendor question. Budget: 45,000 prompt and 12,000 completion tokens,
-  180 s.
+  vendor question. Budget: 12,000 completion tokens,
+  90,000 in total, 180 s.
 - **Checks** (`checks.ts`): each cited line exists in the pack, contains its
   quote (one line of tolerance) and supports the claim. A required variable
   is an unguarded read with no default, and no pack line reads it with a

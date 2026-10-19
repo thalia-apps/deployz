@@ -15,6 +15,12 @@ export const ANALYST_MAX_PROMPT_TOKENS = 40_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
 export const ANALYST_TIMEOUT_MS = 240_000;
+/**
+ * The spend check on the provider's reported usage. The prompt estimate
+ * (characters / 4) undercounts code: measured 2026-10-19, a full pack used
+ * 70,678 tokens in one call.
+ */
+export const ANALYST_MAX_TOTAL_TOKENS = 80_000;
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -188,9 +194,7 @@ export async function runAnalyst(
     maxOutputTokens: ANALYST_MAX_OUTPUT_TOKENS,
   });
   const used = response.usage.promptTokens + response.usage.completionTokens;
-  if (used > ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS) {
-    throw new SpendLimitExceededError(used, ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS);
-  }
+  if (used > ANALYST_MAX_TOTAL_TOKENS) throw new SpendLimitExceededError(used, ANALYST_MAX_TOTAL_TOKENS);
   const output = analystOutputSchema.parse(fromWire(analystWireSchema.parse(response.object)));
   return { output, usage: response.usage, model: response.model };
 }
