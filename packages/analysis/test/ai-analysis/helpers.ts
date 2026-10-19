@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
-import type { AiGateway, AiGatewayResponse } from '../../src/ai-gateway.js';
-import type { AnalystOutput, AnalystWire } from '../../src/ai-analysis/analyst.js';
+import type { AiGateway, AiGatewayResponse, AiGenerateOptions } from '../../src/ai-gateway.js';
+import { factsToWire, type AnalystOutput } from '../../src/ai-analysis/analyst.js';
 import type { EvidencePack } from '../../src/ai-analysis/evidence-pack.js';
 import type { FileTree } from '../../src/detectors.js';
 
@@ -34,27 +34,15 @@ export function factsOf(overrides: Partial<AnalystOutput> = {}): AnalystOutput {
 }
 
 /** The analyst facts in the flat wire format the provider returns. */
-export function toWire(output: AnalystOutput): AnalystWire {
-  const scalar = (['dockerfile', 'port', 'startCommand', 'healthPath', 'database', 'redis', 'storage', 'migration'] as const).map((fact) => ({
-    fact,
-    subject: null,
-    value: JSON.stringify(output[fact].value),
-    confidence: output[fact].confidence,
-    evidence: output[fact].evidence,
-  }));
-  return {
-    facts: [
-      ...scalar,
-      ...output.workers.map((w) => ({ fact: 'workers' as const, subject: w.id, value: JSON.stringify(w.command), confidence: w.confidence, evidence: w.evidence })),
-      ...output.requiredVariables.map((v) => ({ fact: 'requiredVariables' as const, subject: v.name, value: 'true', confidence: v.confidence, evidence: v.evidence })),
-    ],
-  };
-}
+/** The analyst facts in the wire format the provider returns (the production conversion). */
+export const toWire = factsToWire;
 
 export const cite = (path: string, line: number, quote: string) => [{ path, line, quote }];
 
 export interface FakeGateway extends AiGateway {
   readonly prompts: string[];
+  /** The system message of each call. */
+  readonly systems: Array<string | undefined>;
 }
 
 /** A gateway that returns a canned object (or runs a function) and records the prompts. */
@@ -63,10 +51,13 @@ export function fakeGateway(
   usage = { promptTokens: 100, completionTokens: 50 },
 ): FakeGateway {
   const prompts: string[] = [];
+  const systems: Array<string | undefined> = [];
   return {
     prompts,
-    generate(prompt: string, _schema: z.ZodType): Promise<AiGatewayResponse> {
+    systems,
+    generate(prompt: string, _schema: z.ZodType, options?: AiGenerateOptions): Promise<AiGatewayResponse> {
       prompts.push(prompt);
+      systems.push(options?.system);
       const object = typeof respond === 'function' ? (respond as () => unknown)() : respond;
       return Promise.resolve({ object, usage, model: 'fake-model' });
     },

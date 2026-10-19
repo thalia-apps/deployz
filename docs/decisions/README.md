@@ -907,8 +907,13 @@ Decision:
 - A fact that passes the checks enters the `DeploymentManifest`. A fact that
   fails becomes a vendor question (NEEDS_CONFIGURATION). The AI never makes a
   silent guess.
-- A reviewer model (GPT-6 Astra) reads the same evidence pack and the
-  analyst's facts and returns objections only. A fixed check decides an
+- A reviewer model (DeepSeek V4 Pro, a pinned version) reads the same
+  evidence pack and the analyst's facts and returns objections only. The
+  first reviewer, GPT-6 Astra, cost about $0.27 of the $0.44 of each
+  analysis; DeepSeek V4 Pro costs about $0.02, and it comes from another
+  model family than the analyst, so it makes other mistakes. Jev was not
+  chosen: its evaluation found no useful signal (see "Jev shadow analysis
+  is not adopted"). A fixed check decides an
   objection. An objection that no check can decide becomes a vendor question.
 - Both models go through Cloudflare AI Gateway, on its OpenRouter route
   with the OpenRouter key (the unified `/compat` endpoint answered 402 for
