@@ -220,6 +220,15 @@ describe('buildEvidencePack: entry files and manifest kinds', () => {
     expect(paths.indexOf('bootstrap/app.php')).toBeLessThan(paths.indexOf('composer.json'));
   });
 
+  it('includes a CommonJS start script that the Dockerfile runs', () => {
+    const tree: FileTree = {
+      Dockerfile: 'FROM node:22\nCMD ["node", "docker-entrypoint.cjs"]',
+      'package.json': '{}',
+      'docker-entrypoint.cjs': "require('./cli.js').bootstrap();",
+    };
+    expect(buildEvidencePack(tree, analyseRepo(tree)).files.map((file) => file.path)).toContain('docker-entrypoint.cjs');
+  });
+
   it('keeps at most four manifests of one kind', () => {
     const tree: FileTree = { Dockerfile: 'FROM mcr.microsoft.com/dotnet/aspnet:9.0\nCMD ["dotnet", "App.dll"]' };
     for (let i = 0; i < 10; i++) tree[`src/App.Module${i}/App.Module${i}.csproj`] = '<Project />';

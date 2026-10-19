@@ -746,6 +746,35 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).not.toHaveProperty('config/locales/en.yml');
   });
 
+  it('fetches Laravel route and bootstrap files and keeps them above ordinary source', async () => {
+    const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
+      path: `src/feature${i}.ts`,
+      type: 'blob' as const,
+      sha: `sha-src-${i}`,
+      size: 10,
+    }));
+    const php = ['bootstrap/app.php', 'routes/web.php', 'routes/api.php', 'app/Models/User.php'];
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [...sources, ...php.map((path, i) => ({ path, type: 'blob', sha: `sha-php-${i}`, size: 10 }))],
+        });
+      }
+      const sha = url.split('/').pop();
+      return makeFetchResponse(200, {
+        content: Buffer.from(`content-${sha}`).toString('base64'),
+        encoding: 'base64',
+      });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(tree).toHaveProperty('bootstrap/app.php');
+    expect(tree).toHaveProperty('routes/web.php');
+    expect(tree).toHaveProperty('routes/api.php');
+    expect(tree).not.toHaveProperty('app/Models/User.php');
+  });
+
   it('keeps a NestJS health.controller.ts inside the ANALYSIS_MAX_FILES cap (A1-003)', async () => {
     const services = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
       path: `apps/server/src/feature${i}/feature${i}.service.ts`,

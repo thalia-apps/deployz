@@ -148,7 +148,7 @@ export function startScripts(dockerfile: string | undefined, tree: FileTree): st
   if (dockerfile === undefined) return [];
   const content = tree[dockerfile] ?? '';
   const scripts: string[] = [];
-  for (const match of content.matchAll(/[\w./-]+\.(?:sh|bash|py|rb|exs|js|mjs|ts|php)\b/g)) {
+  for (const match of content.matchAll(/[\w./-]+\.(?:sh|bash|py|rb|exs|js|mjs|cjs|ts|php)\b/g)) {
     const name = match[0].replace(/^\.?\//, '');
     const found = Object.keys(tree).find((path) => path === name || path.endsWith(`/${name}`));
     if (found !== undefined) scripts.push(found);
