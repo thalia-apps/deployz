@@ -75,18 +75,24 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
 }
 
 // AI-first application Analysis (docs/decisions/README.md): the analyst and the
-// reviewer go through the shared gateway, each with its own model and,
-// optionally, its own upstream key (the providers differ).
+// reviewer go through the shared Cloudflare gateway to its OpenRouter route,
+// with the OpenRouter key. The gateway's unified /compat endpoint answers 402
+// for these models.
 
-/** The analyst model. Override with `ANALYSIS_AI_MODEL`. */
-export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5-5';
-/** The reviewer model. Override with `ANALYSIS_REVIEWER_MODEL`. */
+/** The analyst model (OpenRouter id). Override with `ANALYSIS_AI_MODEL`. */
+export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5.5';
+/** The reviewer model (OpenRouter id). Override with `ANALYSIS_REVIEWER_MODEL`. */
 export const ANALYSIS_REVIEWER_MODEL_DEFAULT = 'openai/gpt-6-astra';
+
+/** The gateway's OpenRouter route: `…/{account}/{gateway}/openrouter/v1`, from the `/compat` base URL. */
+export function gatewayOpenRouterUrl(baseUrl: string): string {
+  return `${baseUrl.replace(/\/compat(?:\/chat\/completions)?\/?$/, '').replace(/\/$/, '')}/openrouter/v1`;
+}
 
 export interface AnalysisAiConfig {
   /** `ANALYSIS_ENGINE`: `rules` (the default), `shadow` or `ai`. */
   readonly engine: AnalysisEngine;
-  /** Undefined when the gateway is not configured: the engine then runs the rules only. */
+  /** Undefined without AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY: the engine then runs the rules only. */
   readonly analyst: AiGatewayConfig | undefined;
   /** Undefined when the gateway is not configured. */
   readonly reviewer: AiGatewayConfig | undefined;
@@ -95,16 +101,16 @@ export interface AnalysisAiConfig {
 export function resolveAnalysisAiConfig(source: Record<string, string | undefined>): AnalysisAiConfig {
   const engine = parseAnalysisEngine(source.ANALYSIS_ENGINE);
   const baseUrl = source.AI_GATEWAY_BASE_URL;
+  const providerApiKey = source.OPENROUTER_API_KEY;
   const gatewayToken = source.AI_GATEWAY_TOKEN || undefined;
-  const role = (model: string, key: string | undefined): AiGatewayConfig | undefined =>
-    baseUrl && key && key !== gatewayToken ? { baseUrl, providerApiKey: key, gatewayToken, model } : undefined;
+  const role = (model: string): AiGatewayConfig | undefined =>
+    baseUrl && providerApiKey && providerApiKey !== gatewayToken
+      ? { provider: 'openrouter', baseUrl: gatewayOpenRouterUrl(baseUrl), providerApiKey, gatewayToken, model }
+      : undefined;
   return {
     engine,
-    analyst: role(source.ANALYSIS_AI_MODEL || ANALYSIS_AI_MODEL_DEFAULT, source.ANALYSIS_AI_PROVIDER_API_KEY || source.AI_PROVIDER_API_KEY),
-    reviewer: role(
-      source.ANALYSIS_REVIEWER_MODEL || ANALYSIS_REVIEWER_MODEL_DEFAULT,
-      source.ANALYSIS_REVIEWER_PROVIDER_API_KEY || source.AI_PROVIDER_API_KEY,
-    ),
+    analyst: role(source.ANALYSIS_AI_MODEL || ANALYSIS_AI_MODEL_DEFAULT),
+    reviewer: role(source.ANALYSIS_REVIEWER_MODEL || ANALYSIS_REVIEWER_MODEL_DEFAULT),
   };
 }
 

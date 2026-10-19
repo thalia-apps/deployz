@@ -79,7 +79,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
 
   const aiAnalysis = options.engine === 'ai' ? createAnalysisAiGateways(resolveAnalysisAiConfig(process.env)) : undefined;
   if (options.engine === 'ai' && aiAnalysis === undefined) {
-    console.error('--engine ai needs AI_GATEWAY_BASE_URL and a provider key (AI_PROVIDER_API_KEY or ANALYSIS_AI_PROVIDER_API_KEY).');
+    console.error('--engine ai needs AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY.');
     return 1;
   }
   const analyser = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);

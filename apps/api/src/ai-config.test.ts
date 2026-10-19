@@ -8,6 +8,7 @@ import {
   FIX_INSTRUCTIONS_MODEL_DEFAULT,
   OPENROUTER_BASE_URL_DEFAULT,
   createAnalysisAiGateways,
+  gatewayOpenRouterUrl,
   describeFixInstructionsAiConfig,
   resolveAiGatewayConfig,
   resolveAnalysisAiConfig,
@@ -154,43 +155,55 @@ describe('describeFixInstructionsAiConfig', () => {
 });
 
 describe('resolveAnalysisAiConfig', () => {
-  it('defaults to the rules engine and the two default models on the shared gateway', () => {
-    const config = resolveAnalysisAiConfig(complete);
+  const withOpenRouter = { ...complete, OPENROUTER_API_KEY: 'or-key' };
+
+  it('defaults to the rules engine and both models on the gateway OpenRouter route', () => {
+    const config = resolveAnalysisAiConfig(withOpenRouter);
 
     expect(config.engine).toBe('rules');
     expect(config.analyst).toEqual({
-      baseUrl: complete.AI_GATEWAY_BASE_URL,
-      providerApiKey: 'provider-key',
+      provider: 'openrouter',
+      baseUrl: 'https://gateway.ai.cloudflare.com/v1/acct/gw/openrouter/v1',
+      providerApiKey: 'or-key',
       gatewayToken: 'gateway-token',
       model: ANALYSIS_AI_MODEL_DEFAULT,
     });
-    expect(config.reviewer?.model).toBe(ANALYSIS_REVIEWER_MODEL_DEFAULT);
+    expect(config.reviewer).toMatchObject({ provider: 'openrouter', model: ANALYSIS_REVIEWER_MODEL_DEFAULT });
   });
 
-  it('reads the engine, the models and a separate key per role', () => {
+  it('reads the engine and the models', () => {
     const config = resolveAnalysisAiConfig({
-      ...complete,
+      ...withOpenRouter,
       ANALYSIS_ENGINE: 'shadow',
       ANALYSIS_AI_MODEL: 'anthropic/other',
-      ANALYSIS_AI_PROVIDER_API_KEY: 'anthropic-key',
       ANALYSIS_REVIEWER_MODEL: 'openai/other',
-      ANALYSIS_REVIEWER_PROVIDER_API_KEY: 'openai-key',
     });
 
     expect(config.engine).toBe('shadow');
-    expect(config.analyst).toMatchObject({ model: 'anthropic/other', providerApiKey: 'anthropic-key' });
-    expect(config.reviewer).toMatchObject({ model: 'openai/other', providerApiKey: 'openai-key' });
+    expect(config.analyst?.model).toBe('anthropic/other');
+    expect(config.reviewer?.model).toBe('openai/other');
   });
 
   it('maps an unknown engine to rules', () => {
-    expect(resolveAnalysisAiConfig({ ...complete, ANALYSIS_ENGINE: 'magic' }).engine).toBe('rules');
+    expect(resolveAnalysisAiConfig({ ...withOpenRouter, ANALYSIS_ENGINE: 'magic' }).engine).toBe('rules');
   });
 
-  it('has no gateways without the gateway URL or a key, or with a key equal to the gateway token', () => {
+  it('has no gateways without the gateway URL or the OpenRouter key, or with a key equal to the gateway token', () => {
     expect(createAnalysisAiGateways(resolveAnalysisAiConfig({ ANALYSIS_ENGINE: 'ai' }))).toBeUndefined();
-    const reused = resolveAnalysisAiConfig({ ...complete, ANALYSIS_AI_PROVIDER_API_KEY: 'gateway-token' });
-    expect(reused.analyst).toBeUndefined();
-    expect(createAnalysisAiGateways(resolveAnalysisAiConfig(complete))).toMatchObject({ analyst: expect.any(Object), reviewer: expect.any(Object) });
+    expect(resolveAnalysisAiConfig(complete).analyst).toBeUndefined();
+    expect(resolveAnalysisAiConfig({ ...complete, OPENROUTER_API_KEY: 'gateway-token' }).analyst).toBeUndefined();
+    expect(createAnalysisAiGateways(resolveAnalysisAiConfig(withOpenRouter))).toMatchObject({
+      analyst: expect.any(Object),
+      reviewer: expect.any(Object),
+    });
+  });
+
+  it('derives the OpenRouter route from the /compat base URL', () => {
+    expect(gatewayOpenRouterUrl('https://gateway.ai.cloudflare.com/v1/a/g/compat')).toBe('https://gateway.ai.cloudflare.com/v1/a/g/openrouter/v1');
+    expect(gatewayOpenRouterUrl('https://gateway.ai.cloudflare.com/v1/a/g/compat/chat/completions')).toBe(
+      'https://gateway.ai.cloudflare.com/v1/a/g/openrouter/v1',
+    );
+    expect(gatewayOpenRouterUrl('https://gateway.ai.cloudflare.com/v1/a/g/')).toBe('https://gateway.ai.cloudflare.com/v1/a/g/openrouter/v1');
   });
 });
 

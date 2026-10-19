@@ -241,7 +241,7 @@ and the release gate are in `docs/decisions/README.md`.
   key files, lockfiles and vendored code are never included. Secrets are
   redacted line by line, env sample values are removed, and a file with a
   private key is left out. Each line keeps its repository line number.
-- **Analyst** (`analyst.ts`): `claude-opus-5-5` returns the facts under a
+- **Analyst** (`analyst.ts`): Claude Opus 5.5 returns the facts under a
   strict schema: Dockerfile and context, port, start command, health path,
   database engine, Redis, S3, migration mode and command, workers and
   required variables. Each fact has a value, a confidence and
@@ -596,11 +596,15 @@ diagnostic-vocabulary.ts`) plus a migration.
   `AI_FIXTURE_MODE=true` swaps in canned answers for E2E and switches the
   AI-first engine off in the API.
 - AI-first Analysis: `ANALYSIS_ENGINE` (`rules` when unset),
-  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5-5`),
-  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), and optional
-  `ANALYSIS_AI_PROVIDER_API_KEY` / `ANALYSIS_REVIEWER_PROVIDER_API_KEY` when
-  a provider needs another upstream key than `AI_PROVIDER_API_KEY`. Both
-  roles use `AI_GATEWAY_BASE_URL` and `AI_GATEWAY_TOKEN`.
+  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5.5`) and
+  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), both OpenRouter
+  ids. Both roles go through the Cloudflare gateway's OpenRouter route
+  (`<AI_GATEWAY_BASE_URL without /compat>/openrouter/v1`) with
+  `OPENROUTER_API_KEY`, and `AI_GATEWAY_TOKEN` when the gateway is
+  authenticated. The gateway's unified `/compat` endpoint answered
+  402 Payment Required for these models. Every request asks OpenRouter for a
+  provider that honours the JSON schema, logs the served model, tokens and
+  cost, and rejects an answer from another model.
 - Fix-instructions model: `FIX_INSTRUCTIONS_AI_PROVIDER` (`openrouter`, the
   default, or `gateway`), `FIX_INSTRUCTIONS_AI_MODEL` (the OpenRouter model,
   default `anthropic/claude-opus-5.5`), `OPENROUTER_API_KEY`, optional
