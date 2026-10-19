@@ -1,0 +1,223 @@
+{
+  "id": "repo-008",
+  "commit": "4d15cb7eed6225ac0b03da3d2ab50c424b81c34c",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "/gatus",
+      "port": 8080
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web/app/src/router/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in api/api.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GATUS_DELAY_START_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOCK_ALERT_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in watchdog/alerting.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOCK_ALERT_PROVIDER_ERROR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in watchdog/alerting.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROUTER_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in controller/controller.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sendgrid",
+      "twilio"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "none",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 8080,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/gatus",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/health",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "none",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.1405602,
+        "promptTokens": 31290,
+        "completionTokens": 841
+      },
+      "latencyMs": 11730
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.231182325,
+        "promptTokens": 18314,
+        "completionTokens": 92
+      },
+      "latencyMs": 5152
+    },
+    "latencyMs": 16892,
+    "objections": {
+      "total": 0,
+      "confirmed": 0,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:41:56.728Z",
+    "failedChecks": 0,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

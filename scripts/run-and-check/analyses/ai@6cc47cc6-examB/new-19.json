@@ -1,0 +1,585 @@
+{
+  "id": "new-19",
+  "commit": "f7cc56ba4c1d8632c4c4d2d12d6867fd0b4376ec",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "server",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "server/Dockerfile"
+    },
+    "build": {
+      "command": "tsc",
+      "context": "."
+    },
+    "web": {
+      "command": "bun run dist/server.js",
+      "port": 3000
+    },
+    "health": {
+      "path": "/v2/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRESQL_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APNS_KEY_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/push/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "APNS_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/push/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APNS_TEAM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/push/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APNS_TOPIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/push/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_INSTANCE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_OFFICIAL_ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PAID_CONNECT_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PAID_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PAID_TOTAL_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PAID_TO_ROTE_ACTIVE_KEY_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BILLING_PAID_TO_ROTE_ACTIVE_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BILLING_PAID_TO_ROTE_PREVIOUS_KEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PAID_TO_ROTE_PREVIOUS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BILLING_PRODUCT_IDS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BILLING_PURCHASE_AVAILABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_ROTE_TO_PAID_ACTIVE_KEY_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BILLING_ROTE_TO_PAID_ACTIVE_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BILLING_ROTE_TO_PAID_PREVIOUS_KEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_ROTE_TO_PAID_PREVIOUS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/billing/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "IMPORT_ATTACHMENT_GLOBAL_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/imports/remoteAttachmentMigrationService.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/handlers.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRESQL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares POSTGRESQL_URL",
+            "server/.env.template declares POSTGRESQL_URL",
+            "read in server/utils/drizzle.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PUSH_NOTIFICATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/push/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESOURCE_CLEANUP_SAFETY_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/resources/worker.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESOURCE_OFFICIAL_STORAGE_ENFORCEMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/resources/service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESOURCE_UPLOAD_PROXY_ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/resources/uploadProxy.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNBOUND_ATTACHMENT_CLEANUP_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/attachments/unboundCleanup.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 2 application services (rote-backend, rote-frontend). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (rote-backend, rote-frontend). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: APNS_KEY_ID, BILLING_PAID_TO_ROTE_ACTIVE_KEY_ID, BILLING_PRODUCT_IDS, BILLING_ROTE_TO_PAID_ACTIVE_KEY_ID. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "postgres",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [
+          "reviewer: The application uses S3-compatible object storage for attachments. Conditional storage setup does not establish that storage is unused.",
+          "low confidence"
+        ],
+        "subject": null,
+        "decision": "rules"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "server/Dockerfile",
+          "context": "server"
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "port",
+        "value": 3000,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "bun run dist/server.js",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/v2/api/health",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "bun run dist/scripts/runMigrations.js"
+        },
+        "reasons": [
+          "server/package.json:22 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "server/billing/config.ts:204 reads it with a default or a guard"
+        ],
+        "subject": "BILLING_INSTANCE_ID",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "server/billing/config.ts:207 reads it with a default or a guard"
+        ],
+        "subject": "BILLING_OFFICIAL_ORIGIN",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "server/billing/config.ts:245 reads it with a default or a guard"
+        ],
+        "subject": "BILLING_PAID_SERVER_URL",
+        "decision": "ai"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.24229656,
+        "promptTokens": 53436,
+        "completionTokens": 1550
+      },
+      "latencyMs": 22922
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.440913825,
+        "promptTokens": 31658,
+        "completionTokens": 993
+      },
+      "latencyMs": 22768
+    },
+    "latencyMs": 45712,
+    "objections": {
+      "total": 2,
+      "confirmed": 0,
+      "questions": 2
+    },
+    "generatedAt": "2026-10-19T07:39:22.045Z",
+    "failedChecks": 2,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

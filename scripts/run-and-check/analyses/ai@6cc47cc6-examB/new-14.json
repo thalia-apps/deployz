@@ -1,0 +1,638 @@
+{
+  "id": "new-14",
+  "commit": "e459fb6de84fe31921a3a92173f43493263fa68d",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "koa",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "vite build",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 3001
+    },
+    "health": {
+      "path": "/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AZURE_FUNCTION_APP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_FUNCTION_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_FUNCTION_UNTRUSTED_APP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_FUNCTION_UNTRUSTED_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CASE_SENSITIVE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_CONNECTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_STATEMENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG_INJECTED_HEADERS_JSON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVELOPMENT_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVELOPMENT_USER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEV_FEATURES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTPS_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTPS_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNORE_CONNECTOR_VERSION_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INJECTED_HEADER_MAPPING_JSON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTEGRATION_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIPLE_CUSTOM_DOMAINS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_PROVIDER_SSRF_PROTECTION_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH_BASED_MULTI_TENANCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_PUBLIC_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_KEY_ROTATION_GRACE_PERIOD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROTECTED_APP_LOCAL_DEV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPT_RUNNER_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_VAULT_KEK",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SELF_HOSTED_LICENSE_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSRF_ALLOWED_ADDRESSES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSRF_PROTECTION_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATUS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TENANT_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUST_PROXY_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_DEFAULT_ROLE_NAMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/node/env/GlobalValues.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "postgres",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [
+          "no evidence"
+        ],
+        "subject": null,
+        "decision": "rules"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 3001,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "npm run start",
+        "reasons": [
+          "Dockerfile:58 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "healthPath",
+        "value": null,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "npm run cli db seed -- --swe"
+        },
+        "reasons": [
+          "package.json:18 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.26854344,
+        "promptTokens": 61509,
+        "completionTokens": 1261
+      },
+      "latencyMs": 17333
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.548997075,
+        "promptTokens": 43148,
+        "completionTokens": 304
+      },
+      "latencyMs": 7856
+    },
+    "latencyMs": 25205,
+    "objections": {
+      "total": 1,
+      "confirmed": 1,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:37:57.799Z",
+    "failedChecks": 3,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}
