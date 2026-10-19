@@ -16,7 +16,7 @@ const EVIDENCE_CHARS = 2000;
 type Failure = NonNullable<BuiltImage['failure']>;
 
 const INFRASTRUCTURE =
-  /TLS handshake timeout|failed to fetch|i\/o timeout|connection reset|429 Too Many Requests|toomanyrequests|Temporary failure in name resolution|unexpected EOF|failed to resolve source metadata|Could not resolve host|ETIMEDOUT|ECONNRESET|The operation was aborted due to timeout|ERR_PNPM_META_FETCH_FAIL|ERR_SOCKET_TIMEOUT|network timeout|EAI_AGAIN/i;
+  /TLS handshake timeout|failed to fetch|i\/o timeout|connection reset|429 Too Many Requests|toomanyrequests|Temporary failure in name resolution|unexpected EOF|failed to resolve source metadata|Could not resolve host|ETIMEDOUT|ECONNRESET|The operation was aborted due to timeout|ERR_PNPM_META_FETCH_FAIL|ERR_SOCKET_TIMEOUT|network timeout|EAI_AGAIN|stream error: stream ID \d+; INTERNAL_ERROR/i;
 const EMULATION_SIGNAL = /qemu: uncaught target signal|Illegal instruction|Segmentation fault/i;
 
 /** Classifies a failed build from the tail of its log. */

@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-17T13:56:12.314Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:41.030Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 850063779,
+          "seconds": 118,
+          "imageBytes": 843556243,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-049:2ae5053e584cf8999114e39fdae0e0b692526d32 from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#11 78.26   OrchardCore.Media.ImageSharpV3 -> /source/src/OrchardCore.Modules/OrchardCore.Media.ImageSharpV3/bin/Release/net10.0/OrchardCore.Media.ImageSharpV3.dll\n#11 78.36   TheAdmin -> /source/src/OrchardCore.Themes/TheAdmin/bin/Release/net10.0/TheAdmin.dll\n#11 78.37   OrchardCore.OpenApi -> /source/src/OrchardCore.Modules/OrchardCore.OpenApi/bin/Release/net10.0/OrchardCore.OpenApi.dll\n#11 78.38   OrchardCore.DataLocalization -> /source/src/OrchardCore.Modules/OrchardCore.DataLocalization/bin/Release/net10.0/OrchardCore.DataLocalization.dll\n#11 78.40   OrchardCore.Media.Azure -> /source/src/OrchardCore.Modules/OrchardCore.Media.Azure/bin/Release/net10.0/OrchardCore.Media.Azure.dll\n#11 79.49   OrchardCore.Application.Cms.Core.Targets -> /source/src/OrchardCore/OrchardCore.Application.Cms.Core.Targets/bin/Release/net10.0/OrchardCore.Application.Cms.Core.Targets.dll\n#11 80.66   OrchardCore.Application.Cms.Targets -> /source/src/OrchardCore/OrchardCore.Application.Cms.Targets/bin/Release/net10.0/OrchardCore.Application.Cms.Targets.dll\n#11 83.95   OrchardCore.Cms.Web -> /source/src/OrchardCore.Cms.Web/bin/Release/net10.0/OrchardCore.Cms.Web.dll\n#11 83.96   Copying translation files: OrchardCore.Cms.Web\n#11 84.49   Publishing translation files: OrchardCore.Cms.Web\n#11 88.33   OrchardCore.Cms.Web -> /app/\n#11 DONE 88.7s\n#12 [aspnet 2/2] COPY --from=build-env /app/ .\n#12 DONE 3.5s\n#13 exporting to image\n#13 exporting layers\n#13 exporting layers 1.0s done\n#13 writing image sha256:9a80e32f16c0f0b5b3bbfad95049ea098e322cad3b99280c09b463ac553075bf done\n#13 naming to docker.io/deployz-runcheck/repo-049:2ae5053e584cf8999114e39fdae0e0b692526d32 done\n#13 DONE 1.0s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,12 +45,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=12.245\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.995\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {45ad681c-175c-43c9-bfff-74e2124f839d} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 13:57:26.9059|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 13:57:26.9200|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-17 13:57:26.9200|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-17 13:57:26.9200|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {4b11f81f-f83b-4acc-8f98-91d394c5bc70} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:28:27.1014|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:28:27.1032|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-19 18:28:27.1037|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-19 18:28:27.1037|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
           }
         ]
       },
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 42291,
+            "port": 41719,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "80 all reachable=true\n42291 loopback reachable=false"
+            "text": "80 all reachable=true\n41719 loopback reachable=false"
           }
         ]
       },
@@ -125,7 +126,7 @@
             "status": 404
           }
         ],
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -140,7 +141,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -157,7 +158,7 @@
           "tablesAfterStart": [],
           "sqliteFileWritten": false
         },
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -187,13 +188,13 @@
           "tablesCreatedByStart": false,
           "secondStartHealthy": true
         },
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -203,7 +204,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -217,7 +218,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -229,75 +230,90 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [
-          "/app/App_Data/Sites/Default/DataProtection-Keys/key-a74b73bb-538c-486c-beae-26161df578a7.xml",
+          "/app/App_Data/Sites/Default/DataProtection-Keys/key-fd5cdfeb-d625-4894-a1ed-3396af5a2744.xml",
           "/app/App_Data/Sites/Default/appsettings.json",
           "/app/App_Data/tenants.json",
-          "/root/.aspnet/DataProtection-Keys/key-45ad681c-175c-43c9-bfff-74e2124f839d.xml"
+          "/root/.aspnet/DataProtection-Keys/key-4b11f81f-f83b-4acc-8f98-91d394c5bc70.xml"
         ],
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
             "source": "web#1",
-            "text": "/app/App_Data/Sites/Default/DataProtection-Keys/key-a74b73bb-538c-486c-beae-26161df578a7.xml\n/app/App_Data/Sites/Default/appsettings.json\n/app/App_Data/tenants.json\n/root/.aspnet/DataProtection-Keys/key-45ad681c-175c-43c9-bfff-74e2124f839d.xml"
+            "text": "/app/App_Data/Sites/Default/DataProtection-Keys/key-fd5cdfeb-d625-4894-a1ed-3396af5a2744.xml\n/app/App_Data/Sites/Default/appsettings.json\n/app/App_Data/tenants.json\n/root/.aspnet/DataProtection-Keys/key-4b11f81f-f83b-4acc-8f98-91d394c5bc70.xml"
           }
         ]
       },
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
         "status": "not_run",
         "value": null,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate variable"
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=13.884\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.495\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {c3be0a9b-5754-4abd-8339-5e5afc08444d} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 13:58:34.4038|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 13:58:34.4152|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-17 13:58:34.4172|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-17 13:58:34.4172|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {df2ef67b-d819-4ed2-8810-341782a17f46} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:28:51.9375|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:28:51.9392|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-19 18:28:51.9404|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-19 18:28:51.9404|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=14.25\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.521\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {914faefa-c9e6-468d-ba24-0944d5a43d96} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 13:58:34.3959|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 13:58:34.4116|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-17 13:58:34.4151|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-17 13:58:34.4151|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {a3992149-08df-46e1-ab7d-c60c4b5cf743} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:28:51.8785|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:28:51.8799|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-19 18:28:51.8807|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-19 18:28:51.8807|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=3.298\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.938\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {726fdca7-1175-466a-aa5a-dc7702d542c8} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 13:57:43.6664|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 13:57:43.6676|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-17 13:57:43.6676|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-17 13:57:43.6676|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {851c5c71-c2e6-4ac6-ad9a-db2c2d4ab8a3} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:28:35.3272|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:28:35.3285|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-19 18:28:35.3285|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-19 18:28:35.3285|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "80/ 200 -> 200\n80/health 404 -> 404\n80/healthz 404 -> 404\n80/up 404 -> 404\n80/api/health 404 -> 404\n80/status 404 -> 404\n80/ping 404 -> 404\n80/_health 404 -> 404\n80/actuator/health 404 -> 404\n80/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -309,11 +325,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 12.245,
+            "startSeconds": 6.995,
             "oomKilled": false
           }
         ],
-        "arch": "arm64-native",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -339,360 +355,382 @@
         "workerCommands": [],
         "variables": [],
         "from": [
-          "analysis:rules@b028a8bc",
-          "fixed-list"
-        ]
-      },
-      "infrastructureFailures": [
-        "emulation: qemu: uncaught target signal 6 (Aborted) - core dumped"
-      ],
-      "timings": {
-        "build": 26.026,
-        "setA": 73.224,
-        "twoCopies": 61.922
-      }
-    },
-    {
-      "startedAt": "2026-10-17T13:58:53.524Z",
-      "harnessVersion": "1",
-      "build": {
-        "status": "observed",
-        "value": {
-          "ok": true,
-          "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 850063779,
-          "dockerfile": "Dockerfile",
-          "context": ".",
-          "failure": null,
-          "fromCache": true
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-049:2ae5053e584cf8999114e39fdae0e0b692526d32 from the image cache"
-          }
-        ]
-      },
-      "webHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "web#1",
-            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
-          },
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=5.527\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {47d728b9-f78a-4f0f-b733-b4a40b48c45a} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 14:00:10.0804|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 14:00:10.0857|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-17 14:00:10.0867|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-17 14:00:10.0867|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
-          }
-        ]
-      },
-      "listeningPorts": {
-        "status": "observed",
-        "value": [
-          {
-            "port": 80,
-            "bind": "all",
-            "reachableFromProbe": true
-          },
-          {
-            "port": 45569,
-            "bind": "loopback",
-            "reachableFromProbe": false
-          }
-        ],
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "inspect",
-            "source": "web#1",
-            "text": "80 all reachable=true\n45569 loopback reachable=false"
-          }
-        ]
-      },
-      "httpPaths": {
-        "status": "observed",
-        "value": [
-          {
-            "port": 80,
-            "path": "/",
-            "status": 200
-          },
-          {
-            "port": 80,
-            "path": "/health",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/healthz",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/up",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/api/health",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/status",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/ping",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/_health",
-            "status": 404
-          },
-          {
-            "port": 80,
-            "path": "/actuator/health",
-            "status": 404
-          }
-        ],
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404"
-          }
-        ]
-      },
-      "smoke": {
-        "status": "observed",
-        "value": {
-          "path": "/",
-          "status": 200
-        },
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "GET 80/ 200"
-          }
-        ]
-      },
-      "database": {
-        "status": "observed",
-        "value": {
-          "engine": null,
-          "connections": 0,
-          "tablesAfterStart": [],
-          "sqliteFileWritten": false
-        },
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "postgres",
-            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
-          },
-          {
-            "kind": "command",
-            "source": "mysql",
-            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
-          },
-          {
-            "kind": "command",
-            "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
-          },
-          {
-            "kind": "command",
-            "source": "minio",
-            "text": "mc ls --recursive rc-repo-049: 0 objects"
-          }
-        ]
-      },
-      "startupMigration": {
-        "status": "observed",
-        "value": {
-          "tablesCreatedByStart": false,
-          "secondStartHealthy": true
-        },
-        "arch": "arm64-native",
-        "evidence": []
-      },
-      "migrationCommands": {
-        "status": "not_run",
-        "value": null,
-        "arch": "arm64-native",
-        "evidence": [],
-        "note": "no candidate migration command"
-      },
-      "redis": {
-        "status": "observed",
-        "value": {
-          "connected": false,
-          "clients": 0
-        },
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
-          }
-        ]
-      },
-      "objectStorage": {
-        "status": "observed",
-        "value": {
-          "objectsWritten": 0
-        },
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "minio",
-            "text": "mc ls --recursive rc-repo-049: 0 objects"
-          }
-        ]
-      },
-      "localDiskWrites": {
-        "status": "observed",
-        "value": [
-          "/app/App_Data/Sites/Default/DataProtection-Keys/key-24a83852-6666-49b7-9b28-ee71cbd94921.xml",
-          "/app/App_Data/Sites/Default/appsettings.json",
-          "/app/App_Data/tenants.json",
-          "/root/.aspnet/DataProtection-Keys/key-47d728b9-f78a-4f0f-b733-b4a40b48c45a.xml"
-        ],
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "diff",
-            "source": "web#1",
-            "text": "/app/App_Data/Sites/Default/DataProtection-Keys/key-24a83852-6666-49b7-9b28-ee71cbd94921.xml\n/app/App_Data/Sites/Default/appsettings.json\n/app/App_Data/tenants.json\n/root/.aspnet/DataProtection-Keys/key-47d728b9-f78a-4f0f-b733-b4a40b48c45a.xml"
-          }
-        ]
-      },
-      "workers": {
-        "status": "not_run",
-        "value": null,
-        "arch": "arm64-native",
-        "evidence": [],
-        "note": "no candidate worker command"
-      },
-      "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "arm64-native",
-        "evidence": [],
-        "note": "no candidate variable"
-      },
-      "twoCopiesHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=10.652\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {cd28fe9b-dc1b-453a-801d-d80192a2f141} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 14:01:18.4856|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 14:01:18.4896|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-17 14:01:18.5016|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-17 14:01:18.5016|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
-          },
-          {
-            "kind": "http",
-            "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=11.011\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#2",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {c14ab89e-3937-475b-85eb-426c8c13c3c1} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 14:01:18.3222|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 14:01:18.3383|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-17 14:01:18.3425|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-17 14:01:18.3425|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
-          }
-        ]
-      },
-      "restartHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=3.407\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#2",
-            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {91ab44c4-030f-416a-9c13-0def37014061} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-17 14:00:20.2611|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-17 14:00:20.2623|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-17 14:00:20.2623|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-17 14:00:20.2623|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
-          }
-        ]
-      },
-      "sizes": {
-        "status": "observed",
-        "value": [
-          {
-            "profile": "small-v2",
-            "memoryMiB": 512,
-            "cpus": 1,
-            "healthy": true,
-            "startSeconds": 5.527,
-            "oomKilled": false
-          }
-        ],
-        "arch": "arm64-native",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "small-v2",
-            "text": "healthy=true oomKilled=false exited=false"
-          }
-        ]
-      },
-      "candidates": {
-        "injectedPort": 18080,
-        "healthPaths": [
-          "/",
-          "/health",
-          "/healthz",
-          "/up",
-          "/api/health",
-          "/status",
-          "/ping",
-          "/_health",
-          "/actuator/health"
-        ],
-        "migrationCommands": [],
-        "workerCommands": [],
-        "variables": [],
-        "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 26.3,
-        "setA": 67.484,
-        "twoCopies": 65.071
+        "build": 140.223,
+        "setA": 41.687,
+        "twoCopies": 16.681
+      }
+    },
+    {
+      "startedAt": "2026-10-19T18:28:59.627Z",
+      "harnessVersion": "2",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 118,
+          "imageBytes": 843556243,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "target": null,
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-049:2ae5053e584cf8999114e39fdae0e0b692526d32 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=6.95\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {4776c9ff-03c1-4e29-a887-a5f7eab79a27} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:29:12.7878|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:12.7912|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-19 18:29:12.7917|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-19 18:29:12.7917|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 35407,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n35407 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 200
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 200"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-049: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-049: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/app/App_Data/Sites/Default/DataProtection-Keys/key-6c48a4a4-f5fd-48a9-adbc-ea017607988d.xml",
+          "/app/App_Data/Sites/Default/appsettings.json",
+          "/app/App_Data/tenants.json",
+          "/root/.aspnet/DataProtection-Keys/key-4776c9ff-03c1-4e29-a887-a5f7eab79a27.xml"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/app/App_Data/Sites/Default/DataProtection-Keys/key-6c48a4a4-f5fd-48a9-adbc-ea017607988d.xml\n/app/App_Data/Sites/Default/appsettings.json\n/app/App_Data/tenants.json\n/root/.aspnet/DataProtection-Keys/key-4776c9ff-03c1-4e29-a887-a5f7eab79a27.xml"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate variable"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.352\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {38d13082-5c2b-4202-b759-1afb7b602b32} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:29:37.8041|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:37.8058|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\n2026-10-19 18:29:37.8067|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\n2026-10-19 18:29:37.8067|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.389\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {afa1ad9f-f3a9-4b7f-ad41-c951cb6e7107} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:29:37.8704|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:37.8746|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:37.8746|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-19 18:29:37.8746|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=6.989\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 200\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\nwarn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]\n      No XML encryptor configured. Key {2ee330b2-56c1-4196-b8af-40278e06bfe9} may be persisted to storage in unencrypted form.\nwarn: Microsoft.AspNetCore.Hosting.Diagnostics[15]\n      Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:80'.\nwarn: Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware[16]\n      The WebRootPath was not found: /app/wwwroot. Static files may be unavailable.\ninfo: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://[::]:80\n2026-10-19 18:29:21.0414|INFO|Microsoft.Hosting.Lifetime|Now listening on: http://[::]:80\ninfo: Microsoft.Hosting.Lifetime[0]\n      Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:21.0461|INFO|Microsoft.Hosting.Lifetime|Application started. Press Ctrl+C to shut down.\n2026-10-19 18:29:21.0467|INFO|Microsoft.Hosting.Lifetime|Hosting environment: Production\n2026-10-19 18:29:21.0467|INFO|Microsoft.Hosting.Lifetime|Content root path: /app\ninfo: Microsoft.Hosting.Lifetime[0]\n      Hosting environment: Production\ninfo: Microsoft.Hosting.Lifetime[0]\n      Content root path: /app\nwarn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]\n      Storing keys in a directory '/app/App_Data/Sites/Default/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "80/ 200 -> 200\n80/health 404 -> 404\n80/healthz 404 -> 404\n80/up 404 -> 404\n80/api/health 404 -> 404\n80/status 404 -> 404\n80/ping 404 -> 404\n80/_health 404 -> 404\n80/actuator/health 404 -> 404\n80/ (smoke) 200 -> 200"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 6.95,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 4.334,
+        "setA": 24.728,
+        "twoCopies": 16.772
       }
     }
   ],

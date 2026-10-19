@@ -103,7 +103,13 @@ describe('classifyBuildFailure', () => {
     expect(classifyBuildFailure('Segmentation fault', false).failure).toBe('dockerfile');
     expect(classifyBuildFailure('#12 0.923 fatal error: lfstack.push', false).failure).toBe('emulation');
     expect(classifyBuildFailure('#13 323.3 TimeoutError: The operation was aborted due to timeout', false).failure).toBe('infrastructure');
-    for (const line of ['TLS handshake timeout', 'toomanyrequests: rate limit', 'Could not resolve host: x', 'read: ECONNRESET']) {
+    for (const line of [
+      'TLS handshake timeout',
+      'toomanyrequests: rate limit',
+      'Could not resolve host: x',
+      'read: ECONNRESET',
+      'go: x@v1.0.0: read "https://proxy.golang.org/x/@v/v1.0.0.zip": stream error: stream ID 699; INTERNAL_ERROR; received from peer',
+    ]) {
       expect(classifyBuildFailure(`step\n${line}`, false).failure).toBe('infrastructure');
     }
     expect(classifyBuildFailure('npm ERR! missing script: build', false).failure).toBe('dockerfile');

@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-18T07:08:36.913Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:31.061Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 767958697,
+          "seconds": 162,
+          "imageBytes": 712200268,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-021:ea25ba63db11d4e25c0b1a4e5b8926a64dadbfee from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#18 88.38 + node -e '\n#18 88.38 \t\tconst f = \"package.json\", {name, version, type, exports, bin} = require(`./${f}`), {packageManager} = require(`../${f}`);\n#18 88.38 \t\tfs.writeFileSync(f, JSON.stringify({name, version, type, exports, bin, packageManager}, null, 2));\n#18 88.38 \t'\n#18 88.42 + mkdir -p database extensions uploads\n#18 DONE 89.1s\n#19 [runtime 4/7] COPY --from=builder --chown=node:node /directus/ecosystem.config.cjs .\n#19 DONE 0.0s\n#20 [runtime 5/7] COPY --from=builder --chown=node:node /directus/dist .\n#20 DONE 8.6s\n#21 [runtime 6/7] COPY --chown=node:node docker-entrypoint.cjs .\n#21 DONE 0.0s\n#22 [runtime 7/7] RUN ln -s /directus/node_modules/.pnpm/pm2@*/node_modules/pm2/bin/pm2 /usr/local/bin/pm2\n#22 DONE 0.1s\n#23 exporting to image\n#23 exporting layers\n#23 exporting layers 8.3s done\n#23 writing image sha256:a95f75fc5e6cde8939838edc11e086be59b53cb10333367ca29f7f59495ae60e done\n#23 naming to docker.io/deployz-runcheck/repo-021:ea25ba63db11d4e25c0b1a4e5b8926a64dadbfee done\n#23 DONE 8.3s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,12 +45,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=762.814\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.652\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "[07:23:38.556] INFO: Applying Visual Editor...\n[07:23:38.786] INFO: Applying License Banner...\n[07:23:39.248] INFO: Applying Add Project ID...\n[07:23:39.437] INFO: Applying Add Direction...\n[07:23:39.535] INFO: Applying Add MCP...\n[07:23:39.732] INFO: Applying Add Field Searchable...\n[07:23:40.381] INFO: Applying Add Project Owner...\n[07:23:42.381] INFO: Applying Add Retention Indexes...\n[07:23:46.820] INFO: Applying Add AI Settings...\n[07:23:46.910] INFO: Applying Remove Webhooks...\n[07:23:47.030] INFO: Applying Add AI Provider Settings...\n[07:23:47.580] INFO: Applying Add Revisions Index...\n[07:23:48.986] INFO: Applying Add Collaborative Editing...\n[07:23:49.072] INFO: Applying Add Deployment...\n[07:23:49.997] INFO: Applying Add Deployment Webhooks...\n[07:23:50.295] INFO: Applying Null Item Versions...\n[07:23:50.397] INFO: Applying Add AI Translation Settings...\n[07:23:50.554] INFO: Applying Add Licensing...\n[07:23:50.693] INFO: Applying Add Autosave Revision Interval...\n[07:23:50.955] INFO: Applying Add MCP Oauth...\n[07:23:52.230] INFO: Applying Add Default Save Action...\n[07:23:53.598] INFO: Setting up first admin role...\n[07:23:55.574] INFO: Adding first admin user...\n[07:24:03.536] INFO: Done\n2026-10-18T07:24:21: PM2 log: Launching in no daemon mode\n2026-10-18T07:24:24: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T07:24:28: PM2 log: App [directus:0] online\n[07:28:56.691] INFO: Extensions loaded\n[07:28:57.869] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[07:29:07.893] INFO: Server started at http://0.0.0.0:18080\n[07:29:21] GET / 302 332ms\n[07:29:21] GET /server/ping 200 95ms\n[07:29:22] GET /health 404 310ms\n[07:29:22] GET /healthz 404 231ms\n[07:29:22] GET /up 404 169ms\n[07:29:23] GET /api/health 404 180ms\n[07:29:23] GET /status 404 213ms\n[07:29:23] GET /ping 404 218ms\n[07:29:23] GET /_health 404 231ms\n[07:29:24] GET /actuator/health 404 239ms\n"
+            "text": "[18:29:20.945] INFO: Applying Visual Editor...\n[18:29:20.951] INFO: Applying License Banner...\n[18:29:20.961] INFO: Applying Add Project ID...\n[18:29:20.968] INFO: Applying Add Direction...\n[18:29:20.970] INFO: Applying Add MCP...\n[18:29:20.975] INFO: Applying Add Field Searchable...\n[18:29:20.986] INFO: Applying Add Project Owner...\n[18:29:21.050] INFO: Applying Add Retention Indexes...\n[18:29:21.113] INFO: Applying Add AI Settings...\n[18:29:21.116] INFO: Applying Remove Webhooks...\n[18:29:21.125] INFO: Applying Add AI Provider Settings...\n[18:29:21.137] INFO: Applying Add Revisions Index...\n[18:29:21.181] INFO: Applying Add Collaborative Editing...\n[18:29:21.185] INFO: Applying Add Deployment...\n[18:29:21.218] INFO: Applying Add Deployment Webhooks...\n[18:29:21.224] INFO: Applying Null Item Versions...\n[18:29:21.234] INFO: Applying Add AI Translation Settings...\n[18:29:21.237] INFO: Applying Add Licensing...\n[18:29:21.241] INFO: Applying Add Autosave Revision Interval...\n[18:29:21.244] INFO: Applying Add MCP Oauth...\n[18:29:21.299] INFO: Applying Add Default Save Action...\n[18:29:21.346] INFO: Setting up first admin role...\n[18:29:21.387] INFO: Adding first admin user...\n[18:29:21.593] INFO: Done\n2026-10-19T18:29:21: PM2 log: Launching in no daemon mode\n2026-10-19T18:29:21: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:29:24: PM2 log: App [directus:0] online\n[18:29:34.904] INFO: Extensions loaded\n[18:29:34.918] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:29:35.118] INFO: Server started at http://0.0.0.0:18080\n[18:29:37] GET / 302 4ms\n[18:29:37] GET /server/ping 200 2ms\n[18:29:37] GET /health 404 6ms\n[18:29:37] GET /healthz 404 3ms\n[18:29:37] GET /up 404 3ms\n[18:29:37] GET /api/health 404 3ms\n[18:29:37] GET /status 404 3ms\n[18:29:37] GET /ping 404 3ms\n[18:29:37] GET /_health 404 3ms\n[18:29:37] GET /actuator/health 404 3ms\n"
           }
         ]
       },
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 35299,
+            "port": 37139,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n35299 loopback reachable=false"
+            "text": "18080 all reachable=true\n37139 loopback reachable=false"
           }
         ]
       },
@@ -130,7 +131,7 @@
             "status": 404
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -145,7 +146,7 @@
           "path": "/",
           "status": 302
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -196,7 +197,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -211,7 +212,7 @@
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 9, baseline 2, harness sessions 1: 6 application connections; DBSIZE = 1"
+            "text": "INFO stats total_connections_received = 9, baseline 2, harness sessions 1: 6 application connections; DBSIZE = 0"
           },
           {
             "kind": "command",
@@ -226,13 +227,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -240,14 +241,30 @@
         "status": "observed",
         "value": {
           "connected": true,
-          "clients": 6
+          "clients": 6,
+          "healthyWithout": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 9, baseline 2, harness sessions 1: 6 application connections; DBSIZE = 1"
+            "text": "INFO stats total_connections_received = 9, baseline 2, harness sessions 1: 6 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "http",
+            "source": "web without Redis",
+            "text": "healthy=true exited=false oomKilled=false seconds=31.724\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without Redis",
+            "text": "[18:35:20.940] INFO: Applying Visual Editor...\n[18:35:20.946] INFO: Applying License Banner...\n[18:35:20.956] INFO: Applying Add Project ID...\n[18:35:20.962] INFO: Applying Add Direction...\n[18:35:20.965] INFO: Applying Add MCP...\n[18:35:20.970] INFO: Applying Add Field Searchable...\n[18:35:20.979] INFO: Applying Add Project Owner...\n[18:35:21.035] INFO: Applying Add Retention Indexes...\n[18:35:21.090] INFO: Applying Add AI Settings...\n[18:35:21.093] INFO: Applying Remove Webhooks...\n[18:35:21.103] INFO: Applying Add AI Provider Settings...\n[18:35:21.114] INFO: Applying Add Revisions Index...\n[18:35:21.130] INFO: Applying Add Collaborative Editing...\n[18:35:21.133] INFO: Applying Add Deployment...\n[18:35:21.165] INFO: Applying Add Deployment Webhooks...\n[18:35:21.171] INFO: Applying Null Item Versions...\n[18:35:21.175] INFO: Applying Add AI Translation Settings...\n[18:35:21.178] INFO: Applying Add Licensing...\n[18:35:21.183] INFO: Applying Add Autosave Revision Interval...\n[18:35:21.185] INFO: Applying Add MCP Oauth...\n[18:35:21.240] INFO: Applying Add Default Save Action...\n[18:35:21.289] INFO: Setting up first admin role...\n[18:35:21.327] INFO: Adding first admin user...\n[18:35:21.491] INFO: Done\n2026-10-19T18:35:21: PM2 log: Launching in no daemon mode\n2026-10-19T18:35:21: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:35:24: PM2 log: App [directus:0] online\n[18:35:34.540] INFO: Extensions loaded\n[18:35:34.581] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:35:34.778] INFO: Server started at http://0.0.0.0:18080\n[18:35:38] GET / 302 5ms\n[18:35:38] GET /server/ping 200 2ms\n[18:35:38] GET /health 404 6ms\n[18:35:38] GET /healthz 404 4ms\n[18:35:38] GET /up 404 4ms\n[18:35:38] GET /api/health 404 3ms\n[18:35:38] GET /status 404 5ms\n[18:35:38] GET /ping 404 4ms\n[18:35:38] GET /_health 404 4ms\n[18:35:38] GET /actuator/health 404 3ms\n"
+          },
+          {
+            "kind": "command",
+            "source": "web without Redis",
+            "text": "the app still reached Valkey"
           }
         ]
       },
@@ -256,7 +273,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -268,7 +285,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -280,7 +297,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -318,47 +335,47 @@
             "healthyWith": true
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web without KEY",
-            "text": "healthy=true exited=false oomKilled=false seconds=542.96\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.554\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without KEY",
-            "text": "[07:58:00.773] INFO: Applying Visual Editor...\n[07:58:00.913] INFO: Applying License Banner...\n[07:58:01.357] INFO: Applying Add Project ID...\n[07:58:01.477] INFO: Applying Add Direction...\n[07:58:01.576] INFO: Applying Add MCP...\n[07:58:01.633] INFO: Applying Add Field Searchable...\n[07:58:02.093] INFO: Applying Add Project Owner...\n[07:58:03.284] INFO: Applying Add Retention Indexes...\n[07:58:05.013] INFO: Applying Add AI Settings...\n[07:58:05.043] INFO: Applying Remove Webhooks...\n[07:58:05.080] INFO: Applying Add AI Provider Settings...\n[07:58:05.215] INFO: Applying Add Revisions Index...\n[07:58:05.695] INFO: Applying Add Collaborative Editing...\n[07:58:05.729] INFO: Applying Add Deployment...\n[07:58:05.913] INFO: Applying Add Deployment Webhooks...\n[07:58:05.964] INFO: Applying Null Item Versions...\n[07:58:06.002] INFO: Applying Add AI Translation Settings...\n[07:58:06.035] INFO: Applying Add Licensing...\n[07:58:06.076] INFO: Applying Add Autosave Revision Interval...\n[07:58:06.111] INFO: Applying Add MCP Oauth...\n[07:58:06.378] INFO: Applying Add Default Save Action...\n[07:58:06.748] INFO: Setting up first admin role...\n[07:58:07.483] INFO: Adding first admin user...\n[07:58:09.661] INFO: Done\n2026-10-18T07:58:14: PM2 log: Launching in no daemon mode\n2026-10-18T07:58:15: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T07:58:19: PM2 log: App [directus:0] online\n[08:02:21.487] INFO: Extensions loaded\n[08:02:22.552] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:02:31.439] INFO: Server started at http://0.0.0.0:18080\n[08:02:35] GET / 302 252ms\n[08:02:35] GET /server/ping 200 89ms\n[08:02:36] GET /health 404 295ms\n[08:02:36] GET /healthz 404 253ms\n[08:02:36] GET /up 404 194ms\n[08:02:37] GET /api/health 404 315ms\n[08:02:37] GET /status 404 393ms\n[08:02:38] GET /ping 404 400ms\n[08:02:38] GET /_health 404 304ms\n[08:02:39] GET /actuator/health 404 196ms\n"
+            "text": "[18:31:23.605] INFO: Applying Visual Editor...\n[18:31:23.612] INFO: Applying License Banner...\n[18:31:23.626] INFO: Applying Add Project ID...\n[18:31:23.634] INFO: Applying Add Direction...\n[18:31:23.639] INFO: Applying Add MCP...\n[18:31:23.648] INFO: Applying Add Field Searchable...\n[18:31:23.660] INFO: Applying Add Project Owner...\n[18:31:23.720] INFO: Applying Add Retention Indexes...\n[18:31:23.784] INFO: Applying Add AI Settings...\n[18:31:23.787] INFO: Applying Remove Webhooks...\n[18:31:23.796] INFO: Applying Add AI Provider Settings...\n[18:31:23.806] INFO: Applying Add Revisions Index...\n[18:31:23.821] INFO: Applying Add Collaborative Editing...\n[18:31:23.825] INFO: Applying Add Deployment...\n[18:31:23.855] INFO: Applying Add Deployment Webhooks...\n[18:31:23.861] INFO: Applying Null Item Versions...\n[18:31:23.864] INFO: Applying Add AI Translation Settings...\n[18:31:23.867] INFO: Applying Add Licensing...\n[18:31:23.871] INFO: Applying Add Autosave Revision Interval...\n[18:31:23.873] INFO: Applying Add MCP Oauth...\n[18:31:23.927] INFO: Applying Add Default Save Action...\n[18:31:23.975] INFO: Setting up first admin role...\n[18:31:24.009] INFO: Adding first admin user...\n[18:31:24.189] INFO: Done\n2026-10-19T18:31:24: PM2 log: Launching in no daemon mode\n2026-10-19T18:31:24: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:31:27: PM2 log: App [directus:0] online\n[18:31:37.126] INFO: Extensions loaded\n[18:31:37.139] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:31:37.315] INFO: Server started at http://0.0.0.0:18080\n[18:31:40] GET / 302 7ms\n[18:31:40] GET /server/ping 200 2ms\n[18:31:40] GET /health 404 6ms\n[18:31:40] GET /healthz 404 4ms\n[18:31:40] GET /up 404 3ms\n[18:31:40] GET /api/health 404 3ms\n[18:31:40] GET /status 404 3ms\n[18:31:40] GET /ping 404 3ms\n[18:31:40] GET /_health 404 3ms\n[18:31:40] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
             "source": "web without SECRET",
-            "text": "healthy=true exited=false oomKilled=false seconds=586.493\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.626\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without SECRET",
-            "text": "[08:07:17.620] INFO: Applying Add Project ID...\n[08:07:17.763] INFO: Applying Add Direction...\n[08:07:17.815] INFO: Applying Add MCP...\n[08:07:17.880] INFO: Applying Add Field Searchable...\n[08:07:18.490] INFO: Applying Add Project Owner...\n[08:07:20.396] INFO: Applying Add Retention Indexes...\n[08:07:23.734] INFO: Applying Add AI Settings...\n[08:07:23.806] INFO: Applying Remove Webhooks...\n[08:07:23.893] INFO: Applying Add AI Provider Settings...\n[08:07:24.380] INFO: Applying Add Revisions Index...\n[08:07:26.469] INFO: Applying Add Collaborative Editing...\n[08:07:27.178] INFO: Applying Add Deployment...\n[08:07:29.671] INFO: Applying Add Deployment Webhooks...\n[08:07:30.773] INFO: Applying Null Item Versions...\n[08:07:31.778] INFO: Applying Add AI Translation Settings...\n[08:07:32.273] INFO: Applying Add Licensing...\n[08:07:33.570] INFO: Applying Add Autosave Revision Interval...\n[08:07:33.989] INFO: Applying Add MCP Oauth...\n[08:07:34.702] INFO: Applying Add Default Save Action...\n[08:07:35.683] INFO: Setting up first admin role...\n[08:07:37.755] INFO: Adding first admin user...\n[08:07:46.971] INFO: Done\n2026-10-18T08:08:05: PM2 log: Launching in no daemon mode\n2026-10-18T08:08:08: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T08:08:12: PM2 log: App [directus:0] online\n[08:12:38.957] INFO: Extensions loaded\n[08:12:40.791] WARN: \"SECRET\" env variable is missing. Using a random value instead. Tokens will not persist between restarts. This is not appropriate for production usage.\n[08:12:41.085] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:12:50.107] INFO: Server started at http://0.0.0.0:18080\n[08:13:03] GET / 302 220ms\n[08:13:03] GET /server/ping 200 99ms\n[08:13:04] GET /health 404 251ms\n[08:13:04] GET /healthz 404 229ms\n[08:13:04] GET /up 404 182ms\n[08:13:04] GET /api/health 404 188ms\n[08:13:05] GET /status 404 215ms\n[08:13:05] GET /ping 404 169ms\n[08:13:05] GET /_health 404 183ms\n[08:13:06] GET /actuator/health 404 202ms\n"
+            "text": " License Banner...\n[18:32:06.186] INFO: Applying Add Project ID...\n[18:32:06.191] INFO: Applying Add Direction...\n[18:32:06.194] INFO: Applying Add MCP...\n[18:32:06.198] INFO: Applying Add Field Searchable...\n[18:32:06.208] INFO: Applying Add Project Owner...\n[18:32:06.263] INFO: Applying Add Retention Indexes...\n[18:32:06.340] INFO: Applying Add AI Settings...\n[18:32:06.343] INFO: Applying Remove Webhooks...\n[18:32:06.352] INFO: Applying Add AI Provider Settings...\n[18:32:06.361] INFO: Applying Add Revisions Index...\n[18:32:06.376] INFO: Applying Add Collaborative Editing...\n[18:32:06.379] INFO: Applying Add Deployment...\n[18:32:06.411] INFO: Applying Add Deployment Webhooks...\n[18:32:06.417] INFO: Applying Null Item Versions...\n[18:32:06.420] INFO: Applying Add AI Translation Settings...\n[18:32:06.423] INFO: Applying Add Licensing...\n[18:32:06.427] INFO: Applying Add Autosave Revision Interval...\n[18:32:06.430] INFO: Applying Add MCP Oauth...\n[18:32:06.484] INFO: Applying Add Default Save Action...\n[18:32:06.533] INFO: Setting up first admin role...\n[18:32:06.573] INFO: Adding first admin user...\n[18:32:06.744] INFO: Done\n2026-10-19T18:32:07: PM2 log: Launching in no daemon mode\n2026-10-19T18:32:07: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:32:10: PM2 log: App [directus:0] online\n[18:32:20.026] INFO: Extensions loaded\n[18:32:20.039] WARN: \"SECRET\" env variable is missing. Using a random value instead. Tokens will not persist between restarts. This is not appropriate for production usage.\n[18:32:20.041] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:32:20.233] INFO: Server started at http://0.0.0.0:18080\n[18:32:23] GET / 302 4ms\n[18:32:23] GET /server/ping 200 1ms\n[18:32:23] GET /health 404 6ms\n[18:32:23] GET /healthz 404 3ms\n[18:32:23] GET /up 404 3ms\n[18:32:23] GET /api/health 404 3ms\n[18:32:23] GET /status 404 4ms\n[18:32:23] GET /ping 404 3ms\n[18:32:23] GET /_health 404 4ms\n[18:32:23] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
             "source": "web without ADMIN_EMAIL",
-            "text": "healthy=true exited=false oomKilled=false seconds=508.097\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.544\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without ADMIN_EMAIL",
-            "text": "[08:18:02.052] INFO: Applying Migrate Legacy Comments...\n[08:18:02.465] INFO: Applying Populate Versioning Deltas...\n[08:18:02.542] INFO: Applying Visual Editor...\n[08:18:02.889] INFO: Applying License Banner...\n[08:18:03.515] INFO: Applying Add Project ID...\n[08:18:03.729] INFO: Applying Add Direction...\n[08:18:03.925] INFO: Applying Add MCP...\n[08:18:04.265] INFO: Applying Add Field Searchable...\n[08:18:04.850] INFO: Applying Add Project Owner...\n[08:18:07.020] INFO: Applying Add Retention Indexes...\n[08:18:10.613] INFO: Applying Add AI Settings...\n[08:18:10.675] INFO: Applying Remove Webhooks...\n[08:18:10.747] INFO: Applying Add AI Provider Settings...\n[08:18:11.136] INFO: Applying Add Revisions Index...\n[08:18:13.216] INFO: Applying Add Collaborative Editing...\n[08:18:13.817] INFO: Applying Add Deployment...\n[08:18:16.116] INFO: Applying Add Deployment Webhooks...\n[08:18:17.325] INFO: Applying Null Item Versions...\n[08:18:18.214] INFO: Applying Add AI Translation Settings...\n[08:18:18.929] INFO: Applying Add Licensing...\n[08:18:20.213] INFO: Applying Add Autosave Revision Interval...\n[08:18:20.744] INFO: Applying Add MCP Oauth...\n[08:18:21.531] INFO: Applying Add Default Save Action...\n[08:18:22.666] INFO: Done\n2026-10-18T08:18:35: PM2 log: Launching in no daemon mode\n2026-10-18T08:18:36: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T08:18:39: PM2 log: App [directus:0] online\n[08:22:21.782] INFO: Extensions loaded\n[08:22:21.951] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:22:23.587] INFO: Server started at http://0.0.0.0:18080\n[08:22:24] GET / 302 56ms\n[08:22:24] GET /server/ping 200 20ms\n[08:22:24] GET /health 404 71ms\n[08:22:25] GET /healthz 404 51ms\n[08:22:25] GET /up 404 40ms\n[08:22:25] GET /api/health 404 60ms\n[08:22:25] GET /status 404 36ms\n[08:22:25] GET /ping 404 58ms\n[08:22:25] GET /_health 404 47ms\n[08:22:25] GET /actuator/health 404 45ms\n"
+            "text": "[18:32:48.832] INFO: Applying Migrate Legacy Comments...\n[18:32:48.840] INFO: Applying Populate Versioning Deltas...\n[18:32:48.842] INFO: Applying Visual Editor...\n[18:32:48.848] INFO: Applying License Banner...\n[18:32:48.858] INFO: Applying Add Project ID...\n[18:32:48.864] INFO: Applying Add Direction...\n[18:32:48.866] INFO: Applying Add MCP...\n[18:32:48.871] INFO: Applying Add Field Searchable...\n[18:32:48.881] INFO: Applying Add Project Owner...\n[18:32:48.941] INFO: Applying Add Retention Indexes...\n[18:32:49.004] INFO: Applying Add AI Settings...\n[18:32:49.007] INFO: Applying Remove Webhooks...\n[18:32:49.017] INFO: Applying Add AI Provider Settings...\n[18:32:49.028] INFO: Applying Add Revisions Index...\n[18:32:49.044] INFO: Applying Add Collaborative Editing...\n[18:32:49.047] INFO: Applying Add Deployment...\n[18:32:49.082] INFO: Applying Add Deployment Webhooks...\n[18:32:49.089] INFO: Applying Null Item Versions...\n[18:32:49.093] INFO: Applying Add AI Translation Settings...\n[18:32:49.096] INFO: Applying Add Licensing...\n[18:32:49.102] INFO: Applying Add Autosave Revision Interval...\n[18:32:49.105] INFO: Applying Add MCP Oauth...\n[18:32:49.163] INFO: Applying Add Default Save Action...\n[18:32:49.218] INFO: Done\n2026-10-19T18:32:49: PM2 log: Launching in no daemon mode\n2026-10-19T18:32:49: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:32:52: PM2 log: App [directus:0] online\n[18:33:02.204] INFO: Extensions loaded\n[18:33:02.217] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:33:02.399] INFO: Server started at http://0.0.0.0:18080\n[18:33:06] GET / 302 5ms\n[18:33:06] GET /server/ping 200 2ms\n[18:33:06] GET /health 404 6ms\n[18:33:06] GET /healthz 404 4ms\n[18:33:06] GET /up 404 3ms\n[18:33:06] GET /api/health 404 4ms\n[18:33:06] GET /status 404 3ms\n[18:33:06] GET /ping 404 3ms\n[18:33:06] GET /_health 404 3ms\n[18:33:06] GET /actuator/health 404 2ms\n"
           },
           {
             "kind": "http",
             "source": "web without ADMIN_PASSWORD",
-            "text": "healthy=true exited=false oomKilled=false seconds=485.164\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.547\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without ADMIN_PASSWORD",
-            "text": "[08:27:23.714] INFO: Applying Migrate Legacy Comments...\n[08:27:23.795] INFO: Applying Populate Versioning Deltas...\n[08:27:23.817] INFO: Applying Visual Editor...\n[08:27:23.866] INFO: Applying License Banner...\n[08:27:23.960] INFO: Applying Add Project ID...\n[08:27:24.016] INFO: Applying Add Direction...\n[08:27:24.033] INFO: Applying Add MCP...\n[08:27:24.053] INFO: Applying Add Field Searchable...\n[08:27:24.200] INFO: Applying Add Project Owner...\n[08:27:24.658] INFO: Applying Add Retention Indexes...\n[08:27:25.650] INFO: Applying Add AI Settings...\n[08:27:25.672] INFO: Applying Remove Webhooks...\n[08:27:25.699] INFO: Applying Add AI Provider Settings...\n[08:27:25.790] INFO: Applying Add Revisions Index...\n[08:27:26.092] INFO: Applying Add Collaborative Editing...\n[08:27:26.115] INFO: Applying Add Deployment...\n[08:27:26.248] INFO: Applying Add Deployment Webhooks...\n[08:27:26.293] INFO: Applying Null Item Versions...\n[08:27:26.323] INFO: Applying Add AI Translation Settings...\n[08:27:26.367] INFO: Applying Add Licensing...\n[08:27:26.396] INFO: Applying Add Autosave Revision Interval...\n[08:27:26.416] INFO: Applying Add MCP Oauth...\n[08:27:26.739] INFO: Applying Add Default Save Action...\n[08:27:27.090] INFO: Done\n2026-10-18T08:27:31: PM2 log: Launching in no daemon mode\n2026-10-18T08:27:33: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T08:27:36: PM2 log: App [directus:0] online\n[08:31:21.703] INFO: Extensions loaded\n[08:31:21.946] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:31:25.875] INFO: Server started at http://0.0.0.0:18080\n[08:31:32] GET / 302 348ms\n[08:31:32] GET /server/ping 200 79ms\n[08:31:33] GET /health 404 361ms\n[08:31:33] GET /healthz 404 267ms\n[08:31:34] GET /up 404 170ms\n[08:31:34] GET /api/health 404 169ms\n[08:31:34] GET /status 404 220ms\n[08:31:34] GET /ping 404 186ms\n[08:31:35] GET /_health 404 171ms\n[08:31:35] GET /actuator/health 404 210ms\n"
+            "text": "[18:33:31.166] INFO: Applying Migrate Legacy Comments...\n[18:33:31.176] INFO: Applying Populate Versioning Deltas...\n[18:33:31.179] INFO: Applying Visual Editor...\n[18:33:31.186] INFO: Applying License Banner...\n[18:33:31.199] INFO: Applying Add Project ID...\n[18:33:31.207] INFO: Applying Add Direction...\n[18:33:31.210] INFO: Applying Add MCP...\n[18:33:31.216] INFO: Applying Add Field Searchable...\n[18:33:31.232] INFO: Applying Add Project Owner...\n[18:33:31.318] INFO: Applying Add Retention Indexes...\n[18:33:31.396] INFO: Applying Add AI Settings...\n[18:33:31.399] INFO: Applying Remove Webhooks...\n[18:33:31.407] INFO: Applying Add AI Provider Settings...\n[18:33:31.418] INFO: Applying Add Revisions Index...\n[18:33:31.433] INFO: Applying Add Collaborative Editing...\n[18:33:31.435] INFO: Applying Add Deployment...\n[18:33:31.465] INFO: Applying Add Deployment Webhooks...\n[18:33:31.471] INFO: Applying Null Item Versions...\n[18:33:31.474] INFO: Applying Add AI Translation Settings...\n[18:33:31.477] INFO: Applying Add Licensing...\n[18:33:31.481] INFO: Applying Add Autosave Revision Interval...\n[18:33:31.483] INFO: Applying Add MCP Oauth...\n[18:33:31.538] INFO: Applying Add Default Save Action...\n[18:33:31.588] INFO: Done\n2026-10-19T18:33:31: PM2 log: Launching in no daemon mode\n2026-10-19T18:33:31: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:33:34: PM2 log: App [directus:0] online\n[18:33:44.740] INFO: Extensions loaded\n[18:33:44.754] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:33:44.969] INFO: Server started at http://0.0.0.0:18080\n[18:33:48] GET / 302 4ms\n[18:33:48] GET /server/ping 200 2ms\n[18:33:48] GET /health 404 5ms\n[18:33:48] GET /healthz 404 4ms\n[18:33:48] GET /up 404 3ms\n[18:33:48] GET /api/health 404 3ms\n[18:33:48] GET /status 404 3ms\n[18:33:48] GET /ping 404 3ms\n[18:33:48] GET /_health 404 3ms\n[18:33:48] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
@@ -368,17 +385,17 @@
           {
             "kind": "log",
             "source": "web without DB_CLIENT",
-            "text": "[08:36:10.429] WARN: Could not find `connection.filename` in config. Please specify the database path and name to avoid errors. (see docs https://knexjs.org/guide/#configuration-options)\nTypeError: String expected\n    at /directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:99:18\n    at new Promise (<anonymous>)\n    at Client_SQLite3.acquireRawConnection (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:83:12)\n    at create (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/client.js:262:39)\n"
+            "text": "[18:34:13.701] WARN: Could not find `connection.filename` in config. Please specify the database path and name to avoid errors. (see docs https://knexjs.org/guide/#configuration-options)\nTypeError: String expected\n    at /directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:99:18\n    at new Promise (<anonymous>)\n    at Client_SQLite3.acquireRawConnection (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:83:12)\n    at create (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/client.js:262:39)\n"
           },
           {
             "kind": "http",
             "source": "web without DB_SSL",
-            "text": "healthy=true exited=false oomKilled=false seconds=586.993\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.532\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without DB_SSL",
-            "text": "[08:42:21.326] INFO: Applying Visual Editor...\n[08:42:21.399] INFO: Applying License Banner...\n[08:42:21.524] INFO: Applying Add Project ID...\n[08:42:21.593] INFO: Applying Add Direction...\n[08:42:21.618] INFO: Applying Add MCP...\n[08:42:21.646] INFO: Applying Add Field Searchable...\n[08:42:21.826] INFO: Applying Add Project Owner...\n[08:42:22.528] INFO: Applying Add Retention Indexes...\n[08:42:24.316] INFO: Applying Add AI Settings...\n[08:42:24.353] INFO: Applying Remove Webhooks...\n[08:42:24.403] INFO: Applying Add AI Provider Settings...\n[08:42:24.600] INFO: Applying Add Revisions Index...\n[08:42:25.340] INFO: Applying Add Collaborative Editing...\n[08:42:25.436] INFO: Applying Add Deployment...\n[08:42:25.800] INFO: Applying Add Deployment Webhooks...\n[08:42:25.989] INFO: Applying Null Item Versions...\n[08:42:26.155] INFO: Applying Add AI Translation Settings...\n[08:42:26.322] INFO: Applying Add Licensing...\n[08:42:26.487] INFO: Applying Add Autosave Revision Interval...\n[08:42:26.567] INFO: Applying Add MCP Oauth...\n[08:42:27.625] INFO: Applying Add Default Save Action...\n[08:42:29.032] INFO: Setting up first admin role...\n[08:42:31.088] INFO: Adding first admin user...\n[08:42:38.130] INFO: Done\n2026-10-18T08:42:52: PM2 log: Launching in no daemon mode\n2026-10-18T08:42:55: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T08:42:59: PM2 log: App [directus:0] online\n[08:46:39.166] INFO: Extensions loaded\n[08:46:40.093] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:46:49.964] INFO: Server started at http://0.0.0.0:18080\n[08:46:58] GET / 302 278ms\n[08:46:58] GET /server/ping 200 80ms\n[08:46:58] GET /health 404 310ms\n[08:46:59] GET /healthz 404 230ms\n[08:46:59] GET /up 404 211ms\n[08:46:59] GET /api/health 404 179ms\n[08:46:59] GET /status 404 174ms\n[08:47:00] GET /ping 404 182ms\n[08:47:00] GET /_health 404 212ms\n[08:47:00] GET /actuator/health 404 210ms\n"
+            "text": "[18:34:38.027] INFO: Applying Visual Editor...\n[18:34:38.042] INFO: Applying License Banner...\n[18:34:38.057] INFO: Applying Add Project ID...\n[18:34:38.065] INFO: Applying Add Direction...\n[18:34:38.068] INFO: Applying Add MCP...\n[18:34:38.074] INFO: Applying Add Field Searchable...\n[18:34:38.086] INFO: Applying Add Project Owner...\n[18:34:38.173] INFO: Applying Add Retention Indexes...\n[18:34:38.226] INFO: Applying Add AI Settings...\n[18:34:38.229] INFO: Applying Remove Webhooks...\n[18:34:38.237] INFO: Applying Add AI Provider Settings...\n[18:34:38.247] INFO: Applying Add Revisions Index...\n[18:34:38.273] INFO: Applying Add Collaborative Editing...\n[18:34:38.276] INFO: Applying Add Deployment...\n[18:34:38.307] INFO: Applying Add Deployment Webhooks...\n[18:34:38.316] INFO: Applying Null Item Versions...\n[18:34:38.319] INFO: Applying Add AI Translation Settings...\n[18:34:38.322] INFO: Applying Add Licensing...\n[18:34:38.326] INFO: Applying Add Autosave Revision Interval...\n[18:34:38.328] INFO: Applying Add MCP Oauth...\n[18:34:38.378] INFO: Applying Add Default Save Action...\n[18:34:38.425] INFO: Setting up first admin role...\n[18:34:38.463] INFO: Adding first admin user...\n[18:34:38.597] INFO: Done\n2026-10-19T18:34:38: PM2 log: Launching in no daemon mode\n2026-10-19T18:34:39: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:34:42: PM2 log: App [directus:0] online\n[18:34:51.784] INFO: Extensions loaded\n[18:34:51.869] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:34:52.188] INFO: Server started at http://0.0.0.0:18080\n[18:34:55] GET / 302 4ms\n[18:34:55] GET /server/ping 200 1ms\n[18:34:55] GET /health 404 6ms\n[18:34:55] GET /healthz 404 5ms\n[18:34:55] GET /up 404 3ms\n[18:34:55] GET /api/health 404 4ms\n[18:34:55] GET /status 404 3ms\n[18:34:55] GET /ping 404 4ms\n[18:34:55] GET /_health 404 4ms\n[18:34:55] GET /actuator/health 404 3ms\n"
           }
         ],
         "note": "tested 6 of 10 candidate variables (cap 6)"
@@ -386,44 +403,59 @@
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/server/ping none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=33.296\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "[07:46:59.276] INFO: Initializing bootstrap...\n[07:46:59.684] INFO: Installing Directus system tables...\nerror: create table \"directus_collections\" (\"collection\" varchar(64) not null, \"icon\" varchar(30), \"note\" text, \"display_template\" varchar(255), \"hidden\" boolean not null default '0', \"singleton\" boolean not null default '0', \"translations\" json, \"archive_field\" varchar(64), \"archive_app_filter\" boolean not null default '1', \"archive_value\" varchar(255), \"unarchive_value\" varchar(255), \"sort_field\" varchar(64), constraint \"directus_collections_pkey\" primary key (\"collection\")) - duplicate key value violates unique constraint \"pg_type_typname_nsp_index\"\n    at Parser.parseErrorMessage (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:285:98)\n    at Parser.handlePacket (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:122:29)\n    at Parser.parse (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:35:38)\n    at TLSSocket.<anonymous> (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/index.js:11:42)\n    at TLSSocket.emit (node:events:519:28)\n    at addChunk (node:internal/streams/readable:561:12)\n    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)\n    at Readable.push (node:internal/streams/readable:392:5)\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23) {\n  length: 260,\n  severity: 'ERROR',\n  code: '23505',\n  detail: 'Key (typname, typnamespace)=(directus_collections, 2200) already exists.',\n  hint: undefined,\n  position: undefined,\n  internalPosition: undefined,\n  internalQuery: undefined,\n  where: undefined,\n  schema: 'pg_catalog',\n  table: 'pg_type',\n  column: undefined,\n  dataType: undefined,\n  constraint: 'pg_type_typname_nsp_index',\n  file: 'nbtinsert.c',\n  line: '666',\n  routine: '_bt_check_unique'\n}\n"
+            "text": "[18:30:40.645] INFO: Applying Visual Editor...\n[18:30:40.653] INFO: Applying License Banner...\n[18:30:40.673] INFO: Applying Add Project ID...\n[18:30:40.685] INFO: Applying Add Direction...\n[18:30:40.689] INFO: Applying Add MCP...\n[18:30:40.700] INFO: Applying Add Field Searchable...\n[18:30:40.717] INFO: Applying Add Project Owner...\n[18:30:40.815] INFO: Applying Add Retention Indexes...\n[18:30:40.928] INFO: Applying Add AI Settings...\n[18:30:40.932] INFO: Applying Remove Webhooks...\n[18:30:40.948] INFO: Applying Add AI Provider Settings...\n[18:30:40.965] INFO: Applying Add Revisions Index...\n[18:30:40.999] INFO: Applying Add Collaborative Editing...\n[18:30:41.004] INFO: Applying Add Deployment...\n[18:30:41.068] INFO: Applying Add Deployment Webhooks...\n[18:30:41.077] INFO: Applying Null Item Versions...\n[18:30:41.082] INFO: Applying Add AI Translation Settings...\n[18:30:41.087] INFO: Applying Add Licensing...\n[18:30:41.095] INFO: Applying Add Autosave Revision Interval...\n[18:30:41.099] INFO: Applying Add MCP Oauth...\n[18:30:41.213] INFO: Applying Add Default Save Action...\n[18:30:41.264] INFO: Setting up first admin role...\n[18:30:41.303] INFO: Adding first admin user...\n[18:30:41.458] INFO: Done\n2026-10-19T18:30:41: PM2 log: Launching in no daemon mode\n2026-10-19T18:30:41: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:30:44: PM2 log: App [directus:0] online\n[18:30:54.572] INFO: Extensions loaded\n[18:30:54.588] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:30:54.789] INFO: Server started at http://0.0.0.0:18080\n[18:30:58] GET / 302 4ms\n[18:30:58] GET /server/ping 200 2ms\n[18:30:58] GET /health 404 5ms\n[18:30:58] GET /healthz 404 5ms\n[18:30:58] GET /up 404 3ms\n[18:30:58] GET /api/health 404 4ms\n[18:30:58] GET /status 404 3ms\n[18:30:58] GET /ping 404 4ms\n[18:30:58] GET /_health 404 3ms\n[18:30:58] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=668.401\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/server/ping none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "[07:47:49.775] INFO: Applying Add AI Settings...\n[07:47:49.804] INFO: Applying Remove Webhooks...\n[07:47:49.847] INFO: Applying Add AI Provider Settings...\n[07:47:49.952] INFO: Applying Add Revisions Index...\n[07:47:50.445] INFO: Applying Add Collaborative Editing...\n[07:47:50.508] INFO: Applying Add Deployment...\n[07:47:50.707] INFO: Applying Add Deployment Webhooks...\n[07:47:50.758] INFO: Applying Null Item Versions...\n[07:47:50.805] INFO: Applying Add AI Translation Settings...\n[07:47:50.837] INFO: Applying Add Licensing...\n[07:47:50.958] INFO: Applying Add Autosave Revision Interval...\n[07:47:50.996] INFO: Applying Add MCP Oauth...\n[07:47:51.349] INFO: Applying Add Default Save Action...\n[07:47:51.922] INFO: Setting up first admin role...\n[07:47:52.692] INFO: Adding first admin user...\n[07:47:55.099] INFO: Done\n2026-10-18T07:48:05: PM2 log: Launching in no daemon mode\n2026-10-18T07:48:08: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T07:48:12: PM2 log: App [directus:0] online\n[07:52:01.115] INFO: Extensions loaded\n[07:52:02.282] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[07:52:11.522] INFO: Server started at http://0.0.0.0:18080\n[07:52:18] GET / 302 233ms\n[07:52:18] GET /healthz 404 226ms\n[07:52:19] GET /up 404 187ms\n[07:52:19] GET /api/health 404 172ms\n[07:52:19] GET /status 404 430ms\n[07:52:20] GET /ping 404 183ms\n[07:52:20] GET /_health 404 193ms\n[07:52:20] GET /actuator/health 404 195ms\n[07:52:35] GET / 302 41ms\n[07:52:35] GET /server/ping 200 32ms\n[07:52:35] GET /health 404 169ms\n[07:52:36] GET /healthz 404 175ms\n[07:52:36] GET /up 404 239ms\n[07:52:36] GET /api/health 404 167ms\n[07:52:36] GET /status 404 179ms\n[07:52:36] GET /ping 404 191ms\n[07:52:37] GET /_health 404 186ms\n[07:52:37] GET /actuator/health 404 166ms\n"
+            "text": "[18:30:39.434] INFO: Skipping CLI extensions initialization due to outstanding migrations.\n[18:30:39.445] INFO: Initializing bootstrap...\n[18:30:39.449] INFO: Database already initialized, skipping install\n[18:30:39.450] INFO: Running migrations...\n[18:30:39.464] INFO: Applying Add Cascade System Relations...\nerror: insert into \"directus_migrations\" (\"name\", \"version\") values ($1, $2) - duplicate key value violates unique constraint \"directus_migrations_pkey\"\n    at Parser.parseErrorMessage (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:285:98)\n    at Parser.handlePacket (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:122:29)\n    at Parser.parse (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:35:38)\n    at TLSSocket.<anonymous> (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/index.js:11:42)\n    at TLSSocket.emit (node:events:519:28)\n    at addChunk (node:internal/streams/readable:561:12)\n    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)\n    at Readable.push (node:internal/streams/readable:392:5)\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23) {\n  length: 235,\n  severity: 'ERROR',\n  code: '23505',\n  detail: 'Key (version)=(20201105A) already exists.',\n  hint: undefined,\n  position: undefined,\n  internalPosition: undefined,\n  internalQuery: undefined,\n  where: undefined,\n  schema: 'public',\n  table: 'directus_migrations',\n  column: undefined,\n  dataType: undefined,\n  constraint: 'directus_migrations_pkey',\n  file: 'nbtinsert.c',\n  line: '666',\n  routine: '_bt_check_unique'\n}\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=655.865\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.644\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "[07:34:21.015] INFO: Extensions loaded\n[07:34:21.813] INFO: Initializing bootstrap...\n[07:34:22.011] INFO: Database already initialized, skipping install\n[07:34:22.052] INFO: Running migrations...\n[07:34:23.000] INFO: Done\n2026-10-18T07:34:41: PM2 log: Launching in no daemon mode\n2026-10-18T07:34:45: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T07:34:48: PM2 log: App [directus:0] online\n[07:40:21.819] INFO: Extensions loaded\n[07:40:23.300] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[07:40:33.386] INFO: Server started at http://0.0.0.0:18080\n[07:40:39] GET / 302 214ms\n[07:40:39] GET /server/ping 200 78ms\n[07:40:39] GET /health 404 289ms\n[07:40:40] GET /healthz 404 224ms\n[07:40:40] GET /up 404 238ms\n[07:40:40] GET /api/health 404 305ms\n[07:40:41] GET /status 404 168ms\n[07:40:41] GET /ping 404 175ms\n[07:40:41] GET /_health 404 162ms\n[07:40:41] GET /actuator/health 404 176ms\n"
+            "text": "[18:29:55.790] INFO: Extensions loaded\n[18:29:55.801] INFO: Initializing bootstrap...\n[18:29:55.804] INFO: Database already initialized, skipping install\n[18:29:55.804] INFO: Running migrations...\n[18:29:55.823] INFO: Done\n2026-10-19T18:29:56: PM2 log: Launching in no daemon mode\n2026-10-19T18:29:56: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:29:59: PM2 log: App [directus:0] online\n[18:30:09.107] INFO: Extensions loaded\n[18:30:09.190] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:30:09.533] INFO: Server started at http://0.0.0.0:18080\n[18:30:13] GET / 302 4ms\n[18:30:13] GET /server/ping 200 2ms\n[18:30:13] GET /health 404 5ms\n[18:30:13] GET /healthz 404 4ms\n[18:30:13] GET /up 404 3ms\n[18:30:13] GET /api/health 404 3ms\n[18:30:13] GET /status 404 3ms\n[18:30:13] GET /ping 404 3ms\n[18:30:13] GET /_health 404 3ms\n[18:30:13] GET /actuator/health 404 3ms\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 302 -> 302\n18080/server/ping 200 -> 200\n18080/health 404 -> 404\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 302 -> 302"
           }
         ]
       },
@@ -435,11 +467,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 762.814,
+            "startSeconds": 31.652,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -478,34 +510,40 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 370.91,
-        "setA": 1570.117,
-        "twoCopies": 711.863,
-        "requiredVariables": 3270.3690000000006
+        "build": 188.981,
+        "setA": 95.921,
+        "twoCopies": 44.225,
+        "requiredVariables": 237.09799999999998,
+        "redisWithout": 42.787
       }
     },
     {
-      "startedAt": "2026-10-18T08:47:20.195Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:35:40.085Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 767958697,
+          "seconds": 162,
+          "imageBytes": 712200268,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -517,7 +555,7 @@
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -527,12 +565,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=509.883\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.657\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "[08:53:38.945] INFO: Applying Visual Editor...\n[08:53:39.270] INFO: Applying License Banner...\n[08:53:39.909] INFO: Applying Add Project ID...\n[08:53:40.164] INFO: Applying Add Direction...\n[08:53:40.295] INFO: Applying Add MCP...\n[08:53:40.569] INFO: Applying Add Field Searchable...\n[08:53:41.411] INFO: Applying Add Project Owner...\n[08:53:43.754] INFO: Applying Add Retention Indexes...\n[08:53:46.514] INFO: Applying Add AI Settings...\n[08:53:46.557] INFO: Applying Remove Webhooks...\n[08:53:46.602] INFO: Applying Add AI Provider Settings...\n[08:53:46.785] INFO: Applying Add Revisions Index...\n[08:53:47.395] INFO: Applying Add Collaborative Editing...\n[08:53:47.478] INFO: Applying Add Deployment...\n[08:53:47.660] INFO: Applying Add Deployment Webhooks...\n[08:53:47.722] INFO: Applying Null Item Versions...\n[08:53:47.765] INFO: Applying Add AI Translation Settings...\n[08:53:47.798] INFO: Applying Add Licensing...\n[08:53:47.844] INFO: Applying Add Autosave Revision Interval...\n[08:53:47.879] INFO: Applying Add MCP Oauth...\n[08:53:48.190] INFO: Applying Add Default Save Action...\n[08:53:48.677] INFO: Setting up first admin role...\n[08:53:49.618] INFO: Adding first admin user...\n[08:53:52.270] INFO: Done\n2026-10-18T08:53:57: PM2 log: Launching in no daemon mode\n2026-10-18T08:53:57: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T08:54:00: PM2 log: App [directus:0] online\n[08:57:41.236] INFO: Extensions loaded\n[08:57:41.459] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[08:57:43.661] INFO: Server started at http://0.0.0.0:18080\n[08:57:50] GET / 302 219ms\n[08:57:50] GET /server/ping 200 92ms\n[08:57:50] GET /health 404 282ms\n[08:57:51] GET /healthz 404 251ms\n[08:57:51] GET /up 404 176ms\n[08:57:51] GET /api/health 404 154ms\n[08:57:51] GET /status 404 201ms\n[08:57:52] GET /ping 404 223ms\n[08:57:52] GET /_health 404 195ms\n[08:57:52] GET /actuator/health 404 191ms\n"
+            "text": "[18:36:10.382] INFO: Applying Visual Editor...\n[18:36:10.388] INFO: Applying License Banner...\n[18:36:10.399] INFO: Applying Add Project ID...\n[18:36:10.405] INFO: Applying Add Direction...\n[18:36:10.407] INFO: Applying Add MCP...\n[18:36:10.413] INFO: Applying Add Field Searchable...\n[18:36:10.422] INFO: Applying Add Project Owner...\n[18:36:10.475] INFO: Applying Add Retention Indexes...\n[18:36:10.527] INFO: Applying Add AI Settings...\n[18:36:10.530] INFO: Applying Remove Webhooks...\n[18:36:10.538] INFO: Applying Add AI Provider Settings...\n[18:36:10.565] INFO: Applying Add Revisions Index...\n[18:36:10.581] INFO: Applying Add Collaborative Editing...\n[18:36:10.584] INFO: Applying Add Deployment...\n[18:36:10.617] INFO: Applying Add Deployment Webhooks...\n[18:36:10.624] INFO: Applying Null Item Versions...\n[18:36:10.628] INFO: Applying Add AI Translation Settings...\n[18:36:10.632] INFO: Applying Add Licensing...\n[18:36:10.636] INFO: Applying Add Autosave Revision Interval...\n[18:36:10.639] INFO: Applying Add MCP Oauth...\n[18:36:10.697] INFO: Applying Add Default Save Action...\n[18:36:10.748] INFO: Setting up first admin role...\n[18:36:10.791] INFO: Adding first admin user...\n[18:36:10.974] INFO: Done\n2026-10-19T18:36:11: PM2 log: Launching in no daemon mode\n2026-10-19T18:36:11: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:36:14: PM2 log: App [directus:0] online\n[18:36:24.285] INFO: Extensions loaded\n[18:36:24.301] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:36:24.518] INFO: Server started at http://0.0.0.0:18080\n[18:36:27] GET / 302 4ms\n[18:36:27] GET /server/ping 200 2ms\n[18:36:27] GET /health 404 5ms\n[18:36:27] GET /healthz 404 3ms\n[18:36:27] GET /up 404 3ms\n[18:36:27] GET /api/health 404 3ms\n[18:36:27] GET /status 404 3ms\n[18:36:27] GET /ping 404 3ms\n[18:36:27] GET /_health 404 3ms\n[18:36:27] GET /actuator/health 404 3ms\n"
           }
         ]
       },
@@ -545,17 +583,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 46519,
+            "port": 40851,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n46519 loopback reachable=false"
+            "text": "18080 all reachable=true\n40851 loopback reachable=false"
           }
         ]
       },
@@ -613,7 +651,7 @@
             "status": 404
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -628,7 +666,7 @@
           "path": "/",
           "status": 302
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -679,7 +717,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -709,13 +747,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -723,14 +761,30 @@
         "status": "observed",
         "value": {
           "connected": true,
-          "clients": 6
+          "clients": 6,
+          "healthyWithout": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "valkey",
             "text": "INFO stats total_connections_received = 9, baseline 2, harness sessions 1: 6 application connections; DBSIZE = 1"
+          },
+          {
+            "kind": "http",
+            "source": "web without Redis",
+            "text": "healthy=true exited=false oomKilled=false seconds=31.716\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without Redis",
+            "text": "[18:42:15.532] INFO: Applying Visual Editor...\n[18:42:15.538] INFO: Applying License Banner...\n[18:42:15.548] INFO: Applying Add Project ID...\n[18:42:15.554] INFO: Applying Add Direction...\n[18:42:15.556] INFO: Applying Add MCP...\n[18:42:15.561] INFO: Applying Add Field Searchable...\n[18:42:15.570] INFO: Applying Add Project Owner...\n[18:42:15.628] INFO: Applying Add Retention Indexes...\n[18:42:15.689] INFO: Applying Add AI Settings...\n[18:42:15.691] INFO: Applying Remove Webhooks...\n[18:42:15.699] INFO: Applying Add AI Provider Settings...\n[18:42:15.709] INFO: Applying Add Revisions Index...\n[18:42:15.726] INFO: Applying Add Collaborative Editing...\n[18:42:15.729] INFO: Applying Add Deployment...\n[18:42:15.764] INFO: Applying Add Deployment Webhooks...\n[18:42:15.770] INFO: Applying Null Item Versions...\n[18:42:15.773] INFO: Applying Add AI Translation Settings...\n[18:42:15.776] INFO: Applying Add Licensing...\n[18:42:15.780] INFO: Applying Add Autosave Revision Interval...\n[18:42:15.782] INFO: Applying Add MCP Oauth...\n[18:42:15.836] INFO: Applying Add Default Save Action...\n[18:42:15.885] INFO: Setting up first admin role...\n[18:42:15.924] INFO: Adding first admin user...\n[18:42:16.096] INFO: Done\n2026-10-19T18:42:16: PM2 log: Launching in no daemon mode\n2026-10-19T18:42:16: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:42:19: PM2 log: App [directus:0] online\n[18:42:29.308] INFO: Extensions loaded\n[18:42:29.322] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:42:29.710] INFO: Server started at http://0.0.0.0:18080\n[18:42:32] GET / 302 4ms\n[18:42:32] GET /server/ping 200 2ms\n[18:42:32] GET /health 404 5ms\n[18:42:32] GET /healthz 404 4ms\n[18:42:32] GET /up 404 3ms\n[18:42:32] GET /api/health 404 3ms\n[18:42:32] GET /status 404 4ms\n[18:42:32] GET /ping 404 3ms\n[18:42:32] GET /_health 404 3ms\n[18:42:32] GET /actuator/health 404 4ms\n"
+          },
+          {
+            "kind": "command",
+            "source": "web without Redis",
+            "text": "the app still reached Valkey"
           }
         ]
       },
@@ -739,7 +793,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -751,7 +805,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -763,7 +817,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -797,51 +851,51 @@
           },
           {
             "name": "DB_SSL",
-            "healthyWithout": false,
+            "healthyWithout": true,
             "healthyWith": true
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web without KEY",
-            "text": "healthy=true exited=false oomKilled=false seconds=510.301\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.579\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without KEY",
-            "text": "[09:25:57.608] INFO: Applying Visual Editor...\n[09:25:57.871] INFO: Applying License Banner...\n[09:25:58.433] INFO: Applying Add Project ID...\n[09:25:58.754] INFO: Applying Add Direction...\n[09:25:58.835] INFO: Applying Add MCP...\n[09:25:59.087] INFO: Applying Add Field Searchable...\n[09:25:59.657] INFO: Applying Add Project Owner...\n[09:26:02.227] INFO: Applying Add Retention Indexes...\n[09:26:06.127] INFO: Applying Add AI Settings...\n[09:26:06.187] INFO: Applying Remove Webhooks...\n[09:26:06.269] INFO: Applying Add AI Provider Settings...\n[09:26:06.621] INFO: Applying Add Revisions Index...\n[09:26:08.476] INFO: Applying Add Collaborative Editing...\n[09:26:09.175] INFO: Applying Add Deployment...\n[09:26:11.368] INFO: Applying Add Deployment Webhooks...\n[09:26:12.391] INFO: Applying Null Item Versions...\n[09:26:13.273] INFO: Applying Add AI Translation Settings...\n[09:26:13.970] INFO: Applying Add Licensing...\n[09:26:15.486] INFO: Applying Add Autosave Revision Interval...\n[09:26:15.734] INFO: Applying Add MCP Oauth...\n[09:26:17.108] INFO: Applying Add Default Save Action...\n[09:26:18.624] INFO: Setting up first admin role...\n[09:26:21.038] INFO: Adding first admin user...\n[09:26:28.842] INFO: Done\n2026-10-18T09:26:37: PM2 log: Launching in no daemon mode\n2026-10-18T09:26:38: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T09:26:41: PM2 log: App [directus:0] online\n[09:30:31.311] INFO: Extensions loaded\n[09:30:31.620] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[09:30:33.960] INFO: Server started at http://0.0.0.0:18080\n[09:30:37] GET / 302 55ms\n[09:30:37] GET /server/ping 200 41ms\n[09:30:37] GET /health 404 102ms\n[09:30:37] GET /healthz 404 42ms\n[09:30:37] GET /up 404 41ms\n[09:30:37] GET /api/health 404 49ms\n[09:30:37] GET /status 404 40ms\n[09:30:38] GET /ping 404 48ms\n[09:30:38] GET /_health 404 40ms\n[09:30:38] GET /actuator/health 404 42ms\n"
+            "text": "[18:38:13.355] INFO: Applying Visual Editor...\n[18:38:13.361] INFO: Applying License Banner...\n[18:38:13.371] INFO: Applying Add Project ID...\n[18:38:13.376] INFO: Applying Add Direction...\n[18:38:13.379] INFO: Applying Add MCP...\n[18:38:13.384] INFO: Applying Add Field Searchable...\n[18:38:13.394] INFO: Applying Add Project Owner...\n[18:38:13.457] INFO: Applying Add Retention Indexes...\n[18:38:13.513] INFO: Applying Add AI Settings...\n[18:38:13.517] INFO: Applying Remove Webhooks...\n[18:38:13.553] INFO: Applying Add AI Provider Settings...\n[18:38:13.564] INFO: Applying Add Revisions Index...\n[18:38:13.581] INFO: Applying Add Collaborative Editing...\n[18:38:13.584] INFO: Applying Add Deployment...\n[18:38:13.618] INFO: Applying Add Deployment Webhooks...\n[18:38:13.624] INFO: Applying Null Item Versions...\n[18:38:13.628] INFO: Applying Add AI Translation Settings...\n[18:38:13.631] INFO: Applying Add Licensing...\n[18:38:13.637] INFO: Applying Add Autosave Revision Interval...\n[18:38:13.639] INFO: Applying Add MCP Oauth...\n[18:38:13.694] INFO: Applying Add Default Save Action...\n[18:38:13.744] INFO: Setting up first admin role...\n[18:38:13.787] INFO: Adding first admin user...\n[18:38:13.964] INFO: Done\n2026-10-19T18:38:14: PM2 log: Launching in no daemon mode\n2026-10-19T18:38:14: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:38:17: PM2 log: App [directus:0] online\n[18:38:26.947] INFO: Extensions loaded\n[18:38:26.961] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:38:27.152] INFO: Server started at http://0.0.0.0:18080\n[18:38:30] GET / 302 5ms\n[18:38:30] GET /server/ping 200 2ms\n[18:38:30] GET /health 404 5ms\n[18:38:30] GET /healthz 404 3ms\n[18:38:30] GET /up 404 3ms\n[18:38:30] GET /api/health 404 3ms\n[18:38:30] GET /status 404 3ms\n[18:38:30] GET /ping 404 3ms\n[18:38:30] GET /_health 404 3ms\n[18:38:30] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
             "source": "web without SECRET",
-            "text": "healthy=true exited=false oomKilled=false seconds=579.705\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.496\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without SECRET",
-            "text": "09:35:41.237] INFO: Applying Add Project ID...\n[09:35:41.441] INFO: Applying Add Direction...\n[09:35:41.495] INFO: Applying Add MCP...\n[09:35:41.626] INFO: Applying Add Field Searchable...\n[09:35:42.424] INFO: Applying Add Project Owner...\n[09:35:44.285] INFO: Applying Add Retention Indexes...\n[09:35:46.903] INFO: Applying Add AI Settings...\n[09:35:46.966] INFO: Applying Remove Webhooks...\n[09:35:47.058] INFO: Applying Add AI Provider Settings...\n[09:35:47.309] INFO: Applying Add Revisions Index...\n[09:35:48.014] INFO: Applying Add Collaborative Editing...\n[09:35:48.062] INFO: Applying Add Deployment...\n[09:35:48.267] INFO: Applying Add Deployment Webhooks...\n[09:35:48.417] INFO: Applying Null Item Versions...\n[09:35:48.477] INFO: Applying Add AI Translation Settings...\n[09:35:48.602] INFO: Applying Add Licensing...\n[09:35:48.697] INFO: Applying Add Autosave Revision Interval...\n[09:35:48.752] INFO: Applying Add MCP Oauth...\n[09:35:49.702] INFO: Applying Add Default Save Action...\n[09:35:52.205] INFO: Setting up first admin role...\n[09:35:52.867] INFO: Adding first admin user...\n[09:35:54.912] INFO: Done\n2026-10-18T09:35:58: PM2 log: Launching in no daemon mode\n2026-10-18T09:35:58: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T09:36:02: PM2 log: App [directus:0] online\n[09:41:11.153] INFO: Extensions loaded\n[09:41:11.296] WARN: \"SECRET\" env variable is missing. Using a random value instead. Tokens will not persist between restarts. This is not appropriate for production usage.\n[09:41:11.324] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[09:41:13.212] INFO: Server started at http://0.0.0.0:18080\n[09:41:16] GET / 302 192ms\n[09:41:16] GET /server/ping 200 101ms\n[09:41:16] GET /health 404 257ms\n[09:41:17] GET /healthz 404 215ms\n[09:41:17] GET /up 404 183ms\n[09:41:17] GET /api/health 404 167ms\n[09:41:17] GET /status 404 181ms\n[09:41:18] GET /ping 404 151ms\n[09:41:18] GET /_health 404 205ms\n[09:41:18] GET /actuator/health 404 199ms\n"
+            "text": " License Banner...\n[18:38:55.748] INFO: Applying Add Project ID...\n[18:38:55.753] INFO: Applying Add Direction...\n[18:38:55.755] INFO: Applying Add MCP...\n[18:38:55.761] INFO: Applying Add Field Searchable...\n[18:38:55.771] INFO: Applying Add Project Owner...\n[18:38:55.948] INFO: Applying Add Retention Indexes...\n[18:38:56.078] INFO: Applying Add AI Settings...\n[18:38:56.081] INFO: Applying Remove Webhooks...\n[18:38:56.089] INFO: Applying Add AI Provider Settings...\n[18:38:56.121] INFO: Applying Add Revisions Index...\n[18:38:56.138] INFO: Applying Add Collaborative Editing...\n[18:38:56.141] INFO: Applying Add Deployment...\n[18:38:56.171] INFO: Applying Add Deployment Webhooks...\n[18:38:56.177] INFO: Applying Null Item Versions...\n[18:38:56.180] INFO: Applying Add AI Translation Settings...\n[18:38:56.183] INFO: Applying Add Licensing...\n[18:38:56.187] INFO: Applying Add Autosave Revision Interval...\n[18:38:56.189] INFO: Applying Add MCP Oauth...\n[18:38:56.243] INFO: Applying Add Default Save Action...\n[18:38:56.290] INFO: Setting up first admin role...\n[18:38:56.327] INFO: Adding first admin user...\n[18:38:56.519] INFO: Done\n2026-10-19T18:38:56: PM2 log: Launching in no daemon mode\n2026-10-19T18:38:56: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:38:59: PM2 log: App [directus:0] online\n[18:39:09.570] INFO: Extensions loaded\n[18:39:09.582] WARN: \"SECRET\" env variable is missing. Using a random value instead. Tokens will not persist between restarts. This is not appropriate for production usage.\n[18:39:09.584] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:39:09.768] INFO: Server started at http://0.0.0.0:18080\n[18:39:12] GET / 302 5ms\n[18:39:12] GET /server/ping 200 2ms\n[18:39:12] GET /health 404 5ms\n[18:39:12] GET /healthz 404 4ms\n[18:39:12] GET /up 404 3ms\n[18:39:12] GET /api/health 404 2ms\n[18:39:12] GET /status 404 3ms\n[18:39:12] GET /ping 404 3ms\n[18:39:12] GET /_health 404 3ms\n[18:39:12] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
             "source": "web without ADMIN_EMAIL",
-            "text": "healthy=true exited=false oomKilled=false seconds=494.78\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.595\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without ADMIN_EMAIL",
-            "text": "[09:46:27.637] INFO: Applying Migrate Legacy Comments...\n[09:46:27.830] INFO: Applying Populate Versioning Deltas...\n[09:46:27.870] INFO: Applying Visual Editor...\n[09:46:27.986] INFO: Applying License Banner...\n[09:46:28.278] INFO: Applying Add Project ID...\n[09:46:28.374] INFO: Applying Add Direction...\n[09:46:28.404] INFO: Applying Add MCP...\n[09:46:28.470] INFO: Applying Add Field Searchable...\n[09:46:28.719] INFO: Applying Add Project Owner...\n[09:46:29.644] INFO: Applying Add Retention Indexes...\n[09:46:30.719] INFO: Applying Add AI Settings...\n[09:46:30.746] INFO: Applying Remove Webhooks...\n[09:46:30.813] INFO: Applying Add AI Provider Settings...\n[09:46:30.909] INFO: Applying Add Revisions Index...\n[09:46:31.283] INFO: Applying Add Collaborative Editing...\n[09:46:31.312] INFO: Applying Add Deployment...\n[09:46:31.484] INFO: Applying Add Deployment Webhooks...\n[09:46:31.534] INFO: Applying Null Item Versions...\n[09:46:31.565] INFO: Applying Add AI Translation Settings...\n[09:46:31.593] INFO: Applying Add Licensing...\n[09:46:31.621] INFO: Applying Add Autosave Revision Interval...\n[09:46:31.643] INFO: Applying Add MCP Oauth...\n[09:46:31.868] INFO: Applying Add Default Save Action...\n[09:46:32.235] INFO: Done\n2026-10-18T09:46:35: PM2 log: Launching in no daemon mode\n2026-10-18T09:46:36: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T09:46:39: PM2 log: App [directus:0] online\n[09:50:25.419] INFO: Extensions loaded\n[09:50:25.622] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[09:50:27.293] INFO: Server started at http://0.0.0.0:18080\n[09:50:32] GET / 302 104ms\n[09:50:32] GET /server/ping 200 40ms\n[09:50:32] GET /health 404 251ms\n[09:50:32] GET /healthz 404 305ms\n[09:50:33] GET /up 404 151ms\n[09:50:33] GET /api/health 404 175ms\n[09:50:33] GET /status 404 189ms\n[09:50:33] GET /ping 404 187ms\n[09:50:34] GET /_health 404 191ms\n[09:50:34] GET /actuator/health 404 245ms\n"
+            "text": "[18:39:37.693] INFO: Applying Migrate Legacy Comments...\n[18:39:37.701] INFO: Applying Populate Versioning Deltas...\n[18:39:37.704] INFO: Applying Visual Editor...\n[18:39:37.712] INFO: Applying License Banner...\n[18:39:37.724] INFO: Applying Add Project ID...\n[18:39:37.731] INFO: Applying Add Direction...\n[18:39:37.734] INFO: Applying Add MCP...\n[18:39:37.741] INFO: Applying Add Field Searchable...\n[18:39:37.755] INFO: Applying Add Project Owner...\n[18:39:37.836] INFO: Applying Add Retention Indexes...\n[18:39:37.914] INFO: Applying Add AI Settings...\n[18:39:37.918] INFO: Applying Remove Webhooks...\n[18:39:37.936] INFO: Applying Add AI Provider Settings...\n[18:39:37.950] INFO: Applying Add Revisions Index...\n[18:39:37.969] INFO: Applying Add Collaborative Editing...\n[18:39:37.973] INFO: Applying Add Deployment...\n[18:39:38.023] INFO: Applying Add Deployment Webhooks...\n[18:39:38.031] INFO: Applying Null Item Versions...\n[18:39:38.035] INFO: Applying Add AI Translation Settings...\n[18:39:38.037] INFO: Applying Add Licensing...\n[18:39:38.042] INFO: Applying Add Autosave Revision Interval...\n[18:39:38.045] INFO: Applying Add MCP Oauth...\n[18:39:38.096] INFO: Applying Add Default Save Action...\n[18:39:38.146] INFO: Done\n2026-10-19T18:39:38: PM2 log: Launching in no daemon mode\n2026-10-19T18:39:38: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:39:41: PM2 log: App [directus:0] online\n[18:39:51.067] INFO: Extensions loaded\n[18:39:51.081] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:39:51.273] INFO: Server started at http://0.0.0.0:18080\n[18:39:55] GET / 302 5ms\n[18:39:55] GET /server/ping 200 2ms\n[18:39:55] GET /health 404 6ms\n[18:39:55] GET /healthz 404 4ms\n[18:39:55] GET /up 404 3ms\n[18:39:55] GET /api/health 404 3ms\n[18:39:55] GET /status 404 3ms\n[18:39:55] GET /ping 404 3ms\n[18:39:55] GET /_health 404 3ms\n[18:39:55] GET /actuator/health 404 4ms\n"
           },
           {
             "kind": "http",
             "source": "web without ADMIN_PASSWORD",
-            "text": "healthy=true exited=false oomKilled=false seconds=492.601\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.619\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without ADMIN_PASSWORD",
-            "text": "[09:55:42.009] INFO: Applying Migrate Legacy Comments...\n[09:55:42.088] INFO: Applying Populate Versioning Deltas...\n[09:55:42.111] INFO: Applying Visual Editor...\n[09:55:42.184] INFO: Applying License Banner...\n[09:55:42.269] INFO: Applying Add Project ID...\n[09:55:42.351] INFO: Applying Add Direction...\n[09:55:42.370] INFO: Applying Add MCP...\n[09:55:42.394] INFO: Applying Add Field Searchable...\n[09:55:42.539] INFO: Applying Add Project Owner...\n[09:55:43.009] INFO: Applying Add Retention Indexes...\n[09:55:43.829] INFO: Applying Add AI Settings...\n[09:55:43.853] INFO: Applying Remove Webhooks...\n[09:55:43.875] INFO: Applying Add AI Provider Settings...\n[09:55:43.951] INFO: Applying Add Revisions Index...\n[09:55:44.201] INFO: Applying Add Collaborative Editing...\n[09:55:44.282] INFO: Applying Add Deployment...\n[09:55:44.383] INFO: Applying Add Deployment Webhooks...\n[09:55:44.414] INFO: Applying Null Item Versions...\n[09:55:44.439] INFO: Applying Add AI Translation Settings...\n[09:55:44.457] INFO: Applying Add Licensing...\n[09:55:44.483] INFO: Applying Add Autosave Revision Interval...\n[09:55:44.501] INFO: Applying Add MCP Oauth...\n[09:55:44.704] INFO: Applying Add Default Save Action...\n[09:55:45.034] INFO: Done\n2026-10-18T09:55:49: PM2 log: Launching in no daemon mode\n2026-10-18T09:55:49: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T09:55:53: PM2 log: App [directus:0] online\n[09:59:35.886] INFO: Extensions loaded\n[09:59:36.105] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[09:59:37.966] INFO: Server started at http://0.0.0.0:18080\n[09:59:46] GET / 302 277ms\n[09:59:47] GET /server/ping 200 117ms\n[09:59:47] GET /health 404 257ms\n[09:59:48] GET /healthz 404 220ms\n[09:59:48] GET /up 404 222ms\n[09:59:48] GET /api/health 404 178ms\n[09:59:48] GET /status 404 171ms\n[09:59:49] GET /ping 404 179ms\n[09:59:49] GET /_health 404 262ms\n[09:59:49] GET /actuator/health 404 188ms\n"
+            "text": "[18:40:20.834] INFO: Applying Migrate Legacy Comments...\n[18:40:20.841] INFO: Applying Populate Versioning Deltas...\n[18:40:20.843] INFO: Applying Visual Editor...\n[18:40:20.848] INFO: Applying License Banner...\n[18:40:20.857] INFO: Applying Add Project ID...\n[18:40:20.862] INFO: Applying Add Direction...\n[18:40:20.864] INFO: Applying Add MCP...\n[18:40:20.870] INFO: Applying Add Field Searchable...\n[18:40:20.879] INFO: Applying Add Project Owner...\n[18:40:20.937] INFO: Applying Add Retention Indexes...\n[18:40:21.003] INFO: Applying Add AI Settings...\n[18:40:21.006] INFO: Applying Remove Webhooks...\n[18:40:21.015] INFO: Applying Add AI Provider Settings...\n[18:40:21.025] INFO: Applying Add Revisions Index...\n[18:40:21.042] INFO: Applying Add Collaborative Editing...\n[18:40:21.045] INFO: Applying Add Deployment...\n[18:40:21.076] INFO: Applying Add Deployment Webhooks...\n[18:40:21.082] INFO: Applying Null Item Versions...\n[18:40:21.085] INFO: Applying Add AI Translation Settings...\n[18:40:21.088] INFO: Applying Add Licensing...\n[18:40:21.092] INFO: Applying Add Autosave Revision Interval...\n[18:40:21.097] INFO: Applying Add MCP Oauth...\n[18:40:21.149] INFO: Applying Add Default Save Action...\n[18:40:21.197] INFO: Done\n2026-10-19T18:40:21: PM2 log: Launching in no daemon mode\n2026-10-19T18:40:21: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:40:24: PM2 log: App [directus:0] online\n[18:40:34.124] INFO: Extensions loaded\n[18:40:34.138] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:40:34.529] INFO: Server started at http://0.0.0.0:18080\n[18:40:38] GET / 302 5ms\n[18:40:38] GET /server/ping 200 2ms\n[18:40:38] GET /health 404 5ms\n[18:40:38] GET /healthz 404 4ms\n[18:40:38] GET /up 404 2ms\n[18:40:38] GET /api/health 404 3ms\n[18:40:38] GET /status 404 3ms\n[18:40:38] GET /ping 404 3ms\n[18:40:38] GET /_health 404 3ms\n[18:40:38] GET /actuator/health 404 3ms\n"
           },
           {
             "kind": "http",
@@ -851,17 +905,17 @@
           {
             "kind": "log",
             "source": "web without DB_CLIENT",
-            "text": "[10:04:36.413] WARN: Could not find `connection.filename` in config. Please specify the database path and name to avoid errors. (see docs https://knexjs.org/guide/#configuration-options)\nTypeError: String expected\n    at /directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:99:18\n    at new Promise (<anonymous>)\n    at Client_SQLite3.acquireRawConnection (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:83:12)\n    at create (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/client.js:262:39)\n"
+            "text": "[18:41:02.416] WARN: Could not find `connection.filename` in config. Please specify the database path and name to avoid errors. (see docs https://knexjs.org/guide/#configuration-options)\nTypeError: String expected\n    at /directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:99:18\n    at new Promise (<anonymous>)\n    at Client_SQLite3.acquireRawConnection (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/dialects/sqlite3/index.js:83:12)\n    at create (/directus/node_modules/.pnpm/knex@3.1.0_mysql2@3.15.3_pg@8.16.3_sqlite3@6.0.1_tedious@18.6.1/node_modules/knex/lib/client.js:262:39)\n"
           },
           {
             "kind": "http",
             "source": "web without DB_SSL",
-            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ none\n18080/server/ping none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.631\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web without DB_SSL",
-            "text": "ing Add Session Window...\n[10:11:04.894] INFO: Applying Add Tus Data...\n[10:11:04.969] INFO: Applying Update Files Date Fields...\n[10:11:05.154] INFO: Applying Permissions Policies...\n[10:11:05.561] INFO: Applying Update Icon Fields Length...\n[10:11:05.817] INFO: Applying Separate Comments...\n[10:11:05.975] INFO: Applying Consolidate Content Versioning...\n[10:11:06.034] INFO: Applying Migrate Legacy Comments...\n[10:11:06.465] INFO: Applying Populate Versioning Deltas...\n[10:11:06.584] INFO: Applying Visual Editor...\n[10:11:06.886] INFO: Applying License Banner...\n[10:11:07.416] INFO: Applying Add Project ID...\n[10:11:07.687] INFO: Applying Add Direction...\n[10:11:07.859] INFO: Applying Add MCP...\n[10:11:08.070] INFO: Applying Add Field Searchable...\n[10:11:09.006] INFO: Applying Add Project Owner...\n[10:11:12.204] INFO: Applying Add Retention Indexes...\n[10:11:17.034] INFO: Applying Add AI Settings...\n[10:11:17.118] INFO: Applying Remove Webhooks...\n[10:11:17.197] INFO: Applying Add AI Provider Settings...\n[10:11:17.511] INFO: Applying Add Revisions Index...\n[10:11:18.603] INFO: Applying Add Collaborative Editing...\n[10:11:18.692] INFO: Applying Add Deployment...\n[10:11:19.046] INFO: Applying Add Deployment Webhooks...\n[10:11:19.162] INFO: Applying Null Item Versions...\n[10:11:19.240] INFO: Applying Add AI Translation Settings...\n[10:11:19.300] INFO: Applying Add Licensing...\n[10:11:19.390] INFO: Applying Add Autosave Revision Interval...\n[10:11:19.455] INFO: Applying Add MCP Oauth...\n[10:11:20.162] INFO: Applying Add Default Save Action...\n[10:11:21.270] INFO: Setting up first admin role...\n[10:11:23.624] INFO: Adding first admin user...\n[10:11:32.693] INFO: Done\n2026-10-18T10:11:48: PM2 log: Launching in no daemon mode\n2026-10-18T10:11:50: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T10:11:54: PM2 log: App [directus:0] online\n[10:15:44.549] INFO: Extensions loaded\n[10:15:45.288] WARN: PostGIS isn't installed. Geometry type support will be limited.\n"
+            "text": "[18:41:32.144] INFO: Applying Visual Editor...\n[18:41:32.150] INFO: Applying License Banner...\n[18:41:32.164] INFO: Applying Add Project ID...\n[18:41:32.170] INFO: Applying Add Direction...\n[18:41:32.173] INFO: Applying Add MCP...\n[18:41:32.177] INFO: Applying Add Field Searchable...\n[18:41:32.187] INFO: Applying Add Project Owner...\n[18:41:32.269] INFO: Applying Add Retention Indexes...\n[18:41:32.353] INFO: Applying Add AI Settings...\n[18:41:32.358] INFO: Applying Remove Webhooks...\n[18:41:32.371] INFO: Applying Add AI Provider Settings...\n[18:41:32.384] INFO: Applying Add Revisions Index...\n[18:41:32.403] INFO: Applying Add Collaborative Editing...\n[18:41:32.408] INFO: Applying Add Deployment...\n[18:41:32.455] INFO: Applying Add Deployment Webhooks...\n[18:41:32.464] INFO: Applying Null Item Versions...\n[18:41:32.469] INFO: Applying Add AI Translation Settings...\n[18:41:32.472] INFO: Applying Add Licensing...\n[18:41:32.478] INFO: Applying Add Autosave Revision Interval...\n[18:41:32.480] INFO: Applying Add MCP Oauth...\n[18:41:32.558] INFO: Applying Add Default Save Action...\n[18:41:32.609] INFO: Setting up first admin role...\n[18:41:32.647] INFO: Adding first admin user...\n[18:41:32.834] INFO: Done\n2026-10-19T18:41:33: PM2 log: Launching in no daemon mode\n2026-10-19T18:41:33: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:41:36: PM2 log: App [directus:0] online\n[18:41:45.748] INFO: Extensions loaded\n[18:41:45.762] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:41:45.953] INFO: Server started at http://0.0.0.0:18080\n[18:41:49] GET / 302 4ms\n[18:41:49] GET /server/ping 200 2ms\n[18:41:49] GET /health 404 6ms\n[18:41:49] GET /healthz 404 4ms\n[18:41:49] GET /up 404 3ms\n[18:41:49] GET /api/health 404 3ms\n[18:41:49] GET /status 404 4ms\n[18:41:49] GET /ping 404 3ms\n[18:41:49] GET /_health 404 4ms\n[18:41:49] GET /actuator/health 404 3ms\n"
           }
         ],
         "note": "tested 6 of 10 candidate variables (cap 6)"
@@ -869,7 +923,7 @@
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -879,34 +933,49 @@
           {
             "kind": "log",
             "source": "web#1",
-            "text": "{ [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] }, Promise { [Object] }, Promise { [Object] },\n    Promise { [Object] },\n    ... 1 more item\n  ]\n}\n"
+            "text": "[18:37:29.534] INFO: Initializing bootstrap...\n[18:37:29.545] INFO: Installing Directus system tables...\nError: Database is already installed\n    at runSeed (file:///directus/node_modules/.pnpm/@directus+api@file+api_@emnapi+core@1.10.0_@emnapi+runtime@1.10.0_@opentelemetry+api@1._caa6e610da6632e510a1fc9f6186eb61/node_modules/@directus/api/dist/database/seeds/run.js:13:68)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async Command.bootstrap (file:///directus/node_modules/.pnpm/@directus+api@file+api_@emnapi+core@1.10.0_@emnapi+runtime@1.10.0_@opentelemetry+api@1._caa6e610da6632e510a1fc9f6186eb61/node_modules/@directus/api/dist/cli/commands/bootstrap/index.js:22:3)\n    at async Command.parseAsync (/directus/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1122:5)\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/server/ping none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=32.9\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "[09:15:28.788] ERROR: Database migrations cannot be found\n[09:15:29.083] ERROR: select \"version\" from \"directus_migrations\" - relation \"directus_migrations\" does not exist\n    err: {\n      \"type\": \"DatabaseError\",\n      \"message\": \"select \\\"version\\\" from \\\"directus_migrations\\\" - relation \\\"directus_migrations\\\" does not exist\",\n      \"stack\":\n          error: select \"version\" from \"directus_migrations\" - relation \"directus_migrations\" does not exist\n              at Parser.parseErrorMessage (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:285:98)\n              at Parser.handlePacket (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:122:29)\n              at Parser.parse (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/parser.js:35:38)\n              at TLSSocket.<anonymous> (/directus/node_modules/.pnpm/pg-protocol@1.10.3/node_modules/pg-protocol/dist/index.js:11:42)\n              at TLSSocket.emit (node:events:519:28)\n              at addChunk (node:internal/streams/readable:561:12)\n              at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)\n              at Readable.push (node:internal/streams/readable:392:5)\n              at TLSWrap.onStreamRead (node:internal/stream_base_commons:189:23)\n      \"length\": 118,\n      \"name\": \"error\",\n      \"severity\": \"ERROR\",\n      \"code\": \"42P01\",\n      \"position\": \"23\",\n      \"file\": \"parse_relation.c\",\n      \"line\": \"1449\",\n      \"routine\": \"parserOpenTable\"\n    }\n"
+            "text": "[18:37:30.794] INFO: Applying Visual Editor...\n[18:37:30.799] INFO: Applying License Banner...\n[18:37:30.808] INFO: Applying Add Project ID...\n[18:37:30.812] INFO: Applying Add Direction...\n[18:37:30.815] INFO: Applying Add MCP...\n[18:37:30.820] INFO: Applying Add Field Searchable...\n[18:37:30.829] INFO: Applying Add Project Owner...\n[18:37:30.890] INFO: Applying Add Retention Indexes...\n[18:37:30.945] INFO: Applying Add AI Settings...\n[18:37:30.947] INFO: Applying Remove Webhooks...\n[18:37:30.956] INFO: Applying Add AI Provider Settings...\n[18:37:30.985] INFO: Applying Add Revisions Index...\n[18:37:31.003] INFO: Applying Add Collaborative Editing...\n[18:37:31.005] INFO: Applying Add Deployment...\n[18:37:31.035] INFO: Applying Add Deployment Webhooks...\n[18:37:31.040] INFO: Applying Null Item Versions...\n[18:37:31.043] INFO: Applying Add AI Translation Settings...\n[18:37:31.046] INFO: Applying Add Licensing...\n[18:37:31.050] INFO: Applying Add Autosave Revision Interval...\n[18:37:31.052] INFO: Applying Add MCP Oauth...\n[18:37:31.103] INFO: Applying Add Default Save Action...\n[18:37:31.152] INFO: Setting up first admin role...\n[18:37:31.194] INFO: Adding first admin user...\n[18:37:31.386] INFO: Done\n2026-10-19T18:37:31: PM2 log: Launching in no daemon mode\n2026-10-19T18:37:31: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:37:34: PM2 log: App [directus:0] online\n[18:37:44.335] INFO: Extensions loaded\n[18:37:44.349] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:37:44.532] INFO: Server started at http://0.0.0.0:18080\n[18:37:48] GET / 302 4ms\n[18:37:48] GET /server/ping 200 2ms\n[18:37:48] GET /health 404 5ms\n[18:37:48] GET /healthz 404 4ms\n[18:37:48] GET /up 404 3ms\n[18:37:48] GET /api/health 404 2ms\n[18:37:48] GET /status 404 2ms\n[18:37:48] GET /ping 404 2ms\n[18:37:48] GET /_health 404 3ms\n[18:37:48] GET /actuator/health 404 3ms\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=487.752\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=31.805\n18080/ 302\n18080/server/ping 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n8055/ none\n8055/server/ping none\n8055/health none\n8055/healthz none\n8055/up none\n8055/api/health none\n8055/status none\n8055/ping none\n8055/_health none\n8055/actuator/health none\n8080/ none\n8080/server/ping none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/server/ping none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/server/ping none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "[09:02:19.177] INFO: Extensions loaded\n[09:02:19.881] INFO: Initializing bootstrap...\n[09:02:20.057] INFO: Database already initialized, skipping install\n[09:02:20.091] INFO: Running migrations...\n[09:02:21.308] INFO: Done\n2026-10-18T09:02:29: PM2 log: Launching in no daemon mode\n2026-10-18T09:02:30: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-18T09:02:33: PM2 log: App [directus:0] online\n[09:06:15.487] INFO: Extensions loaded\n[09:06:15.747] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[09:06:18.026] INFO: Server started at http://0.0.0.0:18080\n[09:06:24] GET / 302 241ms\n[09:06:25] GET /server/ping 200 90ms\n[09:06:25] GET /health 404 248ms\n[09:06:26] GET /healthz 404 356ms\n[09:06:26] GET /up 404 238ms\n[09:06:26] GET /api/health 404 169ms\n[09:06:26] GET /status 404 167ms\n[09:06:27] GET /ping 404 233ms\n[09:06:27] GET /_health 404 180ms\n[09:06:27] GET /actuator/health 404 198ms\n"
+            "text": "[18:36:45.842] INFO: Extensions loaded\n[18:36:45.853] INFO: Initializing bootstrap...\n[18:36:45.857] INFO: Database already initialized, skipping install\n[18:36:45.858] INFO: Running migrations...\n[18:36:45.885] INFO: Done\n2026-10-19T18:36:46: PM2 log: Launching in no daemon mode\n2026-10-19T18:36:46: PM2 log: App [directus:0] starting in -fork mode-\n2026-10-19T18:36:49: PM2 log: App [directus:0] online\n[18:36:59.320] INFO: Extensions loaded\n[18:36:59.333] WARN: PostGIS isn't installed. Geometry type support will be limited.\n[18:36:59.510] INFO: Server started at http://0.0.0.0:18080\n[18:37:03] GET / 302 5ms\n[18:37:03] GET /server/ping 200 2ms\n[18:37:03] GET /health 404 6ms\n[18:37:03] GET /healthz 404 4ms\n[18:37:03] GET /up 404 3ms\n[18:37:03] GET /api/health 404 3ms\n[18:37:03] GET /status 404 4ms\n[18:37:03] GET /ping 404 3ms\n[18:37:03] GET /_health 404 3ms\n[18:37:03] GET /actuator/health 404 4ms\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 302 -> 302\n18080/server/ping 200 -> 200\n18080/health 404 -> 404\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 302 -> 302"
           }
         ]
       },
@@ -918,11 +987,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 509.883,
+            "startSeconds": 31.657,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -961,21 +1030,24 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 75.974,
-        "setA": 1093.823,
-        "twoCopies": 877.761,
-        "requiredVariables": 3282.5539999999996
+        "build": 6.784,
+        "setA": 79.143,
+        "twoCopies": 43.768,
+        "requiredVariables": 241.914,
+        "redisWithout": 42.851
       }
     }
   ],
-  "unstable": [
-    "requiredVariables"
-  ],
+  "unstable": [],
   "complete": true
 }

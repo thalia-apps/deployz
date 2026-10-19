@@ -8,17 +8,18 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-18T22:41:43.090Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:33:38.037Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 130,
-          "imageBytes": 405322417,
+          "seconds": 190,
+          "imageBytes": 405322432,
           "dockerfile": "backend/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": false
         },
@@ -27,7 +28,7 @@
           {
             "kind": "log",
             "source": "build",
-            "text": "#18 38.34 [INFO] ------------------------------------------------------------------------\n#18 DONE 39.6s\n#19 [app 2/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/lib/ /app/lib/\n#19 DONE 0.6s\n#20 [app 3/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/*.jar /app/\n#20 DONE 0.0s\n#21 [app 4/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/app/ /app/app/\n#21 DONE 0.0s\n#22 [app 5/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/quarkus/ /app/quarkus/\n#22 DONE 0.0s\n#23 [stage-2 5/6] COPY --from=app /app /app\n#23 DONE 0.5s\n#24 [stage-2 6/6] COPY --chmod=755 backend/src/main/docker/geopulse /usr/local/bin/geopulse\n#24 DONE 0.0s\n#25 exporting to image\n#25 exporting layers\n#25 exporting layers 0.3s done\n#25 writing image sha256:611f58aaa5dd78fd9894591a92d92ea6ffd3865041e73661cb1ef9bd0929cf38 done\n#25 naming to docker.io/deployz-runcheck/new-9:99e6255d386128bb16c2d57ddab33673bcb6a27c done\n#25 DONE 0.3s"
+            "text": "#18 38.24 [INFO] ------------------------------------------------------------------------\n#18 DONE 39.2s\n#19 [app 2/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/lib/ /app/lib/\n#19 DONE 0.5s\n#20 [app 3/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/*.jar /app/\n#20 DONE 0.0s\n#21 [app 4/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/app/ /app/app/\n#21 DONE 0.0s\n#22 [app 5/5] COPY --from=build --chown=1001:0 /app/backend/target/quarkus-app/quarkus/ /app/quarkus/\n#22 DONE 0.0s\n#23 [stage-2 5/6] COPY --from=app /app /app\n#23 DONE 0.5s\n#24 [stage-2 6/6] COPY --chmod=755 backend/src/main/docker/geopulse /usr/local/bin/geopulse\n#24 DONE 0.0s\n#25 exporting to image\n#25 exporting layers\n#25 exporting layers 0.3s done\n#25 writing image sha256:7699215eb5789f40e50c2cb70a629d737dd32874082b8215b81ac7012a82cce0 done\n#25 naming to docker.io/deployz-runcheck/new-9:99e6255d386128bb16c2d57ddab33673bcb6a27c done\n#25 DONE 0.3s"
           }
         ]
       },
@@ -194,6 +195,13 @@
         "evidence": [],
         "note": "web was not healthy"
       },
+      "freshContainer": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "the first or the second web container gave no answers"
+      },
       "sizes": {
         "status": "observed",
         "value": [
@@ -251,29 +259,32 @@
         "workerCommands": [],
         "variables": [],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
           "analysis:rules@0fc073b8",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 142.996,
-        "setA": 46.632,
-        "sizes": 23.284
+        "build": 201.143,
+        "setA": 39.637,
+        "sizes": 21.872
       }
     },
     {
-      "startedAt": "2026-10-18T22:45:16.010Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:38:00.694Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 130,
-          "imageBytes": 405322417,
+          "seconds": 190,
+          "imageBytes": 405322432,
           "dockerfile": "backend/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
@@ -449,6 +460,13 @@
         "evidence": [],
         "note": "web was not healthy"
       },
+      "freshContainer": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "the first or the second web container gave no answers"
+      },
       "sizes": {
         "status": "observed",
         "value": [
@@ -506,15 +524,17 @@
         "workerCommands": [],
         "variables": [],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
           "analysis:rules@0fc073b8",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 2.916,
-        "setA": 55.217,
-        "sizes": 23.811
+        "build": 2.303,
+        "setA": 22.033,
+        "sizes": 20.882
       }
     }
   ],

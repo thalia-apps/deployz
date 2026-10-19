@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-17T07:29:53.133Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:20.031Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 34953262,
+          "seconds": 39,
+          "imageBytes": 34007383,
           "dockerfile": "packaging/docker/alpine/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-004:a84533db6ca0a2ff9a47800fbf0326be6d9b3170 from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#12 1.372 go: downloading github.com/tinylib/msgp v1.6.4\n#12 1.407 go: downloading golang.org/x/text v0.41.0\n#12 1.865 go: downloading github.com/tdewolff/parse/v2 v2.8.16\n#12 1.895 go: downloading github.com/go-viper/mapstructure/v2 v2.5.0\n#12 1.896 go: downloading github.com/google/go-tpm v0.9.8\n#12 1.896 go: downloading github.com/golang-jwt/jwt/v5 v5.3.1\n#12 1.927 go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822\n#12 1.929 go: downloading github.com/go-webauthn/x v0.2.6\n#12 1.935 go: downloading github.com/philhofer/fwd v1.2.0\n#12 1.951 go: downloading github.com/fxamacker/cbor/v2 v2.9.2\n#12 1.976 go: downloading github.com/x448/float16 v0.8.4\n#12 DONE 27.1s\n#13 [stage-1 3/3] COPY --from=build /go/src/app/miniflux /usr/bin/miniflux\n#13 DONE 0.0s\n#14 exporting to image\n#14 exporting layers\n#14 exporting layers 0.6s done\n#14 writing image sha256:14ca0ffbeaa1dc9cda2cb7bef10caa43e0c97a6500ec127bb714d6dbed64feff done\n#14 naming to docker.io/deployz-runcheck/repo-004:a84533db6ca0a2ff9a47800fbf0326be6d9b3170 done\n#14 DONE 0.7s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,7 +45,7 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=17.654\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.681\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 33591,
+            "port": 38051,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n33591 loopback reachable=false"
+            "text": "18080 all reachable=true\n38051 loopback reachable=false"
           }
         ]
       },
@@ -86,6 +87,11 @@
           },
           {
             "port": 18080,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 18080,
             "path": "/healthcheck",
             "status": 200
           },
@@ -93,11 +99,6 @@
             "port": 18080,
             "path": "/health",
             "status": 302
-          },
-          {
-            "port": 18080,
-            "path": "/healthz",
-            "status": 200
           },
           {
             "port": 18080,
@@ -130,12 +131,12 @@
             "status": 302
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
+            "text": "18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
           }
         ]
       },
@@ -145,7 +146,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -177,7 +178,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -207,13 +208,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -223,7 +224,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -237,7 +238,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -249,7 +250,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -261,7 +262,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -275,7 +276,7 @@
           },
           {
             "name": "CREATE_ADMIN",
-            "healthyWithout": false,
+            "healthyWithout": true,
             "healthyWith": true
           },
           {
@@ -294,12 +295,12 @@
             "healthyWith": true
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web without RUN_MIGRATIONS",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -309,7 +310,7 @@
           {
             "kind": "http",
             "source": "web without CREATE_ADMIN",
-            "text": "healthy=true exited=false oomKilled=false seconds=30.433\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.657\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -317,14 +318,9 @@
             "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
           },
           {
-            "kind": "command",
-            "source": "web without CREATE_ADMIN",
-            "text": "healthy, but no postgres connection"
-          },
-          {
             "kind": "http",
             "source": "web without ADMIN_USERNAME",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -334,7 +330,7 @@
           {
             "kind": "http",
             "source": "web without ADMIN_PASSWORD",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -344,7 +340,7 @@
           {
             "kind": "http",
             "source": "web without BASE_URL",
-            "text": "healthy=true exited=false oomKilled=false seconds=21.967\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.674\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -356,12 +352,12 @@
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=18.4\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.949\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -371,7 +367,7 @@
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -383,17 +379,32 @@
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=26.449\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=0.782\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
             "text": "level=INFO msg=\"Running database migrations\" current_version=134 latest_version=134\nlevel=INFO msg=\"Skipping admin user creation because it already exists\" username=admin\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 200 -> 200\n18080/healthz 200 -> 200\n18080/healthcheck 200 -> 200\n18080/health 302 -> 302\n18080/up 302 -> 302\n18080/api/health 302 -> 302\n18080/status 302 -> 302\n18080/ping 302 -> 302\n18080/_health 302 -> 302\n18080/actuator/health 302 -> 302\n18080/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -405,11 +416,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 17.654,
+            "startSeconds": 6.681,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -422,9 +433,9 @@
         "injectedPort": 18080,
         "healthPaths": [
           "/",
+          "/healthz",
           "/healthcheck",
           "/health",
-          "/healthz",
           "/up",
           "/api/health",
           "/status",
@@ -443,34 +454,39 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 3.65,
-        "setA": 141.776,
-        "twoCopies": 99.324,
-        "requiredVariables": 516.786
+        "build": 40.418,
+        "setA": 34.425,
+        "twoCopies": 17.782,
+        "requiredVariables": 85.214
       }
     },
     {
-      "startedAt": "2026-10-17T07:42:34.679Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:28:17.882Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 34953262,
+          "seconds": 39,
+          "imageBytes": 34007383,
           "dockerfile": "packaging/docker/alpine/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -482,7 +498,7 @@
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -492,7 +508,7 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=27.084\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.72\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -510,17 +526,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 40473,
+            "port": 43791,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n40473 loopback reachable=false"
+            "text": "18080 all reachable=true\n43791 loopback reachable=false"
           }
         ]
       },
@@ -534,6 +550,11 @@
           },
           {
             "port": 18080,
+            "path": "/healthz",
+            "status": 200
+          },
+          {
+            "port": 18080,
             "path": "/healthcheck",
             "status": 200
           },
@@ -541,11 +562,6 @@
             "port": 18080,
             "path": "/health",
             "status": 302
-          },
-          {
-            "port": 18080,
-            "path": "/healthz",
-            "status": 200
           },
           {
             "port": 18080,
@@ -578,12 +594,12 @@
             "status": 302
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
+            "text": "18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302"
           }
         ]
       },
@@ -593,7 +609,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -625,7 +641,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -655,13 +671,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -671,7 +687,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -685,7 +701,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -697,7 +713,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -709,7 +725,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -742,12 +758,12 @@
             "healthyWith": true
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web without RUN_MIGRATIONS",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -757,7 +773,7 @@
           {
             "kind": "http",
             "source": "web without CREATE_ADMIN",
-            "text": "healthy=true exited=false oomKilled=false seconds=41.12\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.662\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -767,7 +783,7 @@
           {
             "kind": "http",
             "source": "web without ADMIN_USERNAME",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -777,7 +793,7 @@
           {
             "kind": "http",
             "source": "web without ADMIN_PASSWORD",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -787,7 +803,7 @@
           {
             "kind": "http",
             "source": "web without BASE_URL",
-            "text": "healthy=true exited=false oomKilled=false seconds=24.388\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.644\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -799,44 +815,59 @@
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.952\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\n[Migration v1] pq: duplicate key value violates unique constraint \"pg_type_typname_nsp_index\" (23505)\n"
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=29.34\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/healthcheck none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\nlevel=INFO msg=\"Created new admin user\" username=admin user_id=1\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+            "text": "level=INFO msg=\"Running database migrations\" current_version=0 latest_version=134\n[Migration v1] pq: duplicate key value violates unique constraint \"pg_type_typname_nsp_index\" (23505)\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=17.143\n18080/ 200\n18080/healthcheck 200\n18080/health 302\n18080/healthz 200\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=0.778\n18080/ 200\n18080/healthz 200\n18080/healthcheck 200\n18080/health 302\n18080/up 302\n18080/api/health 302\n18080/status 302\n18080/ping 302\n18080/_health 302\n18080/actuator/health 302\n8080/ none\n8080/healthz none\n8080/healthcheck none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/healthcheck none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/healthcheck none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
             "text": "level=INFO msg=\"Running database migrations\" current_version=134 latest_version=134\nlevel=INFO msg=\"Skipping admin user creation because it already exists\" username=admin\nlevel=INFO msg=\"Starting HTTP server\" listen_address=:18080\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 200 -> 200\n18080/healthz 200 -> 200\n18080/healthcheck 200 -> 200\n18080/health 302 -> 302\n18080/up 302 -> 302\n18080/api/health 302 -> 302\n18080/status 302 -> 302\n18080/ping 302 -> 302\n18080/_health 302 -> 302\n18080/actuator/health 302 -> 302\n18080/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -848,11 +879,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 27.084,
+            "startSeconds": 6.72,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -865,9 +896,9 @@
         "injectedPort": 18080,
         "healthPaths": [
           "/",
+          "/healthz",
           "/healthcheck",
           "/health",
-          "/healthz",
           "/up",
           "/api/health",
           "/status",
@@ -886,21 +917,23 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 8.708,
-        "setA": 127.843,
-        "twoCopies": 102.546,
-        "requiredVariables": 595.951
+        "build": 0.398,
+        "setA": 20.267,
+        "twoCopies": 17.925,
+        "requiredVariables": 85.02900000000001
       }
     }
   ],
-  "unstable": [
-    "requiredVariables"
-  ],
+  "unstable": [],
   "complete": true
 }

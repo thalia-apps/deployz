@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-18T04:59:01.745Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:20.071Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 800,
-          "imageBytes": 333846857,
+          "seconds": 270,
+          "imageBytes": 935947430,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-007:73e4f0368de398d7b67c50fb2926351414e2044e from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#29 1.259 Prisma schema loaded from prisma/schema.prisma.\n#29 1.661 \n#29 1.661 ✔ Generated Prisma Client (v7.10.0) to ./node_modules/@prisma/client in 280ms\n#29 1.661 \n#29 1.661 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)\n#29 1.661 \n#29 1.661 \n#29 DONE 1.7s\n#30 [stage-1 3/5] COPY --chown=node:node --from=builder /ghostfolio/dist/apps /ghostfolio/apps/\n#30 DONE 7.7s\n#31 [stage-1 4/5] COPY --chown=node:node ./docker/entrypoint.sh /ghostfolio/\n#31 DONE 0.0s\n#32 [stage-1 5/5] WORKDIR /ghostfolio/apps/api\n#32 DONE 0.0s\n#33 exporting to image\n#33 exporting layers\n#33 exporting layers 7.0s done\n#33 writing image sha256:9b194a933f96f36b48945a64a3bb9a4fc35cde8d025321a6ac417e177c14c212 done\n#33 naming to docker.io/deployz-runcheck/repo-007:73e4f0368de398d7b67c50fb2926351414e2044e done\n#33 DONE 7.0s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
-        "value": false,
-        "arch": "amd64-emulated",
+        "value": true,
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,58 +45,153 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=19.043\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "Running database migrations\n+ echo Running database migrations\n+ npx prisma migrate deploy\nLoaded Prisma config from .config/prisma.ts.\n\nError: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh\n"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:55 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:55 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:55 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:55 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3426ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:30:58 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
           }
         ]
       },
       "listeningPorts": {
         "status": "observed",
-        "value": [],
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "value": [
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 46215,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "18080 all reachable=true\n46215 loopback reachable=false"
+          }
+        ]
       },
       "httpPaths": {
         "status": "observed",
-        "value": [],
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "value": [
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 301
+          },
+          {
+            "port": 18080,
+            "path": "/api/v1/health",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404"
+          }
+        ]
       },
       "smoke": {
         "status": "observed",
         "value": {
           "path": "/",
-          "status": null
+          "status": 301
         },
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ 301"
+          }
+        ]
       },
       "database": {
         "status": "observed",
         "value": {
-          "engine": null,
-          "connections": 0,
-          "tablesAfterStart": [],
+          "engine": "postgres",
+          "connections": 7,
+          "tablesAfterStart": [
+            "Access",
+            "Account",
+            "AccountBalance",
+            "Analytics",
+            "ApiKey",
+            "AssetProfileResolution",
+            "AssetProfileSplit",
+            "AuthDevice",
+            "MarketData",
+            "Order",
+            "Platform",
+            "Property",
+            "Settings",
+            "Subscription",
+            "SymbolProfile",
+            "SymbolProfileOverrides",
+            "Tag",
+            "TagsOnAccounts",
+            "User",
+            "_OrderToTag",
+            "_UserWatchlist",
+            "_prisma_migrations"
+          ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "postgres",
-            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 7 application connections; tables in deployz: Access, Account, AccountBalance, Analytics, ApiKey, AssetProfileResolution, AssetProfileSplit, AuthDevice, MarketData, Order, Platform, Property, Settings, Subscription, SymbolProfile, SymbolProfileOverrides, Tag, TagsOnAccounts, User, _OrderToTag, _UserWatchlist, _prisma_migrations"
           },
           {
             "kind": "command",
@@ -105,7 +201,7 @@
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+            "text": "INFO stats total_connections_received = 17, baseline 2, harness sessions 1: 14 application connections; DBSIZE = 3"
           },
           {
             "kind": "command",
@@ -117,31 +213,42 @@
       "startupMigration": {
         "status": "observed",
         "value": {
-          "tablesCreatedByStart": false,
-          "secondStartHealthy": null
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
       "redis": {
         "status": "observed",
         "value": {
-          "connected": false,
-          "clients": 0
+          "connected": true,
+          "clients": 14,
+          "healthyWithout": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+            "text": "INFO stats total_connections_received = 17, baseline 2, harness sessions 1: 14 application connections; DBSIZE = 3"
+          },
+          {
+            "kind": "http",
+            "source": "web without Redis",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ 301\n18080/api/v1/health none\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without Redis",
+            "text": "\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:42:50 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:42:50 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:42:51 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:42:52 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:42:54 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n"
           }
         ]
       },
@@ -150,7 +257,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -162,7 +269,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -174,30 +281,106 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": [
+          {
+            "name": "ACCESS_TOKEN_SALT",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "JWT_SECRET_KEY",
+            "healthyWithout": false,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without ACCESS_TOKEN_SALT",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ACCESS_TOKEN_SALT",
+            "text": "  └─ 20260808120000_added_draft_tag_to_order/\n    └─ migration.sql\n  └─ 20260812120000_removed_is_draft_from_order/\n    └─ migration.sql\n  └─ 20260815120000_added_symbol_profile_id_index_to_order/\n    └─ migration.sql\n  └─ 20260815130000_added_scopes_to_access/\n    └─ migration.sql\n  └─ 20260820120000_removed_permissions_from_access/\n    └─ migration.sql\n  └─ 20260822000000_updated_indexes_of_order/\n    └─ migration.sql\n  └─ 20260823120000_added_type_to_access/\n    └─ migration.sql\n  └─ 20260824000000_added_is_carried_forward_to_market_data/\n    └─ migration.sql\n  └─ 20260826000000_added_expires_at_to_access/\n    └─ migration.sql\n  └─ 20260826010000_added_last_used_at_to_access/\n    └─ migration.sql\n\nAll migrations have been successfully applied.\nSeeding the database\nRunning seed command `node /ghostfolio/apps/api/prisma/seed.mts` ...\n\n🌱  The seed command has been executed.\nStarting the server\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:32:13 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestFactory] \u001b[39m\u001b[32mStarting Nest application...\u001b[39m\n+ echo Seeding the database\n+ npx prisma db seed\nLoaded Prisma config from .config/prisma.ts.\n\n+ echo Starting the server\n+ exec node main\n\u001b[37m================================\u001b[0m\n \u001b[33mMissing\u001b[0m environment variables:\n    \u001b[34mACCESS_TOKEN_SALT\u001b[0m: undefined\n\u001b[37m================================\u001b[0m\n\u001b[33m\n Exiting with error code 1\u001b[0m\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without JWT_SECRET_KEY",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without JWT_SECRET_KEY",
+            "text": "  └─ 20260808120000_added_draft_tag_to_order/\n    └─ migration.sql\n  └─ 20260812120000_removed_is_draft_from_order/\n    └─ migration.sql\n  └─ 20260815120000_added_symbol_profile_id_index_to_order/\n    └─ migration.sql\n  └─ 20260815130000_added_scopes_to_access/\n    └─ migration.sql\n  └─ 20260820120000_removed_permissions_from_access/\n    └─ migration.sql\n  └─ 20260822000000_updated_indexes_of_order/\n    └─ migration.sql\n  └─ 20260823120000_added_type_to_access/\n    └─ migration.sql\n  └─ 20260824000000_added_is_carried_forward_to_market_data/\n    └─ migration.sql\n  └─ 20260826000000_added_expires_at_to_access/\n    └─ migration.sql\n  └─ 20260826010000_added_last_used_at_to_access/\n    └─ migration.sql\n\nAll migrations have been successfully applied.\nSeeding the database\nRunning seed command `node /ghostfolio/apps/api/prisma/seed.mts` ...\n\n🌱  The seed command has been executed.\nStarting the server\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:32:36 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestFactory] \u001b[39m\u001b[32mStarting Nest application...\u001b[39m\n+ echo Seeding the database\n+ npx prisma db seed\nLoaded Prisma config from .config/prisma.ts.\n\n+ echo Starting the server\n+ exec node main\n\u001b[37m================================\u001b[0m\n \u001b[33mMissing\u001b[0m environment variables:\n    \u001b[34mJWT_SECRET_KEY\u001b[0m: undefined\n\u001b[37m================================\u001b[0m\n\u001b[33m\n Exiting with error code 1\u001b[0m\n"
+          }
+        ]
       },
       "twoCopiesHealthy": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=21.29\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3831ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=21.301\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3727ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:47 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          }
+        ]
       },
       "restartHealthy": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=13.077\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:17 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:17 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:17 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:17 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3498ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:31:20 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 301 -> 301\n18080/api/v1/health 200 -> 200\n18080/health 404 -> 404\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 301 -> 301"
+          }
+        ]
       },
       "sizes": {
         "status": "observed",
@@ -206,40 +389,17 @@
             "profile": "small-v2",
             "memoryMiB": 512,
             "cpus": 1,
-            "healthy": false,
-            "startSeconds": null,
-            "oomKilled": false
-          },
-          {
-            "profile": "medium-v1",
-            "memoryMiB": 2048,
-            "cpus": 1,
-            "healthy": false,
-            "startSeconds": null,
+            "healthy": true,
+            "startSeconds": 19.043,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "small-v2",
-            "text": "healthy=false oomKilled=false exited=true"
-          },
-          {
-            "kind": "http",
-            "source": "medium-v1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "medium-v1",
-            "text": "Running database migrations\n+ echo Running database migrations\n+ npx prisma migrate deploy\nLoaded Prisma config from .config/prisma.ts.\n\nError: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh\n"
-          },
-          {
-            "kind": "log",
-            "source": "medium-v1",
-            "text": "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
+            "text": "healthy=true oomKilled=false exited=false"
           }
         ]
       },
@@ -265,35 +425,40 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
-      "infrastructureFailures": [
-        "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
-      ],
+      "infrastructureFailures": [],
       "timings": {
-        "build": 140.451,
-        "setA": 237.928,
-        "sizes": 234.242
+        "build": 302.208,
+        "setA": 60.867,
+        "twoCopies": 32.275,
+        "requiredVariables": 45.747,
+        "redisWithout": 613.904
       }
     },
     {
-      "startedAt": "2026-10-18T05:09:14.396Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:42:55.085Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 800,
-          "imageBytes": 333846857,
+          "seconds": 270,
+          "imageBytes": 935947430,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -304,8 +469,8 @@
       },
       "webHealthy": {
         "status": "observed",
-        "value": false,
-        "arch": "amd64-emulated",
+        "value": true,
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -315,58 +480,153 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=19.085\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "Running database migrations\n+ echo Running database migrations\n+ npx prisma migrate deploy\nLoaded Prisma config from .config/prisma.ts.\n\nError: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh\n"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:22 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:22 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:22 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:22 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3501ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:25 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
           }
         ]
       },
       "listeningPorts": {
         "status": "observed",
-        "value": [],
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "value": [
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 33407,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "18080 all reachable=true\n33407 loopback reachable=false"
+          }
+        ]
       },
       "httpPaths": {
         "status": "observed",
-        "value": [],
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "value": [
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 301
+          },
+          {
+            "port": 18080,
+            "path": "/api/v1/health",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404"
+          }
+        ]
       },
       "smoke": {
         "status": "observed",
         "value": {
           "path": "/",
-          "status": null
+          "status": 301
         },
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "container exited"
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ 301"
+          }
+        ]
       },
       "database": {
         "status": "observed",
         "value": {
-          "engine": null,
-          "connections": 0,
-          "tablesAfterStart": [],
+          "engine": "postgres",
+          "connections": 7,
+          "tablesAfterStart": [
+            "Access",
+            "Account",
+            "AccountBalance",
+            "Analytics",
+            "ApiKey",
+            "AssetProfileResolution",
+            "AssetProfileSplit",
+            "AuthDevice",
+            "MarketData",
+            "Order",
+            "Platform",
+            "Property",
+            "Settings",
+            "Subscription",
+            "SymbolProfile",
+            "SymbolProfileOverrides",
+            "Tag",
+            "TagsOnAccounts",
+            "User",
+            "_OrderToTag",
+            "_UserWatchlist",
+            "_prisma_migrations"
+          ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "postgres",
-            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 7 application connections; tables in deployz: Access, Account, AccountBalance, Analytics, ApiKey, AssetProfileResolution, AssetProfileSplit, AuthDevice, MarketData, Order, Platform, Property, Settings, Subscription, SymbolProfile, SymbolProfileOverrides, Tag, TagsOnAccounts, User, _OrderToTag, _UserWatchlist, _prisma_migrations"
           },
           {
             "kind": "command",
@@ -376,7 +636,7 @@
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+            "text": "INFO stats total_connections_received = 17, baseline 2, harness sessions 1: 14 application connections; DBSIZE = 3"
           },
           {
             "kind": "command",
@@ -388,31 +648,42 @@
       "startupMigration": {
         "status": "observed",
         "value": {
-          "tablesCreatedByStart": false,
-          "secondStartHealthy": null
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
       "redis": {
         "status": "observed",
         "value": {
-          "connected": false,
-          "clients": 0
+          "connected": true,
+          "clients": 14,
+          "healthyWithout": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+            "text": "INFO stats total_connections_received = 17, baseline 2, harness sessions 1: 14 application connections; DBSIZE = 3"
+          },
+          {
+            "kind": "http",
+            "source": "web without Redis",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ 301\n18080/api/v1/health none\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without Redis",
+            "text": "\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:55:16 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:55:17 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:55:18 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:55:19 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n\u001b[31m[Nest] 1  - \u001b[39m10/19/2026, 6:55:20 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[RedisCacheService] \u001b[39mError: connect ECONNREFUSED 127.0.0.1:6379\n\u001b[90m    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1638:16)\u001b[39m {\n  errno: \u001b[33m-111\u001b[39m,\n  code: \u001b[32m'ECONNREFUSED'\u001b[39m,\n  syscall: \u001b[32m'connect'\u001b[39m,\n  address: \u001b[32m'127.0.0.1'\u001b[39m,\n  port: \u001b[33m6379\u001b[39m\n}\n"
           }
         ]
       },
@@ -421,7 +692,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -433,7 +704,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -445,30 +716,106 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": [
+          {
+            "name": "ACCESS_TOKEN_SALT",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "JWT_SECRET_KEY",
+            "healthyWithout": false,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without ACCESS_TOKEN_SALT",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ACCESS_TOKEN_SALT",
+            "text": "  └─ 20260808120000_added_draft_tag_to_order/\n    └─ migration.sql\n  └─ 20260812120000_removed_is_draft_from_order/\n    └─ migration.sql\n  └─ 20260815120000_added_symbol_profile_id_index_to_order/\n    └─ migration.sql\n  └─ 20260815130000_added_scopes_to_access/\n    └─ migration.sql\n  └─ 20260820120000_removed_permissions_from_access/\n    └─ migration.sql\n  └─ 20260822000000_updated_indexes_of_order/\n    └─ migration.sql\n  └─ 20260823120000_added_type_to_access/\n    └─ migration.sql\n  └─ 20260824000000_added_is_carried_forward_to_market_data/\n    └─ migration.sql\n  └─ 20260826000000_added_expires_at_to_access/\n    └─ migration.sql\n  └─ 20260826010000_added_last_used_at_to_access/\n    └─ migration.sql\n\nAll migrations have been successfully applied.\nSeeding the database\nRunning seed command `node /ghostfolio/apps/api/prisma/seed.mts` ...\n\n🌱  The seed command has been executed.\nStarting the server\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:40 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestFactory] \u001b[39m\u001b[32mStarting Nest application...\u001b[39m\n+ echo Seeding the database\n+ npx prisma db seed\nLoaded Prisma config from .config/prisma.ts.\n\n+ echo Starting the server\n+ exec node main\n\u001b[37m================================\u001b[0m\n \u001b[33mMissing\u001b[0m environment variables:\n    \u001b[34mACCESS_TOKEN_SALT\u001b[0m: undefined\n\u001b[37m================================\u001b[0m\n\u001b[33m\n Exiting with error code 1\u001b[0m\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without JWT_SECRET_KEY",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without JWT_SECRET_KEY",
+            "text": "  └─ 20260808120000_added_draft_tag_to_order/\n    └─ migration.sql\n  └─ 20260812120000_removed_is_draft_from_order/\n    └─ migration.sql\n  └─ 20260815120000_added_symbol_profile_id_index_to_order/\n    └─ migration.sql\n  └─ 20260815130000_added_scopes_to_access/\n    └─ migration.sql\n  └─ 20260820120000_removed_permissions_from_access/\n    └─ migration.sql\n  └─ 20260822000000_updated_indexes_of_order/\n    └─ migration.sql\n  └─ 20260823120000_added_type_to_access/\n    └─ migration.sql\n  └─ 20260824000000_added_is_carried_forward_to_market_data/\n    └─ migration.sql\n  └─ 20260826000000_added_expires_at_to_access/\n    └─ migration.sql\n  └─ 20260826010000_added_last_used_at_to_access/\n    └─ migration.sql\n\nAll migrations have been successfully applied.\nSeeding the database\nRunning seed command `node /ghostfolio/apps/api/prisma/seed.mts` ...\n\n🌱  The seed command has been executed.\nStarting the server\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:45:03 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestFactory] \u001b[39m\u001b[32mStarting Nest application...\u001b[39m\n+ echo Seeding the database\n+ npx prisma db seed\nLoaded Prisma config from .config/prisma.ts.\n\n+ echo Starting the server\n+ exec node main\n\u001b[37m================================\u001b[0m\n \u001b[33mMissing\u001b[0m environment variables:\n    \u001b[34mJWT_SECRET_KEY\u001b[0m: undefined\n\u001b[37m================================\u001b[0m\n\u001b[33m\n Exiting with error code 1\u001b[0m\n"
+          }
+        ]
       },
       "twoCopiesHealthy": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=21.147\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:10 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3790ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=21.255\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:11 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:11 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:11 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +3ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:11 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3796ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:44:14 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          }
+        ]
       },
       "restartHealthy": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "web was not healthy"
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=13.131\n18080/ 301\n18080/api/v1/health 200\n18080/health 404\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "d, PUT} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RoutesResolver] \u001b[39m\u001b[32mWatchlistController {/api/watchlist} (version: 1):\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, POST} (version: 1) route\u001b[39m\u001b[38;5;3m +1ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist/:dataSource/:symbol, DELETE} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:44 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[RouterExplorer] \u001b[39m\u001b[32mMapped {/api/watchlist, GET} (version: 1) route\u001b[39m\u001b[38;5;3m +0ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[NestApplication] \u001b[39m\u001b[32mNest application successfully started\u001b[39m\u001b[38;5;3m +3482ms\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m   ________               __  ____      ___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m  / ____/ /_  ____  _____/ /_/ __/___  / (_)___\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m / / __/ __ \\/ __ \\/ ___/ __/ /_/ __ \\/ / / __ \\\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m/ /_/ / / / / /_/ (__  ) /_/ __/ /_/ / / / /_/ /\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\\____/_/ /_/\\____/____/\\__/_/  \\____/_/_/\\____/ 3.65.0\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32mListening at http://0.0.0.0:18080\u001b[39m\n\u001b[32m[Nest] 1  - \u001b[39m10/19/2026, 6:43:48 PM \u001b[32m    LOG\u001b[39m \u001b[38;5;3m[Bootstrap] \u001b[39m\u001b[32m\u001b[39m\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 301 -> 301\n18080/api/v1/health 200 -> 200\n18080/health 404 -> 404\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 301 -> 301"
+          }
+        ]
       },
       "sizes": {
         "status": "observed",
@@ -477,40 +824,17 @@
             "profile": "small-v2",
             "memoryMiB": 512,
             "cpus": 1,
-            "healthy": false,
-            "startSeconds": null,
-            "oomKilled": false
-          },
-          {
-            "profile": "medium-v1",
-            "memoryMiB": 2048,
-            "cpus": 1,
-            "healthy": false,
-            "startSeconds": null,
+            "healthy": true,
+            "startSeconds": 19.085,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
             "source": "small-v2",
-            "text": "healthy=false oomKilled=false exited=true"
-          },
-          {
-            "kind": "http",
-            "source": "medium-v1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/api/v1/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3333/ none\n3333/api/v1/health none\n3333/health none\n3333/healthz none\n3333/up none\n3333/api/health none\n3333/status none\n3333/ping none\n3333/_health none\n3333/actuator/health none\n8080/ none\n8080/api/v1/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/api/v1/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/api/v1/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "medium-v1",
-            "text": "Running database migrations\n+ echo Running database migrations\n+ npx prisma migrate deploy\nLoaded Prisma config from .config/prisma.ts.\n\nError: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh\n"
-          },
-          {
-            "kind": "log",
-            "source": "medium-v1",
-            "text": "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
+            "text": "healthy=true oomKilled=false exited=false"
           }
         ]
       },
@@ -536,17 +860,21 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
-      "infrastructureFailures": [
-        "needs internet at run time: Error: request to https://binaries.prisma.sh/all_commits/0edf323efd1d98336f3f0a68684b56f689b900d3/debian-openssl-3.0.x/schema-engine.gz.sha256 failed, reason: getaddrinfo EAI_AGAIN binaries.prisma.sh"
-      ],
+      "infrastructureFailures": [],
       "timings": {
-        "build": 87.174,
-        "setA": 236.102,
-        "sizes": 204.866
+        "build": 8.165,
+        "setA": 47.131,
+        "twoCopies": 32.206,
+        "requiredVariables": 45.891,
+        "redisWithout": 614.085
       }
     }
   ],

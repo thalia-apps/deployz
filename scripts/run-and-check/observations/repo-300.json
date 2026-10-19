@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-17T13:18:00.854Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:02.032Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 216555648,
+          "seconds": 13,
+          "imageBytes": 209506472,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-300:6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#10 6.202 16 packages are looking for funding\n#10 6.202   run `npm fund` for details\n#10 6.203 \n#10 6.203 found 0 vulnerabilities\n#10 6.204 npm notice\n#10 6.204 npm notice New major version of npm available! 10.8.2 -> 12.2.0\n#10 6.204 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0\n#10 6.204 npm notice To update run: npm install -g npm@12.2.0\n#10 6.204 npm notice\n#10 DONE 6.2s\n#12 [build 6/6] RUN npx tsc\n#12 DONE 1.7s\n#13 [runtime 6/6] COPY --from=build /app/dist ./dist\n#13 DONE 0.0s\n#14 exporting to image\n#14 exporting layers\n#14 exporting layers 0.6s done\n#14 writing image sha256:33c014a11a62da3ffaee9cf60b0024c18db27547001e261d496136cd0e459df0 done\n#14 naming to docker.io/deployz-runcheck/repo-300:6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d done\n#14 DONE 0.6s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,7 +45,7 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=33.534\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.413\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 33145,
+            "port": 46807,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n33145 loopback reachable=false"
+            "text": "18080 all reachable=true\n46807 loopback reachable=false"
           }
         ]
       },
@@ -125,7 +126,7 @@
             "status": 404
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -140,7 +141,7 @@
           "path": "/",
           "status": 404
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -160,7 +161,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -190,13 +191,13 @@
           "tablesCreatedByStart": false,
           "secondStartHealthy": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -206,7 +207,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -220,7 +221,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -232,7 +233,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -252,363 +253,7 @@
             "queueActivity": null
           }
         ],
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "log",
-            "source": "worker#1",
-            "text": "eserializeResponse (/app/node_modules/@smithy/core/dist-cjs/submodules/protocols/index.js:580:62)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/schema/index.js:23:24\n    at async /app/node_modules/@smithy/core/dist-cjs/index.js:118:20\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/retry/index.js:175:50\n    at async /app/node_modules/@aws-sdk/middleware-sdk-sqs/dist-cjs/index.js:50:22\n    at async /app/node_modules/@aws-sdk/core/dist-cjs/submodules/client/index.js:125:26\n    at async poll (/app/dist/orders-consumer.js:14:25) {\n  '$metadata': {\n    httpStatusCode: 400,\n    requestId: undefined,\n    extendedRequestId: undefined,\n    cfId: undefined,\n    attempts: 1,\n    totalRetryDelay: 0\n  }\n}\ndlq poll failed SyntaxError: Unexpected token '<', \"<?xml vers\"... is not valid JSON\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$response on this object.\n    at JSON.parse (<anonymous>)\n    at JsonShapeDeserializer2.read (/app/node_modules/@aws-sdk/core/dist-cjs/submodules/protocols/index.js:522:27)\n    at AwsJson1_0Protocol.deserializeResponse (/app/node_modules/@smithy/core/dist-cjs/submodules/protocols/index.js:580:62)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/schema/index.js:23:24\n    at async /app/node_modules/@smithy/core/dist-cjs/index.js:118:20\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/retry/index.js:175:50\n    at async /app/node_modules/@aws-sdk/middleware-sdk-sqs/dist-cjs/index.js:50:22\n    at async /app/node_modules/@aws-sdk/core/dist-cjs/submodules/client/index.js:125:26\n    at async poll (/app/dist/dlq-monitor.js:12:13) {\n  '$metadata': {\n    httpStatusCode: 400,\n    requestId: undefined,\n    extendedRequestId: undefined,\n    cfId: undefined,\n    attempts: 1,\n    totalRetryDelay: 0\n  }\n}\n"
-          }
-        ]
-      },
-      "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "no candidate variable"
-      },
-      "twoCopiesHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=18.78\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
-          },
-          {
-            "kind": "http",
-            "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=18.181\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#2",
-            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
-          }
-        ]
-      },
-      "restartHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=27.118\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#2",
-            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
-          }
-        ]
-      },
-      "sizes": {
-        "status": "observed",
-        "value": [
-          {
-            "profile": "small-v2",
-            "memoryMiB": 512,
-            "cpus": 1,
-            "healthy": true,
-            "startSeconds": 33.534,
-            "oomKilled": false
-          }
-        ],
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "small-v2",
-            "text": "healthy=true oomKilled=false exited=false"
-          }
-        ]
-      },
-      "candidates": {
-        "injectedPort": 18080,
-        "healthPaths": [
-          "/",
-          "/health",
-          "/healthz",
-          "/up",
-          "/api/health",
-          "/status",
-          "/ping",
-          "/_health",
-          "/actuator/health"
-        ],
-        "migrationCommands": [],
-        "workerCommands": [
-          "node dist/worker.js"
-        ],
-        "variables": [],
-        "from": [
-          "analysis:rules@b028a8bc",
-          "fixed-list"
-        ]
-      },
-      "infrastructureFailures": [],
-      "timings": {
-        "build": 43.528,
-        "setA": 427.754,
-        "twoCopies": 87.08
-      }
-    },
-    {
-      "startedAt": "2026-10-17T13:27:19.221Z",
-      "harnessVersion": "1",
-      "build": {
-        "status": "observed",
-        "value": {
-          "ok": true,
-          "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 216555648,
-          "dockerfile": "Dockerfile",
-          "context": ".",
-          "failure": null,
-          "fromCache": true
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-300:6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d from the image cache"
-          }
-        ]
-      },
-      "webHealthy": {
-        "status": "observed",
-        "value": true,
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "web#1",
-            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
-          },
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=17.709\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
-          }
-        ]
-      },
-      "listeningPorts": {
-        "status": "observed",
-        "value": [
-          {
-            "port": 18080,
-            "bind": "all",
-            "reachableFromProbe": true
-          },
-          {
-            "port": 46231,
-            "bind": "loopback",
-            "reachableFromProbe": false
-          }
-        ],
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "inspect",
-            "source": "web#1",
-            "text": "18080 all reachable=true\n46231 loopback reachable=false"
-          }
-        ]
-      },
-      "httpPaths": {
-        "status": "observed",
-        "value": [
-          {
-            "port": 18080,
-            "path": "/",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/health",
-            "status": 200
-          },
-          {
-            "port": 18080,
-            "path": "/healthz",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/up",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/api/health",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/status",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/ping",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/_health",
-            "status": 404
-          },
-          {
-            "port": 18080,
-            "path": "/actuator/health",
-            "status": 404
-          }
-        ],
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404"
-          }
-        ]
-      },
-      "smoke": {
-        "status": "observed",
-        "value": {
-          "path": "/",
-          "status": 404
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "http",
-            "source": "web#1",
-            "text": "GET 18080/ 404"
-          }
-        ]
-      },
-      "database": {
-        "status": "observed",
-        "value": {
-          "engine": "postgres",
-          "connections": 1,
-          "tablesAfterStart": [
-            "messages",
-            "ticks"
-          ],
-          "sqliteFileWritten": false
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "postgres",
-            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 1 application connections; tables in deployz: messages, ticks"
-          },
-          {
-            "kind": "command",
-            "source": "mysql",
-            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 12, baseline 9, harness sessions 3: 0 application connections; tables in deployz: (none)"
-          },
-          {
-            "kind": "command",
-            "source": "valkey",
-            "text": "INFO stats total_connections_received = 5, baseline 2, harness sessions 3: 0 application connections; DBSIZE = 0"
-          },
-          {
-            "kind": "command",
-            "source": "minio",
-            "text": "mc ls --recursive rc-repo-300: 0 objects"
-          }
-        ]
-      },
-      "startupMigration": {
-        "status": "observed",
-        "value": {
-          "tablesCreatedByStart": false,
-          "secondStartHealthy": true
-        },
-        "arch": "amd64-ci-build",
-        "evidence": []
-      },
-      "migrationCommands": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "no candidate migration command"
-      },
-      "redis": {
-        "status": "observed",
-        "value": {
-          "connected": false,
-          "clients": 0
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "valkey",
-            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
-          }
-        ]
-      },
-      "objectStorage": {
-        "status": "observed",
-        "value": {
-          "objectsWritten": 0
-        },
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "command",
-            "source": "minio",
-            "text": "mc ls --recursive rc-repo-300: 0 objects"
-          }
-        ]
-      },
-      "localDiskWrites": {
-        "status": "observed",
-        "value": [],
-        "arch": "amd64-ci-build",
-        "evidence": [
-          {
-            "kind": "diff",
-            "source": "web#1",
-            "text": "no local writes"
-          }
-        ]
-      },
-      "workers": {
-        "status": "observed",
-        "value": [
-          {
-            "command": "node dist/worker.js",
-            "stayedRunning": true,
-            "exitCode": null,
-            "restarts": 0,
-            "queueActivity": null
-          }
-        ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "log",
@@ -620,19 +265,19 @@
       "requiredVariables": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate variable"
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=25.668\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.905\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -642,7 +287,7 @@
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=25.721\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.904\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
@@ -654,17 +299,32 @@
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=21.756\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=6.406\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
             "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 404 -> 404\n18080/health 200 -> 200\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 404 -> 404"
           }
         ]
       },
@@ -676,11 +336,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 17.709,
+            "startSeconds": 6.413,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -708,15 +368,395 @@
         ],
         "variables": [],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 41.156,
-        "setA": 410.943,
-        "twoCopies": 85.717
+        "build": 17.787,
+        "setA": 342.016,
+        "twoCopies": 17.611
+      }
+    },
+    {
+      "startedAt": "2026-10-19T18:31:19.453Z",
+      "harnessVersion": "2",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 13,
+          "imageBytes": 209506472,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "target": null,
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-300:6bcc7785f43cc9687dca525f703cb7fe3ef6dc5d from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=6.364\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 40277,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "18080 all reachable=true\n40277 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 200
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 404
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ 404"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "postgres",
+          "connections": 1,
+          "tablesAfterStart": [
+            "messages",
+            "ticks"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 1 application connections; tables in deployz: messages, ticks"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 12, baseline 9, harness sessions 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 5, baseline 2, harness sessions 3: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-300: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-300: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "observed",
+        "value": [
+          {
+            "command": "node dist/worker.js",
+            "stayedRunning": true,
+            "exitCode": null,
+            "restarts": 0,
+            "queueActivity": null
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "worker#1",
+            "text": "erializeResponse (/app/node_modules/@smithy/core/dist-cjs/submodules/protocols/index.js:580:62)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/schema/index.js:23:24\n    at async /app/node_modules/@smithy/core/dist-cjs/index.js:118:20\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/retry/index.js:175:50\n    at async /app/node_modules/@aws-sdk/middleware-sdk-sqs/dist-cjs/index.js:50:22\n    at async /app/node_modules/@aws-sdk/core/dist-cjs/submodules/client/index.js:125:26\n    at async poll (/app/dist/dlq-monitor.js:12:13) {\n  '$metadata': {\n    httpStatusCode: 400,\n    requestId: undefined,\n    extendedRequestId: undefined,\n    cfId: undefined,\n    attempts: 1,\n    totalRetryDelay: 0\n  }\n}\nqueue poll failed SyntaxError: Unexpected token '<', \"<?xml vers\"... is not valid JSON\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$response on this object.\n    at JSON.parse (<anonymous>)\n    at JsonShapeDeserializer2.read (/app/node_modules/@aws-sdk/core/dist-cjs/submodules/protocols/index.js:522:27)\n    at AwsJson1_0Protocol.deserializeResponse (/app/node_modules/@smithy/core/dist-cjs/submodules/protocols/index.js:580:62)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/schema/index.js:23:24\n    at async /app/node_modules/@smithy/core/dist-cjs/index.js:118:20\n    at async /app/node_modules/@smithy/core/dist-cjs/submodules/retry/index.js:175:50\n    at async /app/node_modules/@aws-sdk/middleware-sdk-sqs/dist-cjs/index.js:50:22\n    at async /app/node_modules/@aws-sdk/core/dist-cjs/submodules/client/index.js:125:26\n    at async poll (/app/dist/orders-consumer.js:14:25) {\n  '$metadata': {\n    httpStatusCode: 400,\n    requestId: undefined,\n    extendedRequestId: undefined,\n    cfId: undefined,\n    attempts: 1,\n    totalRetryDelay: 0\n  }\n}\n"
+          }
+        ]
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate variable"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=6.564\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=0.947\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=6.368\n18080/ 404\n18080/health 200\n18080/healthz 404\n18080/up 404\n18080/api/health 404\n18080/status 404\n18080/ping 404\n18080/_health 404\n18080/actuator/health 404\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "canary web listening on 18080\n(node:1) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)\nversions published after the first week of January 2027\nwill require node >=22. You are running node v20.20.2.\n\nTo continue receiving updates to AWS services, bug fixes,\nand security updates please upgrade to node >=22.\n\nMore information can be found at: https://a.co/c895JFp\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 404 -> 404\n18080/health 200 -> 200\n18080/healthz 404 -> 404\n18080/up 404 -> 404\n18080/api/health 404 -> 404\n18080/status 404 -> 404\n18080/ping 404 -> 404\n18080/_health 404 -> 404\n18080/actuator/health 404 -> 404\n18080/ (smoke) 404 -> 404"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 6.364,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [
+          "node dist/worker.js"
+        ],
+        "variables": [],
+        "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.234,
+        "setA": 324.64,
+        "twoCopies": 15.993
       }
     }
   ],
