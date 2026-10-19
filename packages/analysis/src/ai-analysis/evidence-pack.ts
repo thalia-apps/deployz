@@ -8,8 +8,8 @@ import type { AnalysisResult } from '../analyser.js';
 import { listDockerfileCandidates, type FileTree } from '../detectors.js';
 import { redactSecrets } from '../redact.js';
 
-/** The whole pack, in characters of file content (about 30k tokens). */
-export const MAX_PACK_CHARS = 120_000;
+/** The whole pack, in characters of file content (measured: about 50k tokens, inside the spend check). */
+export const MAX_PACK_CHARS = 90_000;
 /** One file, in characters. A longer file keeps its first lines only. */
 export const MAX_FILE_CHARS = 16_000;
 /** Repository paths listed (names only) so the model knows what exists. */

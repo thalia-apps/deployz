@@ -303,6 +303,13 @@ describe('checkFacts: the other facts', () => {
   const find = (checks: ReturnType<typeof checkFacts>, fact: string, subject: string | null = null) =>
     checks.find((c) => c.fact === fact && c.subject === subject)!;
 
+  it('accepts "no database" only from an embedded-store line, never from a generic word such as default', () => {
+    const local = ctxOf({ 'config.js': "const db = process.env.DB_DRIVER || 'default';\nconst file = 'data/app.sqlite';" });
+    const none = (line: number, quote: string) => factsOf({ database: high('none' as const, cite('config.js', line, quote)) });
+    expect(find(checkFacts(local, none(1, "'default'"), null), 'database').ok).toBe(false);
+    expect(find(checkFacts(local, none(2, 'app.sqlite'), null), 'database').ok).toBe(true);
+  });
+
   it('returns one check per fact, then per worker and per variable', () => {
     const checks = checkFacts(
       ctx,
