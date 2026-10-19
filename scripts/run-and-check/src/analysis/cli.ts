@@ -10,7 +10,7 @@
  * Writes analyses/<analyser>/<id>.json (`analysisResultFileSchema`).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -82,8 +82,10 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     console.error('--engine ai needs AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY.');
     return 1;
   }
-  const analyser = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);
-  const outDir = resolve(options.out ?? join(ANALYSES_DIR, analyser));
+  const defaultName = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);
+  const outDir = resolve(options.out ?? join(ANALYSES_DIR, defaultName));
+  // The folder names the run: the full runs and the reports key on it too (.runs/full/<analyser>/).
+  const analyser = basename(outDir);
   mkdirSync(outDir, { recursive: true });
 
   const token = options.offline ? null : resolveGithubToken();
