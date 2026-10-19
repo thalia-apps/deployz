@@ -51,7 +51,7 @@ export interface WorkerCommand {
 
 export interface MergeResult {
   readonly analysis: AnalysisResult;
-  /** Markers for the API: `migrationCommand` and `workers` when the AI decided them. */
+  /** Markers for the API: `migrationCommand`, `noMigration` and `workers` when the AI decided them. */
   readonly aiResolved: readonly string[];
   /** The AI migration command to qualify, or the open question when it was not verified. */
   readonly migration: { readonly command: string } | { readonly candidate: string; readonly reason: string } | null;
@@ -189,7 +189,10 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
 
   // ── Start command ──
   const start = facts.startCommand.value;
-  const startDecision = record('startCommand', start, decide('startCommand', start !== null && start !== firstString(meta['startupCommands']), true));
+  // The image runs its own CMD; the start command only answers the gate. A failed
+  // AI description is a question only when the rules found no command either.
+  const rulesStart = firstString(meta['startupCommands']);
+  const startDecision = record('startCommand', start, decide('startCommand', start !== null && start !== rulesStart, rulesStart === null));
   if (startDecision === 'ai' && start !== null) {
     meta['startupCommands'] = [start];
     meta['hasStartupCommand'] = true;
@@ -217,9 +220,17 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   const migration = facts.migration.value;
   let migrationResult: MergeResult['migration'] = null;
   const modeDiffers = migration.mode !== 'unknown' && migration.mode !== meta['migrationMode'];
-  const migrationDecision = record('migration', migration, decide('migration', modeDiffers || migration.command !== null, migration.command !== null));
+  const migrationOutcome = decide('migration', modeDiffers || migration.command !== null, migration.command !== null);
+  // "No migration" holds only when the deployment has no database after the merge
+  // (the analyst may have said "none" for a database that the rules keep).
+  const migrationDecision =
+    migration.mode === 'none' && rulesDatabase(meta) !== 'none' && migrationOutcome.decision === 'ai'
+      ? record('migration', migration, { decision: 'rules', reasons: ['the deployment keeps a database, so its schema is migrated'] })
+      : record('migration', migration, migrationOutcome);
   if (migrationDecision === 'ai') {
     meta['migrationMode'] = migration.mode;
+    // A verified "no migration" also removes any migration script the rules picked.
+    if (migration.mode === 'none') aiResolved.push('noMigration');
     if (migration.mode === 'startup') {
       meta['migrationStartupEvidence'] = facts.migration.evidence.map((item) => ({ path: item.path, line: item.line, fromDockerCommand: false }));
     }
@@ -260,7 +271,10 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
     const entry = model.find((item) => item['key'] === name);
     // Deployz provides these values itself; they are never the vendor's to supply.
     if (entry?.['classification'] === 'deployz_managed' || entry?.['classification'] === 'deployz_generated') continue;
-    const outcome = decide('requiredVariables', entry?.['required'] !== true, true, name);
+    // A variable that the analyst claims and the checks refute (a default, a guard, low
+    // confidence) is dropped; only an open reviewer objection asks the vendor.
+    const objected = questions.some((question) => question.fact === 'requiredVariables' && question.subject === name);
+    const outcome = decide('requiredVariables', entry?.['required'] !== true, objected, name);
     if (record('requiredVariables', true, outcome, name) === 'agree') continue;
     if (outcome.decision === 'ai' || outcome.decision === 'question') {
       if (entry) Object.assign(entry, { required: true, classification: 'customer_required' });

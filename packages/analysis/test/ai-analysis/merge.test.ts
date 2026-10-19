@@ -128,7 +128,8 @@ describe('mergeAiFacts: a differing fact that passes', () => {
 
   it('start command: the AI value replaces the startup commands', () => {
     const { merged } = run(baseTree, factsOf({ startCommand: high('node dist/server.js', cite('docs/notes.md', NOTE.worker, 'node dist/queue.js')) }));
-    expect(decision(merged, 'startCommand')?.decision).toBe('question');
+    // The rules know the image command, so a failed description keeps it instead of asking.
+    expect(decision(merged, 'startCommand')?.decision).toBe('rules');
     const passing = run(
       { ...baseTree, 'docs/start.md': 'Start with node dist/server.js' },
       factsOf({ startCommand: high('node dist/server.js', cite('docs/start.md', 1, 'node dist/server.js')) }),
@@ -207,11 +208,23 @@ describe('mergeAiFacts: port, health and start that fail become questions', () =
     expect(finding(merged.analysis, 'health-endpoint')).toMatchObject({ detected: false, mode: 'vendor_required' });
   });
 
-  it('start command', () => {
-    const { merged } = run(baseTree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 4, 'dist/index.js')) }));
+  it('start command, when the rules found no command either', () => {
+    const tree: FileTree = {
+      ...baseTree,
+      Dockerfile: 'FROM node:20\nEXPOSE 3000',
+      'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
+    };
+    const { rules, merged } = run(tree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 2, 'EXPOSE 3000')) }));
+    expect(rules.metadata['startupCommands'] ?? []).toEqual([]);
     expect(decision(merged, 'startCommand')?.decision).toBe('question');
     expect(merged.analysis.metadata['startupCommands']).toEqual([]);
     expect(merged.analysis.metadata['hasStartupCommand']).toBe(false);
+  });
+
+  it('start command: a failed description keeps the command the rules found', () => {
+    const { rules, merged } = run(baseTree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 4, 'dist/index.js')) }));
+    expect(decision(merged, 'startCommand')?.decision).toBe('rules');
+    expect(merged.analysis.metadata['startupCommands']).toEqual(rules.metadata['startupCommands']);
   });
 
   it('an open reviewer objection makes a question even when the AI agrees with the rules', () => {
@@ -318,7 +331,8 @@ describe('mergeAiFacts: required variables', () => {
       requiredVariables: [{ name: 'OPT_FLAG', confidence: 'high', evidence: cite('src/index.ts', 6, 'process.env.OPT_FLAG') }],
     });
     const { merged } = run(baseTree, facts);
-    expect(decision(merged, 'requiredVariables', 'OPT_FLAG')?.decision).toBe('question');
+    expect(decision(merged, 'requiredVariables', 'OPT_FLAG')?.decision).toBe('rules');
+    expect(envEntry(merged.analysis, 'OPT_FLAG')?.['required']).not.toBe(true);
   });
 
   it('makes a rules-required variable optional when the AI omits it and the pack shows a guarded read', () => {
@@ -413,6 +427,17 @@ describe('mergeAiFacts: migration', () => {
     expect(merged.analysis.metadata['migrationMode']).toBe('startup');
     expect(merged.analysis.metadata['migrationStartupEvidence']).toEqual([{ path: 'Procfile', line: 1, fromDockerCommand: false }]);
     expect(merged.migration).toBeNull();
+  });
+
+  it('keeps the rules mode for "no migration" when the deployment keeps a database', () => {
+    const facts = factsOf({
+      database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')),
+      migration: high({ mode: 'none' as const, command: null }, []),
+    });
+    const { rules, merged } = run(baseTree, facts);
+    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
+    expect(decision(merged, 'migration')).toMatchObject({ decision: 'rules', reasons: ['the deployment keeps a database, so its schema is migrated'] });
+    expect(merged.analysis.metadata['migrationMode']).toBe(rules.metadata['migrationMode']);
   });
 
   it('keeps the rules mode when a mode without a command fails', () => {

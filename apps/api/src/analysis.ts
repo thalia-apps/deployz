@@ -1128,6 +1128,7 @@ function detectedMigrationCommand(
   aiResolved: string[],
 ): MigrationCommandResolution | { command: null } | undefined {
   if (analysis.metadata['migrationMode'] === 'startup') return { command: null };
+  if (aiResolved.includes('noMigration')) return { command: null };
   const migrationCommands = analysis.metadata['migrationCommands'];
   if (aiResolved.includes('migrationCommand') && Array.isArray(migrationCommands) && typeof migrationCommands[0] === 'string') {
     return qualifyMigrationCommand(tree, migrationCommands[0], '');

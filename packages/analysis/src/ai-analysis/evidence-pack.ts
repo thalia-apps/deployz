@@ -224,10 +224,10 @@ export function renderEvidencePack(pack: EvidencePack): string {
   const parts: string[] = [
     '## Deployz binding contract (JSON)',
     'The environment variables Deployz sets: always; for this repository (the resources the deterministic rules found); and the standard names it sets when a database, Redis or S3 storage is provisioned.',
-    JSON.stringify(pack.bindingContract),
+    JSON.stringify(pack.bindingContract, null, 1),
     '',
     '## Rules Analysis signals (JSON, unverified first guess)',
-    JSON.stringify(pack.signals),
+    JSON.stringify(pack.signals, null, 1),
     '',
     `## Repository paths (${pack.paths.length} of ${pack.totalPaths})`,
     pack.paths.join('\n'),
