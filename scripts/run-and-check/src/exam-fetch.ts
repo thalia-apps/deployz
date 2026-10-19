@@ -44,8 +44,8 @@ function originRepository(): string {
 
 function extract(zip: string, into: string): void {
   mkdirSync(into, { recursive: true });
-  // bsdtar (Windows) reads zip files; Linux and macOS have unzip.
-  if (process.platform === 'win32') execFileSync('tar', ['-xf', zip, '-C', into]);
+  // The Windows tar.exe is bsdtar and reads zip files (a GNU tar earlier on PATH, as in Git Bash, does not); Linux and macOS have unzip.
+  if (process.platform === 'win32') execFileSync(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe'), ['-xf', zip, '-C', into]);
   else execFileSync('unzip', ['-o', '-q', zip, '-d', into]);
 }
 

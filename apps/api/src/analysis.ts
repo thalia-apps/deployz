@@ -29,6 +29,7 @@ import {
   mainCommandRunsWorker,
   mergeAiAnalysis,
   migrationRunnerVerdict,
+  redactSecrets,
   runAiAnalysis,
   selectAiContextFiles,
   selectMigrationScript,
@@ -875,8 +876,15 @@ async function runAiEngine(
     return { merge: outcome.merge, record: { status: 'ok', ...outcome.report, generatedAt: new Date().toISOString() } };
   } catch (error) {
     const reason = error instanceof Error ? error.name : 'unknown';
-    console.warn(JSON.stringify({ event: 'ai_analysis_fallback', reason, latencyMs: Date.now() - startedAt }));
-    return { merge: null, record: { status: 'fallback', reason, latencyMs: Date.now() - startedAt } };
+    // The provider's status and a short, redacted message: enough to tell a
+    // routing or key problem from an outage, never the request content.
+    const statusCode = (error as { statusCode?: unknown } | null)?.statusCode;
+    const detail = {
+      ...(typeof statusCode === 'number' ? { statusCode } : {}),
+      ...(error instanceof Error ? { message: redactSecrets(error.message).slice(0, 200) } : {}),
+    };
+    console.warn(JSON.stringify({ event: 'ai_analysis_fallback', reason, ...detail, latencyMs: Date.now() - startedAt }));
+    return { merge: null, record: { status: 'fallback', reason, ...detail, latencyMs: Date.now() - startedAt } };
   }
 }
 
