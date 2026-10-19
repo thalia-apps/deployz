@@ -1,0 +1,265 @@
+{
+  "id": "repo-209",
+  "commit": "23e7e4da008fdc9ac5b27b2625faa9144d46f208",
+  "analyser": "ai@6cc47cc6-examA",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "container/dist.dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "searx/version_frozen.py"
+      ]
+    },
+    "web": {
+      "command": "/usr/local/searxng/entrypoint.sh",
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GITHUB_REF_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REPOSITORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/version.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_DEBUG_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_DISABLE_ETC_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/settings_loader.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_SETTINGS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/settings_loader.py",
+            "read in utils/searxng_check.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in searx/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (container/dist.dockerfile copies searx/version_frozen.py). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (container/dist.dockerfile copies searx/version_frozen.py). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies searx/version_frozen.py, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "none",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": null,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 8080,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/usr/local/searxng/entrypoint.sh",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/healthz",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "none",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "searx/version.py:47 reads it with a default or a guard"
+        ],
+        "subject": "GITHUB_REF_NAME",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "searx/version.py:47 reads it with a default or a guard"
+        ],
+        "subject": "GITHUB_REPOSITORY",
+        "decision": "ai"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.13213332,
+        "promptTokens": 27292,
+        "completionTokens": 1215
+      },
+      "latencyMs": 15853
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.2208492,
+        "promptTokens": 17343,
+        "completionTokens": 126
+      },
+      "latencyMs": 3867
+    },
+    "latencyMs": 19729,
+    "objections": {
+      "total": 0,
+      "confirmed": 0,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T06:34:33.204Z",
+    "failedChecks": 0,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

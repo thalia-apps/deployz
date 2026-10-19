@@ -1,0 +1,282 @@
+{
+  "id": "new-31",
+  "commit": "3d2e93bc4fb5d7b90a1a3ae5957be26d7305a303",
+  "analyser": "ai@6cc47cc6-examA",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "NODE_ENV=production bun --bun turbo build",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 3721
+    },
+    "health": {
+      "path": "/healthy",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": "bun run ./scripts/migrate.ts",
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/logger/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNDB_AUTH_OTP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/graphql/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNDB_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares UNDB_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "UNDB_DISABLE_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/graphql/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNDB_OAUTH_GITHUB_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/graphql/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "UNDB_OAUTH_GOOGLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/graphql/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "UNDB_STORAGE_PROVIDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set \"s3\" to use the managed S3 bucket",
+            "read in packages/env/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "UNDB_VERIFY_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/backend/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "This app is configured to run a database migration on deploy but the manifest does not require a database — Deployz cannot run migrations without a provisioned database"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "This app is configured to run a database migration on deploy but the manifest does not require a database — Deployz cannot run migrations without a provisioned database"
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: UNDB_STORAGE_PROVIDER. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "none",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": true,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 3721,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/tini -- ./undb",
+        "reasons": [
+          "Dockerfile:55 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/healthy",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "reasons": [
+          "apps/backend/src/app.ts is not on the image start path"
+        ],
+        "subject": null,
+        "decision": "rules"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": true,
+        "reasons": [],
+        "subject": "UNDB_STORAGE_PROVIDER",
+        "decision": "agree"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.17082252,
+        "promptTokens": 36977,
+        "completionTokens": 1232
+      },
+      "latencyMs": 16109
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.310159575,
+        "promptTokens": 23604,
+        "completionTokens": 365
+      },
+      "latencyMs": 6900
+    },
+    "latencyMs": 23024,
+    "objections": {
+      "total": 2,
+      "confirmed": 2,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T05:45:59.655Z",
+    "failedChecks": 2,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}
