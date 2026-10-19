@@ -1,0 +1,14 @@
+id: new-4
+set: tuning
+source:
+  kind: git
+  repository: Bubka/2FAuth
+  commit: 2023d6873eafa89d50cc331ca02c4d46acd60913
+vendorInputs:
+  - name: APP_KEY
+    source: { kind: generated, format: alnum-32 }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-09-02T20:20:53Z. Laravel application (PHP 8.4)."
+  - "Source build confirmed: root Dockerfile. The final stage installs PHP, nginx and supervisord on alpine, copies vendor/ from the composer stage and runs COPY . . (Dockerfile:101-105). The built front end is committed in public/build, so there is no Node stage. No build override. EXPOSE 8000 (Dockerfile:78)."
+  - "The Dockerfile sets DB_CONNECTION=sqlite and DB_DATABASE=/srv/database/database.sqlite (Dockerfile:112-116). The PHP image has the pdo_sqlite, pdo_mysql and pdo_pgsql drivers (Dockerfile:53)."
+  - "APP_KEY: Laravel needs a key of exactly 32 raw characters (or base64: plus 32 bytes). The entrypoint reads APP_KEY from the environment (docker/entrypoint.sh:45). The format alnum-32 gives 32 raw characters."

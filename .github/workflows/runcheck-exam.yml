@@ -1,25 +1,27 @@
 # Runs the Docker run-and-check exam (scripts/run-and-check) on x86_64
 # runners: one matrix job per recipe, so a full exam takes about as long as
-# its slowest repository. It starts only by hand (workflow_dispatch), uses no
-# repository secrets, and uploads one small JSON result per recipe. Fetch the
-# results with `pnpm runcheck:fetch --run <run id>`.
+# its slowest repository. It starts only by hand (workflow_dispatch) and
+# uploads one small JSON result per recipe. Fetch the results with
+# `pnpm runcheck:fetch --run <run id>`. Only the analyse-ai job reads secrets
+# (the AI gateway); it reads repository files as data and runs no repository
+# code. The jobs that build and run repository code get no secrets.
 name: runcheck-exam
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: observe (write observations) or full (run the analysed settings twice)
+        description: observe (write observations), full (run the analysed settings twice) or analyse-ai (the AI engine Analysis)
         required: true
         type: choice
-        options: [observe, full]
+        options: [observe, full, analyse-ai]
       repos:
         description: Recipe ids separated by spaces, or "all"
         required: true
         default: all
         type: string
       analysis:
-        description: Analyser folder under scripts/run-and-check/analyses (full mode), for example rules@0fc073b8
+        description: Folder under scripts/run-and-check/analyses to read (full) or to write (analyse-ai), for example rules@0fc073b8
         required: false
         default: ''
         type: string
@@ -53,6 +55,9 @@ jobs:
           if [[ "$MODE" == full ]]; then
             [[ "$ANALYSIS" =~ ^[A-Za-z0-9_.@-]+$ && -d "analyses/$ANALYSIS" ]] || { echo "invalid analysis folder"; exit 1; }
           fi
+          if [[ "$MODE" == analyse-ai ]]; then
+            [[ "$ANALYSIS" =~ ^ai@[A-Za-z0-9_.@-]+$ ]] || { echo "analyse-ai needs an output folder named ai@..."; exit 1; }
+          fi
           if [[ "$REPOS" == all ]]; then
             ids=$(ls recipes/*.yaml | xargs -n1 basename | sed 's/\.yaml$//')
           else
@@ -63,10 +68,64 @@ jobs:
           done
           echo "ids=$(printf '%s\n' $ids | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
 
+  analyse:
+    needs: plan
+    if: inputs.mode == 'analyse-ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        id: ${{ fromJson(needs.plan.outputs.ids) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm turbo run build --filter=./packages/* --filter=@deployz/api
+
+      - name: AI engine Analysis
+        env:
+          ID: ${{ matrix.id }}
+          ANALYSIS: ${{ inputs.analysis }}
+          GITHUB_TOKEN: ${{ github.token }}
+          AI_GATEWAY_BASE_URL: ${{ secrets.AI_GATEWAY_BASE_URL }}
+          AI_PROVIDER_API_KEY: ${{ secrets.AI_PROVIDER_API_KEY }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+        run: pnpm runcheck:analyse --engine ai --repo "$ID" --out "scripts/run-and-check/analyses/$ANALYSIS"
+
+      - name: Upload analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runcheck-analysis-${{ inputs.analysis }}-${{ matrix.id }}
+          path: scripts/run-and-check/analyses/${{ inputs.analysis }}/${{ matrix.id }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
   run:
     needs: plan
+    if: inputs.mode != 'analyse-ai'
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    env:
+      # The shared runner IPs exceed the ECR Public anonymous data limit.
+      RUNCHECK_LIBRARY_REGISTRY: docker.io/library
     strategy:
       fail-fast: false
       max-parallel: 20

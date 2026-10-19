@@ -1,0 +1,11 @@
+id: new-10
+set: tuning
+source:
+  kind: git
+  repository: smartstore/Smartstore
+  commit: 424752a556c8d1676eec83a6d98c5a126cd6b741
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-17T02:30:49Z. ASP.NET Core (.NET 10) e-commerce application."
+  - "Source build confirmed: root Dockerfile builds Smartstore.sln and publishes Smartstore.Web in an sdk stage, then copies the output to an aspnet stage (Dockerfile:6-34). Its header says it builds the source inside the container. NoBuild.Dockerfile and Nano.Dockerfile are other variants and are not used. No build override."
+  - "The image listens on port 80 (ASPNETCORE_URLS and --urls in Dockerfile:30-42)."
+  - "The reference compose file keeps the tenant settings in App_Data/Tenants and offers a PostgreSQL service (docker-compose.postgres.yml:12-21). docker-compose.sqlserver.yml offers SQL Server."

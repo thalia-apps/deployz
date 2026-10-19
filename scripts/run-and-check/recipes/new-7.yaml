@@ -1,0 +1,10 @@
+id: new-7
+set: tuning
+source:
+  kind: git
+  repository: Erudika/scoold
+  commit: efe1af36dd2cd7b5818f7f7c68c611f8b75581ef
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-09-29T12:46:47Z. Spring Boot application (Maven, Java 25 runtime). Q and A platform."
+  - "Source build confirmed: root Dockerfile. A maven stage runs mvn package and copies scoold.jar. The final stage is eclipse-temurin:25-jre-alpine (Dockerfile:1-30). No build override. EXPOSE 8000."
+  - "The reference docker-compose.yml starts two services: a para service (erudikaltd/para) and scoold. Scoold gets -Dscoold.para_endpoint=http://para:8080 (docker-compose.yml:2-35)."

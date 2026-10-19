@@ -1,0 +1,17 @@
+id: new-8
+set: tuning
+source:
+  kind: git
+  repository: Grashjs/cmms
+  commit: e321349e0b972141856fd364d72501f74e08a96d
+build:
+  dockerfile: api/Dockerfile
+  context: api
+vendorInputs:
+  - name: JWT_SECRET_KEY
+    source: { kind: generated, format: base64-32 }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-18T17:42:47Z. Spring Boot API (Maven, Java 17). The repository also has frontend/Dockerfile for a separate React front end."
+  - "Source build confirmed: api/Dockerfile runs mvn clean package in a maven stage and copies the jar to a JRE stage (api/Dockerfile:1-18). The COPY lines use paths relative to api/, so the context is api. EXPOSE 8080."
+  - "JWT_SECRET_KEY: api/src/main/resources/application.yml:81 reads it with no default. The example value in .env.example is a base64 string of 44 characters, so the format is base64-32."
+  - "The datasource reads DB_URL (host:port/database, without the jdbc:postgresql:// prefix), DB_USER and DB_PWD, all without defaults (application.yml:4-6)."

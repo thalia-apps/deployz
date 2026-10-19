@@ -1,0 +1,1083 @@
+{
+  "schemaVersion": 1,
+  "id": "new-20",
+  "set": "holdout",
+  "repository": "grokability/snipe-it",
+  "commit": "d98baec311438e0818988c130eefa8e813a34c22",
+  "recipeHash": "a11c5acbc89a98e8e7d66b7ab7272200324355fa164a29b1ef7c4694d755397e",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:38:54.045Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 86,
+          "imageBytes": 979259956,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#33 7.972 \n#33 7.972   \u001b[37;44m INFO \u001b[39;49m Publishing \u001b[1m[livewire:assets]\u001b[22m assets.  \n#33 7.972 \n#33 7.996   Copying directory \u001b[1m[vendor/livewire/livewire/dist]\u001b[22m to \u001b[1m[public/vendor/livewire]\u001b[22m  \u001b[32;1mDONE\u001b[39;22m\n#33 7.996 \n#33 8.005 93 packages you are using are looking for funding.\n#33 8.005 Use the `composer fund` command to find out more!\n#33 DONE 8.3s\n#34 [stage-0 28/30] COPY docker/startup.sh docker/supervisord.conf /\n#34 DONE 0.0s\n#35 [stage-0 29/30] COPY docker/supervisor-exit-event-listener /usr/bin/supervisor-exit-event-listener\n#35 DONE 0.0s\n#36 [stage-0 30/30] RUN chmod +x /startup.sh /usr/bin/supervisor-exit-event-listener\n#36 DONE 0.1s\n#37 exporting to image\n#37 exporting layers\n#37 exporting layers 12.2s done\n#37 writing image sha256:a52159be2eb134cb54bbd473251006fbe6340dc1477710d4ce6778dd1ed91249 done\n#37 naming to docker.io/deployz-runcheck/new-20:d98baec311438e0818988c130eefa8e813a34c22 done\n#37 DONE 12.2s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, MYSQL_SSL_CA, MYSQL_HOST, MYSQL_PORT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_DATABASE, DB_USERNAME, PRIVATE_AWS_BUCKET, PUBLIC_AWS_BUCKET, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, MYSQL_URL, DB_PASSWORD, APP_KEY, MANDRILL_SECRET, PUSHER_APP_KEY, PUSHER_APP_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.331\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.88ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  11.77ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  20.12ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.57ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.97ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  6.78ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.62ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 28.17ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 26.02ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:41:33,664 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:41:33,666 INFO supervisord started with pid 1\n2026-10-18 22:41:34,668 INFO spawned: 'exit_on_any_fatal' with pid 166\n2026-10-18 22:41:34,669 INFO spawned: 'apache' with pid 167\n2026-10-18 22:41:34,671 INFO spawned: 'run_schedule' with pid 168\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:41:36,091 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:41:36,091 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:41:36,091 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 40835,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n40835 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 302
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 302
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 302"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "mysql",
+          "connections": 22,
+          "tablesAfterStart": [
+            "accessories",
+            "accessories_checkout",
+            "action_logs",
+            "asset_external_sources",
+            "asset_logs",
+            "asset_uploads",
+            "assets",
+            "calendar_events",
+            "categories",
+            "checkout_acceptances",
+            "checkout_requests",
+            "companies",
+            "company_user",
+            "components",
+            "components_assets",
+            "consumables",
+            "consumables_users",
+            "custom_field_custom_fieldset",
+            "custom_fields",
+            "custom_fieldsets",
+            "custom_user_labels",
+            "departments",
+            "depreciations",
+            "imports",
+            "kits",
+            "kits_accessories",
+            "kits_consumables",
+            "kits_licenses",
+            "kits_models",
+            "license_seats",
+            "licenses",
+            "locations",
+            "login_attempts",
+            "maintenance_types",
+            "maintenances",
+            "manufacturers",
+            "migrations",
+            "models",
+            "models_custom_fields",
+            "oauth_access_tokens",
+            "oauth_auth_codes",
+            "oauth_clients",
+            "oauth_personal_access_clients",
+            "oauth_refresh_tokens",
+            "order_items",
+            "orders",
+            "password_resets",
+            "permission_groups",
+            "report_templates",
+            "requested_assets",
+            "requests",
+            "saml_nonces",
+            "settings",
+            "status_labels",
+            "suppliers",
+            "sync_adapter_instances",
+            "telescope_entries",
+            "telescope_entries_tags",
+            "telescope_monitoring",
+            "throttle",
+            "users",
+            "users_groups"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 32, baseline 9, harness sessions 1: 22 application connections; tables in deployz: accessories, accessories_checkout, action_logs, asset_external_sources, asset_logs, asset_uploads, assets, calendar_events, categories, checkout_acceptances, checkout_requests, companies, company_user, components, components_assets, consumables, consumables_users, custom_field_custom_fieldset, custom_fields, custom_fieldsets, custom_user_labels, departments, depreciations, imports, kits, kits_accessories, kits_consumables, kits_licenses, kits_models, license_seats, licenses, locations, login_attempts, maintenance_types, maintenances, manufacturers, migrations, models, models_custom_fields, oauth_access_tokens, oauth_auth_codes, oauth_clients, oauth_personal_access_clients, oauth_refresh_tokens, order_items, orders, password_resets, permission_groups, report_templates, requested_assets, requests, saml_nonces, settings, status_labels, suppliers, sync_adapter_instances, telescope_entries, telescope_entries_tags, telescope_monitoring, throttle, users, users_groups"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-20: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-20: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/var/lib/apache2/module/disabled_by_admin/ssl",
+          "/var/lib/apache2/module/enabled_by_admin",
+          "/var/www/html/database/migrations/2016_06_01_000001_create_oauth_auth_codes_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000002_create_oauth_access_tokens_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000003_create_oauth_refresh_tokens_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000004_create_oauth_clients_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000005_create_oauth_personal_access_clients_table.php",
+          "/var/www/html/storage/framework/sessions/3AnghGjOEZ2GCbQpY4cGfjtcGwG2tS8I76HgNe0r",
+          "/var/www/html/storage/framework/sessions/3fSPxtWa3RT2slcVGOdTNoAWL9VlgtWG9CLt4703",
+          "/var/www/html/storage/framework/sessions/52PyZbE8GivZWF1MqVYlMquh3Q3c9VNl6CZ2gDTC",
+          "/var/www/html/storage/framework/sessions/9SXaEupGf494k8UJIChYtZlAMXXn2tIMGshbwqU1",
+          "/var/www/html/storage/framework/sessions/D9QcmF0WCMmZTLOYbY7rvBUq8BHZw32fuoiJeJH8",
+          "/var/www/html/storage/framework/sessions/DbbQNjuYQxSN2SfvW6JvQeQTfBdSRdn2djeb7nF9",
+          "/var/www/html/storage/framework/sessions/IoV76BRIZBkiP1NVIZjVbudyD1LN28PSeuRfFtnk",
+          "/var/www/html/storage/framework/sessions/KeYjE6auXVHJOHrzJy0Fryz2baZfVl1loALlpoFG",
+          "/var/www/html/storage/framework/sessions/NHJgAXD8pJsbKK6I6yohchSkh6hb1ByD8Tp3U7xB",
+          "/var/www/html/storage/framework/sessions/Pr8PM0DLH3J8zRySgR7CqJRJ4Q6zDmwlSp8rZGej",
+          "/var/www/html/storage/framework/sessions/Wj6RJoXn4UG5uphIyD6zgYvEGsHGczmxFdOykjOg",
+          "/var/www/html/storage/framework/sessions/Z8oYtsx7dYyMDV1vi6JgNxMe2aEjRwov0ksGVXFh",
+          "/var/www/html/storage/framework/sessions/fO70dujo8YTMGSbYqIiwpeAo8W3jESYncPpTB2dc",
+          "/var/www/html/storage/framework/sessions/g3151VupcGnOmOEkayEuvohvr4ZPYpR5pgUBqyrD",
+          "/var/www/html/storage/framework/sessions/jQan6UotLfAwyjr9NAeUwZ0kgMQwPLzO8VhY4p0x",
+          "/var/www/html/storage/framework/sessions/lp6ab1WeVGz1NkREqyFMF4cXZ65YbfP1EP5QmjfK",
+          "/var/www/html/storage/framework/sessions/oku3pcS1G8nS64lPOPACs8S4tLQ7hbKWz92jsO0Q",
+          "/var/www/html/storage/framework/sessions/tZUZiWh1VkrkSdJmiUvGSB6jWWyRRaINOPox1GJE"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "apache2/module/disabled_by_admin/ssl\n/var/lib/apache2/module/enabled_by_admin\n/var/www/html/database/migrations/2016_06_01_000001_create_oauth_auth_codes_table.php\n/var/www/html/database/migrations/2016_06_01_000002_create_oauth_access_tokens_table.php\n/var/www/html/database/migrations/2016_06_01_000003_create_oauth_refresh_tokens_table.php\n/var/www/html/database/migrations/2016_06_01_000004_create_oauth_clients_table.php\n/var/www/html/database/migrations/2016_06_01_000005_create_oauth_personal_access_clients_table.php\n/var/www/html/storage/framework/sessions/3AnghGjOEZ2GCbQpY4cGfjtcGwG2tS8I76HgNe0r\n/var/www/html/storage/framework/sessions/3fSPxtWa3RT2slcVGOdTNoAWL9VlgtWG9CLt4703\n/var/www/html/storage/framework/sessions/52PyZbE8GivZWF1MqVYlMquh3Q3c9VNl6CZ2gDTC\n/var/www/html/storage/framework/sessions/9SXaEupGf494k8UJIChYtZlAMXXn2tIMGshbwqU1\n/var/www/html/storage/framework/sessions/D9QcmF0WCMmZTLOYbY7rvBUq8BHZw32fuoiJeJH8\n/var/www/html/storage/framework/sessions/DbbQNjuYQxSN2SfvW6JvQeQTfBdSRdn2djeb7nF9\n/var/www/html/storage/framework/sessions/IoV76BRIZBkiP1NVIZjVbudyD1LN28PSeuRfFtnk\n/var/www/html/storage/framework/sessions/KeYjE6auXVHJOHrzJy0Fryz2baZfVl1loALlpoFG\n/var/www/html/storage/framework/sessions/NHJgAXD8pJsbKK6I6yohchSkh6hb1ByD8Tp3U7xB\n/var/www/html/storage/framework/sessions/Pr8PM0DLH3J8zRySgR7CqJRJ4Q6zDmwlSp8rZGej\n/var/www/html/storage/framework/sessions/Wj6RJoXn4UG5uphIyD6zgYvEGsHGczmxFdOykjOg\n/var/www/html/storage/framework/sessions/Z8oYtsx7dYyMDV1vi6JgNxMe2aEjRwov0ksGVXFh\n/var/www/html/storage/framework/sessions/fO70dujo8YTMGSbYqIiwpeAo8W3jESYncPpTB2dc\n/var/www/html/storage/framework/sessions/g3151VupcGnOmOEkayEuvohvr4ZPYpR5pgUBqyrD\n/var/www/html/storage/framework/sessions/jQan6UotLfAwyjr9NAeUwZ0kgMQwPLzO8VhY4p0x\n/var/www/html/storage/framework/sessions/lp6ab1WeVGz1NkREqyFMF4cXZ65YbfP1EP5QmjfK\n/var/www/html/storage/framework/sessions/oku3pcS1G8nS64lPOPACs8S4tLQ7hbKWz92jsO0Q\n/var/www/html/storage/framework/sessions/tZUZiWh1VkrkSdJmiUvGSB6jWWyRRaINOPox1GJE"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "observed",
+        "value": [
+          {
+            "name": "APP_KEY",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "ABLY_KEY",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "AWS_SESSION_TOKEN",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "DEBUGBAR_STORAGE_DRIVER",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "MANDRILL_SECRET",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "MEMCACHED_PASSWORD",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without APP_KEY",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without APP_KEY",
+            "text": "Please re-run this container with an environment variable $APP_KEY\nAn example APP_KEY you could use is: \nbase64:2AGlrCkxCuFhf8DLhHMsnWsXZVBOqOp1mVZQF1k/jk8=\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without ABLY_KEY",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.324\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ABLY_KEY",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.92ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  11.12ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  19.99ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.55ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 2.70ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  6.23ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.54ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 32.25ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 27.09ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:43:03,177 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:43:03,178 INFO supervisord started with pid 1\n2026-10-18 22:43:04,180 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:43:04,182 INFO spawned: 'apache' with pid 166\n2026-10-18 22:43:04,184 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:43:05,553 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:43:05,553 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:43:05,553 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without AWS_SESSION_TOKEN",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.323\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without AWS_SESSION_TOKEN",
+            "text": "026_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.73ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  8.62ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  13.18ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.44ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.55ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.81ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.48ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 30.94ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 19.32ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:43:33,769 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:43:33,770 INFO supervisord started with pid 1\n2026-10-18 22:43:34,772 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:43:34,774 INFO spawned: 'apache' with pid 166\n2026-10-18 22:43:34,776 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:43:36,159 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:43:36,159 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:43:36,159 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without DEBUGBAR_STORAGE_DRIVER",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.291\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without DEBUGBAR_STORAGE_DRIVER",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  2.61ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  13.80ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  19.22ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.61ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.63ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  6.68ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.51ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 39.12ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 22.92ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:44:04,143 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:44:04,145 INFO supervisord started with pid 1\n2026-10-18 22:44:05,147 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:44:05,149 INFO spawned: 'apache' with pid 166\n2026-10-18 22:44:05,151 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:44:06,553 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:44:06,553 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:44:06,553 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without MANDRILL_SECRET",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.434\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without MANDRILL_SECRET",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.83ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  10.90ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  14.02ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.56ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.45ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.83ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.49ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 19.21ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 32.01ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:44:34,929 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:44:34,930 INFO supervisord started with pid 1\n2026-10-18 22:44:35,933 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:44:35,935 INFO spawned: 'apache' with pid 166\n2026-10-18 22:44:35,937 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:44:37,333 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:44:37,333 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:44:37,334 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without MEMCACHED_PASSWORD",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.308\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without MEMCACHED_PASSWORD",
+            "text": "dd_action_type_created_at_composite_index_to_action_logs  9.22ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  11.92ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.45ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 2.50ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.37ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.45ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 21.47ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 29.41ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:45:04,994 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:45:04,995 INFO supervisord started with pid 1\n2026-10-18 22:45:05,998 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:45:05,999 INFO spawned: 'apache' with pid 166\n2026-10-18 22:45:06,000 INFO spawned: 'run_schedule' with pid 167\n\n  2026-10-18 22:45:06 Running ['artisan' auth:clear-resets] .... 258.84ms DONE\n  ⇂ '/usr/bin/php8.3' 'artisan' auth:clear-resets > '/dev/null' 2>&1  \n\n2026-10-18 22:45:07,661 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:07,662 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:07,662 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ],
+        "note": "tested 6 of 13 candidate variables (cap 6)"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=20.107\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "026_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.69ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  9.43ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  11.09ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.95ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.44ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.22ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.42ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 19.99ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 20.12ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:42:16,770 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:42:16,771 INFO supervisord started with pid 1\n2026-10-18 22:42:17,774 INFO spawned: 'exit_on_any_fatal' with pid 164\n2026-10-18 22:42:17,776 INFO spawned: 'apache' with pid 165\n2026-10-18 22:42:17,778 INFO spawned: 'run_schedule' with pid 166\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:42:19,187 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:42:19,187 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:42:19,187 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=8.704\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "    834▕             $exceptionType = $this->isUniqueConstraintError($e)\n    835▕                 ? UniqueConstraintViolationException::class\n    836▕                 : QueryException::class;\n    837▕ \n  ➜ 838▕             throw new $exceptionType(\n    839▕                 $this->getNameWithReadWriteType(),\n    840▕                 $query,\n    841▕                 $this->prepareBindings($bindings),\n    842▕                 $e,\n\n      \u001b[2m+9 vendor frames \u001b[22m\n\n  10  database/migrations/2012_12_06_225921_migration_cartalyst_sentry_install_users.php:34\n      Illuminate\\Support\\Facades\\Facade::__callStatic()\n      \u001b[2m+25 vendor frames \u001b[22m\n\n  36  artisan:33\n      Illuminate\\Foundation\\Console\\Kernel::handle()\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:42:04,183 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:42:04,184 INFO supervisord started with pid 1\n2026-10-18 22:42:05,187 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:42:05,189 INFO spawned: 'apache' with pid 166\n2026-10-18 22:42:05,192 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:42:06,686 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:42:06,686 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:42:06,686 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.7. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.368\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "Module ssl disabled.\nTo activate the new configuration, you need to run:\n  service apache2 restart\n\n   INFO  Nothing to migrate.  \n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:41:45,174 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:41:45,176 INFO supervisord started with pid 1\n2026-10-18 22:41:46,178 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:41:46,181 INFO spawned: 'apache' with pid 166\n2026-10-18 22:41:46,183 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:41:47,571 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:41:47,571 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:41:47,572 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 19.331,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "APP_KEY",
+          "ABLY_KEY",
+          "AWS_SESSION_TOKEN",
+          "DEBUGBAR_STORAGE_DRIVER",
+          "MANDRILL_SECRET",
+          "MEMCACHED_PASSWORD",
+          "PASSPORT_PRIVATE_KEY",
+          "PRIVATE_AWS_SESSION_TOKEN",
+          "PUSHER_APP_KEY",
+          "PUSHER_APP_SECRET",
+          "RACKSPACE_KEY",
+          "STRIPE_KEY",
+          "STRIPE_SECRET"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 120.106,
+        "setA": 57.591,
+        "twoCopies": 31.103,
+        "requiredVariables": 168.476
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:45:11.331Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 86,
+          "imageBytes": 979259956,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-20:d98baec311438e0818988c130eefa8e813a34c22 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, MYSQL_SSL_CA, MYSQL_HOST, MYSQL_PORT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_DATABASE, DB_USERNAME, PRIVATE_AWS_BUCKET, PUBLIC_AWS_BUCKET, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, MYSQL_URL, DB_PASSWORD, APP_KEY, MANDRILL_SECRET, PUSHER_APP_KEY, PUSHER_APP_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.339\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "d_action_type_created_at_composite_index_to_action_logs  18.02ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  16.47ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.70ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.73ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  7.45ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.58ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 31.64ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 38.28ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:45:44,011 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:45:44,013 INFO supervisord started with pid 1\n2026-10-18 22:45:45,015 INFO spawned: 'exit_on_any_fatal' with pid 166\n2026-10-18 22:45:45,017 INFO spawned: 'apache' with pid 167\n2026-10-18 22:45:45,019 INFO spawned: 'run_schedule' with pid 168\n\n  2026-10-18 22:45:45 Running ['artisan' auth:clear-resets] .... 257.79ms DONE\n  ⇂ '/usr/bin/php8.3' 'artisan' auth:clear-resets > '/dev/null' 2>&1  \n\n2026-10-18 22:45:46,649 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:46,649 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:46,649 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 38705,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n38705 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 200
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 302
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 302
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 302"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "mysql",
+          "connections": 23,
+          "tablesAfterStart": [
+            "accessories",
+            "accessories_checkout",
+            "action_logs",
+            "asset_external_sources",
+            "asset_logs",
+            "asset_uploads",
+            "assets",
+            "calendar_events",
+            "categories",
+            "checkout_acceptances",
+            "checkout_requests",
+            "companies",
+            "company_user",
+            "components",
+            "components_assets",
+            "consumables",
+            "consumables_users",
+            "custom_field_custom_fieldset",
+            "custom_fields",
+            "custom_fieldsets",
+            "custom_user_labels",
+            "departments",
+            "depreciations",
+            "imports",
+            "kits",
+            "kits_accessories",
+            "kits_consumables",
+            "kits_licenses",
+            "kits_models",
+            "license_seats",
+            "licenses",
+            "locations",
+            "login_attempts",
+            "maintenance_types",
+            "maintenances",
+            "manufacturers",
+            "migrations",
+            "models",
+            "models_custom_fields",
+            "oauth_access_tokens",
+            "oauth_auth_codes",
+            "oauth_clients",
+            "oauth_personal_access_clients",
+            "oauth_refresh_tokens",
+            "order_items",
+            "orders",
+            "password_resets",
+            "permission_groups",
+            "report_templates",
+            "requested_assets",
+            "requests",
+            "saml_nonces",
+            "settings",
+            "status_labels",
+            "suppliers",
+            "sync_adapter_instances",
+            "telescope_entries",
+            "telescope_entries_tags",
+            "telescope_monitoring",
+            "throttle",
+            "users",
+            "users_groups"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 33, baseline 9, harness sessions 1: 23 application connections; tables in deployz: accessories, accessories_checkout, action_logs, asset_external_sources, asset_logs, asset_uploads, assets, calendar_events, categories, checkout_acceptances, checkout_requests, companies, company_user, components, components_assets, consumables, consumables_users, custom_field_custom_fieldset, custom_fields, custom_fieldsets, custom_user_labels, departments, depreciations, imports, kits, kits_accessories, kits_consumables, kits_licenses, kits_models, license_seats, licenses, locations, login_attempts, maintenance_types, maintenances, manufacturers, migrations, models, models_custom_fields, oauth_access_tokens, oauth_auth_codes, oauth_clients, oauth_personal_access_clients, oauth_refresh_tokens, order_items, orders, password_resets, permission_groups, report_templates, requested_assets, requests, saml_nonces, settings, status_labels, suppliers, sync_adapter_instances, telescope_entries, telescope_entries_tags, telescope_monitoring, throttle, users, users_groups"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-20: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": true
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-20: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/var/lib/apache2/module/disabled_by_admin/ssl",
+          "/var/lib/apache2/module/enabled_by_admin",
+          "/var/www/html/database/migrations/2016_06_01_000001_create_oauth_auth_codes_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000002_create_oauth_access_tokens_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000003_create_oauth_refresh_tokens_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000004_create_oauth_clients_table.php",
+          "/var/www/html/database/migrations/2016_06_01_000005_create_oauth_personal_access_clients_table.php",
+          "/var/www/html/storage/framework/sessions/21pjfwCvpdNGTcLrZWhUkAqIIt2IXGf9wVfE7g9e",
+          "/var/www/html/storage/framework/sessions/3AxsxUratBUhscOtvWgbfGUy5aupFfmz2ADuV2Mo",
+          "/var/www/html/storage/framework/sessions/3GgrNd5ibXxG8jtmfdYmVB7XrLo3plLFjeEgR7dD",
+          "/var/www/html/storage/framework/sessions/BtPWGv7hNqgYDW5jtrm6XufaxR3yh1zVqdUDkmxR",
+          "/var/www/html/storage/framework/sessions/FgxmVKJPdudlnqOz3Oyz7BPR1Qhb9Hb5fuH72F1Q",
+          "/var/www/html/storage/framework/sessions/GbEF2TXAtewVOxyszwOk1jiYl8zXYSmnVy5NB7lz",
+          "/var/www/html/storage/framework/sessions/IviTSVFoyaDPFDEtpGBPvs2hYk1fwspw4JEVdEpK",
+          "/var/www/html/storage/framework/sessions/VPKiQWWXfeamAcifHqbXfHOS6akuFkEKvCXFzgjM",
+          "/var/www/html/storage/framework/sessions/WLVKQo3ivIN0V41KIHAg1uWk5vBwWde7v0gLOxmE",
+          "/var/www/html/storage/framework/sessions/Zc6fvPgPKrJwTXjFxLRCNrxP6vUgPBrApYulwqT7",
+          "/var/www/html/storage/framework/sessions/asNjNHYO593Zq1PoeY0zpzJDSc5tL80VfhEU3NKe",
+          "/var/www/html/storage/framework/sessions/bTtrjXFA3EwrWhPHFpoUSU3RwDYyWDPrEhQ4PUQC",
+          "/var/www/html/storage/framework/sessions/cKyLtIwo3CH7r9eFjdIGaLdnq6V6drm4nIxKbCr5",
+          "/var/www/html/storage/framework/sessions/p0c4qbfcvJdlkDLWsq9lbwPXO4d6tVtKgMUR03VS",
+          "/var/www/html/storage/framework/sessions/pniPSGMQ67KTyX8MwkRj4k4O0QnWswsJAftu3Irh",
+          "/var/www/html/storage/framework/sessions/s13sSvwX69V737yjXJnlbtozyvpgCbvpRoFyPng3",
+          "/var/www/html/storage/framework/sessions/tBLLJPCzjdRH0qep0vFZwUik2jk4VKQnCGbbzUey",
+          "/var/www/html/storage/framework/sessions/utJMFc0FFnzawCaFoEutQXnXLWLtlC1TltNl9mY2"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "apache2/module/disabled_by_admin/ssl\n/var/lib/apache2/module/enabled_by_admin\n/var/www/html/database/migrations/2016_06_01_000001_create_oauth_auth_codes_table.php\n/var/www/html/database/migrations/2016_06_01_000002_create_oauth_access_tokens_table.php\n/var/www/html/database/migrations/2016_06_01_000003_create_oauth_refresh_tokens_table.php\n/var/www/html/database/migrations/2016_06_01_000004_create_oauth_clients_table.php\n/var/www/html/database/migrations/2016_06_01_000005_create_oauth_personal_access_clients_table.php\n/var/www/html/storage/framework/sessions/21pjfwCvpdNGTcLrZWhUkAqIIt2IXGf9wVfE7g9e\n/var/www/html/storage/framework/sessions/3AxsxUratBUhscOtvWgbfGUy5aupFfmz2ADuV2Mo\n/var/www/html/storage/framework/sessions/3GgrNd5ibXxG8jtmfdYmVB7XrLo3plLFjeEgR7dD\n/var/www/html/storage/framework/sessions/BtPWGv7hNqgYDW5jtrm6XufaxR3yh1zVqdUDkmxR\n/var/www/html/storage/framework/sessions/FgxmVKJPdudlnqOz3Oyz7BPR1Qhb9Hb5fuH72F1Q\n/var/www/html/storage/framework/sessions/GbEF2TXAtewVOxyszwOk1jiYl8zXYSmnVy5NB7lz\n/var/www/html/storage/framework/sessions/IviTSVFoyaDPFDEtpGBPvs2hYk1fwspw4JEVdEpK\n/var/www/html/storage/framework/sessions/VPKiQWWXfeamAcifHqbXfHOS6akuFkEKvCXFzgjM\n/var/www/html/storage/framework/sessions/WLVKQo3ivIN0V41KIHAg1uWk5vBwWde7v0gLOxmE\n/var/www/html/storage/framework/sessions/Zc6fvPgPKrJwTXjFxLRCNrxP6vUgPBrApYulwqT7\n/var/www/html/storage/framework/sessions/asNjNHYO593Zq1PoeY0zpzJDSc5tL80VfhEU3NKe\n/var/www/html/storage/framework/sessions/bTtrjXFA3EwrWhPHFpoUSU3RwDYyWDPrEhQ4PUQC\n/var/www/html/storage/framework/sessions/cKyLtIwo3CH7r9eFjdIGaLdnq6V6drm4nIxKbCr5\n/var/www/html/storage/framework/sessions/p0c4qbfcvJdlkDLWsq9lbwPXO4d6tVtKgMUR03VS\n/var/www/html/storage/framework/sessions/pniPSGMQ67KTyX8MwkRj4k4O0QnWswsJAftu3Irh\n/var/www/html/storage/framework/sessions/s13sSvwX69V737yjXJnlbtozyvpgCbvpRoFyPng3\n/var/www/html/storage/framework/sessions/tBLLJPCzjdRH0qep0vFZwUik2jk4VKQnCGbbzUey\n/var/www/html/storage/framework/sessions/utJMFc0FFnzawCaFoEutQXnXLWLtlC1TltNl9mY2"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "observed",
+        "value": [
+          {
+            "name": "APP_KEY",
+            "healthyWithout": false,
+            "healthyWith": true
+          },
+          {
+            "name": "ABLY_KEY",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "AWS_SESSION_TOKEN",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "DEBUGBAR_STORAGE_DRIVER",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "MANDRILL_SECRET",
+            "healthyWithout": true,
+            "healthyWith": true
+          },
+          {
+            "name": "MEMCACHED_PASSWORD",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without APP_KEY",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without APP_KEY",
+            "text": "Please re-run this container with an environment variable $APP_KEY\nAn example APP_KEY you could use is: \nbase64:WT7Wrq10Pt//VA6gietn7yLqYMG1T1qr/r/17ZrIPwc=\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without ABLY_KEY",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.361\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without ABLY_KEY",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  1.18ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  13.69ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  15.41ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.83ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.56ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  9.52ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.74ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 42.02ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 19.70ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:47:13,000 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:47:13,001 INFO supervisord started with pid 1\n2026-10-18 22:47:14,004 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:47:14,006 INFO spawned: 'apache' with pid 166\n2026-10-18 22:47:14,008 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:47:15,390 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:47:15,390 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:47:15,390 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without AWS_SESSION_TOKEN",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.328\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without AWS_SESSION_TOKEN",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.88ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  12.65ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  20.47ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.80ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 2.10ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  8.41ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.52ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 23.55ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 23.02ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:47:43,276 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:47:43,277 INFO supervisord started with pid 1\n2026-10-18 22:47:44,279 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:47:44,281 INFO spawned: 'apache' with pid 166\n2026-10-18 22:47:44,283 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:47:45,694 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:47:45,694 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:47:45,694 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without DEBUGBAR_STORAGE_DRIVER",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.329\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without DEBUGBAR_STORAGE_DRIVER",
+            "text": "26_09_21_140000_backfill_accessory_checkout_action_log_quantity  1.15ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  14.62ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  16.59ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.54ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 2.18ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  9.77ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  1.43ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 34.00ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 25.63ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:48:13,209 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:48:13,210 INFO supervisord started with pid 1\n2026-10-18 22:48:14,213 INFO spawned: 'exit_on_any_fatal' with pid 164\n2026-10-18 22:48:14,215 INFO spawned: 'apache' with pid 165\n2026-10-18 22:48:14,216 INFO spawned: 'run_schedule' with pid 166\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:48:15,588 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:48:15,588 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:48:15,588 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without MANDRILL_SECRET",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.379\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without MANDRILL_SECRET",
+            "text": "026_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.71ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  9.25ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  11.97ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.43ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.44ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.21ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.45ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 19.21ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 31.26ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:48:44,105 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:48:44,106 INFO supervisord started with pid 1\n2026-10-18 22:48:45,109 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:48:45,110 INFO spawned: 'apache' with pid 166\n2026-10-18 22:48:45,112 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:48:46,517 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:48:46,517 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:48:46,517 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web without MEMCACHED_PASSWORD",
+            "text": "healthy=true exited=false oomKilled=false seconds=19.335\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without MEMCACHED_PASSWORD",
+            "text": "6_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.81ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  16.61ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  17.86ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.90ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 2.50ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  10.80ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  1.18ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 31.21ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 23.02ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:49:14,257 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:49:14,259 INFO supervisord started with pid 1\n2026-10-18 22:49:15,261 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:49:15,263 INFO spawned: 'apache' with pid 166\n2026-10-18 22:49:15,265 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:49:16,626 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:49:16,626 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:49:16,627 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ],
+        "note": "tested 6 of 13 candidate variables (cap 6)"
+      },
+      "twoCopiesHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=true exited=false oomKilled=false seconds=20.065\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "026_09_21_140000_backfill_accessory_checkout_action_log_quantity  0.85ms DONE\n  2026_09_21_174908_add_action_type_created_at_composite_index_to_action_logs  9.57ms DONE\n  2026_09_22_201800_add_deleted_at_created_at_composite_index_to_assets  12.43ms DONE\n  2026_10_01_195247_fix_controller_namespaced_license_item_type_on_action_logs  0.48ms DONE\n  2026_10_05_120000_backfill_calendar_events_company_id .......... 1.46ms DONE\n  2026_10_07_220000_soft_delete_calendar_events_for_trashed_sources  5.42ms DONE\n  2026_10_08_180859_rename_mosyle_token_credential_to_access_token  0.48ms DONE\n  2026_10_15_175207_add_archived_to_components_table ............ 19.06ms DONE\n  2026_10_16_120000_add_archived_to_accessories_table ........... 48.10ms DONE\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:46:26,553 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:46:26,554 INFO supervisord started with pid 1\n2026-10-18 22:46:27,556 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:46:27,558 INFO spawned: 'apache' with pid 166\n2026-10-18 22:46:27,559 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:46:28,932 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:46:28,932 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:46:28,932 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          },
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=8.758\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": " `migration` varchar(191) not null, `batch` int not null) default character set utf8mb4 collate 'utf8mb4_unicode_ci' engine = InnoDB)\n\n  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838\n    834▕             $exceptionType = $this->isUniqueConstraintError($e)\n    835▕                 ? UniqueConstraintViolationException::class\n    836▕                 : QueryException::class;\n    837▕ \n  ➜ 838▕             throw new $exceptionType(\n    839▕                 $this->getNameWithReadWriteType(),\n    840▕                 $query,\n    841▕                 $this->prepareBindings($bindings),\n    842▕                 $e,\n\n      \u001b[2m+40 vendor frames \u001b[22m\n\n  41  artisan:33\n      Illuminate\\Foundation\\Console\\Kernel::handle()\n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:46:13,983 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:46:13,984 INFO supervisord started with pid 1\n2026-10-18 22:46:14,986 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:46:14,989 INFO spawned: 'apache' with pid 166\n2026-10-18 22:46:14,991 INFO spawned: 'run_schedule' with pid 167\n\n   INFO  No scheduled commands are ready to run.  \n\n2026-10-18 22:46:16,514 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:46:16,514 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:46:16,514 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.7. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "restartHealthy": {
+        "status": "observed",
+        "value": true,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#2",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.384\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 200\n80/healthz 302\n80/up 302\n80/api/health 302\n80/status 302\n80/ping 302\n80/_health 302\n80/actuator/health 302\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "Module ssl disabled.\nTo activate the new configuration, you need to run:\n  service apache2 restart\n\n   INFO  Nothing to migrate.  \n\n\n   INFO  Configuration cache cleared successfully.  \n\n\n   INFO  Configuration cached successfully.  \n\n\n   INFO  Compiled views cleared successfully.  \n\n2026-10-18 22:45:54,996 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.\n2026-10-18 22:45:54,997 INFO supervisord started with pid 1\n2026-10-18 22:45:55,999 INFO spawned: 'exit_on_any_fatal' with pid 165\n2026-10-18 22:45:56,001 INFO spawned: 'apache' with pid 166\n2026-10-18 22:45:56,002 INFO spawned: 'run_schedule' with pid 167\n\n  2026-10-18 22:45:56 Running ['artisan' auth:clear-resets] .... 255.88ms DONE\n  ⇂ '/usr/bin/php8.3' 'artisan' auth:clear-resets > '/dev/null' 2>&1  \n\n2026-10-18 22:45:57,629 INFO success: exit_on_any_fatal entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:57,629 INFO success: apache entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\n2026-10-18 22:45:57,629 INFO success: run_schedule entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)\nAH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.18.0.6. Set the 'ServerName' directive globally to suppress this message\n"
+          }
+        ]
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": true,
+            "startSeconds": 19.339,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=true oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "APP_KEY",
+          "ABLY_KEY",
+          "AWS_SESSION_TOKEN",
+          "DEBUGBAR_STORAGE_DRIVER",
+          "MANDRILL_SECRET",
+          "MEMCACHED_PASSWORD",
+          "PASSPORT_PRIVATE_KEY",
+          "PRIVATE_AWS_SESSION_TOKEN",
+          "PUSHER_APP_KEY",
+          "PUSHER_APP_SECRET",
+          "RACKSPACE_KEY",
+          "STRIPE_KEY",
+          "STRIPE_SECRET"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 8.692,
+        "setA": 41.546,
+        "twoCopies": 31.082,
+        "requiredVariables": 168.073
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

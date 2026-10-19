@@ -1,0 +1,527 @@
+{
+  "schemaVersion": 1,
+  "id": "new-29",
+  "set": "holdout",
+  "repository": "atuinsh/atuin",
+  "commit": "c5f85ed664c8d825b1c3241431a9ff9ec9a25177",
+  "recipeHash": "e0ca252edbefcdd00dba077c561685c7a3d7c84c2025c0f4680ed993d0c7dbbd",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:29:38.033Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 370,
+          "imageBytes": 110823197,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#19 DONE 282.2s\n#20 [builder 5/6] COPY . .\n#20 DONE 0.2s\n#21 [builder 6/6] RUN cargo build --release --bin atuin-server\n#21 0.582    Compiling atuin-common v18.24.1 (/app/crates/atuin-common)\n#21 0.582    Compiling atuin-server v18.24.1 (/app/crates/atuin-server)\n#21 7.848    Compiling atuin-domain v18.24.1 (/app/crates/atuin-domain)\n#21 59.61     Finished `release` profile [optimized] target(s) in 59.48s\n#21 DONE 59.7s\n#22 [runtime 5/5] COPY --from=builder /app/target/release/atuin-server /usr/local/bin\n#22 DONE 0.0s\n#23 exporting to image\n#23 exporting layers\n#23 exporting layers 0.6s done\n#23 writing image sha256:2f9b5103cae94a58173563539bde2a05b8a7ba5e8626bb2d5aa50d5443b524b0 done\n#23 naming to docker.io/deployz-runcheck/new-29:c5f85ed664c8d825b1c3241431a9ff9ec9a25177 done\n#23 DONE 0.6s\n \u001b[33m2 warnings found (use docker --debug to expand):\n\u001b[0m - WorkdirRelativePath: Relative workdir \"app\" can have unexpected results if the base image changes (line 2)\n - WorkdirRelativePath: Relative workdir \"app\" can have unexpected results if the base image changes (line 35)"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, ATUIN_HOST, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "Atuin sync server\n\nUsage: atuin-server <COMMAND>\n\nCommands:\n  start           Start the server\n  default-config  Print server example configuration\n  help            Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/user/deployz-smoke",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-29: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-29: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "Atuin sync server\n\nUsage: atuin-server <COMMAND>\n\nCommands:\n  start           Start the server\n  default-config  Print server example configuration\n  help            Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthz",
+          "/health",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "ATUIN_HOST"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 374.015,
+        "setA": 25.258,
+        "sizes": 10.857
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:36:28.171Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 370,
+          "imageBytes": 110823197,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-29:c5f85ed664c8d825b1c3241431a9ff9ec9a25177 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, ATUIN_HOST, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "Atuin sync server\n\nUsage: atuin-server <COMMAND>\n\nCommands:\n  start           Start the server\n  default-config  Print server example configuration\n  help            Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/user/deployz-smoke",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-29: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-29: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "Atuin sync server\n\nUsage: atuin-server <COMMAND>\n\nCommands:\n  start           Start the server\n  default-config  Print server example configuration\n  help            Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/healthz",
+          "/health",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "ATUIN_HOST"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.197,
+        "setA": 11.274,
+        "sizes": 10.849
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

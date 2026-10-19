@@ -8,6 +8,7 @@ describe('artifactTarget', () => {
     expect(artifactTarget('runcheck-observe-new-12', 'root')).toBe(join('root', 'observations'));
     expect(artifactTarget('runcheck-full-rules@0fc073b8-repo-001', 'root')).toBe(join('root', '.runs', 'full', 'rules@0fc073b8'));
     expect(artifactTarget('runcheck-full-ai@1a2b3c4d-F3', 'root')).toBe(join('root', '.runs', 'full', 'ai@1a2b3c4d'));
+    expect(artifactTarget('runcheck-analysis-ai@1a2b3c4d-r2-new-7', 'root')).toBe(join('root', 'analyses', 'ai@1a2b3c4d-r2'));
   });
 
   it('ignores other artifacts', () => {

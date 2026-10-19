@@ -1,0 +1,11 @@
+id: new-23
+set: holdout
+source:
+  kind: git
+  repository: hapifhir/hapi-fhir-jpaserver-starter
+  commit: 377e6eba316920082e6a90551b488e4599a71eb8
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-02T19:06:11Z. Java FHIR server (Spring Boot)."
+  - "Root Dockerfile builds from source with Maven inside the image (stage build-hapi runs mvn clean install, stage build-distroless repackages the war). The default target is distroless and starts PropertiesLauncher on /app/main.war. Target tomcat is not used."
+  - "src/main/resources/application.yaml:110 sets the datasource to jdbc:h2:mem:test_mem by default. Server port is 8080 (application.yaml:8)."
+  - "The Dockerfile downloads the OpenTelemetry Java agent from GitHub at build time."

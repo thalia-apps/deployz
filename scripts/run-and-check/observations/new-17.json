@@ -1,0 +1,521 @@
+{
+  "schemaVersion": 1,
+  "id": "new-17",
+  "set": "tuning",
+  "repository": "jonschoning/espial",
+  "commit": "27f1d4bcdc537c0182886f7fc22c1fcf0befa6e6",
+  "recipeHash": "90929a760ef8c7bd30cc6d87ee050d2acd87e8b1001a8486cb9690976204d543",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:27:00.036Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 1208,
+          "imageBytes": 136497030,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#28 923.2 Copied executables to /opt/espial/bin/:\n#28 923.2 * espial\n#28 923.2 * migration\n#28 923.2 \n#28 923.2 Warning: Installation path /opt/espial/bin not found on the PATH environment variable.\n#28 DONE 923.6s\n#29 [runtime  7/10] COPY --from=builder /src/config ./config\n#29 DONE 0.0s\n#30 [runtime  8/10] COPY --from=builder /src/static ./static\n#30 DONE 0.0s\n#31 [runtime  9/10] COPY --from=builder /opt/espial/bin/espial ./espial\n#31 DONE 0.0s\n#32 [runtime 10/10] COPY --from=builder /opt/espial/bin/migration ./migration\n#32 DONE 0.1s\n#33 exporting to image\n#33 exporting layers\n#33 exporting layers 0.5s done\n#33 writing image sha256:3d5cb305244708beaad260c6d13deeaa36c75ee378b6c9c29bb4c48f33286808 done\n#33 naming to docker.io/deployz-runcheck/new-17:27f1d4bcdc537c0182886f7fc22c1fcf0befa6e6 done\n#33 DONE 0.5s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "18/Oct/2026:22:47:39 +0000 [Info#startup] espial-0.0.42 (UNKNOWN)\nespial: SQLite3 returned ErrorCan'tOpen while attempting to perform open \"/app/data/espial.sqlite3\".\nHasCallStack backtrace:\n  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:169:13 in ghc-internal:GHC.Internal.Exception\n  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO\n  throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base\n\n\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-17: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-17: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "18/Oct/2026:22:47:51 +0000 [Info#startup] espial-0.0.42 (UNKNOWN)\nespial: SQLite3 returned ErrorCan'tOpen while attempting to perform open \"/app/data/espial.sqlite3\".\nHasCallStack backtrace:\n  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:169:13 in ghc-internal:GHC.Internal.Exception\n  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO\n  throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base\n\n\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1215.649,
+        "setA": 24.664,
+        "sizes": 17.671
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:47:58.028Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 1208,
+          "imageBytes": 136497030,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-17:27f1d4bcdc537c0182886f7fc22c1fcf0befa6e6 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "18/Oct/2026:22:48:09 +0000 [Info#startup] espial-0.0.42 (UNKNOWN)\nespial: SQLite3 returned ErrorCan'tOpen while attempting to perform open \"/app/data/espial.sqlite3\".\nHasCallStack backtrace:\n  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:169:13 in ghc-internal:GHC.Internal.Exception\n  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO\n  throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base\n\n\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-17: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-17: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "18/Oct/2026:22:48:26 +0000 [Info#startup] espial-0.0.42 (UNKNOWN)\nespial: SQLite3 returned ErrorCan'tOpen while attempting to perform open \"/app/data/espial.sqlite3\".\nHasCallStack backtrace:\n  collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:169:13 in ghc-internal:GHC.Internal.Exception\n  toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO\n  throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base\n\n\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.293,
+        "setA": 16.851,
+        "sizes": 16.583
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

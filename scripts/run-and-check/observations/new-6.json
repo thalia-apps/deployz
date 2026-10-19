@@ -1,0 +1,681 @@
+{
+  "schemaVersion": 1,
+  "id": "new-6",
+  "set": "tuning",
+  "repository": "FreshRSS/FreshRSS",
+  "commit": "0d35f6f0ad40759d7ac89edc6ddd8a4aafc636e4",
+  "recipeHash": "00abc6945d8e541d576acc7328a9cf90f7e4b6161d6b9bab50226f608b5f1edb",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:37:51.034Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 27,
+          "imageBytes": 255461663,
+          "dockerfile": "Docker/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#10 0.147 Module status disabled.\n#10 0.176 Module auth_openidc disabled.\n#10 0.204 Conf auth_openidc disabled.\n#10 0.208 Conf charset disabled.\n#10 0.211 Conf localized-error-pages disabled.\n#10 0.215 Conf other-vhosts-access-log disabled.\n#10 0.218 Conf security disabled.\n#10 0.222 Conf serve-cgi-bin disabled.\n#10 0.250 Site 000-default disabled.\n#10 0.279 Enabling module expires.\n#10 0.283 Enabling module headers.\n#10 0.287 Enabling module remoteip.\n#10 0.315 Enabling site FreshRSS.Apache.\n#10 DONE 0.8s\n#11 exporting to image\n#11 exporting layers\n#11 exporting layers 1.3s done\n#11 writing image sha256:3524f58912a7cb5cd9a2daa349caf2a332aece8175f0e6bb43b71e8d47ed9463 done\n#11 naming to docker.io/deployz-runcheck/new-6:0d35f6f0ad40759d7ac89edc6ddd8a4aafc636e4 done\n#11 DONE 1.3s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": " HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:43 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:43 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:43 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET / HTTP/1.1\" 302 - \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /healthz HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /up HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /api/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /status HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:48 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET / HTTP/1.1\" 302 - \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /healthz HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /up HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /api/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /status HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:22:53:54 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 45279,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n45279 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 302\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 302
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 302"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-6: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-6: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/var/www/FreshRSS/data/.gitignore",
+          "/var/www/FreshRSS/data/.htaccess",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/.gitignore",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/README.md",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/index.html",
+          "/var/www/FreshRSS/data/PubSubHubbub/index.html",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/.gitignore",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/README.md",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/index.html",
+          "/var/www/FreshRSS/data/Retry-After/.gitignore",
+          "/var/www/FreshRSS/data/Retry-After/README.md",
+          "/var/www/FreshRSS/data/Retry-After/index.html",
+          "/var/www/FreshRSS/data/extensions-data/.gitignore",
+          "/var/www/FreshRSS/data/extensions-data/index.html",
+          "/var/www/FreshRSS/data/favicons/.gitignore",
+          "/var/www/FreshRSS/data/favicons/index.html",
+          "/var/www/FreshRSS/data/fever/.gitignore",
+          "/var/www/FreshRSS/data/fever/index.html",
+          "/var/www/FreshRSS/data/index.html",
+          "/var/www/FreshRSS/data/tokens/.gitignore",
+          "/var/www/FreshRSS/data/tokens/index.html",
+          "/var/www/FreshRSS/data/tos.example.html",
+          "/var/www/FreshRSS/data/users/.gitignore",
+          "/var/www/FreshRSS/data/users/_/.gitignore",
+          "/var/www/FreshRSS/data/users/_/index.html",
+          "/var/www/FreshRSS/data/users/index.html"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/var/www/FreshRSS/data/.gitignore\n/var/www/FreshRSS/data/.htaccess\n/var/www/FreshRSS/data/PubSubHubbub/feeds/.gitignore\n/var/www/FreshRSS/data/PubSubHubbub/feeds/README.md\n/var/www/FreshRSS/data/PubSubHubbub/feeds/index.html\n/var/www/FreshRSS/data/PubSubHubbub/index.html\n/var/www/FreshRSS/data/PubSubHubbub/keys/.gitignore\n/var/www/FreshRSS/data/PubSubHubbub/keys/README.md\n/var/www/FreshRSS/data/PubSubHubbub/keys/index.html\n/var/www/FreshRSS/data/Retry-After/.gitignore\n/var/www/FreshRSS/data/Retry-After/README.md\n/var/www/FreshRSS/data/Retry-After/index.html\n/var/www/FreshRSS/data/extensions-data/.gitignore\n/var/www/FreshRSS/data/extensions-data/index.html\n/var/www/FreshRSS/data/favicons/.gitignore\n/var/www/FreshRSS/data/favicons/index.html\n/var/www/FreshRSS/data/fever/.gitignore\n/var/www/FreshRSS/data/fever/index.html\n/var/www/FreshRSS/data/index.html\n/var/www/FreshRSS/data/tokens/.gitignore\n/var/www/FreshRSS/data/tokens/index.html\n/var/www/FreshRSS/data/tos.example.html\n/var/www/FreshRSS/data/users/.gitignore\n/var/www/FreshRSS/data/users/_/.gitignore\n/var/www/FreshRSS/data/users/_/index.html\n/var/www/FreshRSS/data/users/index.html"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 36.053,
+        "setA": 930.482
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:53:57.579Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 27,
+          "imageBytes": 255461663,
+          "dockerfile": "Docker/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-6:0d35f6f0ad40759d7ac89edc6ddd8a4aafc636e4 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n80/ 302\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": " HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:02 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:02 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:02 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET / HTTP/1.1\" 302 - \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /healthz HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /up HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /api/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /status HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:08 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET / HTTP/1.1\" 302 - \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /healthz HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /up HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /api/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /status HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /ping HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /_health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n172.18.0.7 - - [18/Oct/2026:23:09:13 +0000] \"GET /actuator/health HTTP/1.1\" 404 236 \"-\" \"curl/8.14.1\"\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 43967,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "80 all reachable=true\n43967 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 80,
+            "path": "/",
+            "status": 302
+          },
+          {
+            "port": 80,
+            "path": "/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/healthz",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/up",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/status",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/ping",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/_health",
+            "status": 404
+          },
+          {
+            "port": 80,
+            "path": "/actuator/health",
+            "status": 404
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "80/ 302\n80/health 404\n80/healthz 404\n80/up 404\n80/api/health 404\n80/status 404\n80/ping 404\n80/_health 404\n80/actuator/health 404"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 302
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 80/ 302"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-6: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-6: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/var/www/FreshRSS/data/.gitignore",
+          "/var/www/FreshRSS/data/.htaccess",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/.gitignore",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/README.md",
+          "/var/www/FreshRSS/data/PubSubHubbub/feeds/index.html",
+          "/var/www/FreshRSS/data/PubSubHubbub/index.html",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/.gitignore",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/README.md",
+          "/var/www/FreshRSS/data/PubSubHubbub/keys/index.html",
+          "/var/www/FreshRSS/data/Retry-After/.gitignore",
+          "/var/www/FreshRSS/data/Retry-After/README.md",
+          "/var/www/FreshRSS/data/Retry-After/index.html",
+          "/var/www/FreshRSS/data/extensions-data/.gitignore",
+          "/var/www/FreshRSS/data/extensions-data/index.html",
+          "/var/www/FreshRSS/data/favicons/.gitignore",
+          "/var/www/FreshRSS/data/favicons/index.html",
+          "/var/www/FreshRSS/data/fever/.gitignore",
+          "/var/www/FreshRSS/data/fever/index.html",
+          "/var/www/FreshRSS/data/index.html",
+          "/var/www/FreshRSS/data/tokens/.gitignore",
+          "/var/www/FreshRSS/data/tokens/index.html",
+          "/var/www/FreshRSS/data/tos.example.html",
+          "/var/www/FreshRSS/data/users/.gitignore",
+          "/var/www/FreshRSS/data/users/_/.gitignore",
+          "/var/www/FreshRSS/data/users/_/index.html",
+          "/var/www/FreshRSS/data/users/index.html"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/var/www/FreshRSS/data/.gitignore\n/var/www/FreshRSS/data/.htaccess\n/var/www/FreshRSS/data/PubSubHubbub/feeds/.gitignore\n/var/www/FreshRSS/data/PubSubHubbub/feeds/README.md\n/var/www/FreshRSS/data/PubSubHubbub/feeds/index.html\n/var/www/FreshRSS/data/PubSubHubbub/index.html\n/var/www/FreshRSS/data/PubSubHubbub/keys/.gitignore\n/var/www/FreshRSS/data/PubSubHubbub/keys/README.md\n/var/www/FreshRSS/data/PubSubHubbub/keys/index.html\n/var/www/FreshRSS/data/Retry-After/.gitignore\n/var/www/FreshRSS/data/Retry-After/README.md\n/var/www/FreshRSS/data/Retry-After/index.html\n/var/www/FreshRSS/data/extensions-data/.gitignore\n/var/www/FreshRSS/data/extensions-data/index.html\n/var/www/FreshRSS/data/favicons/.gitignore\n/var/www/FreshRSS/data/favicons/index.html\n/var/www/FreshRSS/data/fever/.gitignore\n/var/www/FreshRSS/data/fever/index.html\n/var/www/FreshRSS/data/index.html\n/var/www/FreshRSS/data/tokens/.gitignore\n/var/www/FreshRSS/data/tokens/index.html\n/var/www/FreshRSS/data/tos.example.html\n/var/www/FreshRSS/data/users/.gitignore\n/var/www/FreshRSS/data/users/_/.gitignore\n/var/www/FreshRSS/data/users/_/index.html\n/var/www/FreshRSS/data/users/index.html"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 2.558,
+        "setA": 916.624
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

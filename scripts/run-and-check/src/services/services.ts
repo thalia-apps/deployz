@@ -1,4 +1,5 @@
 import type { Evidence } from '../contract.js';
+import { libraryImage } from '../docker/registry.js';
 import type {
   DockerCallOptions,
   DockerFn,
@@ -28,13 +29,13 @@ export const DB_NAME = 'deployz';
 export const CA_DIR = '/deployz/certs';
 export const CA_FILE = `${CA_DIR}/rds-ca-bundle.pem`;
 
-const POSTGRES_IMAGE = 'public.ecr.aws/docker/library/postgres:16-alpine';
-const MYSQL_IMAGE = 'public.ecr.aws/docker/library/mysql:8.0';
+const POSTGRES_IMAGE = libraryImage('postgres:16-alpine');
+const MYSQL_IMAGE = libraryImage('mysql:8.0');
 // Not on ECR Public; the Docker Hub image has an arm64 variant.
 const VALKEY_IMAGE = 'docker.io/valkey/valkey:8-alpine';
 // MinIO no longer publishes images. This frozen Bitnami build is a pinned MinIO server with arm64, `mc` and `curl`.
 const MINIO_IMAGE = 'docker.io/bitnamilegacy/minio:2025.7.23-debian-12-r5';
-const CERT_HELPER_IMAGE = 'public.ecr.aws/docker/library/alpine:3.20';
+const CERT_HELPER_IMAGE = libraryImage('alpine:3.20');
 
 const POSTGRES_PORT = 5432;
 const MYSQL_PORT = 3306;

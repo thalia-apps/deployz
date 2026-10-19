@@ -1,0 +1,14 @@
+id: new-19
+set: tuning
+source:
+  kind: git
+  repository: Rabithua/Rote
+  commit: f7cc56ba4c1d8632c4c4d2d12d6867fd0b4376ec
+build:
+  dockerfile: server/Dockerfile
+  context: server
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-12T13:37:58Z. Bun and Hono API server with PostgreSQL (Drizzle). The repository also has web/Dockerfile for the front end."
+  - "Source build confirmed: server/Dockerfile runs bun install and bun run build in a builder stage, then runs bun run dist/server.js in a runtime stage (server/Dockerfile:4-116). The COPY lines use paths relative to server/, so the context is server. EXPOSE 3000."
+  - "The database setting is POSTGRESQL_URL (server/.env.example:10). The code has no DATABASE_URL name."
+  - "The health check calls /v2/api/health (server/Dockerfile:113)."

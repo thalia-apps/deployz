@@ -1,7 +1,8 @@
 /**
  * `pnpm runcheck:fetch --run <run id>` — downloads the results of one
  * `runcheck-exam.yml` run: each observation to `observations/<id>.json`, each
- * full run to `.runs/full/<analyser>/<id>.json`. Needs `GITHUB_TOKEN`.
+ * full run to `.runs/full/<analyser>/<id>.json`, each AI analysis to
+ * `analyses/<folder>/<id>.json`. Needs `GITHUB_TOKEN`.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -21,6 +22,7 @@ interface Artifact {
 const RUN_ID = /^\d+$/;
 const OBSERVE = /^runcheck-observe-([\w-]+)$/;
 const FULL = /^runcheck-full-([\w.@-]+)-((?:repo-\d{3}|new-\d+|F\d{1,2}))$/;
+const ANALYSIS = /^runcheck-analysis-([\w.@-]+)-((?:repo-\d{3}|new-\d+|F\d{1,2}))$/;
 
 /** Where an artifact's one JSON file belongs, or null for an artifact of another kind. */
 export function artifactTarget(name: string, root: string = HARNESS_ROOT): string | null {
@@ -28,6 +30,8 @@ export function artifactTarget(name: string, root: string = HARNESS_ROOT): strin
   if (observe) return join(root, 'observations');
   const full = FULL.exec(name);
   if (full) return join(root, '.runs', 'full', full[1]!);
+  const analysis = ANALYSIS.exec(name);
+  if (analysis) return join(root, 'analyses', analysis[1]!);
   return null;
 }
 
@@ -40,8 +44,8 @@ function originRepository(): string {
 
 function extract(zip: string, into: string): void {
   mkdirSync(into, { recursive: true });
-  // bsdtar (Windows) reads zip files; Linux and macOS have unzip.
-  if (process.platform === 'win32') execFileSync('tar', ['-xf', zip, '-C', into]);
+  // The Windows tar.exe is bsdtar and reads zip files (a GNU tar earlier on PATH, as in Git Bash, does not); Linux and macOS have unzip.
+  if (process.platform === 'win32') execFileSync(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe'), ['-xf', zip, '-C', into]);
   else execFileSync('unzip', ['-o', '-q', zip, '-d', into]);
 }
 

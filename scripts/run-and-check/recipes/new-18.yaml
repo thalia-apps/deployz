@@ -1,0 +1,11 @@
+id: new-18
+set: tuning
+source:
+  kind: git
+  repository: C4illin/ConvertX
+  commit: 2b7c99de1017442e0e74be4c126d15c7c49cc7ac
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-18T09:39:31Z. Bun and Elysia application (file converter)."
+  - "Source build confirmed: root Dockerfile. Stage base runs bun install and bun run build:bin. The release stage is debian testing with many converter packages (calibre, texlive, libreoffice, ffmpeg) and is the default target (Dockerfile:1-98). The image is large. No build override. EXPOSE 3000."
+  - "The code stores data in a SQLite file. DB_PATH defaults to ./data/mydb.sqlite (src/db/db.ts:53), and the Dockerfile creates the data directory (line 80)."
+  - "src/helpers/env.ts:4 reads HTTP_ALLOWED, which defaults to false. The session cookies use secure: !HTTP_ALLOWED (src/pages/user.tsx:328)."

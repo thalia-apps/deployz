@@ -1,0 +1,12 @@
+id: new-22
+set: holdout
+source:
+  kind: git
+  repository: grimmory-tools/grimmory
+  commit: 41da123135315919e7a529803e5f0bda61bbfed7
+databaseEngine: mysql
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch develop, committed 2026-10-18T18:49:09Z. Spring Boot with an Angular frontend."
+  - "Root Dockerfile builds from source in stages: pnpm build of frontend/, Gradle bootJar of backend/ inside the image, then a JRE image with the jar copied from the build stage. No jar is copied from the host. No build override."
+  - "databaseEngine mysql: backend/src/main/resources/application.yaml:96 uses a jdbc:mariadb URL by default, and DATABASE_USERNAME and DATABASE_PASSWORD are read at lines 97-98. The datasource has no PostgreSQL default."
+  - "The application listens on port 6060 by default (application.yaml:64, EXPOSE 6060). The entrypoint writes to /app/data, /bookdrop and /books."

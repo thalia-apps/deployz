@@ -1,0 +1,17 @@
+id: new-30
+set: holdout
+source:
+  kind: git
+  repository: iv-org/invidious
+  commit: 57cc097022ad44a3a4fbd75f25912e7d12a84eb3
+build:
+  dockerfile: docker/Dockerfile
+  context: .
+vendorInputs:
+  - name: INVIDIOUS_HMAC_KEY
+    source: { kind: generated, format: hex32 }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-09-14T04:03:35Z (the latest commit on master). Crystal application (Kemal)."
+  - "There is no root Dockerfile. build.dockerfile is docker/Dockerfile with the repository root as context. It compiles OpenSSL 3.6.5 and the application inside the image with crystal build --static. It also runs crystal spec during the build, and it runs COPY ./.git/ (the build needs the .git folder of the checkout)."
+  - "INVIDIOUS_HMAC_KEY: src/invidious/config.cr:306 stops the start when hmac_key is empty. config.cr:233 maps INVIDIOUS_<NAME> environment variables to settings, and INVIDIOUS_CONFIG and INVIDIOUS_CONFIG_FILE also exist (config.cr:225)."
+  - "The image copies config/config.example.yml to config/config.yml and replaces the database host 127.0.0.1 or localhost with invidious-db (Dockerfile). The database setting can also be database_url (config.cr:117). The application listens on port 3000."

@@ -1,0 +1,539 @@
+{
+  "schemaVersion": 1,
+  "id": "new-16",
+  "set": "tuning",
+  "repository": "geneweb/geneweb",
+  "commit": "84b2c17e24e7e0268830557b58c5d5958ad7ac6a",
+  "recipeHash": "4d2c26348a6c3a7c7ad62ad782bf126d797f9365f9b5f7b92297d6e31d5e8404",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:39:26.027Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 352,
+          "imageBytes": 243497331,
+          "dockerfile": "docker/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#20 13.71 \u001b[1;1m└ Copy plugins in distribution/gw/plugins\u001b[0m\n#20 13.71 mkdir distribution/gw/plugins\n#20 13.72 Done.\n#20 13.72 \n#20 13.72 \u001b[1;1mDistribution complete\u001b[0m\n#20 13.72 You can launch Geneweb with “\u001b[1;1mcd distribution\u001b[0m” followed by “\u001b[1;1mgw/gwd\u001b[0m”.\n#20 13.72 \n#20 DONE 15.7s\n#21 [container 5/7] COPY --from=builder /home/opam/geneweb/distribution share/dist\n#21 DONE 0.8s\n#22 [container 6/7] COPY docker/geneweb-launch.sh bin/geneweb-launch.sh\n#22 DONE 0.0s\n#23 [container 7/7] RUN chmod +x bin/geneweb-launch.sh   && touch log/gwsetup.log   && touch log/gwd.log   && chown -R geneweb:geneweb .\n#23 DONE 1.0s\n#24 exporting to image\n#24 exporting layers\n#24 exporting layers 0.5s done\n#24 writing image sha256:c5f8e21f4267df89cb04ce17c9e1e5d200d0ba48be18e76ca9ce773d84629ea4 done\n#24 naming to docker.io/deployz-runcheck/new-16:84b2c17e24e7e0268830557b58c5d5958ad7ac6a done\n#24 DONE 0.5s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "2026-10-18_22:45:55 geneweb-launch: Database database not found, creating empty database...\n2026-10-18_22:45:55 geneweb-launch: -- Setting wizard_passwd_file to wizard_passwd in database database.\n2026-10-18_22:45:55 geneweb-launch: Configured access control.\n2026-10-18_22:45:55 geneweb-launch: -- ADMIN USERNAME: admin\n2026-10-18_22:45:55 geneweb-launch: -- ADMIN PASSWORD: 0cbe7230aff0db98153abb92b5dae61460b08bd7dd0681ea4f9fe986c5c4dfa9\n2026-10-18_22:45:55 geneweb-launch: Configuring settings for database database...\n2026-10-18_22:45:55 geneweb-launch: Starting gwsetup.\n2026-10-18_22:45:55 geneweb-launch: -- Started gwsetup!\n2026-10-18_22:45:55 geneweb-launch: Starting gwd.\nThe CLI option \"-daemon\" is deprecated. Please use \"--daemon\" instead.\nThe CLI option \"-plugins\" is deprecated. Please use \"--load-all-plugins\" instead.\nThe CLI option \"-unsafe\" is noop. Please refer to the documentation for more details.\nThe CLI option \"-trace_failed_passwd\" is deprecated. Please use \"--trace-failed-password\" instead.\nThe CLI option \"-bd\" is deprecated. Please use \"--bd\" instead.\nThe CLI option \"-hd\" is deprecated. Please use \"--gw-prefix\" instead.\nThe CLI option \"-cache-in-memory\" is deprecated. Please use \"--cache-database\" instead.\nThe CLI option \"-log\" is deprecated. Please use \"--log\" instead.\nUsage: gwd [--help] [OPTION]…\ngwd: too many arguments, don't know what to do with\n     '/usr/local/share/geneweb/share/dist/gw/plugins'\n2026-10-18_22:45:55 geneweb-launch: -- Started gwd!\n2026-10-18_22:45:55 geneweb-launch: Launch complete! -------------------------------------------------------\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 2316,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          },
+          {
+            "port": 38559,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "2316 loopback reachable=false\n38559 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "no reachable port"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ none"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-16: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-16: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/usr/local/share/geneweb/share/dist/gw/etc/gwsetup_only"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/usr/local/share/geneweb/share/dist/gw/etc/gwsetup_only"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 360.633,
+        "setA": 935.584
+      }
+    },
+    {
+      "startedAt": "2026-10-18T23:01:02.271Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 352,
+          "imageBytes": 243497331,
+          "dockerfile": "docker/Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-16:84b2c17e24e7e0268830557b58c5d5958ad7ac6a from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "2026-10-18_23:01:13 geneweb-launch: Database database not found, creating empty database...\n2026-10-18_23:01:13 geneweb-launch: -- Setting wizard_passwd_file to wizard_passwd in database database.\n2026-10-18_23:01:13 geneweb-launch: Configured access control.\n2026-10-18_23:01:13 geneweb-launch: -- ADMIN USERNAME: admin\n2026-10-18_23:01:13 geneweb-launch: -- ADMIN PASSWORD: 213ecdb1b349afe2cdae242855162fb1d4f933745b9d914d80912f63cfb7d78f\n2026-10-18_23:01:13 geneweb-launch: Configuring settings for database database...\n2026-10-18_23:01:13 geneweb-launch: Starting gwsetup.\n2026-10-18_23:01:13 geneweb-launch: -- Started gwsetup!\n2026-10-18_23:01:13 geneweb-launch: Starting gwd.\nThe CLI option \"-daemon\" is deprecated. Please use \"--daemon\" instead.\nThe CLI option \"-plugins\" is deprecated. Please use \"--load-all-plugins\" instead.\nThe CLI option \"-unsafe\" is noop. Please refer to the documentation for more details.\nThe CLI option \"-trace_failed_passwd\" is deprecated. Please use \"--trace-failed-password\" instead.\nThe CLI option \"-bd\" is deprecated. Please use \"--bd\" instead.\nThe CLI option \"-hd\" is deprecated. Please use \"--gw-prefix\" instead.\nThe CLI option \"-cache-in-memory\" is deprecated. Please use \"--cache-database\" instead.\nThe CLI option \"-log\" is deprecated. Please use \"--log\" instead.\nUsage: gwd [--help] [OPTION]…\ngwd: too many arguments, don't know what to do with\n     '/usr/local/share/geneweb/share/dist/gw/plugins'\n2026-10-18_23:01:13 geneweb-launch: -- Started gwd!\n2026-10-18_23:01:13 geneweb-launch: Launch complete! -------------------------------------------------------\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 2316,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          },
+          {
+            "port": 39677,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "2316 loopback reachable=false\n39677 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "no reachable port"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 18080/ none"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-16: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-16: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/usr/local/share/geneweb/share/dist/gw/etc/gwsetup_only"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/usr/local/share/geneweb/share/dist/gw/etc/gwsetup_only"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 1.708,
+        "setA": 917.737
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

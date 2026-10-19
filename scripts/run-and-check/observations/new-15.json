@@ -1,0 +1,931 @@
+{
+  "schemaVersion": 1,
+  "id": "new-15",
+  "set": "tuning",
+  "repository": "homarr-labs/homarr",
+  "commit": "69e3976297b0f7df9aec42c61ecfd82dbd100de3",
+  "recipeHash": "283629d8efade00fdd572962f02ac1e306ce1957e58d495c4a0dc041a7e1133e",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:38:47.070Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 187,
+          "imageBytes": 507011597,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#30 [runner  9/14] COPY --from=builder /app/apps/nextjs/.output/standalone ./\n#30 DONE 2.7s\n#31 [runner 10/14] COPY scripts/run.sh ./run.sh\n#31 DONE 0.0s\n#32 [runner 11/14] COPY scripts/trusted-proxies.mjs ./scripts/trusted-proxies.mjs\n#32 DONE 0.0s\n#33 [runner 12/14] COPY --chmod=755 scripts/entrypoint.sh ./entrypoint.sh\n#33 DONE 0.0s\n#34 [runner 13/14] COPY packages/redis/redis.conf /app/redis.conf\n#34 DONE 0.0s\n#35 [runner 14/14] COPY nginx.conf /etc/nginx/templates/nginx.conf\n#35 DONE 0.0s\n#36 exporting to image\n#36 exporting layers\n#36 exporting layers 1.6s done\n#36 writing image sha256:9ab67b1a262aaed4919a07231e750a4c48b5f8b02a4ebd4ec6a6af529acbe348 done\n#36 naming to docker.io/deployz-runcheck/new-15:69e3976297b0f7df9aec42c61ecfd82dbd100de3 done\n#36 DONE 1.6s\n \u001b[33m1 warning found (use docker --debug to expand):\n\u001b[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV \"AUTH_PROVIDERS\") (line 58)"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, DB_URL, DB_DRIVER, DB_DIALECT, SECRET_ENCRYPTION_KEY, AUTH_SECRET, HOMARR_REQUEST_IDENTITY_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ 307\n18080/health 307\n18080/healthz 307\n18080/up 307\n18080/api/health 404\n18080/status 307\n18080/ping 307\n18080/_health 307\n18080/actuator/health 307\n7575/ 502\n7575/health 502\n7575/healthz 502\n7575/up 502\n7575/api/health 502\n7575/status 502\n7575/ping 502\n7575/_health 502\n7575/actuator/health 502\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "key module=\"trpcOpenApiRoute\"\n2026-10-18T22:57:27.016Z \u001b[31merror\u001b[39m: tRPC Error occured path=\"undefined\" type=\"unknown\"\n    at onError (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__1vt--w3._.js:1:1378)\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209085\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\ncaused by TRPCError: Not found code=\"NOT_FOUND\"\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:206223\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n2026-10-18T22:57:32.900Z \u001b[32minfo\u001b[39m: Creating OpenAPI fetch handler for user without an api key module=\"trpcOpenApiRoute\"\n2026-10-18T22:57:32.901Z \u001b[31merror\u001b[39m: tRPC Error occured path=\"undefined\" type=\"unknown\"\n    at onError (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__1vt--w3._.js:1:1378)\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209085\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\ncaused by TRPCError: Not found code=\"NOT_FOUND\"\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:206223\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 3001,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 6379,
+            "bind": "all",
+            "reachableFromProbe": false
+          },
+          {
+            "port": 7575,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 40179,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "3001 all reachable=true\n6379 all reachable=false\n7575 all reachable=true\n18080 all reachable=true\n40179 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 3001,
+            "path": "/",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/healthz",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/up",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/api/health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/status",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/ping",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/_health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/actuator/health",
+            "status": 426
+          },
+          {
+            "port": 7575,
+            "path": "/",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/healthz",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/up",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/api/health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/status",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/ping",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/_health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/actuator/health",
+            "status": 502
+          },
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 307
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "3001/ 426\n3001/health 426\n3001/healthz 426\n3001/up 426\n3001/api/health 426\n3001/status 426\n3001/ping 426\n3001/_health 426\n3001/actuator/health 426\n7575/ 502\n7575/health 502\n7575/healthz 502\n7575/up 502\n7575/api/health 502\n7575/status 502\n7575/ping 502\n7575/_health 502\n7575/actuator/health 502\n18080/ 307\n18080/health 307\n18080/healthz 307\n18080/up 307\n18080/api/health 404\n18080/status 307\n18080/ping 307\n18080/_health 307\n18080/actuator/health 307"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 426
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 3001/ 426"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "postgres",
+          "connections": 20,
+          "tablesAfterStart": [
+            "account",
+            "apiKey",
+            "app",
+            "assistant_configuration",
+            "assistant_message",
+            "assistant_thread",
+            "board",
+            "boardGroupPermission",
+            "boardUserPermission",
+            "cron_job_configuration",
+            "custom_widget_definition",
+            "custom_widget_secret",
+            "custom_widget_v2_definition",
+            "custom_widget_v2_secret",
+            "drizzle.__drizzle_migrations",
+            "group",
+            "groupMember",
+            "groupPermission",
+            "icon",
+            "iconRepository",
+            "integration",
+            "integrationGroupPermissions",
+            "integrationSecret",
+            "integrationUserPermission",
+            "integration_item",
+            "invite",
+            "item",
+            "item_layout",
+            "layout",
+            "media",
+            "onboarding",
+            "search_engine",
+            "section",
+            "section_collapse_state",
+            "section_layout",
+            "serverSetting",
+            "session",
+            "trusted_certificate_hostname",
+            "user",
+            "verificationToken",
+            "widget_secret"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 20 application connections; tables in deployz: account, apiKey, app, assistant_configuration, assistant_message, assistant_thread, board, boardGroupPermission, boardUserPermission, cron_job_configuration, custom_widget_definition, custom_widget_secret, custom_widget_v2_definition, custom_widget_v2_secret, drizzle.__drizzle_migrations, group, groupMember, groupPermission, icon, iconRepository, integration, integrationGroupPermissions, integrationSecret, integrationUserPermission, integration_item, invite, item, item_layout, layout, media, onboarding, search_engine, section, section_collapse_state, section_layout, serverSetting, session, trusted_certificate_hostname, user, verificationToken, widget_secret"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-15: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-15: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "DB_DRIVER",
+          "DB_DIALECT",
+          "SECRET_ENCRYPTION_KEY"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 199.812,
+        "setA": 930.214
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:57:37.103Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 187,
+          "imageBytes": 507011597,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-15:69e3976297b0f7df9aec42c61ecfd82dbd100de3 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, DB_HOST, DB_PORT, DB_NAME, DB_USER, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, DB_PASSWORD, DB_URL, DB_DRIVER, DB_DIALECT, SECRET_ENCRYPTION_KEY, AUTH_SECRET, HOMARR_REQUEST_IDENTITY_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=false oomKilled=false seconds=none\n18080/ 307\n18080/health 307\n18080/healthz 307\n18080/up 307\n18080/api/health 404\n18080/status 307\n18080/ping 307\n18080/_health 307\n18080/actuator/health 307\n7575/ 502\n7575/health 502\n7575/healthz 502\n7575/up 502\n7575/api/health 502\n7575/status 502\n7575/ping 502\n7575/_health 502\n7575/actuator/health 502\n8080/ none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "key module=\"trpcOpenApiRoute\"\n2026-10-18T23:12:41.867Z \u001b[31merror\u001b[39m: tRPC Error occured path=\"undefined\" type=\"unknown\"\n    at onError (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__1vt--w3._.js:1:1378)\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209085\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\ncaused by TRPCError: Not found code=\"NOT_FOUND\"\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:206223\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n2026-10-18T23:12:47.799Z \u001b[32minfo\u001b[39m: Creating OpenAPI fetch handler for user without an api key module=\"trpcOpenApiRoute\"\n2026-10-18T23:12:47.800Z \u001b[31merror\u001b[39m: tRPC Error occured path=\"undefined\" type=\"unknown\"\n    at onError (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__1vt--w3._.js:1:1378)\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209085\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\ncaused by TRPCError: Not found code=\"NOT_FOUND\"\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:206223\n    at /app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209674\n    at new Promise (<anonymous>)\n    at X (/app/apps/nextjs/.next/server/chunks/[root-of-the-server]__018j8t4._.js:1:209645)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 3001,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 6379,
+            "bind": "all",
+            "reachableFromProbe": false
+          },
+          {
+            "port": 7575,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 18080,
+            "bind": "all",
+            "reachableFromProbe": true
+          },
+          {
+            "port": 42261,
+            "bind": "loopback",
+            "reachableFromProbe": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "inspect",
+            "source": "web#1",
+            "text": "3001 all reachable=true\n6379 all reachable=false\n7575 all reachable=true\n18080 all reachable=true\n42261 loopback reachable=false"
+          }
+        ]
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [
+          {
+            "port": 3001,
+            "path": "/",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/healthz",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/up",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/api/health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/status",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/ping",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/_health",
+            "status": 426
+          },
+          {
+            "port": 3001,
+            "path": "/actuator/health",
+            "status": 426
+          },
+          {
+            "port": 7575,
+            "path": "/",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/healthz",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/up",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/api/health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/status",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/ping",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/_health",
+            "status": 502
+          },
+          {
+            "port": 7575,
+            "path": "/actuator/health",
+            "status": 502
+          },
+          {
+            "port": 18080,
+            "path": "/",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/health",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/healthz",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/up",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/api/health",
+            "status": 404
+          },
+          {
+            "port": 18080,
+            "path": "/status",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/ping",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/_health",
+            "status": 307
+          },
+          {
+            "port": 18080,
+            "path": "/actuator/health",
+            "status": 307
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "3001/ 426\n3001/health 426\n3001/healthz 426\n3001/up 426\n3001/api/health 426\n3001/status 426\n3001/ping 426\n3001/_health 426\n3001/actuator/health 426\n7575/ 502\n7575/health 502\n7575/healthz 502\n7575/up 502\n7575/api/health 502\n7575/status 502\n7575/ping 502\n7575/_health 502\n7575/actuator/health 502\n18080/ 307\n18080/health 307\n18080/healthz 307\n18080/up 307\n18080/api/health 404\n18080/status 307\n18080/ping 307\n18080/_health 307\n18080/actuator/health 307"
+          }
+        ]
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": 426
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "GET 3001/ 426"
+          }
+        ]
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": "postgres",
+          "connections": 21,
+          "tablesAfterStart": [
+            "account",
+            "apiKey",
+            "app",
+            "assistant_configuration",
+            "assistant_message",
+            "assistant_thread",
+            "board",
+            "boardGroupPermission",
+            "boardUserPermission",
+            "cron_job_configuration",
+            "custom_widget_definition",
+            "custom_widget_secret",
+            "custom_widget_v2_definition",
+            "custom_widget_v2_secret",
+            "drizzle.__drizzle_migrations",
+            "group",
+            "groupMember",
+            "groupPermission",
+            "icon",
+            "iconRepository",
+            "integration",
+            "integrationGroupPermissions",
+            "integrationSecret",
+            "integrationUserPermission",
+            "integration_item",
+            "invite",
+            "item",
+            "item_layout",
+            "layout",
+            "media",
+            "onboarding",
+            "search_engine",
+            "section",
+            "section_collapse_state",
+            "section_layout",
+            "serverSetting",
+            "session",
+            "trusted_certificate_hostname",
+            "user",
+            "verificationToken",
+            "widget_secret"
+          ],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 21 application connections; tables in deployz: account, apiKey, app, assistant_configuration, assistant_message, assistant_thread, board, boardGroupPermission, boardUserPermission, cron_job_configuration, custom_widget_definition, custom_widget_secret, custom_widget_v2_definition, custom_widget_v2_secret, drizzle.__drizzle_migrations, group, groupMember, groupPermission, icon, iconRepository, integration, integrationGroupPermissions, integrationSecret, integrationUserPermission, integration_item, invite, item, item_layout, layout, media, onboarding, search_engine, section, section_collapse_state, section_layout, serverSetting, session, trusted_certificate_hostname, user, verificationToken, widget_secret"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-15: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": true,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-15: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=false"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "DB_DRIVER",
+          "DB_DIALECT",
+          "SECRET_ENCRYPTION_KEY"
+        ],
+        "from": [
+          "recipe",
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 2.709,
+        "setA": 912.372
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

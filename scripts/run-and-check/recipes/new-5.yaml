@@ -1,0 +1,13 @@
+id: new-5
+set: tuning
+source:
+  kind: git
+  repository: pterodactyl/panel
+  commit: f9bc3e5e70510774e5daa1c90b6f5b624c99d2bc
+databaseEngine: mysql
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch 1.0-develop, committed 2026-10-16T18:24:10Z. Laravel application."
+  - "Source build confirmed: root Dockerfile with two stages. Stage 0 runs yarn build:production. Stage 1 is php:8.3-fpm-alpine with nginx and supervisord, then composer install (Dockerfile:5-27). No build override. EXPOSE 80 and 443 (Dockerfile:39)."
+  - "databaseEngine mysql: the image installs only the pdo_mysql PHP extension (Dockerfile:19), and .env.example sets DB_CONNECTION=mysql (line 14)."
+  - "No vendor inputs: the entrypoint creates APP_KEY (32 random characters) and HASHIDS_SALT when they are absent (.github/docker/entrypoint.sh:19-38). The Dockerfile removes .env (Dockerfile:25)."
+  - ".env.example sets QUEUE_CONNECTION=redis, CACHE_DRIVER=file and SESSION_DRIVER=file (lines 25-27)."

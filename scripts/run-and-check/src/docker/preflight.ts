@@ -3,10 +3,11 @@ import os from 'node:os';
 
 import { docker } from './docker.js';
 import { runcheckHome } from './paths.js';
+import { libraryImage } from './registry.js';
 import { createDockerResources } from './resources.js';
 import { labelArgs } from './safety.js';
 
-const ALPINE = 'public.ecr.aws/docker/library/alpine:3.20';
+const ALPINE = libraryImage('alpine:3.20');
 /** A GitHub runner builds and runs one repository, so it needs far less disk than the shared local cache. */
 const MIN_FREE_GB = process.env.CI === 'true' ? 20 : 150;
 const GB = 1024 ** 3;

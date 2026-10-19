@@ -29,6 +29,22 @@ const TUNING_IDS = [
   'repo-074',
   'repo-013',
   'repo-076',
+  'new-4',
+  'new-5',
+  'new-6',
+  'new-7',
+  'new-8',
+  'new-9',
+  'new-10',
+  'new-11',
+  'new-12',
+  'new-13',
+  'new-14',
+  'new-15',
+  'new-16',
+  'new-17',
+  'new-18',
+  'new-19',
 ] as const;
 
 const RECIPE_KEYS = ['id', 'set', 'source', 'build', 'vendorInputs', 'databaseEngine', 'smoke', 'notes'];

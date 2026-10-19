@@ -1,0 +1,531 @@
+{
+  "schemaVersion": 1,
+  "id": "new-22",
+  "set": "holdout",
+  "repository": "grimmory-tools/grimmory",
+  "commit": "41da123135315919e7a529803e5f0bda61bbfed7",
+  "recipeHash": "e9793ed0c0d7558ee3c0f983fd2a5ebf826a308a9b837493d86bda6185431e73",
+  "imageDigest": null,
+  "runs": [
+    {
+      "startedAt": "2026-10-18T22:37:57.035Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 157,
+          "imageBytes": 481356461,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "log",
+            "source": "build",
+            "text": "#39 58.55 For more on this, please refer to https://docs.gradle.org/9.8.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.\n#39 58.56 \n#39 58.56 BUILD SUCCESSFUL in 58s\n#39 58.56 3 actionable tasks: 3 executed\n#39 58.56 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.8.1/userguide/configuration_cache_enabling.html\n#39 DONE 58.9s\n#40 [backend-build 11/11] RUN set -eux;     jar_path=\"$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*plain.jar' | head -n 1)\";     cp \"$jar_path\" /workspace/backend/app.jar\n#40 0.125 + find build/libs -maxdepth 1 -name '*.jar' '!' -name '*plain.jar'\n#40 0.125 + head -n 1\n#40 0.127 + jar_path=build/libs/backend-development.jar\n#40 0.127 + cp build/libs/backend-development.jar /workspace/backend/app.jar\n#40 DONE 0.2s\n#41 [stage-6 8/8] COPY --from=backend-build /workspace/backend/app.jar /app/app.jar\n#41 DONE 0.1s\n#42 exporting to image\n#42 exporting layers\n#42 exporting layers 0.4s done\n#42 writing image sha256:9dce8ee620508e1de055841104d3785889741f2b26901f08e2da3fc1f539e74c done\n#42 naming to docker.io/deployz-runcheck/new-22:41da123135315919e7a529803e5f0bda61bbfed7 done\n#42 DONE 0.4s"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, MYSQL_SSL_CA, MYSQL_HOST, MYSQL_PORT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, MYSQL_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/actuator/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n6060/ none\n6060/actuator/health none\n6060/health none\n6060/healthz none\n6060/up none\n6060/api/health none\n6060/status none\n6060/ping none\n6060/_health none\n8080/ none\n8080/actuator/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n3000/ none\n3000/actuator/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n80/ none\n80/actuator/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiateWithFactoryMethod(SimpleInstantiationStrategy.java:72) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:152) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 143 common frames omitted\nCaused by: java.lang.IllegalArgumentException: 'url' must start with \"jdbc\"\n\tat org.springframework.util.Assert.isTrue(Assert.java:117) ~[spring-core-7.0.9.jar!/:7.0.9]\n\tat org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:316) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.findDriverClassName(DataSourceProperties.java:193) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:177) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails.getDriverClassName(PropertiesJdbcConnectionDetails.java:51) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:63) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:128) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]\n\tat java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:155) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 146 common frames omitted\n\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-22: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-22: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/app/data",
+          "/bookdrop",
+          "/books",
+          "/home/booklore"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/app/data\n/bookdrop\n/books\n/home/booklore"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/actuator/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n6060/ none\n6060/actuator/health none\n6060/health none\n6060/healthz none\n6060/up none\n6060/api/health none\n6060/status none\n6060/ping none\n6060/_health none\n8080/ none\n8080/actuator/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n3000/ none\n3000/actuator/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n80/ none\n80/actuator/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiateWithFactoryMethod(SimpleInstantiationStrategy.java:72) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:152) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 143 common frames omitted\nCaused by: java.lang.IllegalArgumentException: 'url' must start with \"jdbc\"\n\tat org.springframework.util.Assert.isTrue(Assert.java:117) ~[spring-core-7.0.9.jar!/:7.0.9]\n\tat org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:316) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.findDriverClassName(DataSourceProperties.java:193) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:177) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails.getDriverClassName(PropertiesJdbcConnectionDetails.java:51) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:63) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:128) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]\n\tat java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:155) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 146 common frames omitted\n\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/actuator/health",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 173.013,
+        "setA": 50.107,
+        "sizes": 29.176
+      }
+    },
+    {
+      "startedAt": "2026-10-18T22:42:09.341Z",
+      "harnessVersion": "1",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 157,
+          "imageBytes": 481356461,
+          "dockerfile": "Dockerfile",
+          "context": ".",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/new-22:41da123135315919e7a529803e5f0bda61bbfed7 from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, MYSQL_SSL_CA, MYSQL_HOST, MYSQL_PORT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, MYSQL_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/actuator/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n6060/ none\n6060/actuator/health none\n6060/health none\n6060/healthz none\n6060/up none\n6060/api/health none\n6060/status none\n6060/ping none\n6060/_health none\n8080/ none\n8080/actuator/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n3000/ none\n3000/actuator/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n80/ none\n80/actuator/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiateWithFactoryMethod(SimpleInstantiationStrategy.java:72) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:152) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 143 common frames omitted\nCaused by: java.lang.IllegalArgumentException: 'url' must start with \"jdbc\"\n\tat org.springframework.util.Assert.isTrue(Assert.java:117) ~[spring-core-7.0.9.jar!/:7.0.9]\n\tat org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:316) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.findDriverClassName(DataSourceProperties.java:193) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:177) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails.getDriverClassName(PropertiesJdbcConnectionDetails.java:51) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:63) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:128) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]\n\tat java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:155) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 146 common frames omitted\n\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-22: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-new-22: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [
+          "/app/data",
+          "/bookdrop",
+          "/books",
+          "/home/booklore"
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "/app/data\n/bookdrop\n/books\n/home/booklore"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/actuator/health none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n6060/ none\n6060/actuator/health none\n6060/health none\n6060/healthz none\n6060/up none\n6060/api/health none\n6060/status none\n6060/ping none\n6060/_health none\n8080/ none\n8080/actuator/health none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n3000/ none\n3000/actuator/health none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n80/ none\n80/actuator/health none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiateWithFactoryMethod(SimpleInstantiationStrategy.java:72) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:152) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\tat org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 143 common frames omitted\nCaused by: java.lang.IllegalArgumentException: 'url' must start with \"jdbc\"\n\tat org.springframework.util.Assert.isTrue(Assert.java:117) ~[spring-core-7.0.9.jar!/:7.0.9]\n\tat org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:316) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.findDriverClassName(DataSourceProperties.java:193) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:177) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails.getDriverClassName(PropertiesJdbcConnectionDetails.java:51) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:63) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:128) ~[spring-boot-jdbc-4.1.1.jar!/:4.1.1]\n\tat java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source) ~[na:na]\n\tat java.base/java.lang.reflect.Method.invoke(Unknown Source) ~[na:na]\n\tat org.springframework.beans.factory.support.SimpleInstantiationStrategy.lambda$instantiate$0(SimpleInstantiationStrategy.java:155) ~[spring-beans-7.0.9.jar!/:7.0.9]\n\t... 146 common frames omitted\n\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/actuator/health",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/status",
+          "/ping",
+          "/_health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [],
+        "from": [
+          "analysis:rules@0fc073b8",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 4.556,
+        "setA": 35.513,
+        "sizes": 29.221
+      }
+    }
+  ],
+  "unstable": [],
+  "complete": true
+}

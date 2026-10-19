@@ -1,0 +1,11 @@
+id: new-11
+set: tuning
+source:
+  kind: git
+  repository: oqtane/oqtane.framework
+  commit: 86b5e6ded8b8fe1a360aacf60f9f4bca21f2e5c4
+build:
+  dockerfile: Oqtane.Server/Dockerfile
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch dev, committed 2026-10-14T20:17:56Z. ASP.NET Core (.NET 10) with Blazor, a CMS and application framework."
+  - "Source build confirmed: Oqtane.Server/Dockerfile runs dotnet restore, dotnet build and dotnet publish in an sdk stage, then copies the output to an aspnet stage (Oqtane.Server/Dockerfile:16-44). It copies Directory.Build.props and the Oqtane.Client and Oqtane.Shared projects from the repository root, so the context is the repository root. The Dockerfile is not at the root, so build.dockerfile names it. EXPOSE 8080 (line 12)."

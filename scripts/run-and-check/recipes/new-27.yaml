@@ -1,0 +1,20 @@
+id: new-27
+set: holdout
+source:
+  kind: git
+  repository: lukevella/rallly
+  commit: 4cf46ff7b442f6414d3af35787a436ef990683d7
+build:
+  dockerfile: apps/web/Dockerfile
+  context: .
+vendorInputs:
+  - name: SECRET_PASSWORD
+    source: { kind: generated, format: hex64 }
+  - name: NEXT_PUBLIC_BASE_URL
+    source: { kind: deploymentUrl }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-18T03:10:26Z. pnpm and Turborepo workspace; the web app is apps/web."
+  - "There is no root Dockerfile. build.dockerfile is apps/web/Dockerfile (the one docker-compose.yml uses), with the repository root as context. It runs turbo prune for @rallly/web, then pnpm build, and starts scripts/docker-start.sh (prisma migrate deploy, then node apps/web/server.js)."
+  - "SECRET_PASSWORD: apps/web/src/env.ts:25 requires at least 32 characters. The name is specific to this app, so the input is explicit."
+  - "NEXT_PUBLIC_BASE_URL: env.ts:230 requires a valid URL, and docker-start.sh copies it to AUTH_URL."
+  - "DATABASE_URL is required (env.ts:21). docker-compose.yml builds the image with the build arg SELF_HOSTED=true. The recipe sets no build arg."

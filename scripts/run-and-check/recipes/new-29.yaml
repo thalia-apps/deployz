@@ -1,0 +1,18 @@
+id: new-29
+set: holdout
+source:
+  kind: git
+  repository: atuinsh/atuin
+  commit: c5f85ed664c8d825b1c3241431a9ff9ec9a25177
+vendorInputs:
+  - name: ATUIN_HOST
+    source: { kind: fixed, value: "0.0.0.0" }
+smoke:
+  method: GET
+  path: /user/deployz-smoke
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-16T23:45:56Z. Rust Cargo workspace; the Dockerfile builds only the atuin-server binary (an axum HTTP server)."
+  - "Root Dockerfile builds from source with cargo-chef (cargo build --release --bin atuin-server) and runs it from a debian slim image. No build override."
+  - "ATUIN_HOST: crates/atuin-server/src/settings.rs:59 defaults host to 127.0.0.1. Fixed non-secret value. The Dockerfile health check uses ATUIN_PORT (default 8888) and /healthz."
+  - "The database setting is db_uri (settings.rs, environment name ATUIN_DB_URI). The in-code default is sqlite::memory:."
+  - "smoke: GET / and /healthz do not need the database. GET /user/{username} (crates/atuin-server/src/router.rs:124) looks up a user row."

@@ -1,0 +1,15 @@
+id: new-13
+set: tuning
+source:
+  kind: git
+  repository: plausible/analytics
+  commit: d44e104ae3943a9240d5cb6b62e67dff0f069d3a
+vendorInputs:
+  - name: BASE_URL
+    source: { kind: deploymentUrl }
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-16T07:49:30Z. Elixir Phoenix application with PostgreSQL and ClickHouse."
+  - "Source build confirmed: root Dockerfile. It builds the assets and tracker with node and runs mix release plausible in an elixir stage. The runtime stage is alpine (Dockerfile:9-86). MIX_ENV defaults to ce. No build override."
+  - "BASE_URL: config/runtime.exs:69-73 raises when BASE_URL is absent, and it must start with http or https (line 77)."
+  - "SECRET_KEY_BASE is required and must have at least 32 bytes (config/runtime.exs:81-88). TOTP_VAULT_KEY is optional (line 170)."
+  - "The events store is read from CLICKHOUSE_DATABASE_URL (config/runtime.exs:117-120)."

@@ -1,0 +1,10 @@
+id: new-31
+set: holdout
+source:
+  kind: git
+  repository: undb-io/undb
+  commit: 3d2e93bc4fb5d7b90a1a3ae5957be26d7305a303
+notes:
+  - "Pinned 2026-10-19: HEAD of the default branch develop, API commit date 2026-09-22. Bun monorepo (apps/backend, apps/frontend, packages/)."
+  - "Root Dockerfile builds from source: bun install, bun run build:docker (compiles apps/backend/undb), then an oven/bun release image that runs ./undb under tini. It downloads tini from GitHub at build time. No build override."
+  - "The container listens on PORT 3721 (Dockerfile). packages/env/src/index.ts reads UNDB_DB_POSTGRES_URL, UNDB_DB_MYSQL_URL and UNDB_DB_TURSO_URL as optional database settings. .env.example sets UNDB_BASE_URL."
