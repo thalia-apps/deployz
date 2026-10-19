@@ -79,6 +79,35 @@ export const analystOutputSchema = z
   .strict();
 export type AnalystOutput = z.infer<typeof analystOutputSchema>;
 
+/**
+ * The shape the provider is held to: structure only. With its patterns and
+ * limits, `analystOutputSchema` compiles to a grammar that Anthropic refuses
+ * ("The compiled grammar is too large"). The strict schema still validates
+ * every answer after the call.
+ */
+export const wireEvidenceSchema = z.object({ path: z.string(), line: z.number().int(), quote: z.string() }).strict();
+
+function wireFact<T extends z.ZodType>(value: T) {
+  return z.object({ value, confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict();
+}
+
+const analystWireSchema = z
+  .object({
+    dockerfile: wireFact(z.object({ path: z.string(), context: z.string() }).strict().nullable()),
+    port: wireFact(z.number().int().nullable()),
+    startCommand: wireFact(z.string().nullable()),
+    healthPath: wireFact(z.string().nullable()),
+    database: wireFact(z.enum(['postgres', 'mysql', 'none'])),
+    redis: wireFact(z.boolean()),
+    storage: wireFact(z.boolean()),
+    migration: wireFact(z.object({ mode: z.enum(['pre_deploy', 'startup', 'none', 'unknown']), command: z.string().nullable() }).strict()),
+    workers: z.array(
+      z.object({ id: z.string(), command: z.string(), confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict(),
+    ),
+    requiredVariables: z.array(z.object({ name: z.string(), confidence: confidenceSchema, evidence: z.array(wireEvidenceSchema) }).strict()),
+  })
+  .strict();
+
 export const FACT_NAMES = [
   'dockerfile',
   'port',
@@ -133,7 +162,7 @@ export async function runAnalyst(
   if (estimateTokens(prompt) > ANALYST_MAX_PROMPT_TOKENS) {
     throw new SpendLimitExceededError(estimateTokens(prompt), ANALYST_MAX_PROMPT_TOKENS);
   }
-  const response = await gateway.generate(prompt, analystOutputSchema, {
+  const response = await gateway.generate(prompt, analystWireSchema, {
     abortSignal: options.abortSignal,
     label: 'application-analysis',
     maxOutputTokens: ANALYST_MAX_OUTPUT_TOKENS,
