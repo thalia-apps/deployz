@@ -10,11 +10,17 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 1;
+export const ANALYST_PROMPT_VERSION = 2;
 export const ANALYST_MAX_PROMPT_TOKENS = 40_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
 export const ANALYST_TIMEOUT_MS = 240_000;
+/**
+ * The spend check on the provider's reported usage. The prompt estimate
+ * (characters / 4) undercounts code: measured 2026-10-19, a full pack used
+ * 70,678 tokens in one call.
+ */
+export const ANALYST_MAX_TOTAL_TOKENS = 80_000;
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -93,6 +99,53 @@ export const FACT_NAMES = [
 ] as const;
 export type FactName = (typeof FACT_NAMES)[number];
 
+/**
+ * The shape the provider is held to: one flat entry per fact, the value as
+ * JSON text. Anthropic refuses the typed schema ("The compiled grammar is too
+ * large"), even without its patterns and limits. `fromWire` rebuilds the facts
+ * and `analystOutputSchema` validates them.
+ */
+export const wireEvidenceSchema = z.object({ path: z.string(), line: z.number().int(), quote: z.string() }).strict();
+
+export const analystWireSchema = z
+  .object({
+    facts: z.array(
+      z
+        .object({
+          fact: z.enum(FACT_NAMES),
+          subject: z.string().nullable(),
+          value: z.string(),
+          confidence: confidenceSchema,
+          evidence: z.array(wireEvidenceSchema),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type AnalystWire = z.infer<typeof analystWireSchema>;
+
+function parseValue(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** The facts in the analyst shape. A missing or repeated scalar fact makes the strict parse fail. */
+export function fromWire(wire: AnalystWire): unknown {
+  const output: Record<string, unknown> = { workers: [], requiredVariables: [] };
+  for (const entry of wire.facts) {
+    const value = parseValue(entry.value);
+    const item = { confidence: entry.confidence, evidence: entry.evidence };
+    if (entry.fact === 'workers') (output['workers'] as unknown[]).push({ id: entry.subject, command: value, ...item });
+    else if (entry.fact === 'requiredVariables') (output['requiredVariables'] as unknown[]).push({ name: entry.subject, ...item });
+    else if (entry.fact in output) throw new Error(`the analyst gave ${entry.fact} twice`);
+    else output[entry.fact] = { value, ...item };
+  }
+  return output;
+}
+
 export function buildAnalystPrompt(pack: EvidencePack): string {
   return [
     'You analyse one application repository for Deployz. Deployz builds the repository Dockerfile into one image and runs it on AWS ECS Fargate (x86_64) behind a load balancer, with optional managed PostgreSQL or MySQL, Redis, S3 and worker processes from the same image.',
@@ -105,13 +158,15 @@ export function buildAnalystPrompt(pack: EvidencePack): string {
     '- port: the port the production container listens on for HTTP. Prefer the production stage EXPOSE/ENV PORT, a HEALTHCHECK, or the server start code. Deployz sets PORT to this value.',
     '- startCommand: the command the image runs (CMD/ENTRYPOINT), or null when the image has none.',
     '- healthPath: an HTTP path that returns 2xx when the app is up, without login. Prefer a dedicated health route that the started app registers, or the path a HEALTHCHECK probes. null when there is no such evidence.',
-    '- database: the relational database the app needs at runtime to start and serve. "none" when it can run without one (for example SQLite by default with no database URL).',
+    '- database: the relational database the app needs at runtime to start and serve. "none" only when the default configuration runs without one (SQLite or an embedded store), with that line as evidence.',
     '- redis: true only when the app needs Redis to start or to serve requests (a client built at boot from a configured URL, or a Redis-backed queue). An optional cache is false.',
     '- storage: true only when the app needs S3-compatible object storage to work.',
     '- migration: mode "startup" when the image migrates the database itself when it starts; "pre_deploy" with the command when a separate migration command must run before the new version; "none" when there is no database or no schema to migrate; "unknown" when you cannot tell. command = a command that the built image can run (for example `php artisan migrate --force`), else null.',
     '- workers: only processes that the repository declares as separate long-running processes (a Procfile entry, a Compose service on the same image, a documented worker command). Each needs a command the image can run.',
-    '- requiredVariables: environment variables the app cannot start or serve without, that the vendor must supply: an unguarded read with no default that fails or crashes when the value is missing. Do not list variables with a default, optional features, or the database, Redis, S3, PORT and public-URL variables that Deployz provides.',
+    '- requiredVariables: environment variables the app cannot start or serve without, that the vendor must supply: an unguarded read with no default that fails or crashes when the value is missing. Do not list variables with a default, optional features, or the database, Redis, S3, PORT and public-URL variables that Deployz provides. Deployz also generates app-internal secrets (SECRET_KEY, APP_KEY, JWT or session secrets). Never list build arguments, runtime tuning (JAVA_OPTS, MIX_ENV, NODE_ENV) or variables read only by an optional feature (mail, OAuth, analytics, billing) that the app starts without.',
     '- confidence: "high" only when the evidence is explicit; "medium" when it is strong but indirect; "low" otherwise.',
+    '',
+    'Answer format: a list `facts` with exactly one entry for each of dockerfile, port, startCommand, healthPath, database, redis, storage and migration, plus one entry per worker and per required variable. Each entry has fact (the name), subject (the worker id or the variable name, else null), value (JSON text of the value), confidence and evidence. Value examples: dockerfile "{\\"path\\":\\"Dockerfile\\",\\"context\\":\\".\\"}" or "null"; port "8080" or "null"; startCommand "\\"node server.js\\"" or "null"; healthPath "\\"/healthz\\"" or "null"; database "\\"postgres\\"", "\\"mysql\\"" or "\\"none\\""; redis and storage "true" or "false"; migration "{\\"mode\\":\\"startup\\",\\"command\\":null}"; a worker "\\"bundle exec sidekiq\\"" with subject "sidekiq"; a required variable "true" with subject "SECRET_KEY". Evidence may be empty for a null, false or none value.',
     '',
     renderEvidencePack(pack),
   ].join('\n');
@@ -133,14 +188,13 @@ export async function runAnalyst(
   if (estimateTokens(prompt) > ANALYST_MAX_PROMPT_TOKENS) {
     throw new SpendLimitExceededError(estimateTokens(prompt), ANALYST_MAX_PROMPT_TOKENS);
   }
-  const response = await gateway.generate(prompt, analystOutputSchema, {
+  const response = await gateway.generate(prompt, analystWireSchema, {
     abortSignal: options.abortSignal,
     label: 'application-analysis',
     maxOutputTokens: ANALYST_MAX_OUTPUT_TOKENS,
   });
   const used = response.usage.promptTokens + response.usage.completionTokens;
-  if (used > ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS) {
-    throw new SpendLimitExceededError(used, ANALYST_MAX_PROMPT_TOKENS + ANALYST_MAX_OUTPUT_TOKENS);
-  }
-  return { output: analystOutputSchema.parse(response.object), usage: response.usage, model: response.model };
+  if (used > ANALYST_MAX_TOTAL_TOKENS) throw new SpendLimitExceededError(used, ANALYST_MAX_TOTAL_TOKENS);
+  const output = analystOutputSchema.parse(fromWire(analystWireSchema.parse(response.object)));
+  return { output, usage: response.usage, model: response.model };
 }

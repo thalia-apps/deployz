@@ -910,8 +910,10 @@ Decision:
 - A reviewer model (GPT-6 Astra) reads the same evidence pack and the
   analyst's facts and returns objections only. A fixed check decides an
   objection. An objection that no check can decide becomes a vendor question.
-- Both models go through Cloudflare AI Gateway with a token budget, a
-  timeout and a spend log for each call. The Analysis runs in the background
+- Both models go through Cloudflare AI Gateway, on its OpenRouter route
+  with the OpenRouter key (the unified `/compat` endpoint answered 402 for
+  these models), with a token budget, a timeout and a spend log for each
+  call. The Analysis runs in the background
   analysis job (the worker Lambda) and its result is cached per commit.
 - `ANALYSIS_ENGINE=rules|shadow|ai` selects the engine. The default is
   `rules`. `shadow` runs the AI next to the rules, stores its result and

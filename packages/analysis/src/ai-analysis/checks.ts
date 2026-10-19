@@ -166,7 +166,7 @@ export function checkPort(ctx: CheckContext, port: AnalystOutput['port'], docker
 
 const POSTGRES = /postgres|\bpg\b|psycopg|pgx|lib\/pq|npgsql|postgrex|jdbc:postgresql|pdo_pgsql|asyncpg|sequelize|prisma|typeorm|knex|DATABASE_URL/i;
 const MYSQL = /mysql|mariadb|pdo_mysql|myxql|jdbc:mysql/i;
-const NO_DATABASE = /sqlite|memory|\bh2\b|optional|default|embedded|none/i;
+const NO_DATABASE = /sqlite|in[-_ ]?memory|\bh2\b|embedded|nedb|bolt|badger/i;
 const REDIS = /redis|valkey|bullmq|\bbull\b|sidekiq|celery|\brq\b|resque|horizon/i;
 const OPTIONAL = /optional|enabled|disable|default|\bif\b|unless|\|\||\?\?|false|null|nil|None|local|file|disk|memory/i;
 const STORAGE = /\bs3\b|aws-sdk|boto|minio|bucket|ex_aws|flysystem|active_?storage|object.?storage|storage/i;

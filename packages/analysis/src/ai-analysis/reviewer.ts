@@ -12,6 +12,7 @@ import {
   evidenceSchema,
   FACT_NAMES,
   migrationValueSchema,
+  wireEvidenceSchema,
   type AnalystOutput,
   type FactName,
 } from './analyst.js';
@@ -22,6 +23,8 @@ export const REVIEWER_PROMPT_VERSION = 1;
 export const REVIEWER_MAX_PROMPT_TOKENS = 45_000;
 export const REVIEWER_MAX_OUTPUT_TOKENS = 12_000;
 export const REVIEWER_TIMEOUT_MS = 180_000;
+/** The spend check on the reported usage: the pack (see `ANALYST_MAX_TOTAL_TOKENS`) plus the facts. */
+export const REVIEWER_MAX_TOTAL_TOKENS = 90_000;
 
 export const objectionSchema = z
   .object({
@@ -38,6 +41,23 @@ export type Objection = z.infer<typeof objectionSchema>;
 
 export const reviewerOutputSchema = z.object({ objections: z.array(objectionSchema).max(20) }).strict();
 export type ReviewerOutput = z.infer<typeof reviewerOutputSchema>;
+
+/** The shape the provider is held to (structure only, see `analyst.ts`); `reviewerOutputSchema` validates the answer. */
+const reviewerWireSchema = z
+  .object({
+    objections: z.array(
+      z
+        .object({
+          fact: z.enum(FACT_NAMES),
+          subject: z.string().nullable(),
+          reason: z.string(),
+          proposedValue: z.string().nullable(),
+          evidence: z.array(wireEvidenceSchema),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
 
 export function buildReviewerPrompt(pack: EvidencePack, facts: AnalystOutput): string {
   return [
@@ -69,15 +89,13 @@ export async function runReviewer(
   if (estimateTokens(prompt) > REVIEWER_MAX_PROMPT_TOKENS) {
     throw new SpendLimitExceededError(estimateTokens(prompt), REVIEWER_MAX_PROMPT_TOKENS);
   }
-  const response = await gateway.generate(prompt, reviewerOutputSchema, {
+  const response = await gateway.generate(prompt, reviewerWireSchema, {
     abortSignal: options.abortSignal,
     label: 'application-analysis-review',
     maxOutputTokens: REVIEWER_MAX_OUTPUT_TOKENS,
   });
   const used = response.usage.promptTokens + response.usage.completionTokens;
-  if (used > REVIEWER_MAX_PROMPT_TOKENS + REVIEWER_MAX_OUTPUT_TOKENS) {
-    throw new SpendLimitExceededError(used, REVIEWER_MAX_PROMPT_TOKENS + REVIEWER_MAX_OUTPUT_TOKENS);
-  }
+  if (used > REVIEWER_MAX_TOTAL_TOKENS) throw new SpendLimitExceededError(used, REVIEWER_MAX_TOTAL_TOKENS);
   return { output: reviewerOutputSchema.parse(response.object), usage: response.usage, model: response.model };
 }
 

@@ -4,7 +4,7 @@ import { analyseRepo } from '../../src/analyser.js';
 import { SpendLimitExceededError, type AiGateway } from '../../src/ai-gateway.js';
 import { ANALYST_PROMPT_VERSION, REVIEWER_PROMPT_VERSION, parseAnalysisEngine, runAiAnalysis } from '../../src/ai-analysis/index.js';
 import type { FileTree } from '../../src/detectors.js';
-import { cite, factsOf, fakeGateway } from './helpers.js';
+import { cite, factsOf, fakeGateway, toWire } from './helpers.js';
 
 const tree: FileTree = {
   Dockerfile: ['FROM node:20', 'EXPOSE 3000', 'CMD ["node", "dist/index.js"]'].join('\n'),
@@ -21,7 +21,7 @@ const throwing = (error: Error): AiGateway => ({ generate: () => Promise.reject(
 describe('runAiAnalysis', () => {
   it('returns the merge and a report from a fake analyst and reviewer', async () => {
     const analyst = fakeGateway(
-      factsOf({ port: { value: 9000, confidence: 'high', evidence: cite('Dockerfile', 2, 'EXPOSE 3000') } }),
+      toWire(factsOf({ port: { value: 9000, confidence: 'high', evidence: cite('Dockerfile', 2, 'EXPOSE 3000') } })),
       { promptTokens: 1000, completionTokens: 200 },
     );
     const reviewer = fakeGateway(
@@ -49,7 +49,7 @@ describe('runAiAnalysis', () => {
   });
 
   it('gives the analyst the numbered evidence pack and the reviewer the proposed facts', async () => {
-    const analyst = fakeGateway(agreeingFacts);
+    const analyst = fakeGateway(toWire(agreeingFacts));
     const reviewer = fakeGateway({ objections: [] });
     await runAiAnalysis(gatewaysOf(analyst, reviewer));
     expect(analyst.prompts).toHaveLength(1);
@@ -61,7 +61,7 @@ describe('runAiAnalysis', () => {
   });
 
   it('works without a reviewer gateway', async () => {
-    const { merge, report } = await runAiAnalysis(gatewaysOf(fakeGateway(agreeingFacts)));
+    const { merge, report } = await runAiAnalysis(gatewaysOf(fakeGateway(toWire(agreeingFacts))));
     expect(report.reviewer).toBeNull();
     expect(report.objections).toEqual({ total: 0, confirmed: 0, questions: 0 });
     expect(merge.analysis.metadata['port']).toBe('3000');
@@ -69,7 +69,7 @@ describe('runAiAnalysis', () => {
   });
 
   it('counts a failed check of the analyst in the report', async () => {
-    const analyst = fakeGateway(factsOf({ port: { value: 9000, confidence: 'high', evidence: cite('Dockerfile', 2, 'EXPOSE 3000') } }));
+    const analyst = fakeGateway(toWire(factsOf({ port: { value: 9000, confidence: 'high', evidence: cite('Dockerfile', 2, 'EXPOSE 3000') } })));
     const { merge, report } = await runAiAnalysis(gatewaysOf(analyst));
     expect(merge.analysis.metadata['port']).toBeNull();
     expect(report.failedChecks).toBe(1);
@@ -81,11 +81,11 @@ describe('runAiAnalysis', () => {
 
   it('rejects when the analyst object fails the schema', async () => {
     await expect(runAiAnalysis(gatewaysOf(fakeGateway({ port: 'three thousand' })))).rejects.toThrow();
-    await expect(runAiAnalysis(gatewaysOf(fakeGateway({ ...agreeingFacts, extra: 1 })))).rejects.toThrow();
+    await expect(runAiAnalysis(gatewaysOf(fakeGateway({ ...toWire(agreeingFacts), extra: 1 })))).rejects.toThrow();
   });
 
   it('rejects when the reviewer gateway throws or returns an object that fails the schema', async () => {
-    const analyst = fakeGateway(agreeingFacts);
+    const analyst = fakeGateway(toWire(agreeingFacts));
     await expect(runAiAnalysis(gatewaysOf(analyst, throwing(new Error('reviewer down'))))).rejects.toThrow('reviewer down');
     await expect(runAiAnalysis(gatewaysOf(analyst, fakeGateway({ objections: [{ fact: 'colour' }] })))).rejects.toThrow();
   });

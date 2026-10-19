@@ -259,6 +259,20 @@ describe('mergeAiFacts: rejections never change', () => {
 });
 
 describe('mergeAiFacts: required variables', () => {
+  it('never gives the vendor a variable that Deployz provides: a minted secret or a binding of the provisioned database', () => {
+    const facts = factsOf({
+      requiredVariables: [
+        { name: 'SECRET_KEY', confidence: 'high', evidence: cite('src/index.ts', 3, 'process.env.SECRET_KEY') },
+        { name: 'DATABASE_URL', confidence: 'high', evidence: cite('.env.example', 1, 'DATABASE_URL=') },
+      ],
+    });
+    const { rules, merged } = run(baseTree, facts);
+    expect(rules.metadata['postgres']).toMatchObject({ required: true });
+    expect(decision(merged, 'requiredVariables', 'SECRET_KEY')).toBeUndefined();
+    expect(decision(merged, 'requiredVariables', 'DATABASE_URL')).toBeUndefined();
+    expect(envEntry(merged.analysis, 'SECRET_KEY')?.['classification']).toBe(envEntry(rules, 'SECRET_KEY')?.['classification']);
+  });
+
   it('adds a passing required variable as customer_required', () => {
     const facts = factsOf({
       requiredVariables: [{ name: 'LICENSE_CODE', confidence: 'high', evidence: cite('docs/notes.md', 8, 'process.env.LICENSE_CODE') }],

@@ -241,17 +241,20 @@ and the release gate are in `docs/decisions/README.md`.
   key files, lockfiles and vendored code are never included. Secrets are
   redacted line by line, env sample values are removed, and a file with a
   private key is left out. Each line keeps its repository line number.
-- **Analyst** (`analyst.ts`): `claude-opus-5-5` returns the facts under a
+- **Analyst** (`analyst.ts`): Claude Opus 5.5 returns the facts under a
   strict schema: Dockerfile and context, port, start command, health path,
   database engine, Redis, S3, migration mode and command, workers and
   required variables. Each fact has a value, a confidence and
-  `{path, line, quote}` evidence. Budget: 40,000 prompt and 16,000
-  completion tokens, 240 s.
+  `{path, line, quote}` evidence. The provider is held to a flat list (one
+  entry per fact, the value as JSON text), because Anthropic refuses the
+  grammar of the typed schema; the strict typed schema then validates the
+  rebuilt facts. Budget: 16,000 completion tokens,
+  80,000 tokens in total by the reported usage, 240 s.
 - **Reviewer** (`reviewer.ts`): GPT-6 Astra reads the same pack and the
   facts and returns objections only. An objection whose proposed value
   passes the checks replaces the fact. Any other objection makes the fact a
-  vendor question. Budget: 45,000 prompt and 12,000 completion tokens,
-  180 s.
+  vendor question. Budget: 12,000 completion tokens,
+  90,000 in total, 180 s.
 - **Checks** (`checks.ts`): each cited line exists in the pack, contains its
   quote (one line of tolerance) and supports the claim. A required variable
   is an unguarded read with no default, and no pack line reads it with a
@@ -596,11 +599,16 @@ diagnostic-vocabulary.ts`) plus a migration.
   `AI_FIXTURE_MODE=true` swaps in canned answers for E2E and switches the
   AI-first engine off in the API.
 - AI-first Analysis: `ANALYSIS_ENGINE` (`rules` when unset),
-  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5-5`),
-  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), and optional
-  `ANALYSIS_AI_PROVIDER_API_KEY` / `ANALYSIS_REVIEWER_PROVIDER_API_KEY` when
-  a provider needs another upstream key than `AI_PROVIDER_API_KEY`. Both
-  roles use `AI_GATEWAY_BASE_URL` and `AI_GATEWAY_TOKEN`.
+  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5.5`) and
+  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), both OpenRouter
+  ids. Both roles go through the Cloudflare gateway's OpenRouter route
+  (`<AI_GATEWAY_BASE_URL without /compat>/openrouter/v1`) with
+  `OPENROUTER_API_KEY`. The gateway is authenticated: the
+  `cf-aig-authorization` token is `AI_GATEWAY_TOKEN`, or `AI_PROVIDER_API_KEY`
+  when that is unset (in production it is the gateway token). The gateway's unified `/compat` endpoint answered
+  402 Payment Required for these models. Every request asks OpenRouter for a
+  provider that honours the JSON schema, logs the served model, tokens and
+  cost, and rejects an answer from another model.
 - Fix-instructions model: `FIX_INSTRUCTIONS_AI_PROVIDER` (`openrouter`, the
   default, or `gateway`), `FIX_INSTRUCTIONS_AI_MODEL` (the OpenRouter model,
   default `anthropic/claude-opus-5.5`), `OPENROUTER_API_KEY`, optional

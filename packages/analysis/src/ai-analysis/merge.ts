@@ -14,6 +14,10 @@
  * rejections and the unsupported reasons are never changed.
  */
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
+import { isDerivedS3EnvVariable, postgresSemantic } from '../bindings.js';
+import { isDerivedUrlEnvVariable } from '../derived-url.js';
+import { isGeneratableSecretName } from '../env-classification.js';
+import { resolveRedisEnvBindings } from '../redis.js';
 import type { DetectorFinding, FileTree } from '../detectors.js';
 import type { AnalystOutput, FactName } from './analyst.js';
 import { guardedAnywhere, type FactCheck } from './checks.js';
@@ -81,6 +85,22 @@ function rulesWorkers(meta: Meta): WorkerCommand[] {
       ? [{ id: record['id'], command: record['command'], source: typeof record['source'] === 'string' ? record['source'] : 'repository' }]
       : [];
   });
+}
+
+/**
+ * True when the deterministic rules say Deployz supplies this variable: a
+ * secret it mints, a binding of a provisioned database, cache or bucket, the
+ * app's own URL, or PORT/HOSTNAME. Such a variable never becomes the vendor's.
+ */
+function deployzProvides(name: string, meta: Meta, evidencePaths: readonly string[]): boolean {
+  if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name)) return true;
+  const variable = { key: name, required: true, secret: false, source: evidencePaths.map((path) => `read in ${path}`) };
+  if (isDerivedUrlEnvVariable(variable)) return true;
+  if (rulesDatabase(meta) !== 'none' && postgresSemantic(name) !== null) return true;
+  const redis = meta['redis'] as { required?: unknown; connectionEnvVars?: unknown } | undefined;
+  const redisNames = Array.isArray(redis?.connectionEnvVars) ? (redis.connectionEnvVars as string[]) : [];
+  if (redis?.required === true && resolveRedisEnvBindings(redisNames).some((binding) => binding.name === name)) return true;
+  return meta['usesS3'] === true && isDerivedS3EnvVariable(variable);
 }
 
 function replaceFinding(findings: DetectorFinding[], detector: string, patch: Partial<DetectorFinding>): DetectorFinding[] {
@@ -222,7 +242,10 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
 
   // ── Required variables ──
   const model = Array.isArray(meta['envVarModel']) ? (meta['envVarModel'] as Record<string, unknown>[]).map((entry) => ({ ...entry })) : [];
-  const aiNames = new Set(facts.requiredVariables.map((variable) => variable.name));
+  const evidenceOf = new Map(facts.requiredVariables.map((variable) => [variable.name, variable.evidence.map((item) => item.path)]));
+  const aiNames = new Set(
+    facts.requiredVariables.map((variable) => variable.name).filter((name) => !deployzProvides(name, meta, evidenceOf.get(name) ?? [])),
+  );
   for (const question of questions) if (question.fact === 'requiredVariables' && question.subject !== null) aiNames.add(question.subject);
   for (const name of aiNames) {
     const entry = model.find((item) => item['key'] === name);
