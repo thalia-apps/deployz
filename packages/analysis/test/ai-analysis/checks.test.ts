@@ -54,8 +54,14 @@ describe('citedLine and checkEvidence', () => {
 
   it('reports a bad citation and a line that does not support the claim', () => {
     expect(checkEvidence(pack, cite('missing.js', 1, 'one'), anything)[0]).toContain('does not exist in the evidence');
-    expect(checkEvidence(pack, cite('app.js', 3, 'three'), (line) => line.includes('zzz'))[0]).toContain('does not support the claim');
+    expect(checkEvidence(pack, cite('app.js', 3, 'three'), (line) => line.includes('zzz'))[0]).toContain('no cited line supports the claim');
     expect(checkEvidence(pack, cite('app.js', 3, 'three'), anything)).toEqual([]);
+  });
+
+  it('accepts a reasoning chain: one supporting line is enough when every cited line exists', () => {
+    const chain = [...cite('app.js', 3, 'three'), ...cite('app.js', 1, 'one')];
+    expect(checkEvidence(pack, chain, (line) => line.includes('three'))).toEqual([]);
+    expect(checkEvidence(pack, chain, (line) => line.includes('zzz'))).toHaveLength(1);
   });
 
   it('fails when any one of several citations is bad', () => {

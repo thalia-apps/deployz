@@ -58,14 +58,22 @@ export function citedLine(pack: EvidencePack, evidence: Evidence): string | null
 }
 
 /** Every evidence item must resolve to a pack line that supports the claim; at least one is needed. */
+/**
+ * Every cited line must exist and contain its quote; at least one of them must
+ * support the claim. A citation is a reasoning chain (the ENTRYPOINT line and
+ * the CMD line, a route and its mount point), so the other lines need not
+ * repeat the value.
+ */
 export function checkEvidence(pack: EvidencePack, evidence: readonly Evidence[], supports: Supports): string[] {
   if (evidence.length === 0) return ['no evidence'];
   const reasons: string[] = [];
+  let supported = false;
   for (const item of evidence) {
     const line = citedLine(pack, item);
     if (line === null) reasons.push(`${item.path}:${item.line} does not exist in the evidence or does not contain the quote`);
-    else if (!supports(line)) reasons.push(`${item.path}:${item.line} does not support the claim`);
+    else if (supports(line)) supported = true;
   }
+  if (!supported) reasons.push(`no cited line supports the claim (${evidence.map((item) => `${item.path}:${item.line}`).join(', ')})`);
   return reasons;
 }
 
@@ -82,7 +90,11 @@ export function distinctiveToken(command: string): string {
   return tokens.sort((a, b) => b.length - a.length)[0] ?? command.trim();
 }
 
-const mentions = (token: string): Supports => (line) => line.includes(token);
+/** The line names the token, or the file name of a path token (`/usr/local/bin/entrypoint.sh` → `entrypoint.sh`). */
+const mentions = (token: string): Supports => {
+  const base = token.split('/').pop() ?? token;
+  return (line) => line.includes(token) || (base.length >= 3 && line.includes(base));
+};
 
 // ── Required variables ─────────────────────────────────────────────────────
 
