@@ -108,6 +108,8 @@ export const recipeSchema = z
       .object({
         dockerfile: z.string().min(1).optional(),
         context: z.string().min(1).optional(),
+        /** The stage to build (`docker build --target`), when the last stage is not the application. */
+        target: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/i).optional(),
         buildArgs: z.record(z.string().regex(ENV_NAME), z.string()).optional(),
       })
       .strict()
@@ -143,6 +145,8 @@ export const buildFactSchema = z
     imageBytes: z.number().int().nonnegative().nullable(),
     dockerfile: z.string(),
     context: z.string(),
+    /** The stage that was built; absent in observations from before build targets. */
+    target: z.string().nullable().optional(),
     failure: z.enum(BUILD_FAILURES).nullable(),
     /** True when the image came from the image cache (4.6). */
     fromCache: z.boolean(),
@@ -196,7 +200,24 @@ export const migrationCommandFactSchema = z
   .strict();
 
 export const redisFactSchema = z
-  .object({ connected: z.boolean(), clients: z.number().int().nonnegative() })
+  .object({
+    connected: z.boolean(),
+    clients: z.number().int().nonnegative(),
+    /**
+     * A web start without the Redis variables is healthy. null = not tested (no connection, the web was not
+     * healthy, or the app still reached Valkey); absent in observations from before this check.
+     */
+    healthyWithout: z.boolean().nullable().optional(),
+  })
+  .strict();
+
+/**
+ * A second web container with a new filesystem and the same services, as a
+ * replaced Fargate task starts. `changed` lists the probed paths (`port/path`)
+ * whose status differs from the first container.
+ */
+export const freshContainerFactSchema = z
+  .object({ healthy: z.boolean(), changed: z.array(z.string()) })
   .strict();
 
 export const objectStorageFactSchema = z
@@ -256,6 +277,14 @@ export const observationRunSchema = z
     requiredVariables: factSchema(z.array(requiredVariableFactSchema)),
     twoCopiesHealthy: factSchema(z.boolean()),
     restartHealthy: factSchema(z.boolean()),
+    /** Observations from before this check read as not run. */
+    freshContainer: factSchema(freshContainerFactSchema).default({
+      status: 'not_run',
+      value: null,
+      arch: 'amd64-native',
+      evidence: [],
+      note: 'recorded before the fresh-container check',
+    }),
     sizes: factSchema(z.array(sizeRunSchema)),
     /** Candidate commands and health paths that the runs probed, and where they came from. */
     candidates: z
@@ -292,6 +321,7 @@ export const OBSERVATION_FACTS = [
   'requiredVariables',
   'twoCopiesHealthy',
   'restartHealthy',
+  'freshContainer',
   'sizes',
 ] as const satisfies readonly (keyof ObservationRun)[];
 export type ObservationFactName = (typeof OBSERVATION_FACTS)[number];
@@ -338,6 +368,8 @@ export const analysisResultFileSchema = z
     gate: manifestReadinessResultSchema.nullable(),
     /** Questions the Analysis asks the vendor (manifest questions + gate findings that need a vendor answer). */
     vendorQuestions: z.number().int().nonnegative(),
+    /** The stage the build targets (`dockerfileBuildTarget`); absent when the build uses the last stage. */
+    buildTarget: z.string().optional(),
     /** The AI engine record (`detected_metadata.aiEngine`): status or fallback reason, usage, latency, fact decisions. */
     ai: z.record(z.string(), z.unknown()).nullable().optional(),
   })
@@ -369,6 +401,8 @@ export const claimSchema = z
     value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
     /** The manifest field or gate finding the claim came from. */
     from: z.string(),
+    /** The dockerfile claim: the stage to build, when it is not the last one. */
+    target: z.string().optional(),
   })
   .strict();
 export type Claim = z.infer<typeof claimSchema>;

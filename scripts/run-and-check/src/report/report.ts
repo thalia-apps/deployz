@@ -13,6 +13,7 @@ import {
   type RepositoryReport,
   type SummaryReport,
 } from '../contract.js';
+import { LOCAL_STATE_REASON } from '../claims/extract.js';
 
 const MAX_PROBLEM_TEXT = 160;
 
@@ -91,7 +92,8 @@ function shorten(text: string): string {
  * A false problem is a fix or a vendor decision that the Analysis asked for
  * and that the application did not need:
  *  - NOT_COMPATIBLE (each `unsupported` reason) while the application is
- *    healthy: the full run, or without one the observation;
+ *    healthy: the full run, or without one the observation. A local-state
+ *    reason is not one when the check confirms the local state;
  *  - a required variable that the application starts without;
  *  - a managed database or Valkey that the application never used;
  *  - gate findings that ask the vendor for something the observation shows
@@ -114,7 +116,11 @@ function falseProblems(
 
   const healthy = fullRun !== null ? fullRunsHealth(fullRun).healthy === true : run.webHealthy.status === 'observed' && run.webHealthy.value === true;
   if (gate.state === 'NOT_COMPATIBLE' && healthy) {
-    for (const finding of findings('unsupported')) problems.push(`NOT_COMPATIBLE but the application is healthy: ${shorten(finding.message)}`);
+    const localState = find('storage.local')?.verdict === 'CONFIRMED';
+    for (const finding of findings('unsupported')) {
+      if (localState && LOCAL_STATE_REASON.test(finding.message)) continue;
+      problems.push(`NOT_COMPATIBLE but the application is healthy: ${shorten(finding.message)}`);
+    }
   }
 
   for (const entry of verdicts) {
@@ -125,7 +131,9 @@ function falseProblems(
       problems.push(`a managed ${claim.value} database is required, but the application made no SQL connection`);
     }
     if (claim.type === 'redis.required' && claim.value === true) {
-      problems.push('Valkey is required, but the application made no connection');
+      problems.push(entry.observed === false && entry.reason === 'the app starts without Redis'
+        ? 'Valkey is required, but the application starts without it'
+        : 'Valkey is required, but the application made no connection');
     }
   }
 
@@ -162,7 +170,7 @@ export function repositoryReport(
     if (entry.claim.type === 'readiness' && readiness !== null) return decideReadiness(entry, readiness, fullRun, unbuildable);
     // The observation gives every app Valkey, so an app that uses it only when present looks like it needs it.
     // The full run has no Valkey when the claim is false: a healthy full run confirms the claim.
-    if (entry.claim.type === 'redis.required' && entry.claim.value === false && entry.verdict === 'CONTRADICTED' && fullHealth === true) {
+    if (entry.claim.type === 'redis.required' && entry.claim.value === false && entry.verdict !== 'CONFIRMED' && fullHealth === true) {
       return { ...entry, verdict: 'CONFIRMED' as const, reason: 'the full run without Valkey is healthy', observed: undefined };
     }
     return entry;

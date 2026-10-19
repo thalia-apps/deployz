@@ -114,6 +114,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
       }
       const raw = await session.analyse({ id: recipe.id, repository, commit });
       const gate = raw.manifest ? freshApplicationGate(raw.manifest) : null;
+      const buildTarget = raw.row?.detectedMetadata?.['dockerfileBuildTarget'];
       return {
         id: recipe.id,
         commit,
@@ -123,6 +124,7 @@ export async function openAnalyser(options: AnalyserOptions): Promise<Analyser> 
         manifest: raw.manifest,
         gate,
         vendorQuestions: raw.manifest && gate ? vendorQuestionCount(raw.manifest, gate) : 0,
+        ...(typeof buildTarget === 'string' ? { buildTarget } : {}),
         ...(raw.aiEngine ? { ai: raw.aiEngine } : {}),
       };
     },

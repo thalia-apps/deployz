@@ -24,13 +24,14 @@ const DECISION: Decision = {
   database: (v) => [v.engine, v.tablesAfterStart.length > 0, v.sqliteFileWritten],
   startupMigration: (v) => [v.tablesCreatedByStart, v.secondStartHealthy],
   migrationCommands: (v) => v.map((m) => `${m.command} ${m.exitCode === 0} ${m.createdTables}`).sort(),
-  redis: (v) => v.connected,
+  redis: (v) => [v.connected, v.healthyWithout ?? null],
   objectStorage: (v) => v.objectsWritten > 0,
   localDiskWrites: (v) => v.length > 0,
   workers: (v) => v.map((w) => `${w.command} ${w.stayedRunning}`).sort(),
   requiredVariables: (v) => v.map((r) => `${r.name} ${r.healthyWithout} ${r.healthyWith}`).sort(),
   twoCopiesHealthy: (v) => v,
   restartHealthy: (v) => v,
+  freshContainer: (v) => [v.healthy, v.changed.length > 0],
   sizes: (v) => v.map((s) => `${s.profile} ${s.healthy}`).sort(),
 };
 

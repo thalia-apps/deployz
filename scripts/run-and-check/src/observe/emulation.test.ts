@@ -12,7 +12,7 @@ const fact = (texts: string[]) => ({
 
 function run(webLog: string, buildLog = ''): ObservationRun {
   const base = Object.fromEntries(
-    ['listeningPorts', 'httpPaths', 'smoke', 'database', 'startupMigration', 'migrationCommands', 'redis', 'objectStorage', 'localDiskWrites', 'workers', 'requiredVariables', 'twoCopiesHealthy', 'restartHealthy', 'sizes'].map((name) => [name, fact([])]),
+    ['listeningPorts', 'httpPaths', 'smoke', 'database', 'startupMigration', 'migrationCommands', 'redis', 'objectStorage', 'localDiskWrites', 'workers', 'requiredVariables', 'twoCopiesHealthy', 'restartHealthy', 'freshContainer', 'sizes'].map((name) => [name, fact([])]),
   );
   return { ...base, build: fact([buildLog]), webHealthy: fact([webLog]) } as unknown as ObservationRun;
 }

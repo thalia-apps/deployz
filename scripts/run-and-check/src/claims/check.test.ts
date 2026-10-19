@@ -38,6 +38,12 @@ describe('dockerfile', () => {
     expect(check(DOCKERFILE).verdict).toBe('CONFIRMED');
   });
 
+  it('compares the build target', () => {
+    const target = { build: build({ dockerfile: 'docker/dockerfile', context: '.', target: 'release' }) };
+    expect(check({ type: 'dockerfile', subject: '.', value: 'docker/dockerfile', target: 'release' }, target).verdict).toBe('CONFIRMED');
+    expect(check({ type: 'dockerfile', subject: '.', value: 'docker/dockerfile' }, target).verdict).toBe('NOT_CHECKABLE');
+  });
+
   it('ignores ./ and trailing slashes when it compares paths', () => {
     const verdict = check(
       { type: 'dockerfile', subject: './apps/web/', value: './docker/Dockerfile' },
@@ -252,8 +258,17 @@ describe('redis.required', () => {
     expect(check({ type: 'redis.required', value: true })).toMatchObject({ verdict: 'CONTRADICTED', observed: false });
   });
 
-  it('is CONTRADICTED when the claim is false and the app connected', () => {
-    expect(check({ type: 'redis.required', value: false }, connected)).toMatchObject({ verdict: 'CONTRADICTED', observed: true });
+  it('is NOT_CHECKABLE when the claim is false and the app connected, but no start without Redis was observed', () => {
+    expect(check({ type: 'redis.required', value: false }, connected).verdict).toBe('NOT_CHECKABLE');
+  });
+
+  it('follows the start without Redis when the app connected', () => {
+    const optional = { redis: { connected: true, clients: 2, healthyWithout: true } };
+    const needed = { redis: { connected: true, clients: 2, healthyWithout: false } };
+    expect(check({ type: 'redis.required', value: false }, optional).verdict).toBe('CONFIRMED');
+    expect(check({ type: 'redis.required', value: true }, optional)).toMatchObject({ verdict: 'CONTRADICTED', observed: false, reason: 'the app starts without Redis' });
+    expect(check({ type: 'redis.required', value: true }, needed).verdict).toBe('CONFIRMED');
+    expect(check({ type: 'redis.required', value: false }, needed)).toMatchObject({ verdict: 'CONTRADICTED', observed: true });
   });
 
   it('is NOT_CHECKABLE when the app did not start', () => {
@@ -283,7 +298,18 @@ describe('storage.required', () => {
 });
 
 describe('storage.local', () => {
-  const writes = { localDiskWrites: ['/app/data/db.bin'] };
+  // A fresh container that answers differently: the writes hold state.
+  const writes = { localDiskWrites: ['/app/data/db.bin'], freshContainer: { healthy: true, changed: ['8080/ (smoke)'] } };
+
+  it('does not count a temporary write, and follows a fresh container that answers the same', () => {
+    const temporary = { localDiskWrites: ['/app/.env', '/app/.env.temp', '/app/apps/remix/.documenso-license.json'] };
+    expect(check({ type: 'storage.local', value: false }, temporary).verdict).toBe('CONFIRMED');
+    const same = { localDiskWrites: ['/app/App_Data/tenants.json'], freshContainer: { healthy: true, changed: [] } };
+    expect(check({ type: 'storage.local', value: false }, same).verdict).toBe('CONFIRMED');
+    expect(check({ type: 'storage.local', value: true }, same).verdict).toBe('NOT_CHECKABLE');
+    const sqlite = { localDiskWrites: ['/app/data/app.sqlite'], freshContainer: { healthy: true, changed: [] } };
+    expect(check({ type: 'storage.local', value: false }, sqlite).verdict).toBe('CONTRADICTED');
+  });
 
   it('is CONFIRMED when the claim is true and the app wrote to disk', () => {
     expect(check({ type: 'storage.local', value: true }, writes).verdict).toBe('CONFIRMED');

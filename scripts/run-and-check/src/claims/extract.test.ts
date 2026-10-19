@@ -49,6 +49,17 @@ describe('extractClaims', () => {
     expect(claim(claims, 'dockerfile', '.')).toMatchObject({ value: 'apps/web/Dockerfile', from: 'application.dockerfilePath' });
   });
 
+  it('carries the build target, and reads a storage reason that cites the Dockerfile as no build prediction', () => {
+    const storage = {
+      id: 'unsupported',
+      category: 'compatibility',
+      severity: 'error',
+      message: 'Unsupported storage: the app declares durable local state (LIVEBOOK_HOME=/data (Dockerfile)) with no VOLUME or Compose mount.',
+    };
+    const file = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [storage] } as never, { buildTarget: 'release' });
+    expect(claim(extractClaims(file), 'dockerfile', '.')).toMatchObject({ from: 'application.dockerfilePath', target: 'release' });
+  });
+
   it('claims a missing Dockerfile as null', () => {
     const claims = claimsOf({ application: { root: '.', runtime: 'node', framework: null, dockerfilePath: null } });
     expect(claim(claims, 'dockerfile', '.')?.value).toBeNull();

@@ -54,6 +54,8 @@ export interface BuiltImage {
   readonly imageBytes: number | null;
   readonly dockerfile: string;
   readonly context: string;
+  /** The `--target` stage, or null for the last stage. */
+  readonly target: string | null;
   readonly failure: 'dockerfile' | 'infrastructure' | 'emulation' | 'timeout' | null;
   readonly fromCache: boolean;
   readonly evidence: Evidence[];

@@ -14,6 +14,7 @@ import type {
   ObservationRun,
   Verdict,
 } from '../contract.js';
+import { isTransientWrite } from '../observe/diff-filter.js';
 import { PREDICTED_UNBUILDABLE } from './extract.js';
 
 type Observed = string | number | boolean | null;
@@ -72,7 +73,8 @@ export const checkDockerfile: Rule = (claim, run) => {
   const sameDockerfile =
     claim.value !== null &&
     normalisePath(String(claim.value)) === normalisePath(build.dockerfile) &&
-    normalisePath(claim.subject ?? '.') === normalisePath(build.context);
+    normalisePath(claim.subject ?? '.') === normalisePath(build.context) &&
+    (claim.target ?? null) === (build.target ?? null);
 
   const predictedFailure = claim.from === PREDICTED_UNBUILDABLE;
   if (build.ok) {
@@ -180,9 +182,20 @@ export const checkRedisRequired: Rule = (claim, run) => {
   const redis = observed(run, 'redis');
   if (redis === null) return notCheckable('Redis was not observed', facts);
   if (redis.connected || redis.clients > 0) {
+    // A connection shows that the app uses Redis when it is there; only a start without it shows whether it needs it.
+    if (redis.healthyWithout === true) {
+      return claim.value === true
+        ? contradicted(false, 'the app starts without Redis', facts)
+        : confirmed('the app uses Valkey when it is there, and starts without it', facts);
+    }
+    if (redis.healthyWithout === false) {
+      return claim.value === true
+        ? confirmed('the app fails without Redis', facts)
+        : contradicted(true, 'the app fails without Redis', facts);
+    }
     return claim.value === true
       ? confirmed('the app connected to Valkey', facts)
-      : contradicted(true, 'the app connected to Valkey', facts);
+      : notCheckable('the app connected to Valkey, but no start without Redis was observed', facts);
   }
   if (!webIsUp(run)) return notCheckable(NOT_UP, facts);
   return claim.value === true
@@ -201,10 +214,20 @@ export const checkStorageRequired: Rule = (claim, run) => {
 };
 
 export const checkStorageLocal: Rule = (claim, run) => {
-  const facts = ['localDiskWrites', 'objectStorage', 'database', ...UP_FACTS] as const;
-  const writes = observed(run, 'localDiskWrites');
-  if (writes === null) return notCheckable('local disk writes were not observed', facts);
+  const facts = ['localDiskWrites', 'freshContainer', 'objectStorage', 'database', ...UP_FACTS] as const;
+  const observedWrites = observed(run, 'localDiskWrites');
+  if (observedWrites === null) return notCheckable('local disk writes were not observed', facts);
+  const writes = observedWrites.filter((path) => !isTransientWrite(path));
   if (writes.length > 0) {
+    // A replaced task starts with a new filesystem: the writes are local state when a fresh container
+    // answers differently. A SQLite database is local state in any case.
+    const fresh = observed(run, 'freshContainer');
+    const database = writes.some((path) => /\.(?:sqlite3?|db)$/.test(path));
+    if (!database && fresh !== null && fresh.healthy && fresh.changed.length === 0) {
+      return claim.value === true
+        ? notCheckable('a fresh container answered the same without the disk writes', facts)
+        : confirmed('a fresh container answered the same without the disk writes', facts);
+    }
     return claim.value === true
       ? confirmed('the app wrote data to local disk', facts)
       : contradicted(writes[0]!, 'the app wrote data to local disk', facts);

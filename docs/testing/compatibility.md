@@ -51,7 +51,12 @@ for the second run of the stability criterion.
    bind address, HTTP status per path, database connections and tables,
    migrations at start and from a separate command, Valkey clients, MinIO
    objects, local disk writes (`docker diff`), workers, required variables,
-   two copies at the same time and a restart. Each fact has evidence and the
+   two copies at the same time and a restart. The restart is a fresh
+   container: a new filesystem and the same services, as a replaced Fargate
+   task starts. The harness compares the status of each probed path and the
+   smoke request with the first container. When the app connects to Valkey,
+   one more start without the Redis variables shows whether it needs Redis.
+   Each fact has evidence and the
    CPU architecture it came from. Each observation runs twice; a fact that
    differs between the runs is `unstable`. The result is committed in
    `scripts/run-and-check/observations/<id>.json`. An observation does not
@@ -61,7 +66,18 @@ for the second run of the stability criterion.
    stored observations. It needs no Docker and takes seconds. Fixed code
    gives each claim one verdict: `CONFIRMED`, `CONTRADICTED` or
    `NOT_CHECKABLE` with a reason. Use it to evaluate a rule, prompt or model
-   change quickly.
+   change quickly. Three rules need care:
+   - `redis.required`: a Valkey connection shows only that the app uses
+     Redis when it is there. The start without Redis decides; without that
+     start, a `false` claim is `NOT_CHECKABLE`.
+   - `storage.local`: a hidden file that is not a database (an `.env` that
+     an entrypoint writes, a licence cache) and a lock or temp file are not
+     local state. Other writes are local state, except when the fresh
+     container answers the same. A SQLite file is always local state. A
+     local-state rejection is not a false problem when the check confirms
+     the local state.
+   - `dockerfile`: the claim includes the build target. A storage reason
+     that cites the Dockerfile as its evidence is not a build prediction.
 3. **Full run** (`runcheck:full`). Runs the application with exactly the
    settings that the Analysis produced, and nothing more: the migration
    command first, then the web container with the image command, then each
@@ -106,7 +122,8 @@ always reported apart.
 
 A recipe (`recipes/<id>.yaml`) holds **inputs only**, never expected
 answers: the repository and the pinned commit, build overrides only when the
-repository needs them, vendor inputs (a generated secret with a format, or a
+repository needs them (the Dockerfile, the context, build arguments, and the
+`target` stage when the last stage is not the application), vendor inputs (a generated secret with a format, or a
 fixed non-secret test value), the SQL engine when the application supports
 only MySQL, and one smoke request when a generic request cannot touch the
 database. A person reviews each recipe.
