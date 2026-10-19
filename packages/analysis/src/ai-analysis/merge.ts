@@ -87,6 +87,8 @@ function rulesWorkers(meta: Meta): WorkerCommand[] {
   });
 }
 
+const CLIENT_BUILD_VARIABLE = /^(?:NEXT_PUBLIC|VITE|REACT_APP|NUXT_PUBLIC|PUBLIC|EXPO_PUBLIC|GATSBY)_/;
+
 /**
  * True when the deterministic rules say Deployz supplies this variable: a
  * secret it mints, a binding of a provisioned database, cache or bucket, the
@@ -94,6 +96,8 @@ function rulesWorkers(meta: Meta): WorkerCommand[] {
  */
 function deployzProvides(name: string, meta: Meta, evidencePaths: readonly string[]): boolean {
   if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name)) return true;
+  // Inlined into the client bundle at build time: the running server never needs it.
+  if (CLIENT_BUILD_VARIABLE.test(name)) return true;
   const variable = { key: name, required: true, secret: false, source: evidencePaths.map((path) => `read in ${path}`) };
   if (isDerivedUrlEnvVariable(variable)) return true;
   if (rulesDatabase(meta) !== 'none' && postgresSemantic(name) !== null) return true;
@@ -135,7 +139,12 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   // ── Resources first: they re-run the rules with the verified overrides. ──
   const overrides: { -readonly [K in keyof ResourceOverrides]: ResourceOverrides[K] } = {};
   const database = facts.database.value;
-  if (record('database', database, decide('database', database !== rulesDatabase(rules.metadata), false)) === 'ai') overrides.database = database;
+  // PostgreSQL wins when the app can run on it (docs/ai-analysis.md): the AI may add a database, never remove one the rules require.
+  const removesDatabase = database === 'none' && rulesDatabase(rules.metadata) !== 'none';
+  const databaseOutcome = decide('database', database !== rulesDatabase(rules.metadata), false);
+  if (removesDatabase && databaseOutcome.decision === 'ai') {
+    record('database', database, { decision: 'rules', reasons: ['the rules require a database; the AI never removes one'] });
+  } else if (record('database', database, databaseOutcome) === 'ai') overrides.database = database;
   const redis = facts.redis.value;
   const rulesRedis = (rules.metadata['redis'] as { required?: unknown } | undefined)?.required === true;
   if (record('redis', redis, decide('redis', redis !== rulesRedis, false)) === 'ai') overrides.redis = redis;

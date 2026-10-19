@@ -10,8 +10,8 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 2;
-export const ANALYST_MAX_PROMPT_TOKENS = 40_000;
+export const ANALYST_PROMPT_VERSION = 3;
+export const ANALYST_MAX_PROMPT_TOKENS = 60_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
 export const ANALYST_TIMEOUT_MS = 240_000;
@@ -158,10 +158,10 @@ export function buildAnalystPrompt(pack: EvidencePack): string {
     '- port: the port the production container listens on for HTTP. Prefer the production stage EXPOSE/ENV PORT, a HEALTHCHECK, or the server start code. Deployz sets PORT to this value.',
     '- startCommand: the command the image runs (CMD/ENTRYPOINT), or null when the image has none.',
     '- healthPath: an HTTP path that returns 2xx when the app is up, without login. Prefer a dedicated health route that the started app registers, or the path a HEALTHCHECK probes. null when there is no such evidence.',
-    '- database: the relational database the app needs at runtime to start and serve. "none" only when the default configuration runs without one (SQLite or an embedded store), with that line as evidence.',
+    '- database: the relational database the app needs at runtime to start and serve: "postgres" or "mysql". For any other database (MongoDB, SQLite only, …) answer "none": Deployz rejects those by its own checks. "none" also when the default configuration runs without one (SQLite or an embedded store), with that line as evidence.',
     '- redis: true only when the app needs Redis to start or to serve requests (a client built at boot from a configured URL, or a Redis-backed queue). An optional cache is false.',
     '- storage: true only when the app needs S3-compatible object storage to work.',
-    '- migration: mode "startup" when the image migrates the database itself when it starts; "pre_deploy" with the command when a separate migration command must run before the new version; "none" when there is no database or no schema to migrate; "unknown" when you cannot tell. command = a command that the built image can run (for example `php artisan migrate --force`), else null.',
+    '- migration: mode "startup" only when the start path (the Dockerfile CMD/ENTRYPOINT, a script it runs, or a Procfile web line) runs the migration, with that line as evidence; "pre_deploy" with the command when a separate migration command must run before the new version; "none" when there is no database or no schema to migrate; "unknown" when you cannot tell. command = a command that the built image can run (for example `php artisan migrate --force`), else null.',
     '- workers: only processes that the repository declares as separate long-running processes (a Procfile entry, a Compose service on the same image, a documented worker command). Each needs a command the image can run.',
     '- requiredVariables: environment variables the app cannot start or serve without, that the vendor must supply: an unguarded read with no default that fails or crashes when the value is missing. Do not list variables with a default, optional features, or the database, Redis, S3, PORT and public-URL variables that Deployz provides. Deployz also generates app-internal secrets (SECRET_KEY, APP_KEY, JWT or session secrets). Never list build arguments, runtime tuning (JAVA_OPTS, MIX_ENV, NODE_ENV) or variables read only by an optional feature (mail, OAuth, analytics, billing) that the app starts without.',
     '- confidence: "high" only when the evidence is explicit; "medium" when it is strong but indirect; "low" otherwise.',

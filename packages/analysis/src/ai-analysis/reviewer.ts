@@ -20,7 +20,7 @@ import { checkFacts, type CheckContext } from './checks.js';
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 export const REVIEWER_PROMPT_VERSION = 1;
-export const REVIEWER_MAX_PROMPT_TOKENS = 45_000;
+export const REVIEWER_MAX_PROMPT_TOKENS = 70_000;
 export const REVIEWER_MAX_OUTPUT_TOKENS = 12_000;
 export const REVIEWER_TIMEOUT_MS = 180_000;
 /** The spend check on the reported usage: the pack (see `ANALYST_MAX_TOTAL_TOKENS`) plus the facts. */

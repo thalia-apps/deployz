@@ -245,6 +245,7 @@ describe('migration', () => {
   const tree: FileTree = {
     'package.json': '{\n  "scripts": { "migrate": "prisma migrate deploy" }\n}',
     'schema.sql': 'create table a (id int);',
+    Procfile: 'web: npx prisma migrate deploy && node server.js\nworker: node worker.js\n',
   };
   const migrationCheck = (
     migration: AnalystOutput['migration']['value'],
@@ -285,9 +286,15 @@ describe('migration', () => {
     expect(migrationCheck({ mode: 'unknown', command: null }, 'postgres', []).ok).toBe(true);
   });
 
-  it('checks a startup mode without a command against a migration-like line', () => {
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 2, 'prisma migrate deploy')).ok).toBe(true);
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 1, '{')).ok).toBe(false);
+  it('checks a startup mode without a command against a migration-like line on the start path', () => {
+    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 1, 'prisma migrate deploy')).ok).toBe(true);
+    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 2, 'node worker.js')).ok).toBe(false);
+  });
+
+  it('fails a startup mode whose evidence is off the start path (a package script, a README)', () => {
+    const check = migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 2, 'prisma migrate deploy'));
+    expect(check.ok).toBe(false);
+    expect(check.reasons).toContain('package.json is not on the image start path');
   });
 });
 

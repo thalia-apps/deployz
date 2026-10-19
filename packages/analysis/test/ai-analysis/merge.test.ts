@@ -17,6 +17,7 @@ const NOTES = [
   'Migrations run at startup.',
   'The app needs process.env.LICENSE_CODE to start.',
   'The app needs process.env.LICENSE_KEY to start.',
+  'The app needs a mysql server.',
 ].join('\n');
 
 const baseTree: FileTree = {
@@ -52,7 +53,7 @@ const noPortReadTree: FileTree = {
   'src/index.ts': baseTree['src/index.ts']!.replace('app.listen(process.env.PORT || 3000);', 'app.listen(3000);'),
 };
 
-const NOTE = { s3: 2, worker: 3, migrate: 4, redis: 5, sqlite: 6, startup: 7 } as const;
+const NOTE = { s3: 2, worker: 3, migrate: 4, redis: 5, sqlite: 6, startup: 7, mysql: 10 } as const;
 
 interface Run {
   readonly rules: AnalysisResult;
@@ -161,15 +162,20 @@ describe('mergeAiFacts: a differing fact that passes', () => {
   });
 
   it('database: re-runs the rules with the override', () => {
-    const { rules, merged } = run(baseTree, factsOf({ database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')) }));
-    const expected = analyseRepo(baseTree, { database: 'none' });
+    const { rules, merged } = run(baseTree, factsOf({ database: high('mysql' as const, cite('docs/notes.md', NOTE.mysql, 'mysql server')) }));
+    const expected = analyseRepo(baseTree, { database: 'mysql' });
     expect(decision(merged, 'database')?.decision).toBe('ai');
     expect((rules.metadata['postgres'] as { required: boolean }).required).toBe(true);
-    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(false);
+    expect((merged.analysis.metadata['mysql'] as { required: boolean }).required).toBe(true);
     expect(merged.analysis.metadata['envVarModel']).toEqual(expected.metadata['envVarModel']);
     expect(merged.analysis.metadata['migrationMode']).toBe(expected.metadata['migrationMode']);
-    expect(envEntry(merged.analysis, 'DATABASE_URL')).toEqual(envEntry(expected, 'DATABASE_URL'));
-    expect(envEntry(merged.analysis, 'DATABASE_URL')).not.toEqual(envEntry(rules, 'DATABASE_URL'));
+  });
+
+  it('database: never removes a database that the rules require (PostgreSQL wins)', () => {
+    const { rules, merged } = run(baseTree, factsOf({ database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')) }));
+    expect(decision(merged, 'database')).toMatchObject({ decision: 'rules', reasons: ['the rules require a database; the AI never removes one'] });
+    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
+    expect(merged.analysis.metadata['envVarModel']).toEqual(rules.metadata['envVarModel']);
   });
 
   it('redis: re-runs the rules with the override', () => {
@@ -252,7 +258,7 @@ describe('mergeAiFacts: rejections never change', () => {
     });
     const { rules, merged } = run(rejectedTree, facts);
     expect(rules.rejections.some((item) => item.detected)).toBe(true);
-    expect(decision(merged, 'database')?.decision).toBe('ai');
+    expect(decision(merged, 'storage')?.decision).toBe('ai');
     expect(merged.analysis.rejections).toEqual(rules.rejections);
     expect(merged.analysis.metadata['unsupportedReasons']).toEqual(rules.metadata['unsupportedReasons']);
   });
@@ -401,10 +407,11 @@ describe('mergeAiFacts: migration', () => {
   });
 
   it('sets the startup mode with its evidence when the mode passes', () => {
-    const facts = factsOf({ migration: high({ mode: 'startup' as const, command: null }, cite('docs/notes.md', NOTE.startup, 'Migrations run at startup')) });
-    const { merged } = run(baseTree, facts);
+    const tree: FileTree = { ...baseTree, Procfile: 'web: node dist/migrate.js && node dist/index.js\n' };
+    const facts = factsOf({ migration: high({ mode: 'startup' as const, command: null }, cite('Procfile', 1, 'node dist/migrate.js')) });
+    const { merged } = run(tree, facts);
     expect(merged.analysis.metadata['migrationMode']).toBe('startup');
-    expect(merged.analysis.metadata['migrationStartupEvidence']).toEqual([{ path: 'docs/notes.md', line: NOTE.startup, fromDockerCommand: false }]);
+    expect(merged.analysis.metadata['migrationStartupEvidence']).toEqual([{ path: 'Procfile', line: 1, fromDockerCommand: false }]);
     expect(merged.migration).toBeNull();
   });
 

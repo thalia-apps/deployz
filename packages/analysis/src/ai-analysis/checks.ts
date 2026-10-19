@@ -13,7 +13,7 @@
  */
 import { listDockerfileCandidates, type FileTree } from '../detectors.js';
 import type { AnalystOutput, Confidence, Evidence, FactName } from './analyst.js';
-import type { EvidencePack } from './evidence-pack.js';
+import { startScripts, type EvidencePack } from './evidence-pack.js';
 
 export interface FactCheck {
   readonly fact: FactName;
@@ -195,7 +195,20 @@ function checkDatabase(ctx: CheckContext, database: AnalystOutput['database']): 
   return simple('database', ctx, database, (line) => supports.test(line));
 }
 
-function checkMigration(ctx: CheckContext, migration: AnalystOutput['migration'], database: AnalystOutput['database']['value']): FactCheck {
+/** The files on the image's start path: the Dockerfile, the scripts it starts, and a Procfile. */
+function startPathFiles(ctx: CheckContext, dockerfile: string | null): Set<string> {
+  const files = new Set<string>(startScripts(dockerfile ?? undefined, ctx.tree));
+  if (dockerfile !== null) files.add(dockerfile);
+  for (const path of Object.keys(ctx.tree)) if (/(?:^|\/)Procfile$/.test(path)) files.add(path);
+  return files;
+}
+
+function checkMigration(
+  ctx: CheckContext,
+  migration: AnalystOutput['migration'],
+  database: AnalystOutput['database']['value'],
+  dockerfile: string | null,
+): FactCheck {
   const { mode, command } = migration.value;
   if (mode === 'unknown' && command === null) return { fact: 'migration', subject: null, ok: true, reasons: [] };
   if (mode === 'none') {
@@ -206,7 +219,12 @@ function checkMigration(ctx: CheckContext, migration: AnalystOutput['migration']
     return { fact: 'migration', subject: null, ok: false, reasons: ['pre_deploy without a command'] };
   }
   const token = command !== null ? distinctiveToken(command) : null;
-  return simple('migration', ctx, migration, (line) => (token !== null ? line.includes(token) : MIGRATION.test(line)));
+  const check = simple('migration', ctx, migration, (line) => (token !== null ? line.includes(token) : MIGRATION.test(line)));
+  if (mode !== 'startup') return check;
+  // A migration at start must be on the start path, not in a dev script or a README.
+  const startPath = startPathFiles(ctx, dockerfile);
+  const offPath = migration.evidence.filter((item) => !startPath.has(item.path)).map((item) => `${item.path} is not on the image start path`);
+  return offPath.length === 0 ? check : { ...check, ok: false, reasons: [...check.reasons, ...offPath] };
 }
 
 /** Check every analyst fact. The order follows `FACT_NAMES`, then one entry per worker and per variable. */
@@ -229,7 +247,7 @@ export function checkFacts(ctx: CheckContext, output: AnalystOutput, fallbackDoc
     checkDatabase(ctx, output.database),
     simple('redis', ctx, output.redis, (line) => REDIS.test(line) && (output.redis.value || OPTIONAL.test(line))),
     simple('storage', ctx, output.storage, (line) => (output.storage.value ? STORAGE.test(line) : OPTIONAL.test(line))),
-    checkMigration(ctx, output.migration, output.database.value),
+    checkMigration(ctx, output.migration, output.database.value, selected),
   ];
   const workerIds = new Set<string>();
   for (const worker of output.workers) {

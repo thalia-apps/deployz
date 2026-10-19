@@ -90,7 +90,7 @@ function citedPaths(value: unknown, tree: FileTree, into: Set<string>, depth = 0
 }
 
 /** The files the Dockerfile names as its entrypoint or start script. */
-function startScripts(dockerfile: string | undefined, tree: FileTree): string[] {
+export function startScripts(dockerfile: string | undefined, tree: FileTree): string[] {
   if (dockerfile === undefined) return [];
   const content = tree[dockerfile] ?? '';
   const scripts: string[] = [];
