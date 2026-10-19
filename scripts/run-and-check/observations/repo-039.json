@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-17T10:30:34.594Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T19:34:42.041Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 336,
-          "imageBytes": 21487748,
+          "seconds": 93,
+          "imageBytes": 62398996,
           "dockerfile": "scripts/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-039:dfa0fda76602d49dfbb68a6683ef20b068c8d45b from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#11 [backend 4/7] COPY go.mod go.sum ./\n#11 DONE 0.0s\n#12 [backend 5/7] RUN --mount=type=cache,target=/go/pkg/mod     go mod download\n#12 DONE 10.8s\n#13 [backend 6/7] COPY . .\n#13 DONE 0.2s\n#14 [backend 7/7] RUN --mount=type=cache,target=/go/pkg/mod     --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build       -trimpath       -ldflags=\"-s -w -X github.com/usememos/memos/internal/version.Version=dev -X github.com/usememos/memos/internal/version.Commit=unknown -extldflags '-static'\"       -tags netgo,osusergo       -o memos       ./cmd/memos\n#14 DONE 71.3s\n#15 [monolithic 3/5] COPY --from=backend /backend-build/memos /usr/local/memos/memos\n#15 DONE 0.1s\n#16 [monolithic 4/5] COPY --from=backend --chmod=755 /backend-build/scripts/entrypoint.sh /usr/local/memos/entrypoint.sh\n#16 DONE 0.0s\n#17 [monolithic 5/5] WORKDIR /var/opt/memos\n#17 DONE 0.0s\n#18 exporting to image\n#18 exporting layers\n#18 exporting layers 0.2s done\n#18 writing image sha256:d0436faa0eca4320db56ceddc658366ae537ef2cae6c2df1f452b3199b18db8e done\n#18 naming to docker.io/deployz-runcheck/repo-039:dfa0fda76602d49dfbb68a6683ef20b068c8d45b done\n#18 DONE 0.2s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,12 +45,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=22.326\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=0.993\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-17T10:31:41.002Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:31:42.194Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
+            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-19T19:36:41.639Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:36:41.734Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
           }
         ]
       },
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 40809,
+            "port": 46149,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "5230 all reachable=true\n40809 loopback reachable=false"
+            "text": "5230 all reachable=true\n46149 loopback reachable=false"
           }
         ]
       },
@@ -125,7 +126,7 @@
             "status": 200
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -140,7 +141,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -171,7 +172,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -201,13 +202,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -217,7 +218,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -231,7 +232,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -243,7 +244,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -255,7 +256,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -268,24 +269,24 @@
             "healthyWith": true
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web without MEMOS_DRIVER",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ none\n5230/healthz none\n5230/health none\n5230/up none\n5230/api/health none\n5230/status none\n5230/ping none\n5230/_health none\n5230/actuator/health none\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n"
           },
           {
             "kind": "log",
             "source": "web without MEMOS_DRIVER",
-            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-17T10:34:45.800Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to check if database is initialized: failed to check if database is initialized: unable to open database file (14)\"\n"
+            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-19T19:37:13.845Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to check if database is initialized: failed to check if database is initialized: unable to open database file (14)\"\n"
           }
         ]
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -295,34 +296,49 @@
           {
             "kind": "log",
             "source": "web#1",
-            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-17T10:33:21.967Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:33:22.287Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to execute SQL file migration/postgres/LATEST.sql, err failed to execute statement: pq: duplicate key value violates unique constraint \\\"pg_type_typname_nsp_index\\\" (23505)\"\n"
+            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-19T19:36:56.471Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:36:56.585Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to execute SQL file migration/postgres/LATEST.sql, err failed to execute statement: pq: duplicate key value violates unique constraint \\\"pg_type_typname_nsp_index\\\" (23505)\"\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=28.576\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=1.352\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-17T10:33:21.915Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:33:22.272Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
+            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-19T19:36:56.465Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:36:56.583Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=12.39\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=0.978\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
             "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "5230/ 200 -> 200\n5230/healthz 200 -> 200\n5230/health 200 -> 200\n5230/up 200 -> 200\n5230/api/health 404 -> 404\n5230/status 200 -> 200\n5230/ping 200 -> 200\n5230/_health 200 -> 200\n5230/actuator/health 200 -> 200\n5230/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -334,11 +350,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 22.326,
+            "startSeconds": 0.993,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -367,34 +383,39 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 1.45,
-        "setA": 110.34,
-        "twoCopies": 92.983,
-        "requiredVariables": 70.505
+        "build": 95.09,
+        "setA": 29.058,
+        "twoCopies": 17.491,
+        "requiredVariables": 10.978
       }
     },
     {
-      "startedAt": "2026-10-17T10:35:09.881Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T19:37:14.668Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 336,
-          "imageBytes": 21487748,
+          "seconds": 93,
+          "imageBytes": 62398996,
           "dockerfile": "scripts/Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -406,7 +427,7 @@
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -416,12 +437,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=31.062\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=1.001\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-17T10:36:04.411Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:36:05.471Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
+            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-19T19:37:25.399Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:37:25.481Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
           }
         ]
       },
@@ -434,17 +455,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 44415,
+            "port": 45623,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "5230 all reachable=true\n44415 loopback reachable=false"
+            "text": "5230 all reachable=true\n45623 loopback reachable=false"
           }
         ]
       },
@@ -497,7 +518,7 @@
             "status": 200
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -512,7 +533,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -543,7 +564,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -573,13 +594,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -589,7 +610,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -603,7 +624,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -615,7 +636,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -627,7 +648,7 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
@@ -640,7 +661,7 @@
             "healthyWith": true
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -650,51 +671,66 @@
           {
             "kind": "log",
             "source": "web without MEMOS_DRIVER",
-            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-17T10:40:43.159Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to check if database is initialized: failed to check if database is initialized: unable to open database file (14)\"\n"
+            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-19T19:37:57.267Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to check if database is initialized: failed to check if database is initialized: unable to open database file (14)\"\n"
           }
         ]
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=37.542\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-17T10:38:57.640Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:38:59.275Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
-          },
-          {
-            "kind": "http",
-            "source": "web#2",
             "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ none\n5230/healthz none\n5230/health none\n5230/up none\n5230/api/health none\n5230/status none\n5230/ping none\n5230/_health none\n5230/actuator/health none\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
+            "source": "web#1",
+            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-19T19:37:40.144Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:37:40.251Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to execute SQL file migration/postgres/LATEST.sql, err failed to execute statement: pq: duplicate key value violates unique constraint \\\"pg_type_typname_nsp_index\\\" (23505)\"\n"
+          },
+          {
+            "kind": "http",
             "source": "web#2",
-            "text": "memos: starting as UID:GID 10001:10001\ntime=2026-10-17T10:38:57.681Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-17T10:38:59.287Z level=ERROR msg=\"memos failed\" error=\"failed to migrate database: failed to pre-migrate: failed to execute SQL file migration/postgres/LATEST.sql, err failed to execute statement: pq: duplicate key value violates unique constraint \\\"pg_type_typname_nsp_index\\\" (23505)\"\n"
+            "text": "healthy=true exited=false oomKilled=false seconds=1.319\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\ntime=2026-10-19T19:37:40.144Z level=INFO msg=\"initializing new database with latest schema\" file=migration/postgres/LATEST.sql\ntime=2026-10-19T19:37:40.250Z level=INFO msg=\"database initialized successfully\" schemaVersion=0.31.6\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=32.526\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=0.973\n18080/ none\n18080/healthz none\n18080/health none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n5230/ 200\n5230/healthz 200\n5230/health 200\n5230/up 200\n5230/api/health 404\n5230/status 200\n5230/ping 200\n5230/_health 200\n5230/actuator/health 200\n8080/ none\n8080/healthz none\n8080/health none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthz none\n3000/health none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthz none\n80/health none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
             "text": "memos: starting as UID:GID 10001:10001\nMemos dev started successfully!\nData directory: /var/opt/memos\nDatabase driver: postgres\nServer running on port 5230\nAccess your memos at: http://localhost:5230\nAccess mode: private\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "5230/ 200 -> 200\n5230/healthz 200 -> 200\n5230/health 200 -> 200\n5230/up 200 -> 200\n5230/api/health 404 -> 404\n5230/status 200 -> 200\n5230/ping 200 -> 200\n5230/_health 200 -> 200\n5230/actuator/health 200 -> 200\n5230/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -706,11 +742,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 31.062,
+            "startSeconds": 1.001,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -739,16 +775,20 @@
         ],
         "from": [
           "recipe",
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 6.782,
-        "setA": 134.171,
-        "twoCopies": 128.63,
-        "requiredVariables": 81.27
+        "build": 0.673,
+        "setA": 14.657,
+        "twoCopies": 17.33,
+        "requiredVariables": 16.693
       }
     }
   ],
