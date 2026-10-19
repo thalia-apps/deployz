@@ -77,7 +77,9 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
 // AI-first application Analysis (docs/decisions/README.md): the analyst and the
 // reviewer go through the shared Cloudflare gateway to its OpenRouter route,
 // with the OpenRouter key. The gateway's unified /compat endpoint answers 402
-// for these models.
+// for these models. The production gateway is authenticated and
+// AI_PROVIDER_API_KEY is its token (the /compat calls send it as the bearer),
+// so it is the cf-aig-authorization token here unless AI_GATEWAY_TOKEN is set.
 
 /** The analyst model (OpenRouter id). Override with `ANALYSIS_AI_MODEL`. */
 export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5.5';
@@ -102,7 +104,7 @@ export function resolveAnalysisAiConfig(source: Record<string, string | undefine
   const engine = parseAnalysisEngine(source.ANALYSIS_ENGINE);
   const baseUrl = source.AI_GATEWAY_BASE_URL;
   const providerApiKey = source.OPENROUTER_API_KEY;
-  const gatewayToken = source.AI_GATEWAY_TOKEN || undefined;
+  const gatewayToken = source.AI_GATEWAY_TOKEN || source.AI_PROVIDER_API_KEY || undefined;
   const role = (model: string): AiGatewayConfig | undefined =>
     baseUrl && providerApiKey && providerApiKey !== gatewayToken
       ? { provider: 'openrouter', baseUrl: gatewayOpenRouterUrl(baseUrl), providerApiKey, gatewayToken, model }

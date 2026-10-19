@@ -600,8 +600,9 @@ diagnostic-vocabulary.ts`) plus a migration.
   `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), both OpenRouter
   ids. Both roles go through the Cloudflare gateway's OpenRouter route
   (`<AI_GATEWAY_BASE_URL without /compat>/openrouter/v1`) with
-  `OPENROUTER_API_KEY`, and `AI_GATEWAY_TOKEN` when the gateway is
-  authenticated. The gateway's unified `/compat` endpoint answered
+  `OPENROUTER_API_KEY`. The gateway is authenticated: the
+  `cf-aig-authorization` token is `AI_GATEWAY_TOKEN`, or `AI_PROVIDER_API_KEY`
+  when that is unset (in production it is the gateway token). The gateway's unified `/compat` endpoint answered
   402 Payment Required for these models. Every request asks OpenRouter for a
   provider that honours the JSON schema, logs the served model, tokens and
   cost, and rejects an answer from another model.

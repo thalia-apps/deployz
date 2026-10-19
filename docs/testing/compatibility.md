@@ -36,7 +36,7 @@ pnpm runcheck:stability --a <dir> --b <dir>  # claims that differ between two an
 ```
 
 `--engine ai` runs the AI-first engine (`ANALYSIS_ENGINE=ai`) and writes
-`analyses/ai@<tree>/`. It needs `AI_GATEWAY_BASE_URL` and `OPENROUTER_API_KEY`
+`analyses/ai@<tree>/`. It needs `AI_GATEWAY_BASE_URL`, `AI_PROVIDER_API_KEY` (the gateway token) and `OPENROUTER_API_KEY`
 ([`../ai-analysis.md`](../ai-analysis.md#configuration-and-cost)). Each file
 then has an `ai` record: the status or the fallback reason, the token usage
 and the latency of each call, and the decision for each fact. Use `--out`

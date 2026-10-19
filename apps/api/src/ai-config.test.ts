@@ -198,6 +198,16 @@ describe('resolveAnalysisAiConfig', () => {
     });
   });
 
+  it('authenticates to the gateway with AI_PROVIDER_API_KEY when AI_GATEWAY_TOKEN is unset', () => {
+    const config = resolveAnalysisAiConfig({
+      AI_GATEWAY_BASE_URL: complete.AI_GATEWAY_BASE_URL,
+      AI_PROVIDER_API_KEY: 'provider-key',
+      OPENROUTER_API_KEY: 'or-key',
+    });
+
+    expect(config.analyst).toMatchObject({ gatewayToken: 'provider-key', providerApiKey: 'or-key' });
+  });
+
   it('derives the OpenRouter route from the /compat base URL', () => {
     expect(gatewayOpenRouterUrl('https://gateway.ai.cloudflare.com/v1/a/g/compat')).toBe('https://gateway.ai.cloudflare.com/v1/a/g/openrouter/v1');
     expect(gatewayOpenRouterUrl('https://gateway.ai.cloudflare.com/v1/a/g/compat/chat/completions')).toBe(
