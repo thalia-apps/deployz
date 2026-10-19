@@ -42,24 +42,27 @@ derived, because the KMS key and the ECR repository are retained. See
 
 | Stack | Created by | Contents |
 | --- | --- | --- |
-| Bootstrap ("connector") stack `deployz-bootstrap-…` | The customer's Quick Create | The relay Lambda (Node 22, 5-minute timeout) on a 5-minute EventBridge schedule, its role with a permissions boundary, the CloudFormation execution role, the relay credential in Secrets Manager, an SSM pending-command marker |
+| Bootstrap ("connector") stack `deployz-bootstrap-…` | The customer's Quick Create | The relay Lambda (Node 22, 5-minute timeout) on a one-minute EventBridge schedule (five minutes on a connector published before PR #531), its role with a permissions boundary, the CloudFormation execution role, the relay credential in Secrets Manager. The stack creates no SSM parameter; the relay writes its own runtime state (the pending-command marker, the invocation lease) under `/deployz/<installationId>/` |
 | Application stack `deployz-app-<installation-id-prefix>` | The relay, from the compiled CloudFormation artifact frozen in the deployment's spec | VPC, ALB (for public workloads), one ECS Fargate service per workload (the web service plus any declared workers), the one-shot migration task definition when the app has a migration command, S3 bucket, optional RDS PostgreSQL or RDS MySQL, optional Valkey cache, app config secret, roles, per-workload log groups and security groups, alarm |
 
 The relay talks to the control plane **egress-only** and is the only code
-that ever touches the customer's AWS account.
+that calls AWS APIs in the customer's account. The control plane only sends
+HTTPS probes to the application's public address.
 
 ## The live flow
 
 1. **Repository** — the vendor installs the Deployz GitHub App and creates an
-   application from a repository (`apps/api/src/github.ts`). Webhooks handle
-   installation events only; a push never builds anything.
+   application from a repository (`apps/api/src/github.ts`). The webhook acts
+   only on an `installation` `deleted` event; a push never builds anything.
 2. **Analysis** — `@deployz/analysis` runs deterministic detectors (runtime,
    Dockerfile, port, bind address, health path, environment-variable model,
    external services, PostgreSQL / MySQL / storage / Redis requirements,
    declared worker processes, SQS queue and EventBridge Scheduler scheduled-job
-   detection, the unsupported-architecture rejections). An AI
-   fallback resolves only
-   genuinely open questions and can never override a detector. Output: the
+   detection, the unsupported-architecture rejections). The AI role depends
+   on `ANALYSIS_ENGINE`. With `rules` (the default), an AI fallback resolves
+   only genuinely open questions and does not override a detector, with one
+   exception: it can remove the Compose multi-service rejection. With `ai`,
+   a checked AI fact can replace a detector value. Output: the
    canonical `ApplicationAnalysis`, the readiness report and the versioned
    deployment manifest (`packages/analysis/src/{manifest,readiness-report,application-analysis}.ts`).
    See [`ai-analysis.md`](ai-analysis.md). Detected variable names become a

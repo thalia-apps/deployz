@@ -44,7 +44,7 @@ Every failure carries one of 24 stable codes and a recoverability class
 
 | Class | Meaning | Action |
 | --- | --- | --- |
-| `RECONCILE_FIRST` | May repair itself (relay returning, watchdog re-offer, transient AWS condition) | Wait one or two relay polls (5 min each); retry only if it persists |
+| `RECONCILE_FIRST` | May repair itself (relay returning, watchdog re-offer, transient AWS condition) | Wait one or two relay polls (one minute each; five minutes on a connector published before PR #531); retry only if it persists |
 | `USER_ACTION` | The vendor or customer must change something (permissions, quota, app configuration) | Fix the cause, then deploy again or retry the install |
 | `DEPLOYZ_ACTION` | The fault is on Deployz's side (template, image, relay state) | Do not loop on retry; investigate the control plane or template |
 | `TERMINAL` | Retrying cannot help as-is | Change the requirement (unsupported architecture, unsupported Region) |
@@ -94,9 +94,9 @@ The worker's watchdog runs every 15 minutes with two clocks per active job:
   and resumes on the relay's next poll. After 24 hours it fails
   `RELAY_DISCONNECTED`.
 - **Relay marked DISCONNECTED** after 15 minutes without a heartbeat. The
-  relay runs on a 5-minute schedule with a 5-minute timeout; a long install
+  relay runs on a one-minute schedule with a 5-minute timeout; a long install
   is deferred through the SSM pending marker and resumed on later polls, so
-  three quiet polls are normal during provisioning.
+  quiet polls are normal during provisioning.
 - **A DESTROY whose relay is gone** never fails by itself: the vendor (or
   Team Admin) uses force-complete, which records
   `cleanupState: SKIPPED_RELAY_OFFLINE` and does not claim that AWS

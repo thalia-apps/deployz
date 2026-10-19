@@ -88,7 +88,7 @@ export interface DestroyDeps {
    * this existed: no collector, no poll, no cursor.
    *
    * Unlike INSTALL, DESTROY has no intra-invocation wait loop, so `poll` is
-   * called at most once per invocation — once per five-minute resume tick —
+   * called at most once per invocation — once per one-minute resume tick —
    * right after `settleDestroy` observes or issues the delete.
    */
   readonly createStackEventCollector?: (args: {
@@ -346,7 +346,7 @@ export function createDestroyExecutor(deps: DestroyDeps): CommandExecutor {
 
     // Best-effort, once per invocation — DESTROY has no intra-invocation wait
     // loop, so this is the only chance to collect progress before the
-    // resumer's next five-minute tick. `poll` never throws.
+    // resumer's next one-minute tick. `poll` never throws.
     await collector?.poll(deps.stackName);
 
     if (outcome.state === 'failed') {

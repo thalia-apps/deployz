@@ -511,9 +511,10 @@ export function retryDefaultHttps(deploymentId: string): Promise<{ status: 'retr
 
 /**
  * P2 "Permanently remove retained AWS resources" — POST
- * /api/deployments/:id/purge. Eligible only for a force-completed
- * deployment; the relay re-verifies ownership of every resource before
- * deleting it, and a successful purge clears the retained-resources warning.
+ * /api/deployments/:id/purge. Eligible only for a DELETED deployment whose
+ * cleanup is not COMPLETE; the relay re-verifies ownership of every
+ * resource before deleting it, and a successful purge clears the
+ * retained-resources warning.
  */
 export function purgeDeployment(deploymentId: string): Promise<JobResult> {
   return postJson<JobResult>(`/api/deployments/${encodeURIComponent(deploymentId)}/purge`, {});

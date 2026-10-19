@@ -12,8 +12,10 @@ behind the AI boundary are in `docs/decisions/README.md`.
 
 - The AI may inspect repository content, resolve ambiguous facts, classify
   and explain. It never calls AWS, never generates infrastructure, never
-  changes deployment or job state, never flips a deterministic verdict or
-  failure code, and never produces a secret value.
+  changes deployment or job state, never flips a failure code, and never
+  produces a secret value. It flips a deterministic Analysis verdict in two
+  cases only: the Compose multi-service downgrade (see "AI fallback"), and
+  a checked fact under `ANALYSIS_ENGINE=ai` (see "AI-first Analysis").
 - Every AI output crosses a strict Zod schema before anything reads it. A
   malformed, oversized or missing answer degrades to the deterministic
   result — an analysis still completes, a diagnosis still shows copy-map
@@ -27,8 +29,9 @@ behind the AI boundary are in `docs/decisions/README.md`.
 ```
 Repository (GitHub tree, bounded)
   → analyseRepo: deterministic detectors + rejection checks
-  → AI fallback ONLY for an unresolved question; merge is
-    deterministic-always-wins
+  → ANALYSIS_ENGINE=rules (default): AI fallback ONLY for an
+    unresolved question; merge is deterministic-always-wins
+    ANALYSIS_ENGINE=ai: checked AI facts can replace rule values
   → ApplicationAnalysis (canonical, typed, evidenced)
   → ReadinessReport (findings) · DeploymentManifest (contract)
   → Preflight gate at every path into provisioning
@@ -218,7 +221,11 @@ Repository (GitHub tree, bounded)
   / 24k characters of context, sample env files stripped to key names, and
   a strict output schema. `mergeAiAnalysis` lets the AI fill a gap, never
   overwrite; a required-database or Redis flip needs corroborating
-  deterministic evidence. The call runs with model thinking off and a
+  deterministic evidence. One exception: when the rules reject a Compose
+  application as `docker-compose-multi-service` and the AI rates every
+  contested service optional, development-only or integration-only, with
+  confidence 0.9 or more and evidence paths, `apps/api/src/analysis.ts`
+  removes that rejection. The call runs with model thinking off and a
   30 s budget (`REPO_AI_TIMEOUT_MS`, two attempts inside it). With thinking
   on, the production model spent the whole output budget on reasoning, so no
   JSON came back and every attempt took longer than the budget.
