@@ -88,6 +88,13 @@ const VENDORED = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git)\//;
 const MANIFEST =
   /(?:^|\/)(?:package\.json|composer\.json|pom\.xml|build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|[^/]+\.csproj|mix\.exs|go\.mod|Gemfile|requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|deno\.jsonc?|shard\.yml|build\.sbt|project\.clj|deps\.edn|pubspec\.yaml|gleam\.toml|[^/]+\.cabal|stack\.yaml|dune-project|Procfile|app\.json|render\.yaml|fly\.toml|docker-compose(?:\.production|\.prod)?\.ya?ml|compose(?:\.production|\.prod)?\.ya?ml|schema\.prisma|appsettings(?:\.Production)?\.json|application(?:-prod)?\.(?:properties|ya?ml)|config\/(?:runtime|prod|config)\.exs|config\/database\.ya?ml|config\/database\.php|\.env\.(?:example|sample|template|dist))$/i;
 
+/** Route, health and boot files of the common frameworks. */
+const ENTRY_OR_ROUTES =
+  /(?:^|\/)(?:routes?(?:\/[^/]+)?\.(?:php|rb|js|ts|py|go|ex|exs)|[^/]*router[^/]*\.(?:js|ts|go|ex|py)|urls\.py|bootstrap\/app\.php|config\/routes\.rb|Program\.cs|Startup\.cs|[^/]*health[^/]*\.[a-z]+|(?:main|app|server|index|wsgi|asgi)\.(?:js|ts|mjs|py|go|rb))$/i;
+const NOT_PRODUCTION = /(?:^|\/)(?:tests?|spec|__tests__|examples?|docs?|e2e|fixtures?|node_modules|vendor)\//i;
+const MAX_ENTRY_FILES = 8;
+const MAX_MANIFESTS_PER_KIND = 4;
+
 /** A path the pack never includes: secrets, real env files, lockfiles, vendored code. */
 export function isExcludedPath(path: string): boolean {
   const base = path.split('/').pop() ?? path;
@@ -191,13 +198,28 @@ export function buildEvidencePack(tree: FileTree, analysis: AnalysisResult): Evi
   for (const path of dockerfiles.slice(0, 3)) add(path);
   for (const path of startScripts(dockerfiles[0], tree)) add(path);
   const allPaths = Object.keys(tree).sort();
+  const depth = (path: string) => path.split('/').length;
+  // Where frameworks declare routes, health endpoints and boot code: the facts most packs miss.
+  const entries = allPaths.filter((path) => ENTRY_OR_ROUTES.test(path) && !NOT_PRODUCTION.test(path)).sort((a, b) => depth(a) - depth(b));
+  for (const path of entries.slice(0, MAX_ENTRY_FILES)) add(path);
   // Shallow manifests first: the root describes the app better than a nested example.
-  const manifests = allPaths.filter((path) => MANIFEST.test(path)).sort((a, b) => a.split('/').length - b.split('/').length);
-  for (const path of manifests) add(path);
+  // At most a few of one kind, so a large monorepo does not crowd out the code.
+  const manifests = allPaths.filter((path) => MANIFEST.test(path)).sort((a, b) => depth(a) - depth(b));
+  const perKind = new Map<string, number>();
+  const addCapped = (path: string): void => {
+    if (!MANIFEST.test(path)) return add(path);
+    const base = path.split('/').pop() ?? path;
+    const kind = /\.csproj$/i.test(base) ? '*.csproj' : base;
+    const count = perKind.get(kind) ?? 0;
+    if (count >= MAX_MANIFESTS_PER_KIND || seen.has(path)) return;
+    perKind.set(kind, count + 1);
+    add(path);
+  };
+  for (const path of manifests) addCapped(path);
   const cited = new Set<string>();
   citedPaths(analysis.metadata, tree, cited);
   for (const finding of analysis.findings) citedPaths([finding.value, finding.details], tree, cited);
-  for (const path of [...cited].sort()) add(path);
+  for (const path of [...cited].sort()) addCapped(path);
 
   const files: PackFile[] = [];
   let remaining = MAX_PACK_CHARS;

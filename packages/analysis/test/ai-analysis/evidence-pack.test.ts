@@ -203,3 +203,27 @@ describe('the Deployz binding contract', () => {
     expect(rendered.indexOf('## Deployz binding contract')).toBeLessThan(rendered.indexOf('## Rules Analysis signals (JSON, unverified first guess)'));
   });
 });
+
+describe('buildEvidencePack: entry files and manifest kinds', () => {
+  it('includes route, health and boot files before long manifest lists', () => {
+    const tree: FileTree = {
+      Dockerfile: 'FROM php:8\nCMD ["php-fpm"]',
+      'composer.json': '{}',
+      'bootstrap/app.php': "->withRouting(health: '/up')",
+      'routes/web.php': "Route::get('/', fn () => view('welcome'));",
+      'tests/routes.php': 'test only',
+    };
+    const paths = buildEvidencePack(tree, analyseRepo(tree)).files.map((file) => file.path);
+    expect(paths).toContain('bootstrap/app.php');
+    expect(paths).toContain('routes/web.php');
+    expect(paths).not.toContain('tests/routes.php');
+    expect(paths.indexOf('bootstrap/app.php')).toBeLessThan(paths.indexOf('composer.json'));
+  });
+
+  it('keeps at most four manifests of one kind', () => {
+    const tree: FileTree = { Dockerfile: 'FROM mcr.microsoft.com/dotnet/aspnet:9.0\nCMD ["dotnet", "App.dll"]' };
+    for (let i = 0; i < 10; i++) tree[`src/App.Module${i}/App.Module${i}.csproj`] = '<Project />';
+    const csproj = buildEvidencePack(tree, analyseRepo(tree)).files.filter((file) => file.path.endsWith('.csproj'));
+    expect(csproj).toHaveLength(4);
+  });
+});

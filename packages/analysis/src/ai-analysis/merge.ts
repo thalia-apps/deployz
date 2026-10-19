@@ -229,8 +229,7 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
       : record('migration', migration, migrationOutcome);
   if (migrationDecision === 'ai') {
     meta['migrationMode'] = migration.mode;
-    // A verified "no migration" also removes any migration script the rules picked.
-    if (migration.mode === 'none') aiResolved.push('noMigration');
+
     if (migration.mode === 'startup') {
       meta['migrationStartupEvidence'] = facts.migration.evidence.map((item) => ({ path: item.path, line: item.line, fromDockerCommand: false }));
     }
@@ -242,6 +241,12 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   } else if (migrationDecision === 'question' && migration.command !== null) {
     migrationResult = { candidate: migration.command, reason: 'The AI Analysis could not verify this migration command.' };
     meta['aiMigrationQuestion'] = migrationResult;
+  }
+
+  // A "no migration" that holds (verified, or the same as the rules) also removes any
+  // migration script the rules picked: the deployment has no database to migrate.
+  if (migration.mode === 'none' && rulesDatabase(meta) === 'none' && (migrationDecision === 'ai' || migrationDecision === 'agree')) {
+    aiResolved.push('noMigration');
   }
 
   // ── Workers: the rules' declared workers plus every verified AI worker. ──

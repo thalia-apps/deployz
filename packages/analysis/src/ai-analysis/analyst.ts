@@ -10,7 +10,7 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 7;
+export const ANALYST_PROMPT_VERSION = 8;
 export const ANALYST_MAX_PROMPT_TOKENS = 60_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
@@ -230,12 +230,12 @@ redis / storage:
 "true" only when Redis, or S3-compatible object storage, is required to start or for essential functionality. Optional caches, optional queues and optional integrations are "false". Local filesystem writes do not imply S3.
 
 migration:
-Check the start path first. These modes exclude each other:
+Check the start path first, and describe what it does with the external database Deployz provides, even when the application's default is an embedded store. These modes exclude each other:
 - "startup": the actual start path (ENTRYPOINT, CMD, a script they run, or application boot code) runs the schema migrations, or the application creates or upgrades its own schema when it boots. Then command is null; never also give a separate command. A step inside a condition that is off by default (an environment flag that defaults to off, a first-run marker that the image does not set) does not run, so it is not a startup migration.
 - "pre_deploy": the start path does not migrate, and a separate migration must run before the new version starts. Give a command that the built image can run, taking its working directory and entrypoint into account.
 - "none": the application has no schema to migrate.
 - "unknown": you cannot tell.
-Migration files or ORM dependencies alone do not prove that a migration runs. Seeding, one-off data fixes and unrelated setup jobs are not migrations. When the database is "none" (including an app that only uses a database Deployz does not provide), the mode is "none".
+Migration files or ORM dependencies alone do not prove that a migration runs. Seeding, one-off data fixes and unrelated setup jobs are not migrations. When the application only uses a database that Deployz does not provide (for example a document database), the mode is "none".
 
 workers:
 Each required long-running process that the production setup declares next to the web process and that runs from the same image: a Procfile entry other than web, or a service in the production Compose file that uses the same image or build. Development, test and example Compose files do not count. subject = the identifier exactly as declared, in lower case. value = its command exactly as declared. Exclude optional or development services, one-off jobs, schedulers that only run tasks on demand, and processes that the web container already starts.
