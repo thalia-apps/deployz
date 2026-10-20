@@ -44,6 +44,9 @@ export function vendorRequiredVariables(manifest: DeploymentManifest): string[] 
 }
 
 /** The `from` of a Dockerfile claim when the gate itself says the image cannot build. */
+/** The app checks the Host header: its target group also accepts 400 (infrastructure-compiler `Matcher`). */
+export const HOST_CHECKED_HEALTH = 'health.path (host checked)';
+
 export const PREDICTED_UNBUILDABLE = 'application.dockerfilePath (gate: unbuildable)';
 
 /**
@@ -84,7 +87,7 @@ export function extractClaims(file: AnalysisResultFile): Claim[] {
       subject: null,
       // A `vendor_required` path is a neutral placeholder, not a claim.
       value: manifest.health.mode === 'vendor_required' ? null : manifest.health.path,
-      from: 'health.path',
+      from: manifest.health.hostChecked === true ? HOST_CHECKED_HEALTH : 'health.path',
     },
     { type: 'database.engine', subject: null, value: databaseEngine(manifest), from: 'database.postgres' },
     { type: 'redis.required', subject: null, value: manifest.redis.required, from: 'redis.required' },

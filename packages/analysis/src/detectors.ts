@@ -5863,6 +5863,35 @@ export function detectDockerfileBuildTarget(tree: FileTree): DetectorFinding {
   };
 }
 
+// Host-header allow lists. A wildcard (`['*']`, `"*"`) or a cleared list allows every host.
+const HOST_VALIDATION_PATTERNS: readonly { file: RegExp; pattern: RegExp; allowsAll: RegExp }[] = [
+  // Django `ALLOWED_HOSTS = [...]` / `env.list('ALLOWED_HOSTS')`
+  { file: /\.py$/, pattern: /^\s*ALLOWED_HOSTS\s*=\s*\S/m, allowsAll: /^\s*ALLOWED_HOSTS\s*=\s*\[\s*["']\*["']\s*\]/m },
+  // Rails `config.hosts << "example.com"`
+  { file: /(?:^|\/)config\/(?:application|environments\/production)\.rb$/, pattern: /^\s*config\.hosts\s*(?:<<|=|\.push|\.concat)/m, allowsAll: /^\s*config\.hosts\s*(?:\.clear\b|=\s*(?:nil|\[\s*\]))/m },
+  // ASP.NET `"AllowedHosts": "example.com"`
+  { file: /(?:^|\/)appsettings(?:\.Production)?\.json$/, pattern: /"AllowedHosts"\s*:\s*"[^"]*"/, allowsAll: /"AllowedHosts"\s*:\s*"\*"/ },
+  // Laravel trusted hosts
+  { file: /(?:^|\/)(?:bootstrap\/app|app\/Http\/Kernel)\.php$/, pattern: /->trustHosts\(|^\s*\\App\\Http\\Middleware\\TrustHosts::class/m, allowsAll: /$^/ },
+];
+
+/**
+ * The app rejects a request whose Host header it does not know. An AWS ALB
+ * health check sends the task IP as Host, so such an app answers it 400 while
+ * it serves its own domain (healthchecks: ALLOWED_HOSTS from SITE_ROOT).
+ */
+export function detectHostValidation(tree: FileTree): DetectorFinding {
+  const found: string[] = [];
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !isRuntimeSourcePath(path)) continue;
+    for (const { file, pattern, allowsAll } of HOST_VALIDATION_PATTERNS) {
+      if (file.test(path) && pattern.test(content) && !allowsAll.test(content)) found.push(path);
+    }
+  }
+  if (found.length === 0) return { detector: 'host-validation', detected: false };
+  return { detector: 'host-validation', detected: true, value: found, details: `The app checks the Host header: ${found.join(', ')}` };
+}
+
 /**
  * Where a repository file lies in the runtime image of the selected Dockerfile: a path relative
  * to the image's final `WORKDIR` (absolute when the file lies outside it). The build context

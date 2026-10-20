@@ -15,7 +15,7 @@ import type {
   Verdict,
 } from '../contract.js';
 import { isTransientWrite } from '../observe/diff-filter.js';
-import { PREDICTED_UNBUILDABLE } from './extract.js';
+import { HOST_CHECKED_HEALTH, PREDICTED_UNBUILDABLE } from './extract.js';
 
 type Observed = string | number | boolean | null;
 
@@ -141,6 +141,10 @@ export const checkHealthPath: Rule = (claim, run) => {
   const onReachable = reachable.size === 0 ? checks : checks.filter((check) => reachable.has(check.port));
   const answers = onReachable.filter((check) => check.path === claim.value);
   if (answers.some((check) => check.status === 200)) return confirmed('the claimed path answers 200', facts);
+  // The ALB health check sends the task IP as Host; an app that checks the Host header answers it 400, which its target group accepts.
+  if (claim.from === HOST_CHECKED_HEALTH && answers.some((check) => check.status === 400)) {
+    return confirmed('the claimed path answers 400 to an unknown Host, which the target group accepts', facts);
+  }
   if (answers.length === 0) return notCheckable('the observation did not probe the claimed path', facts);
   return contradicted(answers[0]!.status, 'the claimed path does not answer 200', facts);
 };

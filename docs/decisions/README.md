@@ -881,6 +881,29 @@ Docker run and as trustworthy (for example production telemetry from real
 customer deployments), or a release gate that real-AWS runs can give at an
 acceptable cost.
 
+## A Host-checking app's health check also accepts 400 (2026-10-20)
+
+Decision: when Analysis finds that the app checks the Host header (Django
+`ALLOWED_HOSTS`, Rails `config.hosts`, ASP.NET `AllowedHosts`, Laravel
+trusted hosts), the manifest sets `health.hostChecked` and the ALB target
+group matcher is `200,400`. Other apps keep `200`.
+
+Reason: an ALB health check always sends the task IP as Host, and AWS cannot
+change it. A Host-checking app answers that probe 400 while it serves its own
+domain, so it never became healthy. A 400 from the Host check still proves
+that the process serves HTTP. The release probe uses the real domain and
+still needs a success.
+
+Rejected: asking the vendor for `ALLOWED_HOSTS=*` (it turns off the app's
+Host protection), injecting the task IP (it changes on every replacement),
+and a TCP health check (an ALB target group has none).
+
+Compatibility: a relay validates the manifest with a strict schema and does
+not read the flag, so the INSTALL payload leaves `health.hostChecked` out.
+
+What would change it: a real-AWS run shows a Host-checking app that answers
+400 while it is broken.
+
 ## AI-first application Analysis (2026-10-19)
 
 Status: proposed. The switch waits for the release gate and a shadow period

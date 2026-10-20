@@ -7,6 +7,7 @@ import {
   deliversConfigValue,
   requirementsFromSpec,
   taskFamilySuffixForSpec,
+  type DeploymentManifest,
   type DeploymentSpecV2,
 } from '@deployz/contracts';
 import type { RuntimeDb } from '@deployz/db';
@@ -207,6 +208,17 @@ export function requireTaskFamilySuffix(spec: DeploymentSpecV2, installationId: 
 }
 
 /**
+ * The manifest the relay validates. A relay validates it with a strict schema, so a relay built before a
+ * field existed would reject the whole manifest. The relay never reads `health.hostChecked` (the compiled
+ * template already carries its health-check matcher), so the payload leaves it out.
+ */
+function relayManifest(manifest: DeploymentManifest): DeploymentManifest {
+  const health = { ...manifest.health };
+  delete health.hostChecked;
+  return { ...manifest, health };
+}
+
+/**
  * The INSTALL job's payload: the compiled template's URL + parameters, the
  * Redis/database flags, the deployment identity tags, the canonical manifest
  * and — when configuration must precede the first start and there is a
@@ -276,7 +288,7 @@ export async function buildInstallPayload(
     }),
     // The canonical manifest this deployment was created with — the relay
     // derives port/health/binding parameters from it (Phase 2).
-    manifest,
+    manifest: relayManifest(manifest),
     ...(parameters[DESIRED_COUNT_PARAMETER] === '0' ? { startAfterConfig: true } : {}),
   };
 }

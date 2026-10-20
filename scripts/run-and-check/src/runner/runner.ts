@@ -204,7 +204,8 @@ export function createRunner(deps: RunnerDeps): Runner {
         }
         checks = [];
         for (const port of options.ports) checks.push(...(await httpProbe(container, port, options.paths)));
-        if (checks.some((check) => check.status === 200)) {
+        const healthyStatuses = options.healthyStatuses ?? [200];
+        if (checks.some((check) => check.status !== null && healthyStatuses.includes(check.status))) {
           return { healthy: true, seconds: (Date.now() - container.startedAtMs) / 1000, checks, exited: false, oomKilled: false };
         }
         if (Date.now() >= deadline) {

@@ -31,6 +31,7 @@ import {
   detectGitCopyInDockerfile,
   detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
+  detectHostValidation,
   detectStartupMigrationEvidence,
   detectDeclaredWorkerCommands,
   hasPreDeployMigration,
@@ -127,6 +128,7 @@ const DETECTORS = [
   detectGitCopyInDockerfile,
   detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
+  detectHostValidation,
 ] as const;
 
 /** All §10 rejection check functions, in order. `mysql` is handled separately
@@ -273,6 +275,9 @@ function buildMetadata(
         break;
       case 'dockerfile-build-context':
         if (f.detected && f.value) meta['dockerfileBuildContext'] = f.value;
+        break;
+      case 'host-validation':
+        meta['hostChecked'] = f.detected;
         break;
       case 'dockerfile-build-target':
         if (f.detected && f.value) meta['dockerfileBuildTarget'] = f.value;

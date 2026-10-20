@@ -111,7 +111,9 @@ export async function runFull(input: FullRunInput): Promise<FullRun> {
     started.push(web);
     const port = Number(webSpec.env['PORT']);
     const healthPath = manifest.health.path;
-    const health = await runner.waitHealthy(web, { ports: [port], paths: [healthPath], timeoutMs: WEB_START_TIMEOUT_MS });
+    // The same rule as the target group: a host-checked app also counts 400 (infrastructure-compiler Matcher).
+    const healthyStatuses = manifest.health.hostChecked === true ? [200, 400] : [200];
+    const health = await runner.waitHealthy(web, { ports: [port], paths: [healthPath], timeoutMs: WEB_START_TIMEOUT_MS, healthyStatuses });
     result.webHealthy = health.healthy;
     result.healthPathStatus = health.checks.filter((check) => check.path === healthPath).at(-1)?.status ?? null;
     if (health.healthy && recipe.smoke !== undefined) {

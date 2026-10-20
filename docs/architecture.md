@@ -213,7 +213,9 @@ workload (sized by the deployment's frozen profile, for example `small-v2`: 0.25
 breaker with rollback). The web workload runs behind the internet-facing
 ALB (one HTTP listener, a target group, an unhealthy-target alarm, and a
 300-second health-check grace period, so an app that migrates at boot is not
-stopped before it listens); each
+stopped before it listens; the target group counts HTTP 200 as healthy, and
+also 400 when Analysis finds that the app checks the Host header, because the
+ALB health check sends the task IP as Host — `health.hostChecked`); each
 declared worker runs its own private service — one task, its own log group
 and security group, no ALB target, no HTTP health check. Every workload
 gets a task definition with the same frozen image and its own frozen

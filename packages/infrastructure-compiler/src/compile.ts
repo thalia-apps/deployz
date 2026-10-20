@@ -1105,6 +1105,9 @@ function compileAlb(ctx: EcsContext, workload: IrWorkload): ResolvedResource[] {
       cfnType: 'AWS::ElasticLoadBalancingV2::TargetGroup',
       properties: {
         HealthCheckPath: ref('paramHealthCheckPath'),
+        // The ALB health check sends the task IP as Host. An app that checks the Host header answers it 400
+        // while it serves its own domain, so for that app 400 also proves the process is up.
+        ...(workload.healthCheck?.hostChecked === true ? { Matcher: { HttpCode: '200,400' } } : {}),
         Port: ref('paramContainerPort'),
         Protocol: 'HTTP',
         Tags: tags(componentId),

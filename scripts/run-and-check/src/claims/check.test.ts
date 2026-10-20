@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Claim, ClaimVerdict, ObservationFactName } from '../contract.js';
 import { checkClaims } from './check.js';
-import { PREDICTED_UNBUILDABLE } from './extract.js';
+import { HOST_CHECKED_HEALTH, PREDICTED_UNBUILDABLE } from './extract.js';
 import { makeObservation, makeRun, type RunOptions } from './test-support.js';
 
 type Values = Parameters<typeof makeRun>[0];
@@ -136,6 +136,12 @@ describe('health.path', () => {
 
   it('is CONFIRMED when the claimed path answers 200', () => {
     expect(check(HEALTH).verdict).toBe('CONFIRMED');
+  });
+
+  it('accepts 400 only for a host-checked app, as its target group does', () => {
+    const rejected = { httpPaths: [{ port: 8080, path: '/healthz', status: 400 }] };
+    expect(check({ ...HEALTH, from: HOST_CHECKED_HEALTH }, rejected).verdict).toBe('CONFIRMED');
+    expect(check(HEALTH, rejected).verdict).toBe('CONTRADICTED');
   });
 
   it('is CONTRADICTED with the status when another path answers 200', () => {
