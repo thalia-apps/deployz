@@ -1054,40 +1054,38 @@ Decision:
   two criteria: no predicted outcome 1 that is really 2 or 3, and fewer false
   outcome 3 than the rules baseline ([`../testing/compatibility.md`](../testing/compatibility.md#release-gate)).
 
-Measured on the 58 exam repositories (tuning and holdout). The answers came
-from Claude Opus 5.5 in a coding session (no API call), replayed through the
-production checks and merge (`ai@0946721d-open-items`). Full exam on x86_64
-runners: run 39435522422 (each full run runs twice).
+Measured on the 58 exam repositories (tuning and holdout), after the merge
+with the deployability outcome. The answers came from Claude Opus 5.5 in a
+coding session (no API call), replayed through the production checks and
+merge. Full exams on x86_64 runners, each full run twice: AI
+`ai@080dad04-open-items` (run 39451043684), rules `rules@080dad04` (run
+39451101030). The predicted outcome is the readiness report's `outcome`.
 
-| | rules@0fc073b8 | AI open items |
-| --- | --- | --- |
-| Hidden problems, tuning + holdout | 2 + 0 | **0 + 0** |
-| False problems, tuning + holdout | 11 + 6 | 6 + 6 |
-| CONTRADICTED claims, tuning + holdout | 14 + 14 | 8 + 13 |
-| Healthy with the analysed settings, tuning + holdout | 16 + 4 | 19 + 4 |
-| Predicted 1, actually 2 or 3 | 8 + 8 | 5 + 8 |
-| Predicted 3, actually 1 or 2 | 7 + 5 | 7 + 5 |
+| | rules@0fc073b8 | rules@080dad04 | AI open items |
+| --- | --- | --- | --- |
+| Hidden problems, tuning + holdout | 2 + 0 | 1 + 0 | **0 + 0** |
+| False problems, tuning + holdout | 11 + 6 | 6 + 5 | 6 + 6 |
+| CONTRADICTED claims, tuning + holdout | 14 + 14 | 9 + 14 | 8 + 14 |
+| Predicted 1, actually 2 or 3 | — | 5 + 8 | 2 + 4 |
+| Predicted 3, actually 1 or 2 | — | 0 + 0 | 0 + 0 |
 
-- CONTRADICTED claims are fewer than or equal to the rules for each claim
-  type.
-- The rules' two hidden problems are fixed. repo-016 (Outline): the
-  Dockerfile copies nothing from the repository; its image runs the floating
-  `outlinewiki/outline-base` build, which crashes on Node 26. The rules now
-  call such a Dockerfile unbuildable. new-14 (Logto): the database is
-  required, the migration is unknown, and the app refuses to start until its
-  alterations are deployed. An AI migration answer that is unknown or fails
-  its check now stays a vendor question, never READY. An earlier exam also
-  showed new-23 READY while its migration was unknown; the open facts are
-  now all or nothing.
-- The migration question costs two false problems in the holdout set
-  (new-2, repo-204: the app migrates at start, but the AI could not prove
-  it). Doubt asks the vendor; it is never READY.
-- The outcome rows use the gate state (NOT_COMPATIBLE is 3, every other state
-  is 1), because this branch does not have the readiness outcome yet. With
-  that mapping the outcome criteria are not met: a NEEDS_CONFIGURATION
-  repository counts as predicted 1, and its full run has no vendor answer.
-  The AI does not lower the false outcome 3: most blocker answers are
-  "required", because the windows rarely show a switch to a supported engine.
+- CONTRADICTED claims are fewer than or equal to `rules@080dad04` for each
+  claim type.
+- The two hidden problems of `rules@0fc073b8` are fixed. repo-016 (Outline):
+  the Dockerfile copies nothing from the repository and runs the floating
+  `outlinewiki/outline-base` build, so it is not buildable (a repository
+  change). new-14 (Logto): the AI could not resolve the migration of its
+  required database; that migration question is now a change to verify
+  (CODE_CHANGE, outcome 2), not a setting.
+- Predicted 1, actually 2 or 3, is not 0 (the gate needs 0). new-27 and new-31
+  do not build: the product's build check makes them outcome 2 after the
+  first failed release build, but the harness does not apply it. new-20 and
+  new-26 ask the vendor for a setting (a required variable) that the full run
+  does not supply, so the harness counts them as 3. new-15 (Homarr, a second
+  server on the same port) and new-17 (Espial, SQLite in `/app/data`) are
+  real misses of the Analysis.
+- False outcome 3 is 0 for both engines, so it cannot be fewer than the
+  rules.
 - 45 of 58 repositories have an open item. A pack is about 17,000
   characters (at most 34,000), against about 90,000 before. The cost and the
   time are not measured yet: the answers were not API calls.
