@@ -93,8 +93,9 @@ const SECRET_FILE = /\.(?:pem|key|p12|pfx|jks|keystore)$|^id_[a-z0-9]+$|^credent
 const LOCKFILE = /(?:^|\/)(?:pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|package-lock\.json|composer\.lock|Gemfile\.lock|poetry\.lock|uv\.lock|Cargo\.lock|mix\.lock|go\.sum|packages\.lock\.json)$/i;
 const PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
 const VENDORED = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git)\//;
-const NOT_PRODUCTION = /(?:^|\/)(?:tests?|specs?|__tests__|__mocks__|examples?|samples?|docs?|e2e|cypress|fixtures?|testdata|benchmarks?|node_modules|vendor|\.github)\//i;
-const BINARY = /\.(?:png|jpe?g|gif|ico|svg|woff2?|ttf|eot|pdf|zip|gz|tar|jar|wasm|mp4|webp|map|min\.js)$/i;
+const NOT_PRODUCTION = /(?:^|\/)(?:tests?|specs?|__tests__|__mocks__|examples?|samples?|docs?|e2e|cypress|fixtures?|testdata|benchmarks?|load-?tests?|node_modules|vendor|\.[^/]+)\//i;
+/** Binary files, and the built browser bundles a server serves as static files. */
+const BINARY = /\.(?:png|jpe?g|gif|ico|svg|woff2?|ttf|eot|pdf|zip|gz|tar|jar|wasm|mp4|webp|map|min\.js)$|(?:^|\/)(?:public|static|assets|wwwroot)\/(?:.*\/)?[^/]+\.js$/i;
 
 /** A path the pack never includes: secrets, real env files, lockfiles, vendored code. */
 export function isExcludedPath(path: string): boolean {
@@ -171,13 +172,21 @@ const START_FILE = /(?:^|\/)(?:[^/]*entrypoint[^/]*|start[^/]*|boot[^/]*|run[^/]
 /** The rank of a hit, best first: what makes a line decisive for the question. */
 type Rank = (path: string, line: string) => number;
 
+/** Dependency manifests: they name packages, not routes, ports or boot steps, so they rank last for a fact. */
+const MANIFEST = /(?:^|\/)(?:package\.json|composer\.json|pom\.xml|build\.gradle(?:\.kts)?|[^/]+\.csproj|mix\.exs|go\.mod|Gemfile|pyproject\.toml|Cargo\.toml)$/i;
+const BROWSER_FILE = /\.(?:tsx|jsx|vue|svelte)$|(?:^|\/)(?:frontend|client|web|ui)\/src\//i;
+const last = (rank: Rank): Rank => (path, line) => (MANIFEST.test(path) ? 3 : rank(path, line));
+
 const RANKS: Record<string, Rank> = {
   blocker: (_path, line) => (READS_ENV.test(line) ? 0 : 1),
-  port: (path, line) => (/\bPORT\b/.test(line) && READS_ENV.test(line) ? 0 : START_FILE.test(path) ? 1 : 2),
-  startCommand: (path) => (START_FILE.test(path) ? 0 : 1),
-  healthPath: (path, line) => (HEALTH_ROUTE.test(line) || /health/i.test(path) ? 0 : /route|router|urls|controller/i.test(path) ? 1 : 2),
-  migration: (path) => (START_FILE.test(path) ? 0 : 1),
+  port: last((path, line) => (/\bPORT\b/.test(line) && READS_ENV.test(line) ? 0 : START_FILE.test(path) ? 1 : 2)),
+  startCommand: last((path) => (START_FILE.test(path) ? 0 : 1)),
+  // A browser-side router is not a server route.
+  healthPath: last((path, line) => (BROWSER_FILE.test(path) ? 3 : HEALTH_ROUTE.test(line) ? 0 : /health|route|router|urls|controller/i.test(path) ? 1 : 2)),
+  migration: last((path) => (START_FILE.test(path) ? 0 : 1)),
 };
+/** Windows of one file in one question, so one long file does not use the whole budget. */
+const MAX_WINDOWS_PER_FILE = 3;
 
 /** The search pattern of a blocker: any of its terms as a whole word. */
 function blockerSearch(item: BlockerItem): RegExp {
@@ -211,6 +220,7 @@ function hitWindows(tree: FileTree, pattern: RegExp, rank: Rank, first: readonly
   for (const hit of byRank.flatMap((level) => level ?? [])) {
     if (windows.length >= MAX_HITS || remaining < 300) break;
     const shown = windows.filter((file) => file.path === hit.path);
+    if (shown.length >= MAX_WINDOWS_PER_FILE) continue;
     if (shown.some((file) => hit.number >= file.start && hit.number < file.start + file.lines.length)) continue;
     // Start after a window above and stop before a window below, so no line repeats.
     const from = Math.max(hit.number - WINDOW_RADIUS, ...shown.filter((file) => file.start < hit.number).map((file) => file.start + file.lines.length));
