@@ -253,6 +253,21 @@ describe('migration', () => {
     'schema.sql': 'create table a (id int);',
     Procfile: 'web: npx prisma migrate deploy && node server.js\nworker: node worker.js\n',
   };
+  it('accepts a migrate flag of the binary from the line that defines the flag', () => {
+    const cli = ctxOf({ 'internal/cli/cli.go': 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)\nflag.BoolVar(&flagInfo, "info", false, "")' });
+    const command = (line: number, quote: string) =>
+      checkFacts(
+        cli,
+        factsOf({
+          database: { value: 'postgres', confidence: 'high', evidence: [] },
+          migration: { value: { mode: 'pre_deploy', command: '/usr/bin/app -migrate' }, confidence: 'high', evidence: cite('internal/cli/cli.go', line, quote) },
+        }),
+        null,
+      ).find((c) => c.fact === 'migration')!;
+    expect(command(1, 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)').ok).toBe(true);
+    expect(command(2, 'flag.BoolVar(&flagInfo, "info", false, "")').ok).toBe(false);
+  });
+
   const migrationCheck = (
     migration: AnalystOutput['migration']['value'],
     database: AnalystOutput['database']['value'],

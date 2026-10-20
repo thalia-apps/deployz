@@ -233,7 +233,14 @@ function checkMigration(
     return { fact: 'migration', subject: null, ok: false, reasons: ['pre_deploy without a command'] };
   }
   const token = command !== null ? distinctiveToken(command) : null;
-  const check = simple('migration', ctx, migration, (line) => (token !== null ? line.includes(token) : MIGRATION.test(line)));
+  // A migration flag of the binary (`-migrate`, `--upgrade`), as the line that defines the flag names it.
+  const migrationWords = (command ?? '')
+    .split(/\s+/)
+    .filter((part) => part.startsWith('-'))
+    .map((part) => part.replace(/^-+/, '').replace(/=.*$/, ''))
+    .filter((part) => part.length >= 3 && MIGRATION.test(part));
+  const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((word) => line.includes(word));
+  const check = simple('migration', ctx, migration, supports);
   if (mode !== 'startup') return check;
   // A migration at start must be on the start path, not in a dev script or a README.
   const startPath = startPathFiles(ctx, dockerfile);
