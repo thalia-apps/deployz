@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   AI_MODEL_DEFAULT,
   ANALYSIS_AI_MODEL_DEFAULT,
-  ANALYSIS_REVIEWER_MODEL_DEFAULT,
   FIX_INSTRUCTIONS_AI_PROBLEMS,
   FIX_INSTRUCTIONS_MODEL_DEFAULT,
   OPENROUTER_BASE_URL_DEFAULT,
@@ -157,7 +156,7 @@ describe('describeFixInstructionsAiConfig', () => {
 describe('resolveAnalysisAiConfig', () => {
   const withOpenRouter = { ...complete, OPENROUTER_API_KEY: 'or-key' };
 
-  it('defaults to the rules engine and both models on the gateway OpenRouter route', () => {
+  it('defaults to the rules engine and the analyst model on the gateway OpenRouter route', () => {
     const config = resolveAnalysisAiConfig(withOpenRouter);
 
     expect(config.engine).toBe('rules');
@@ -168,20 +167,17 @@ describe('resolveAnalysisAiConfig', () => {
       gatewayToken: 'gateway-token',
       model: ANALYSIS_AI_MODEL_DEFAULT,
     });
-    expect(config.reviewer).toMatchObject({ provider: 'openrouter', model: ANALYSIS_REVIEWER_MODEL_DEFAULT });
   });
 
-  it('reads the engine and the models', () => {
+  it('reads the engine and the model', () => {
     const config = resolveAnalysisAiConfig({
       ...withOpenRouter,
       ANALYSIS_ENGINE: 'shadow',
       ANALYSIS_AI_MODEL: 'anthropic/other',
-      ANALYSIS_REVIEWER_MODEL: 'openai/other',
     });
 
     expect(config.engine).toBe('shadow');
     expect(config.analyst?.model).toBe('anthropic/other');
-    expect(config.reviewer?.model).toBe('openai/other');
   });
 
   it('maps an unknown engine to rules', () => {
@@ -194,7 +190,6 @@ describe('resolveAnalysisAiConfig', () => {
     expect(resolveAnalysisAiConfig({ ...complete, OPENROUTER_API_KEY: 'gateway-token' }).analyst).toBeUndefined();
     expect(createAnalysisAiGateways(resolveAnalysisAiConfig(withOpenRouter))).toMatchObject({
       analyst: expect.any(Object),
-      reviewer: expect.any(Object),
     });
   });
 

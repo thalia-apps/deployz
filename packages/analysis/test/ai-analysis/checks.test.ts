@@ -1,430 +1,166 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AnalystOutput } from '../../src/ai-analysis/analyst.js';
-import {
-  checkEvidence,
-  checkFacts,
-  checkPort,
-  checkRequiredVariable,
-  citedLine,
-  dockerfilePorts,
-  guardedRead,
-  type CheckContext,
-} from '../../src/ai-analysis/checks.js';
+import { analyseRepo } from '../../src/analyser.js';
+import { checkBlocker, checkFact, citedLine, imageCommand, isImageStartCommand, type CheckContext } from '../../src/ai-analysis/checks.js';
+import { buildEvidencePack, type Question } from '../../src/ai-analysis/evidence-pack.js';
+import type { BlockerItem } from '../../src/ai-analysis/open-items.js';
 import type { FileTree } from '../../src/detectors.js';
-import { cite, factsOf, packOf } from './helpers.js';
+import { blocker, cite, fact, MONGO_DECLARED_ONLY, MONGO_OR_POSTGRES } from './helpers.js';
 
-const ctxOf = (tree: FileTree): CheckContext => ({ tree, pack: packOf(tree) });
-const anything = () => true;
+function contextOf(tree: FileTree): CheckContext {
+  return { pack: buildEvidencePack(tree, analyseRepo(tree)), tree, dockerfile: 'Dockerfile', database: 'none' };
+}
 
-describe('citedLine and checkEvidence', () => {
-  const pack = packOf({ 'app.js': ['one', 'const a  =   require("x");', 'three', 'four', 'five'].join('\n') });
+const blockerOf = (ctx: CheckContext) => ctx.pack.questions.find((question) => question.kind === 'blocker') as Question & BlockerItem;
 
-  it('accepts a citation whose line holds the quote', () => {
-    expect(citedLine(pack, { path: 'app.js', line: 3, quote: 'three' })).toBe('three');
-  });
+describe('citedLine', () => {
+  const ctx = contextOf({ ...MONGO_OR_POSTGRES, 'src/db.js': `\n\n${MONGO_OR_POSTGRES['src/db.js']}` });
 
-  it('ignores whitespace differences', () => {
-    expect(citedLine(pack, { path: 'app.js', line: 2, quote: 'const a = require("x");' })).not.toBeNull();
-  });
-
-  it('allows one line of tolerance either way and returns the line that holds the quote', () => {
-    expect(citedLine(pack, { path: 'app.js', line: 2, quote: 'three' })).toBe('three');
-    expect(citedLine(pack, { path: 'app.js', line: 4, quote: 'three' })).toBe('three');
-  });
-
-  it('rejects a line two lines away', () => {
-    expect(citedLine(pack, { path: 'app.js', line: 5, quote: 'three' })).toBeNull();
-    expect(citedLine(pack, { path: 'app.js', line: 1, quote: 'three' })).toBeNull();
-  });
-
-  it('rejects a missing file, a line outside the file and a quote that is not on the line', () => {
-    expect(citedLine(pack, { path: 'missing.js', line: 1, quote: 'one' })).toBeNull();
-    expect(citedLine(pack, { path: 'app.js', line: 99, quote: 'one' })).toBeNull();
-    expect(citedLine(pack, { path: 'app.js', line: 3, quote: 'nowhere' })).toBeNull();
-  });
-
-  it('rejects a one-character quote', () => {
-    expect(citedLine(pack, { path: 'app.js', line: 3, quote: 't' })).toBeNull();
-  });
-
-  it('needs at least one evidence item', () => {
-    expect(checkEvidence(pack, [], anything)).toEqual(['no evidence']);
-  });
-
-  it('reports a bad citation and a line that does not support the claim', () => {
-    expect(checkEvidence(pack, cite('missing.js', 1, 'one'), anything)[0]).toContain('does not exist in the evidence');
-    expect(checkEvidence(pack, cite('app.js', 3, 'three'), (line) => line.includes('zzz'))[0]).toContain('no cited line supports the claim');
-    expect(checkEvidence(pack, cite('app.js', 3, 'three'), anything)).toEqual([]);
-  });
-
-  it('accepts a reasoning chain: one supporting line is enough when every cited line exists', () => {
-    const chain = [...cite('app.js', 3, 'three'), ...cite('app.js', 1, 'one')];
-    expect(checkEvidence(pack, chain, (line) => line.includes('three'))).toEqual([]);
-    expect(checkEvidence(pack, chain, (line) => line.includes('zzz'))).toHaveLength(1);
-  });
-
-  it('fails when any one of several citations is bad', () => {
-    const evidence = [...cite('app.js', 3, 'three'), ...cite('app.js', 3, 'nowhere')];
-    expect(checkEvidence(pack, evidence, anything)).toHaveLength(1);
+  it('finds the line in a window that does not start at line 1, with one line of tolerance', () => {
+    expect(citedLine(ctx.pack, { path: 'src/db.js', line: 3, quote: 'process.env.DB_TYPE' })).toContain('DB_TYPE');
+    expect(citedLine(ctx.pack, { path: 'src/db.js', line: 4, quote: 'process.env.DB_TYPE' })).toContain('DB_TYPE');
+    expect(citedLine(ctx.pack, { path: 'src/db.js', line: 3, quote: 'not there' })).toBeNull();
+    expect(citedLine(ctx.pack, { path: 'src/other.js', line: 1, quote: 'x' })).toBeNull();
   });
 });
 
-describe('required variables', () => {
-  const variable = (name: string, path: string, line: number, quote: string, confidence: 'high' | 'medium' | 'low' = 'high') => ({
-    name,
-    confidence,
-    evidence: cite(path, line, quote),
+describe('checkBlocker: optional by setting', () => {
+  const ctx = contextOf(MONGO_OR_POSTGRES);
+  const question = blockerOf(ctx);
+  const evidence = [...cite('src/db.js', 1, 'process.env.DB_TYPE'), ...cite('src/db.js', 2, "type === 'postgres'")];
+  const answer = (overrides = {}) => blocker('q1', 'optional_by_setting', { setting: 'DB_TYPE', settingValue: 'postgres', engine: 'postgres', evidence, ...overrides });
+
+  it('passes when a cited line reads the setting and the value selects PostgreSQL', () => {
+    expect(checkBlocker(ctx, question, answer())).toEqual({ id: 'q1', ok: true, reasons: [] });
   });
 
-  it.each([
-    ['process.env.X', 'const v = process.env.X;'],
-    ['os.environ["X"]', 'v = os.environ["X"]'],
-    ['ENV.fetch("X")', 'v = ENV.fetch("X")'],
-    ['System.fetch_env!("X")', 'v = System.fetch_env!("X")'],
-  ])('passes for an unguarded read: %s', (_label, source) => {
-    const ctx = ctxOf({ 'src/config.txt': `first\n${source}\n` });
-    const result = checkRequiredVariable(ctx, variable('X', 'src/config.txt', 2, source));
-    expect(result.reasons).toEqual([]);
-    expect(result.ok).toBe(true);
-    expect(result.fact).toBe('requiredVariables');
-    expect(result.subject).toBe('X');
+  it('fails without a cited read of the setting', () => {
+    expect(checkBlocker(ctx, question, answer({ evidence: cite('src/db.js', 2, "type === 'postgres'") })).reasons).toContain('no cited line reads DB_TYPE');
   });
 
-  it.each([
-    ['process.env.X || "a"', 'const v = process.env.X || "a";'],
-    ['process.env.X ?? "a"', 'const v = process.env.X ?? "a";'],
-    ['os.getenv("X", "d")', 'v = os.getenv("X", "d")'],
-    ['${X:-d}', 'v=${X:-d}'],
-    ['if (process.env.X)', 'if (process.env.X) { start(); }'],
-  ])('fails for a default or a guard: %s', (_label, source) => {
-    const ctx = ctxOf({ 'src/config.txt': `first\n${source}\n` });
-    const result = checkRequiredVariable(ctx, variable('X', 'src/config.txt', 2, source));
-    expect(result.ok).toBe(false);
+  it('fails when the value does not select the engine', () => {
+    const check = checkBlocker(ctx, question, answer({ settingValue: 'sql', evidence: cite('src/db.js', 1, 'process.env.DB_TYPE') }));
+    expect(check.reasons).toContain('no cited line shows that DB_TYPE=sql selects postgres');
   });
 
-  it('fails when another pack file reads the variable with a default', () => {
-    const ctx = ctxOf({
-      'src/a.js': 'const v = process.env.X;',
-      'src/b.js': 'const w = process.env.X || "fallback";',
-    });
-    const result = checkRequiredVariable(ctx, variable('X', 'src/a.js', 1, 'process.env.X'));
-    expect(result.ok).toBe(false);
-    expect(result.reasons.join(' ')).toContain('src/b.js:1 reads it with a default or a guard');
+  it('fails for an engine that does not replace a datastore, a low confidence or a missing setting', () => {
+    expect(checkBlocker(ctx, question, answer({ engine: 'redis', settingValue: 'redis' })).ok).toBe(false);
+    expect(checkBlocker(ctx, question, answer({ confidence: 'low' })).reasons).toContain('low confidence');
+    expect(checkBlocker(ctx, question, answer({ setting: null })).ok).toBe(false);
   });
 
-  it('does not count an env sample as a guarded read', () => {
-    const ctx = ctxOf({ 'src/a.js': 'const v = process.env.X;', '.env.example': 'X=\nY=${X:-d}' });
-    expect(checkRequiredVariable(ctx, variable('X', 'src/a.js', 1, 'process.env.X')).ok).toBe(true);
-  });
-
-  it('fails for low confidence', () => {
-    const ctx = ctxOf({ 'src/a.js': 'const v = process.env.X;' });
-    const result = checkRequiredVariable(ctx, variable('X', 'src/a.js', 1, 'process.env.X', 'low'));
-    expect(result.ok).toBe(false);
-    expect(result.reasons).toContain('low confidence');
-  });
-
-  it('fails when the cited line does not name the variable', () => {
-    const ctx = ctxOf({ 'src/a.js': 'const a = 1;\nconst v = process.env.X;' });
-    expect(checkRequiredVariable(ctx, variable('X', 'src/a.js', 1, 'const a = 1;')).ok).toBe(false);
-  });
-
-  it('does not match a longer name that contains the variable', () => {
-    const ctx = ctxOf({ 'src/a.js': 'const v = process.env.X_EXTRA;' });
-    expect(checkRequiredVariable(ctx, variable('X', 'src/a.js', 1, 'process.env.X_EXTRA')).ok).toBe(false);
-  });
-
-  it('fails without a citation to a missing file or line', () => {
-    const ctx = ctxOf({ 'src/a.js': 'const v = process.env.X;' });
-    expect(checkRequiredVariable(ctx, variable('X', 'nope.js', 1, 'process.env.X')).ok).toBe(false);
-    expect(checkRequiredVariable(ctx, variable('X', 'src/a.js', 9, 'process.env.X')).ok).toBe(false);
-    expect(checkRequiredVariable(ctx, { name: 'X', confidence: 'high', evidence: [] }).ok).toBe(false);
-  });
-
-  describe('guardedRead', () => {
-    it('detects defaults and guards', () => {
-      expect(guardedRead('x = ENV["X"] || 1', 'X')).toBe(true);
-      expect(guardedRead('x = ENV.fetch("X", "d")', 'X')).toBe(true);
-      expect(guardedRead('x = $X or "d"', 'X')).toBe(true);
-      expect(guardedRead('x = process.env.X', 'X')).toBe(false);
-      expect(guardedRead('x = os.environ["X"]', 'X')).toBe(false);
-    });
+  it('always accepts "required": it changes nothing', () => {
+    expect(checkBlocker(ctx, question, blocker('q1', 'required')).ok).toBe(true);
   });
 });
 
-describe('port', () => {
-  const portFact = (value: number | null, path: string, line: number, quote: string, confidence: 'high' | 'low' = 'high') => ({
-    value,
-    confidence,
-    evidence: cite(path, line, quote),
+describe('checkBlocker: not used', () => {
+  it('passes when no production file imports the datastore', () => {
+    const ctx = contextOf(MONGO_DECLARED_ONLY);
+    const check = checkBlocker(ctx, blockerOf(ctx), blocker('q1', 'not_used', { evidence: cite('src/index.js', 1, "require('express')") }));
+    expect(check).toEqual({ id: 'q1', ok: true, reasons: [] });
   });
 
-  it('passes for a null port', () => {
-    expect(checkPort(ctxOf({}), factsOf().port, null).ok).toBe(true);
+  it('fails when a production file imports it, and ignores tests', () => {
+    const ctx = contextOf(MONGO_OR_POSTGRES);
+    const answer = blocker('q1', 'not_used', { evidence: cite('src/index.js', 1, "require('express')") });
+    expect(checkBlocker(ctx, blockerOf(ctx), answer).reasons).toEqual([expect.stringMatching(/^src\/(?:db|models\/user)\.js:\d+ imports or connects to it$/)]);
+    const testOnly = contextOf({ ...MONGO_DECLARED_ONLY, 'test/setup.js': "require('mongoose');" });
+    expect(checkBlocker(testOnly, blockerOf(testOnly), answer).ok).toBe(true);
   });
 
-  it.each([
-    ['EXPOSE', 'FROM node:20\nEXPOSE 8080\nCMD ["node","a.js"]', 2, 'EXPOSE 8080'],
-    ['ENV PORT', 'FROM node:20\nENV PORT=8080\nCMD ["node","a.js"]', 2, 'ENV PORT=8080'],
-    ['HEALTHCHECK', 'FROM node:20\nHEALTHCHECK CMD curl -f http://localhost:8080/health\nCMD ["node","a.js"]', 2, 'localhost:8080'],
-  ])('passes when it matches %s', (_label, dockerfile, line, quote) => {
-    const ctx = ctxOf({ Dockerfile: dockerfile });
-    const result = checkPort(ctx, portFact(8080, 'Dockerfile', line, quote), 'Dockerfile');
-    expect(result.reasons).toEqual([]);
-    expect(result.ok).toBe(true);
+  it('local state: fails when the code reads the declared variable or path', () => {
+    const tree: FileTree = { Dockerfile: 'FROM node:20\nENV DATA_DIR=/data\nCMD ["node", "index.js"]', 'index.js': 'app.listen(3000);' };
+    const question: Question & BlockerItem = {
+      id: 'q1',
+      kind: 'blocker',
+      category: 'local_state',
+      dependency: 'local-filesystem',
+      reason: 'durable local state (DATA_DIR=/data (Dockerfile))',
+      terms: ['DATA_DIR', '/data', 'STORAGE'],
+      windows: [],
+    };
+    const answer = blocker('q1', 'not_used', { evidence: cite('Dockerfile', 2, 'ENV DATA_DIR=/data') });
+    expect(checkBlocker(contextOf(tree), question, answer).ok).toBe(true);
+    const reads = { ...tree, 'index.js': 'fs.writeFileSync(`${process.env.DATA_DIR}/db.json`, x);' };
+    expect(checkBlocker(contextOf(reads), question, answer).reasons).toEqual(['index.js:1 uses the declared path or variable']);
   });
 
-  it('fails when the Dockerfile declares another port and the app does not read PORT', () => {
-    const ctx = ctxOf({ Dockerfile: 'FROM node:20\nEXPOSE 3000\n', 'src/server.js': 'server.listen(8080);' });
-    const result = checkPort(ctx, portFact(8080, 'src/server.js', 1, 'server.listen(8080)'), 'Dockerfile');
-    expect(result.ok).toBe(false);
-    expect(result.reasons.join(' ')).toContain('the Dockerfile declares 3000 and the app does not read PORT');
-  });
-
-  it('passes when the app reads PORT, whatever the Dockerfile declares', () => {
-    const ctx = ctxOf({
-      Dockerfile: 'FROM node:20\nEXPOSE 3000\n',
-      'src/server.js': 'const p = process.env.PORT;\nserver.listen(p); // 8080',
-    });
-    expect(checkPort(ctx, portFact(8080, 'src/server.js', 2, 'server.listen(p); // 8080'), 'Dockerfile').ok).toBe(true);
-  });
-
-  it('passes when the Dockerfile declares no port', () => {
-    const ctx = ctxOf({ Dockerfile: 'FROM node:20\nCMD ["node","a.js"]', 'src/server.js': 'server.listen(8080);' });
-    expect(checkPort(ctx, portFact(8080, 'src/server.js', 1, 'server.listen(8080)'), 'Dockerfile').ok).toBe(true);
-  });
-
-  it('fails for low confidence and for a line without the port', () => {
-    const ctx = ctxOf({ 'src/server.js': 'server.listen(8080);\nconsole.log("up");' });
-    expect(checkPort(ctx, portFact(8080, 'src/server.js', 1, 'server.listen(8080)', 'low'), null).reasons).toContain('low confidence');
-    expect(checkPort(ctx, portFact(8080, 'src/server.js', 2, 'console.log("up");'), null).ok).toBe(false);
-  });
-
-  it('does not match a longer number', () => {
-    const ctx = ctxOf({ 'src/server.js': 'server.listen(18080);' });
-    expect(checkPort(ctx, portFact(8080, 'src/server.js', 1, 'server.listen(18080)'), null).ok).toBe(false);
-  });
-
-  describe('dockerfilePorts', () => {
-    it('reads the last stage only', () => {
-      const content = 'FROM node:20 AS build\nEXPOSE 1111\nFROM node:20-slim\nEXPOSE 2222 3333/tcp\nENV PORT=4444';
-      expect(dockerfilePorts(content).sort()).toEqual([2222, 3333, 4444]);
-    });
+  it('a second Compose service: only a third-party image that no production line names', () => {
+    const compose = ['services:', '  web:', '    build: .', '  search:', '    image: getmeili/meilisearch:v1', ''].join('\n');
+    const tree: FileTree = { Dockerfile: 'FROM node:20\nCMD ["node", "index.js"]', 'docker-compose.yml': compose, 'index.js': 'app.listen(3000);' };
+    const question: Question & BlockerItem = {
+      id: 'q1',
+      kind: 'blocker',
+      category: 'compose_service',
+      dependency: 'docker-compose-multi-service',
+      reason: 'defines 2 application services (web, search)',
+      terms: ['web', 'search'],
+      windows: [],
+    };
+    const answer = blocker('q1', 'not_used', { evidence: cite('Dockerfile', 2, 'CMD') });
+    expect(checkBlocker(contextOf(tree), question, answer).ok).toBe(true);
+    const named = { ...tree, 'index.js': 'const url = process.env.SEARCH_URL;' };
+    expect(checkBlocker(contextOf(named), question, answer).reasons).toEqual(['index.js:1 names the service search']);
+    const built = { ...tree, 'docker-compose.yml': compose.replace('image: getmeili/meilisearch:v1', 'build: ./search') };
+    expect(checkBlocker(contextOf(built), question, answer).ok).toBe(false);
   });
 });
 
-describe('dockerfile', () => {
-  const dockerfileFact = (value: { path: string; context: string } | null, confidence: 'high' | 'low' = 'high') => ({ value, confidence, evidence: [] });
-  const tree: FileTree = { Dockerfile: 'FROM node:20\n', 'README.md': 'docs', 'app/main.js': 'x' };
-  const dockerfileCheck = (value: { path: string; context: string } | null, confidence: 'high' | 'low' = 'high') =>
-    checkFacts(ctxOf(tree), factsOf({ dockerfile: dockerfileFact(value, confidence) }), null).find((c) => c.fact === 'dockerfile')!;
-
-  it('passes for a candidate with an existing context', () => {
-    expect(dockerfileCheck({ path: 'Dockerfile', context: '.' }).ok).toBe(true);
-    expect(dockerfileCheck({ path: 'Dockerfile', context: './app/' }).ok).toBe(true);
+describe('the image start command', () => {
+  it('reads the final stage CMD and ENTRYPOINT in both forms', () => {
+    expect(imageCommand('FROM a AS b\nCMD ["x"]\nFROM c\nENTRYPOINT ["tini", "--"]\nCMD node server.js')).toEqual({ entrypoint: 'tini --', cmd: 'node server.js' });
   });
 
-  it('fails for a path that does not exist', () => {
-    const result = dockerfileCheck({ path: 'docker/Dockerfile', context: '.' });
-    expect(result.ok).toBe(false);
-    expect(result.reasons.join(' ')).toContain('does not exist');
-  });
-
-  it('fails for an existing file that is not a Dockerfile candidate', () => {
-    const result = dockerfileCheck({ path: 'README.md', context: '.' });
-    expect(result.ok).toBe(false);
-    expect(result.reasons.join(' ')).toContain('not a Dockerfile candidate');
-  });
-
-  it('fails for a context directory that does not exist and for low confidence', () => {
-    expect(dockerfileCheck({ path: 'Dockerfile', context: 'missing' }).ok).toBe(false);
-    expect(dockerfileCheck({ path: 'Dockerfile', context: '.' }, 'low').ok).toBe(false);
-  });
-
-  it('passes for a null Dockerfile', () => {
-    expect(dockerfileCheck(null).ok).toBe(true);
+  it('accepts the CMD, the ENTRYPOINT with the CMD, a package script the CMD runs, and a script file it starts', () => {
+    const tree: FileTree = {
+      Dockerfile: 'FROM node:20\nENTRYPOINT ["tini", "--"]\nCMD ["yarn", "start-docker"]',
+      'package.json': JSON.stringify({ scripts: { 'start-docker': 'sh scripts/start-docker.sh' } }),
+      'scripts/start-docker.sh': 'node server.js',
+    };
+    expect(isImageStartCommand(tree, 'Dockerfile', 'yarn start-docker')).toBe(true);
+    expect(isImageStartCommand(tree, 'Dockerfile', 'tini -- yarn start-docker')).toBe(true);
+    expect(isImageStartCommand(tree, 'Dockerfile', 'sh scripts/start-docker.sh')).toBe(true);
+    expect(isImageStartCommand(tree, 'Dockerfile', 'node other.js')).toBe(false);
+    const script: FileTree = { Dockerfile: 'FROM alpine\nCOPY docker-entrypoint.sh /\nCMD ["/docker-entrypoint.sh"]', 'docker-entrypoint.sh': 'exec app' };
+    expect(isImageStartCommand(script, 'Dockerfile', 'sh docker-entrypoint.sh')).toBe(true);
   });
 });
 
-describe('migration', () => {
+describe('checkFact', () => {
   const tree: FileTree = {
-    'package.json': '{\n  "scripts": { "migrate": "prisma migrate deploy" }\n}',
-    'schema.sql': 'create table a (id int);',
-    Procfile: 'web: npx prisma migrate deploy && node server.js\nworker: node worker.js\n',
+    Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
+    'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4' } }),
+    'src/index.js': "const app = require('express')();\napp.get('/status', (req, res) => res.send('ok'));\napp.listen(3000);",
   };
-  it('accepts a migrate flag of the binary from the line that defines the flag', () => {
-    const cli = ctxOf({ 'internal/cli/cli.go': 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)\nflag.BoolVar(&flagInfo, "info", false, "")' });
-    const command = (line: number, quote: string) =>
-      checkFacts(
-        cli,
-        factsOf({
-          database: { value: 'postgres', confidence: 'high', evidence: [] },
-          migration: { value: { mode: 'pre_deploy', command: '/usr/bin/app -migrate' }, confidence: 'high', evidence: cite('internal/cli/cli.go', line, quote) },
-        }),
-        null,
-      ).find((c) => c.fact === 'migration')!;
-    expect(command(1, 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)').ok).toBe(true);
-    expect(command(2, 'flag.BoolVar(&flagInfo, "info", false, "")').ok).toBe(false);
+  const ctx = contextOf(tree);
+  const health: Question = { id: 'q7', kind: 'fact', fact: 'healthPath', windows: [] };
+
+  it('passes a health path that a cited route registers', () => {
+    expect(checkFact(ctx, health, fact(health.id, '/status', { evidence: cite('src/index.js', 2, "app.get('/status'") })).ok).toBe(true);
   });
 
-  const migrationCheck = (
-    migration: AnalystOutput['migration']['value'],
-    database: AnalystOutput['database']['value'],
-    evidence = cite('package.json', 2, 'prisma migrate deploy'),
-  ) =>
-    checkFacts(
-      ctxOf(tree),
-      factsOf({ database: { value: database, confidence: 'high', evidence: [] }, migration: { value: migration, confidence: 'high', evidence } }),
-      null,
-    ).find((c) => c.fact === 'migration')!;
-
-  it('fails for mode none with a database', () => {
-    const result = migrationCheck({ mode: 'none', command: null }, 'postgres');
-    expect(result.ok).toBe(false);
-    expect(result.reasons.join(' ')).toContain('mode none with a database needs a vendor decision');
+  it('fails a path the cited line does not register, a low confidence and a value of the wrong shape', () => {
+    expect(checkFact(ctx, health, fact(health.id, '/healthz', { evidence: cite('src/index.js', 2, "app.get('/status'") })).ok).toBe(false);
+    expect(checkFact(ctx, health, fact(health.id, '/status', { confidence: 'low', evidence: cite('src/index.js', 2, "app.get('/status'") })).ok).toBe(false);
+    expect(checkFact(ctx, health, fact(health.id, 'status')).reasons).toEqual(['status is not a valid healthPath']);
   });
 
-  it('passes for mode none without a database', () => {
-    expect(migrationCheck({ mode: 'none', command: null }, 'none').ok).toBe(true);
+  it('accepts "unknown": it changes nothing', () => {
+    expect(checkFact(ctx, health, fact(health.id, null)).ok).toBe(true);
   });
 
-  it('fails for pre_deploy without a command', () => {
-    const result = migrationCheck({ mode: 'pre_deploy', command: null }, 'postgres');
-    expect(result.ok).toBe(false);
-    expect(result.reasons).toContain('pre_deploy without a command');
+  it('port: refuses a port that the Dockerfile contradicts when the app does not read PORT', () => {
+    const portQuestion: Question = { id: 'q9', kind: 'fact', fact: 'port', windows: [] };
+    expect(checkFact(ctx, portQuestion, fact('q9', '8080', { evidence: cite('Dockerfile', 3, 'CMD') })).ok).toBe(false);
+    expect(checkFact(ctx, portQuestion, fact('q9', '3000', { evidence: cite('Dockerfile', 2, 'EXPOSE 3000') })).ok).toBe(true);
   });
 
-  it('passes for pre_deploy with a command that the cited line holds', () => {
-    expect(migrationCheck({ mode: 'pre_deploy', command: 'npx prisma migrate deploy' }, 'postgres').ok).toBe(true);
-  });
-
-  it('fails for a command that the cited line does not hold', () => {
-    expect(migrationCheck({ mode: 'pre_deploy', command: 'php artisan migrate --force' }, 'postgres').ok).toBe(false);
-  });
-
-  it('passes for unknown without a command, even without evidence', () => {
-    expect(migrationCheck({ mode: 'unknown', command: null }, 'postgres', []).ok).toBe(true);
-  });
-
-  it('checks a startup mode without a command against a migration-like line on the start path', () => {
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 1, 'prisma migrate deploy')).ok).toBe(true);
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 2, 'node worker.js')).ok).toBe(false);
-  });
-
-  it('fails a startup mode whose evidence is off the start path (a package script, a README)', () => {
-    const check = migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 2, 'prisma migrate deploy'));
-    expect(check.ok).toBe(false);
-    expect(check.reasons).toContain('package.json is not on the image start path');
-  });
-});
-
-describe('checkFacts: the other facts', () => {
-  const tree: FileTree = {
-    Dockerfile: 'FROM node:20\nCMD ["node", "dist/server.js"]\n',
-    Procfile: 'web: node dist/server.js\nworker: node dist/queue-worker.js\n',
-    'src/health.js': "app.get('/healthz', handler);",
-    'package.json': '{ "dependencies": { "pg": "^8", "ioredis": "^5", "@aws-sdk/client-s3": "^3" } }',
-  };
-  const ctx = ctxOf(tree);
-  const high = <T>(value: T, evidence: AnalystOutput['port']['evidence']) => ({ value, confidence: 'high' as const, evidence });
-  const find = (checks: ReturnType<typeof checkFacts>, fact: string, subject: string | null = null) =>
-    checks.find((c) => c.fact === fact && c.subject === subject)!;
-
-  it('accepts "no database" only from an embedded-store line, never from a generic word such as default', () => {
-    const local = ctxOf({ 'config.js': "const db = process.env.DB_DRIVER || 'default';\nconst file = 'data/app.sqlite';" });
-    const none = (line: number, quote: string) => factsOf({ database: high('none' as const, cite('config.js', line, quote)) });
-    expect(find(checkFacts(local, none(1, "'default'"), null), 'database').ok).toBe(false);
-    expect(find(checkFacts(local, none(2, 'app.sqlite'), null), 'database').ok).toBe(true);
-  });
-
-  it('returns one check per fact, then per worker and per variable', () => {
-    const checks = checkFacts(
-      ctx,
-      factsOf({
-        workers: [{ id: 'queue', command: 'node dist/queue-worker.js', confidence: 'high', evidence: cite('Procfile', 2, 'node dist/queue-worker.js') }],
-        requiredVariables: [{ name: 'API_TOKEN', confidence: 'high', evidence: cite('src/health.js', 1, 'handler') }],
-      }),
-      null,
-    );
-    expect(checks.map((c) => c.fact)).toEqual([
-      'dockerfile',
-      'port',
-      'startCommand',
-      'healthPath',
-      'database',
-      'redis',
-      'storage',
-      'migration',
-      'workers',
-      'requiredVariables',
-    ]);
-    expect(find(checks, 'workers', 'queue').ok).toBe(true);
-    expect(find(checks, 'requiredVariables', 'API_TOKEN').ok).toBe(false);
-  });
-
-  it('checks start command, health path, database, redis and storage against the cited line', () => {
-    const checks = checkFacts(
-      ctx,
-      factsOf({
-        startCommand: high('node dist/server.js', cite('Dockerfile', 2, 'dist/server.js')),
-        healthPath: high('/healthz', cite('src/health.js', 1, '/healthz')),
-        database: high('postgres' as const, cite('package.json', 1, '"pg"')),
-        redis: high(true, cite('package.json', 1, 'ioredis')),
-        storage: high(true, cite('package.json', 1, '@aws-sdk/client-s3')),
-      }),
-      null,
-    );
-    for (const fact of ['startCommand', 'healthPath', 'database', 'redis', 'storage']) expect(find(checks, fact).reasons).toEqual([]);
-  });
-
-  it('fails each of them when the cited line does not support it', () => {
-    const wrong = cite('Procfile', 1, 'web: node dist/server.js');
-    const checks = checkFacts(
-      ctx,
-      factsOf({
-        startCommand: high('gunicorn app:app', wrong),
-        healthPath: high('/healthz', wrong),
-        database: high('mysql' as const, wrong),
-        redis: high(true, wrong),
-        storage: high(true, wrong),
-      }),
-      null,
-    );
-    for (const fact of ['startCommand', 'healthPath', 'database', 'redis', 'storage']) expect(find(checks, fact).ok).toBe(false);
-  });
-
-  it('accepts "/" from the request pipeline of a server-rendered app, never from an unrelated line', () => {
-    const site = ctxOf({ 'Server/Program.cs': 'var app = builder.Build();\napp.UseOqtane(configuration);\nvar name = "site";' });
-    const root = (line: number, quote: string) => factsOf({ healthPath: high('/', cite('Server/Program.cs', line, quote)) });
-    expect(find(checkFacts(site, root(2, 'app.UseOqtane(configuration);'), null), 'healthPath').ok).toBe(true);
-    expect(find(checkFacts(site, root(3, 'var name = "site";'), null), 'healthPath').ok).toBe(false);
-  });
-
-  it('fails a low-confidence fact even with good evidence', () => {
-    const checks = checkFacts(
-      ctx,
-      factsOf({ healthPath: { value: '/healthz', confidence: 'low', evidence: cite('src/health.js', 1, '/healthz') } }),
-      null,
-    );
-    expect(find(checks, 'healthPath').reasons).toContain('low confidence');
-  });
-
-  it('fails a worker whose command is not on the cited line, and a duplicate worker id', () => {
-    const worker = (id: string, command: string, line: number, quote: string) => ({ id, command, confidence: 'high' as const, evidence: cite('Procfile', line, quote) });
-    const checks = checkFacts(
-      ctx,
-      factsOf({
-        workers: [
-          worker('queue', 'node dist/queue-worker.js', 2, 'queue-worker.js'),
-          worker('queue', 'node dist/queue-worker.js', 2, 'queue-worker.js'),
-          worker('mail', 'node dist/mailer.js', 2, 'queue-worker.js'),
-        ],
-      }),
-      null,
-    );
-    const workers = checks.filter((c) => c.fact === 'workers');
-    expect(workers.map((c) => c.ok)).toEqual([true, false, false]);
-    expect(workers[1]!.reasons).toContain('duplicate worker id');
+  it('migration: a startup migration must be cited on the image start path', () => {
+    const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
+    const startup = JSON.stringify({ mode: 'startup', command: null });
+    const db = { ...ctx, database: 'postgres' as const };
+    expect(checkFact(db, migration, fact('q8', startup, { evidence: cite('Dockerfile', 3, 'CMD') })).ok).toBe(false);
+    expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'none', command: null }))).reasons).toEqual(['mode none with a database needs a vendor decision']);
   });
 });

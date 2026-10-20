@@ -386,7 +386,7 @@ export interface AnalysisRunnerDeps {
   aiGateway: AiGateway;
   /** `ANALYSIS_ENGINE`. Default `rules`; `shadow` stores the AI result and changes nothing; `ai` uses it. */
   analysisEngine?: AnalysisEngine | undefined;
-  /** The analyst and reviewer gateways. Without them every engine runs the rules only. */
+  /** The analyst gateway. Without it every engine runs the rules only. */
   aiAnalysis?: AiAnalysisGateways | undefined;
   /** Jev requirements/plan shadow verifier — fire-and-forget telemetry only, never awaited. */
   jevShadow?: JevShadowRunner | undefined;
@@ -515,7 +515,7 @@ export async function runApplicationAnalysis(
     // Vendor intent lives on the application row and can change while this
     // run is fetching and analysing (PATCH /api/applications/:id), so the
     // outcome is derived from the row as it is when written, under its lock.
-    const resolvedWorkerCommands = aiMerge?.workers ? [...aiMerge.workers] : resolveWorkerCommands(tree);
+    const resolvedWorkerCommands = resolveWorkerCommands(tree);
     const buildOutcome = (app: typeof application) => {
       // The vendor-owned field list lives on detected_metadata, which this
       // write replaces wholesale — carry it across or every re-analysis would
@@ -855,8 +855,8 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-/** The AI Analysis budget for the whole run: analyst + reviewer, inside the 15-minute worker. */
-const AI_ENGINE_TIMEOUT_MS = 420_000;
+/** The AI Analysis budget for the whole run: one analyst call and the checks, inside the 15-minute worker. */
+const AI_ENGINE_TIMEOUT_MS = 240_000;
 
 /**
  * Runs the AI-first Analysis and never throws: any failure (no gateway, an

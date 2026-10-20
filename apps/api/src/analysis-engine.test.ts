@@ -4,31 +4,17 @@ import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createAiGateway, type AiGateway, type AnalysisEngine, type AnalystOutput } from '@deployz/analysis';
+import { createAiGateway, type AiGateway, type AnalysisEngine } from '@deployz/analysis';
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { runApplicationAnalysis, type AnalysisRunnerDeps } from './analysis.js';
 import type { FetchFn } from './github.js';
 
-// ANALYSIS_ENGINE over the express-api fixture (EXPOSE 3000, `app.listen(process.env.PORT || 3000)`).
-// The fake analyst moves the port to 4000 with evidence that the app reads PORT,
-// so the fact passes the checks: only the `ai` engine may apply it.
-
-const evidence = (path: string, line: number, quote: string) => [{ path, line, quote }];
-
-const ANALYST: AnalystOutput = {
-  dockerfile: { value: { path: 'Dockerfile', context: '.' }, confidence: 'high', evidence: evidence('Dockerfile', 1, 'FROM node:20-alpine') },
-  port: { value: 4000, confidence: 'high', evidence: evidence('src/index.ts', 4, 'process.env.PORT') },
-  startCommand: { value: 'node dist/index.js', confidence: 'high', evidence: evidence('Dockerfile', 8, 'dist/index.js') },
-  healthPath: { value: '/health', confidence: 'high', evidence: evidence('src/index.ts', 3, "app.get('/health'") },
-  database: { value: 'postgres', confidence: 'high', evidence: evidence('.env.example', 1, 'DATABASE_URL=') },
-  redis: { value: false, confidence: 'high', evidence: [] },
-  storage: { value: false, confidence: 'high', evidence: [] },
-  migration: { value: { mode: 'unknown', command: null }, confidence: 'medium', evidence: [] },
-  workers: [],
-  requiredVariables: [],
-};
+// ANALYSIS_ENGINE over two fixtures. express-api leaves no open item, so no
+// engine calls the model. mongodb-app has one blocker question (mongoose); the
+// fake analyst answers "not used", which the checks refuse because the app
+// imports mongoose, so the rejection stays.
 
 function gateway(answer: () => unknown): AiGateway {
   return {
@@ -38,20 +24,22 @@ function gateway(answer: () => unknown): AiGateway {
   };
 }
 
-// The provider answers in the flat wire format: one entry per fact, the value as JSON text.
-const SCALARS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'database', 'redis', 'storage', 'migration'] as const;
-const WIRE = {
-  facts: SCALARS.map((fact) => ({
-    fact,
-    subject: null,
-    value: JSON.stringify(ANALYST[fact].value),
-    confidence: ANALYST[fact].confidence,
-    evidence: ANALYST[fact].evidence,
-  })),
+const NOT_USED = {
+  answers: [
+    {
+      id: 'q1',
+      answer: 'not_used',
+      setting: null,
+      settingValue: null,
+      engine: null,
+      value: null,
+      confidence: 'high',
+      evidence: [{ path: 'Dockerfile', line: 8, quote: 'CMD ["node", "dist/index.js"]' }],
+    },
+  ],
 };
 
-const analyst = gateway(() => WIRE);
-const reviewer = gateway(() => ({ objections: [] }));
+const analyst = gateway(() => NOT_USED);
 const broken: AiGateway = {
   async generate() {
     throw new Error('gateway down');
@@ -72,7 +60,7 @@ describe('analysis — ANALYSIS_ENGINE', () => {
     await client?.close();
   });
 
-  async function analyse(engine: AnalysisEngine, gateways: AnalysisRunnerDeps['aiAnalysis']) {
+  async function analyse(engine: AnalysisEngine, gateways: AnalysisRunnerDeps['aiAnalysis'], repo = 'express-api') {
     const organizationId = `org-engine-${crypto.randomUUID().slice(0, 8)}`;
     await db.insert(schema.organization).values({ id: organizationId, name: 'Acme', slug: organizationId });
     const [inserted] = await db
@@ -80,8 +68,8 @@ describe('analysis — ANALYSIS_ENGINE', () => {
       .values({
         organizationId,
         name: 'Engine App',
-        repoFullName: 'deployz-demo/express-api',
-        repoUrl: 'https://github.com/deployz-demo/express-api',
+        repoFullName: `deployz-demo/${repo}`,
+        repoUrl: `https://github.com/deployz-demo/${repo}`,
         defaultBranch: 'main',
         analysisStatus: 'ANALYZING',
       })
@@ -104,39 +92,42 @@ describe('analysis — ANALYSIS_ENGINE', () => {
   }
 
   it('rules: never calls the AI and stores no AI record', async () => {
-    const row = await analyse('rules', { analyst: broken, reviewer: broken });
+    const row = await analyse('rules', { analyst: broken });
     expect(row.containerPort).toBe(3000);
     expect(row.detectedMetadata?.['aiEngine']).toBeUndefined();
     expect(row.detectedMetadata?.['analysisEngine']).toBeUndefined();
   });
 
-  it('shadow: stores the AI result and changes nothing', async () => {
-    const row = await analyse('shadow', { analyst, reviewer });
-    expect(row.containerPort).toBe(3000);
-    expect(row.detectedMetadata?.['analysisEngine']).toBe('shadow');
-    const record = row.detectedMetadata?.['aiEngine'] as { status: string; facts: Array<{ fact: string; decision: string }> };
-    expect(record.status).toBe('ok');
-    expect(record.facts).toContainEqual(expect.objectContaining({ fact: 'port', decision: 'ai' }));
+  it('ai: a repository with no open item makes no model call', async () => {
+    const row = await analyse('ai', { analyst: broken });
+    expect(row.compatibilityStatus).toBe('READY');
+    expect(row.detectedMetadata?.['aiEngine']).toMatchObject({ status: 'ok', analyst: null, questions: 0 });
   });
 
-  it('ai: a verified AI fact enters the analysis', async () => {
-    const row = await analyse('ai', { analyst, reviewer });
+  it('shadow: stores the AI answers and changes nothing', async () => {
+    const row = await analyse('shadow', { analyst }, 'mongodb-app');
+    expect(row.compatibilityStatus).toBe('NOT_COMPATIBLE');
+    expect(row.detectedMetadata?.['analysisEngine']).toBe('shadow');
+    const record = row.detectedMetadata?.['aiEngine'] as { status: string; answers: Array<{ subject: string; decision: string }> };
+    expect(record.status).toBe('ok');
+    expect(record.answers).toContainEqual(expect.objectContaining({ subject: 'mongoose', decision: 'rules' }));
+  });
+
+  it('ai: a "not used" answer that the checks refute keeps the rejection', async () => {
+    const row = await analyse('ai', { analyst }, 'mongodb-app');
     expect(row.analysisStatus).toBe('COMPLETE');
-    expect(row.containerPort).toBe(4000);
-    expect(row.detectedMetadata?.['port']).toBe('4000');
-    expect(row.compatibilityStatus).toBe('READY');
+    expect(row.compatibilityStatus).toBe('NOT_COMPATIBLE');
   });
 
   it('ai: a gateway failure falls back to the rules result', async () => {
-    const row = await analyse('ai', { analyst: broken, reviewer });
+    const row = await analyse('ai', { analyst: broken }, 'mongodb-app');
     expect(row.analysisStatus).toBe('COMPLETE');
-    expect(row.containerPort).toBe(3000);
+    expect(row.compatibilityStatus).toBe('NOT_COMPATIBLE');
     expect(row.detectedMetadata?.['aiEngine']).toMatchObject({ status: 'fallback', reason: 'Error' });
   });
 
   it('ai: invalid model output falls back to the rules result', async () => {
-    const row = await analyse('ai', { analyst: gateway(() => ({ port: 'eighty' })), reviewer });
-    expect(row.containerPort).toBe(3000);
+    const row = await analyse('ai', { analyst: gateway(() => ({ port: 'eighty' })) }, 'mongodb-app');
     expect(row.detectedMetadata?.['aiEngine']).toMatchObject({ status: 'fallback' });
   });
 
