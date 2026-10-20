@@ -790,8 +790,11 @@ function appEnvironment(ctx: EcsContext, extraEnv: readonly unknown[] = []): { e
     if (ctx.db.engine === 'mysql') {
       // MYSQL_* aliases so engines that read them by name get the same
       // managed values as the generic DATABASE_*/DB_* names.
+      // MYSQL_ATTR_SSL_CA is Laravel's name (config/database.php): its schema load passes it to the mysql
+      // client as --ssl-ca, and without it that client rejects the RDS certificate.
       environment.push(
         { Name: 'MYSQL_SSL_CA', Value: RDS_CA_BUNDLE_PATH },
+        { Name: 'MYSQL_ATTR_SSL_CA', Value: RDS_CA_BUNDLE_PATH },
         { Name: 'MYSQL_HOST', Value: getAtt(ctx.db.instance, 'Endpoint.Address') },
         { Name: 'MYSQL_PORT', Value: String(MYSQL_DB_PORT) },
       );

@@ -695,6 +695,8 @@ describe('mysql database (phase 4b)', () => {
     expect(envNames).toContain('MYSQL_HOST');
     expect(envNames).toContain('MYSQL_PORT');
     expect(envNames).toContain('MYSQL_SSL_CA');
+    // Laravel's name: its schema load passes it to the mysql client as --ssl-ca.
+    expect(envNames).toContain('MYSQL_ATTR_SSL_CA');
     expect(envNames).toContain('NODE_EXTRA_CA_CERTS');
     expect(app.Secrets.map((entry) => entry.Name)).toContain('MYSQL_URL');
     // Every service (workers included) binds the database — Phase 4A envs

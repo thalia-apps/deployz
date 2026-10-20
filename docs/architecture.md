@@ -256,7 +256,9 @@ through a CloudFormation dynamic reference, so the generated password is
 alphanumeric only; an init container mounts the RDS CA bundle for clients
 that verify the chain, and the CA environment is shared by every workload,
 so workers and the migration task verify TLS the same way. MySQL also
-binds `MYSQL_URL` and the `DB_*` aliases. Aliases such as `DB_HOST` /
+binds `MYSQL_URL` and the `DB_*` aliases, and the CA path as
+`MYSQL_SSL_CA` and `MYSQL_ATTR_SSL_CA` (Laravel's name: its schema load
+passes it to the `mysql` client as `--ssl-ca`). Aliases such as `DB_HOST` /
 `DB_USER` are bound from
 the analysis manifest.
 
