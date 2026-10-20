@@ -488,7 +488,6 @@ function collectEnvVars(): Record<string, string> {
     'AI_GATEWAY_TOKEN',
     'ANALYSIS_ENGINE',
     'ANALYSIS_AI_MODEL',
-    'ANALYSIS_REVIEWER_MODEL',
     'FIX_INSTRUCTIONS_AI_PROVIDER',
     'FIX_INSTRUCTIONS_AI_MODEL',
     'OPENROUTER_API_KEY',

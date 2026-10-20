@@ -1,0 +1,212 @@
+{
+  "id": "new-25",
+  "commit": "70c07d3bb1e0111c4976a9fbd5aa0ee33dae4bc2",
+  "analyser": "ai@3c6ff96e-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "dotnet",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "BTCPayServer.Common/.",
+        "BTCPayServer.Rating/.",
+        "BTCPayServer.Data/.",
+        "BTCPayServer.Client/.",
+        "BTCPayServer.Abstractions/.",
+        "BTCPayServer/."
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/app/docker-entrypoint.sh\"]",
+      "port": 32838
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: BTCPayServer.Tests/docker-compose.yml defines 6 application services (tests, devlnd, nbxplorer, customer_lightningd, merchant_lnd, tor). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (Dockerfile copies BTCPayServer.Common/., BTCPayServer.Rating/., BTCPayServer.Data/.). Deployz builds the app from a Dockerfile in the repository.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: BTCPayServer.Tests/docker-compose.yml defines 6 application services (tests, devlnd, nbxplorer, customer_lightningd, merchant_lnd, tor). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (Dockerfile copies BTCPayServer.Common/., BTCPayServer.Rating/., BTCPayServer.Data/.). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies BTCPayServer.Common/., BTCPayServer.Rating/., BTCPayServer.Data/., BTCPayServer.Client/., BTCPayServer.Abstractions/., BTCPayServer/., which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "replay",
+      "usage": {
+        "promptTokens": 0,
+        "completionTokens": 0
+      },
+      "latencyMs": 21
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 23,
+    "questions": 4,
+    "generatedAt": "2026-10-20T11:52:47.625Z",
+    "failedChecks": 0,
+    "promptVersion": 14
+  }
+}

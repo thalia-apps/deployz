@@ -1,24 +1,26 @@
 /**
- * Fixed checks for the AI facts. Each check is plain code over the evidence
- * pack the model saw, so the same facts always get the same verdicts:
+ * Fixed checks for the AI answers. Each check is plain code over the evidence
+ * pack the model saw and the repository tree, so the same answers always get
+ * the same verdicts:
  *
- * - every cited line exists in the pack and contains its quote, and the line
- *   supports the claim (it names the port, the path, the variable, …);
- * - a required variable is an unguarded read with no default;
+ * - every cited line exists in the pack and contains its quote, and a cited
+ *   line supports the claim (it names the port, the path, the setting, …);
+ * - "optional by setting": a cited line reads the setting, and the value
+ *   selects an engine that Deployz provides;
+ * - "not used": no production source file imports or connects to the item;
+ * - the start command is the image's CMD/ENTRYPOINT or a script the CMD runs;
  * - the port agrees with the Dockerfile EXPOSE / ENV PORT / HEALTHCHECK, or
  *   the app reads PORT (Deployz sets PORT to the manifest port);
- * - a low-confidence fact never passes.
- *
- * The rejections are not checked here: `merge.ts` never changes them.
+ * - a low-confidence answer never passes.
  */
-import { listDockerfileCandidates, type FileTree } from '../detectors.js';
-import type { AnalystOutput, Confidence, Evidence, FactName } from './analyst.js';
-import { startScripts, type EvidencePack } from './evidence-pack.js';
+import { composeServices, listDockerfileCandidates, type FileTree } from '../detectors.js';
+import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
+import { isProductionFile, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import type { BlockerItem } from './open-items.js';
 
-export interface FactCheck {
-  readonly fact: FactName;
-  /** The worker id or variable name for a per-item fact. */
-  readonly subject: string | null;
+export interface AnswerCheck {
+  /** The question id. */
+  readonly id: string;
   readonly ok: boolean;
   readonly reasons: readonly string[];
 }
@@ -26,6 +28,10 @@ export interface FactCheck {
 export interface CheckContext {
   readonly pack: EvidencePack;
   readonly tree: FileTree;
+  /** The rules' selected Dockerfile. */
+  readonly dockerfile: string | null;
+  /** The rules' database engine, for the migration answer. */
+  readonly database: 'postgres' | 'mysql' | 'none';
 }
 
 type Supports = (line: string) => boolean;
@@ -36,28 +42,34 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function packLines(pack: EvidencePack, path: string): readonly string[] | undefined {
-  return pack.files.find((file) => file.path === path)?.lines;
-}
+const word = (name: string): RegExp => new RegExp(`(?<![\\w-])${escape(name)}(?![\\w-])`);
 
 /**
- * The cited line, if the pack has it and it contains the quote. One line of
- * tolerance either way absorbs an off-by-one count; the line returned is the
- * one that holds the quote.
+ * The cited line, if a window of the pack shows it and it contains the quote.
+ * One line of tolerance either way absorbs an off-by-one count.
  */
 export function citedLine(pack: EvidencePack, evidence: Evidence): string | null {
-  const lines = packLines(pack, evidence.path);
-  if (lines === undefined) return null;
   const quote = normalize(evidence.quote);
   if (quote.length < 2) return null;
   for (const offset of [0, -1, 1]) {
-    const line = lines[evidence.line - 1 + offset];
-    if (line !== undefined && normalize(line).includes(quote)) return line;
+    const number = evidence.line + offset;
+    for (const file of packFiles(pack)) {
+      if (file.path !== evidence.path) continue;
+      const line = file.lines[number - file.start];
+      if (line !== undefined && normalize(line).includes(quote)) return line;
+    }
   }
   return null;
 }
 
-/** Every evidence item must resolve to a pack line that supports the claim; at least one is needed. */
+/** Every cited line must exist in the pack and contain its quote. */
+function citationReasons(pack: EvidencePack, evidence: readonly Evidence[]): string[] {
+  if (evidence.length === 0) return ['no evidence'];
+  return evidence
+    .filter((item) => citedLine(pack, item) === null)
+    .map((item) => `${item.path}:${item.line} does not exist in the evidence or does not contain the quote`);
+}
+
 /**
  * Every cited line must exist and contain its quote; at least one of them must
  * support the claim. A citation is a reasoning chain (the ENTRYPOINT line and
@@ -65,20 +77,22 @@ export function citedLine(pack: EvidencePack, evidence: Evidence): string | null
  * repeat the value.
  */
 export function checkEvidence(pack: EvidencePack, evidence: readonly Evidence[], supports: Supports): string[] {
-  if (evidence.length === 0) return ['no evidence'];
-  const reasons: string[] = [];
-  let supported = false;
-  for (const item of evidence) {
+  const reasons = citationReasons(pack, evidence);
+  if (evidence.length === 0) return reasons;
+  const supported = evidence.some((item) => {
     const line = citedLine(pack, item);
-    if (line === null) reasons.push(`${item.path}:${item.line} does not exist in the evidence or does not contain the quote`);
-    else if (supports(line)) supported = true;
-  }
+    return line !== null && supports(line);
+  });
   if (!supported) reasons.push(`no cited line supports the claim (${evidence.map((item) => `${item.path}:${item.line}`).join(', ')})`);
   return reasons;
 }
 
 function confidenceReasons(confidence: Confidence): string[] {
   return confidence === 'low' ? ['low confidence'] : [];
+}
+
+function result(id: string, reasons: readonly string[]): AnswerCheck {
+  return { id, ok: reasons.length === 0, reasons };
 }
 
 /** The longest token of a command: the part a citation most likely repeats. */
@@ -96,51 +110,119 @@ const mentions = (token: string): Supports => {
   return (line) => line.includes(token) || (base.length >= 3 && line.includes(base));
 };
 
-// ── Required variables ─────────────────────────────────────────────────────
+// ── Production reach ───────────────────────────────────────────────────────
 
-/** A default or a presence check right after the name: `|| x`, `?? x`, `, default`, `:-x`, `or x`. */
-const DEFAULT_AFTER = /^["'\]\s)]{0,4}\s*(?:\|\||\?\?|\?:|:-|:=|\bor\b|,\s*[^\s)\]])/;
-/** A presence check before the name on the same line. */
-const GUARD_BEFORE = /\b(?:if|unless|when|isset|has|exists|in)\b|\?\.|\bhas_key\b/;
+const DEPLOYMENT_FILE = /(?:^|\/)(?:Dockerfile[^/]*|[^/]*\.dockerfile|(?:docker-)?compose[^/]*\.ya?ml|\.env\.\w+|[^/]*\.md|[^/]*\.txt|LICENSE[^/]*)$/i;
+/** Dependency manifests: a declared dependency is not an import. */
+const MANIFEST = /(?:^|\/)(?:package\.json|composer\.json|Gemfile|pyproject\.toml|setup\.(?:py|cfg)|go\.mod|pom\.xml|build\.gradle(?:\.kts)?|[^/]+\.csproj|mix\.exs|Cargo\.toml|deno\.jsonc?)$/i;
 
-/** True when `line` reads `name` with a default or behind a presence check. */
-export function guardedRead(line: string, name: string): boolean {
-  const pattern = new RegExp(`\\b${escape(name)}\\b`, 'g');
-  for (const match of line.matchAll(pattern)) {
-    const after = line.slice(match.index + name.length);
-    const before = line.slice(0, match.index);
-    if (DEFAULT_AFTER.test(after) || GUARD_BEFORE.test(before)) return true;
-  }
-  return false;
+/** The production source files: production files that are not deployment files, documents or dependency manifests. */
+function productionSources(tree: FileTree): string[] {
+  return Object.keys(tree).filter((path) => isProductionFile(path) && !DEPLOYMENT_FILE.test(path) && !MANIFEST.test(path));
 }
 
-/** Any pack line (outside env samples) that reads `name` with a default or a guard. */
-export function guardedAnywhere(pack: EvidencePack, name: string): string | null {
-  for (const file of pack.files) {
-    if (/(?:^|\/)\.env\.\w+$/.test(file.path)) continue;
-    for (const [index, line] of file.lines.entries()) {
-      if (line.includes(name) && guardedRead(line, name)) return `${file.path}:${index + 1}`;
+/** The first production source line that matches, as `path:line`. */
+function firstMatch(tree: FileTree, matches: (line: string) => boolean): string | null {
+  for (const path of productionSources(tree)) {
+    for (const [index, line] of (tree[path] ?? '').split(/\r?\n/).entries()) {
+      if (matches(line)) return `${path}:${index + 1}`;
     }
   }
   return null;
 }
 
-export function checkRequiredVariable(ctx: CheckContext, variable: AnalystOutput['requiredVariables'][number]): FactCheck {
-  const reasons = [
-    ...confidenceReasons(variable.confidence),
-    ...checkEvidence(ctx.pack, variable.evidence, (line) => new RegExp(`\\b${escape(variable.name)}\\b`).test(line) && !guardedRead(line, variable.name)),
-  ];
-  const guarded = guardedAnywhere(ctx.pack, variable.name);
-  if (guarded !== null) reasons.push(`${guarded} reads it with a default or a guard`);
-  return { fact: 'requiredVariables', subject: variable.name, ok: reasons.length === 0, reasons };
+const IMPORT_LINE = /\b(?:import|require|from|use|using|include|alias|extern crate)\b/;
+/** Connection strings and drivers of the datastores Deployz does not host. */
+const DATASTORE_PATTERN: Record<string, RegExp> = {
+  mongo: /mongo(?:db|ose)?\b|mongodb(?:\+srv)?:\/\//i,
+  elastic: /elastic(?:search)?|opensearch/i,
+  opensearch: /opensearch|elastic(?:search)?/i,
+  clickhouse: /clickhouse|ecto_ch/i,
+  sqlite: /sqlite|\.db["']|:memory:/i,
+  mariadb: /mariadb/i,
+  h2: /\bh2\b|jdbc:h2|h2database/i,
+  cassandra: /cassandra/i,
+  neo4j: /neo4j|bolt:\/\//i,
+  couch: /couch/i,
+  dynamo: /dynamo/i,
+};
+
+function datastorePattern(item: BlockerItem): RegExp {
+  const engine = item.terms.find((term) => term in DATASTORE_PATTERN);
+  return engine !== undefined ? DATASTORE_PATTERN[engine]! : word(item.dependency);
+}
+
+/** Reasons the item is used: a production import of the datastore, a production line that names the path or the service. */
+function usedBy(ctx: CheckContext, item: BlockerItem): string[] {
+  if (item.category === 'datastore') {
+    const pattern = datastorePattern(item);
+    const imported = firstMatch(ctx.tree, (line) => pattern.test(line) && (IMPORT_LINE.test(line) || /:\/\/|jdbc:|adapter|driver|dialect|client/i.test(line)));
+    return imported !== null ? [`${imported} imports or connects to it`] : [];
+  }
+  if (item.category === 'local_state') {
+    const declared = item.terms.filter((term) => term.startsWith('/') || /^[A-Z][A-Z0-9_]{2,}$/.test(term)).filter((term) => !/^(?:STORAGE|FILESYSTEM_DISK|BUCKET)$/.test(term));
+    if (declared.length === 0) return ['the finding names no path or variable to check'];
+    const named = firstMatch(ctx.tree, (line) => declared.some((term) => (term.startsWith('/') ? line.includes(term) : word(term).test(line))));
+    return named !== null ? [`${named} uses the declared path or variable`] : [];
+  }
+  // A second service of the production Compose file is not used only when it is a third-party image
+  // (it does not build from this repository) and no production line names it as a host or a variable.
+  const services = composeServices(ctx.tree)?.services ?? [];
+  const listed = services.filter((service) => item.terms.includes(service.name));
+  const built = listed.filter((service) => service.build);
+  if (built.length !== 1) return ['exactly one listed service must build the app from this repository'];
+  const others = listed.filter((service) => !service.build);
+  if (others.length === 0) return ['no other listed service is a third-party image'];
+  const reasons: string[] = [];
+  for (const service of others) {
+    const variable = service.name.toUpperCase().replace(/-/g, '_');
+    const named = firstMatch(ctx.tree, (line) => word(service.name).test(line) || new RegExp(`\\b${escape(variable)}_`).test(line));
+    if (named !== null) reasons.push(`${named} names the service ${service.name}`);
+  }
+  return reasons;
+}
+
+// ── Blocker answers ────────────────────────────────────────────────────────
+
+/** The words that show the engine Deployz provides. MariaDB is not MySQL here: Deployz rejects it. */
+export const ENGINE_PATTERN: Record<SupportedEngine, RegExp> = {
+  postgres: /postgres|\bpg\b|pgsql|psql/i,
+  mysql: /mysql/i,
+  redis: /redis|valkey/i,
+  s3: /\bs3\b|\baws\b|amazon/i,
+};
+
+/** The engines a setting may select for each blocker category. */
+const ENGINES_FOR: Record<BlockerItem['category'], readonly SupportedEngine[]> = {
+  datastore: ['postgres', 'mysql'],
+  local_state: ['s3', 'postgres', 'mysql'],
+  compose_service: ['postgres', 'mysql', 'redis', 's3'],
+};
+
+export function checkBlocker(ctx: CheckContext, question: Question & BlockerItem, answer: BlockerAnswer): AnswerCheck {
+  if (answer.answer === 'required') return result(question.id, []);
+  const reasons = confidenceReasons(answer.confidence);
+  if (answer.answer === 'not_used') {
+    reasons.push(...citationReasons(ctx.pack, answer.evidence), ...usedBy(ctx, question));
+    return result(question.id, reasons);
+  }
+  const { setting, settingValue, engine } = answer;
+  if (setting === null || settingValue === null || engine === null) return result(question.id, [...reasons, 'a setting, its value and the engine are required']);
+  if (!ENGINES_FOR[question.category].includes(engine)) reasons.push(`${engine} does not replace a ${question.category.replace('_', ' ')}`);
+  const lines = answer.evidence.map((item) => citedLine(ctx.pack, item));
+  reasons.push(...citationReasons(ctx.pack, answer.evidence));
+  if (!lines.some((line) => line !== null && word(setting).test(line))) reasons.push(`no cited line reads ${setting}`);
+  const selects =
+    ENGINE_PATTERN[engine].test(settingValue) || lines.some((line) => line !== null && line.includes(settingValue) && ENGINE_PATTERN[engine].test(line));
+  if (!selects) reasons.push(`no cited line shows that ${setting}=${settingValue} selects ${engine}`);
+  return result(question.id, reasons);
 }
 
 // ── Port ───────────────────────────────────────────────────────────────────
 
 /** The port signals of the production stage (after the last FROM): EXPOSE, ENV PORT, HEALTHCHECK. */
 export function dockerfilePorts(content: string): number[] {
-  const stages = content.split(/^\s*FROM\s/im);
-  const stage = stages[stages.length - 1] ?? '';
+  const stage = finalStage(content);
   const ports = new Set<number>();
   for (const match of stage.matchAll(/^\s*EXPOSE\s+([^\n]+)/gim)) {
     for (const token of match[1]!.split(/\s+/)) {
@@ -157,81 +239,140 @@ const READS_PORT =
   /process\.env\.PORT\b|process\.env\[["']PORT["']\]|getenv\(\s*["']PORT["']|environ(?:\.get\()?\[?\s*["']PORT["']|ENV\[["']PORT["']\]|ENV\.fetch\(["']PORT["']|System\.get_env\(\s*["']PORT["']|System\.getenv\(\s*["']PORT["']|Deno\.env\.get\(\s*["']PORT["']|Bun\.env\.PORT|\$\{?PORT\b|ASPNETCORE_(?:URLS|HTTP_PORTS)|server\.port=\$\{PORT/;
 
 function readsPort(pack: EvidencePack): boolean {
-  return pack.files.some((file) => file.lines.some((line) => READS_PORT.test(line)));
+  return packFiles(pack).some((file) => file.lines.some((line) => READS_PORT.test(line)));
 }
 
-export function checkPort(ctx: CheckContext, port: AnalystOutput['port'], dockerfile: string | null): FactCheck {
-  if (port.value === null) return { fact: 'port', subject: null, ok: true, reasons: [] };
-  const value = port.value;
+export function checkPort(ctx: CheckContext, id: string, port: number, answer: FactAnswer): AnswerCheck {
   const reasons = [
-    ...confidenceReasons(port.confidence),
-    ...checkEvidence(ctx.pack, port.evidence, (line) => new RegExp(`(?<!\\d)${value}(?!\\d)|\\bPORT\\b`).test(line)),
+    ...confidenceReasons(answer.confidence),
+    ...checkEvidence(ctx.pack, answer.evidence, (line) => new RegExp(`(?<!\\d)${port}(?!\\d)|\\bPORT\\b`).test(line)),
   ];
-  const declared = dockerfile !== null ? dockerfilePorts(ctx.tree[dockerfile] ?? '') : [];
-  if (declared.length > 0 && !declared.includes(value) && !readsPort(ctx.pack)) {
+  const declared = ctx.dockerfile !== null ? dockerfilePorts(ctx.tree[ctx.dockerfile] ?? '') : [];
+  if (declared.length > 0 && !declared.includes(port) && !readsPort(ctx.pack)) {
     reasons.push(`the Dockerfile declares ${declared.join(', ')} and the app does not read PORT`);
   }
-  return { fact: 'port', subject: null, ok: reasons.length === 0, reasons };
+  return result(id, reasons);
+}
+
+// ── Start command ──────────────────────────────────────────────────────────
+
+/** The instructions after the last FROM. */
+function finalStage(content: string): string {
+  const stages = content.split(/^\s*FROM\s/im);
+  return stages[stages.length - 1] ?? '';
+}
+
+/** An ENTRYPOINT or CMD argument as one command line: the exec form `["a", "b"]` joined, the shell form as written. */
+function instructionCommand(argument: string): string {
+  const text = argument.trim();
+  if (text.startsWith('[')) {
+    try {
+      const parts = JSON.parse(text) as unknown;
+      if (Array.isArray(parts) && parts.every((part) => typeof part === 'string')) return parts.join(' ');
+    } catch {
+      return text;
+    }
+  }
+  return text;
+}
+
+/** The final stage's ENTRYPOINT and CMD (the last of each), with line continuations joined. */
+export function imageCommand(dockerfile: string): { entrypoint: string | null; cmd: string | null } {
+  const stage = finalStage(dockerfile).replace(/\\\r?\n/g, ' ');
+  const last = (name: string): string | null => {
+    const matches = [...stage.matchAll(new RegExp(`^\\s*${name}\\s+(.+)$`, 'gim'))];
+    const argument = matches[matches.length - 1]?.[1];
+    return argument === undefined ? null : instructionCommand(argument);
+  };
+  return { entrypoint: last('ENTRYPOINT'), cmd: last('CMD') };
+}
+
+const flat = (command: string): string => normalize(command.replace(/["']/g, ''));
+
+/** The package.json script that a `npm|yarn|pnpm|bun [run] <name>` command runs. */
+function packageScript(tree: FileTree, dockerfile: string, command: string): string | null {
+  const name = command.match(/^(?:exec\s+)?(?:npm|yarn|pnpm|bun)\s+(?:run\s+)?([\w:.-]+)\s*$/)?.[1];
+  if (name === undefined) return null;
+  const directory = dockerfile.includes('/') ? dockerfile.slice(0, dockerfile.lastIndexOf('/') + 1) : '';
+  for (const path of [`${directory}package.json`, 'package.json']) {
+    try {
+      const scripts = (JSON.parse(tree[path] ?? '{}') as { scripts?: Record<string, unknown> }).scripts ?? {};
+      const script = scripts[name];
+      if (typeof script === 'string') return script;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * The start command is the image's own command: its CMD, its ENTRYPOINT, the
+ * two together, or a script that the CMD runs (a package.json script, or the
+ * script file that the CMD or the ENTRYPOINT starts).
+ */
+export function isImageStartCommand(tree: FileTree, dockerfile: string | null, command: string): boolean {
+  if (dockerfile === null) return false;
+  const { entrypoint, cmd } = imageCommand(tree[dockerfile] ?? '');
+  const given = flat(command);
+  const forms = [cmd, entrypoint, entrypoint !== null && cmd !== null ? `${entrypoint} ${cmd}` : null].filter((form): form is string => form !== null);
+  if (forms.some((form) => flat(form) === given)) return true;
+  if (forms.some((form) => { const script = packageScript(tree, dockerfile, flat(form)); return script !== null && flat(script) === given; })) return true;
+  // A command that runs a script file the image command names (`sh scripts/start.sh`, `./docker-entrypoint.sh`).
+  const scripts = startScripts(dockerfile, tree).map((path) => path.split('/').pop()!);
+  const file = given.match(/^(?:exec\s+)?(?:(?:ba)?sh\s+)?(\S+\.(?:sh|bash))\b/)?.[1]?.split('/').pop();
+  return file !== undefined && scripts.includes(file) && forms.some((form) => form.includes(file));
+}
+
+function checkStartCommand(ctx: CheckContext, id: string, command: string, answer: FactAnswer): AnswerCheck {
+  const reasons = confidenceReasons(answer.confidence);
+  if (!isImageStartCommand(ctx.tree, ctx.dockerfile, command)) reasons.push('it is not the image CMD or ENTRYPOINT, or a script that the CMD runs');
+  return result(id, reasons);
 }
 
 // ── The other facts ────────────────────────────────────────────────────────
 
-const POSTGRES = /postgres|\bpg\b|psycopg|pgx|lib\/pq|npgsql|postgrex|jdbc:postgresql|pdo_pgsql|asyncpg|sequelize|prisma|typeorm|knex|DATABASE_URL/i;
-const MYSQL = /mysql|mariadb|pdo_mysql|myxql|jdbc:mysql/i;
-const NO_DATABASE = /sqlite|in[-_ ]?memory|\bh2\b|embedded|nedb|bolt|badger/i;
 // A line that serves the root page: the request pipeline or route table of a server-rendered app (`app.UseOqtane(...)`, `app.MapRazorPages()`, `urlpatterns`).
 const SERVES_ROOT = /\.(?:Map|Use)\w*\(|\.Run\(\)|\burlpatterns\b|\broutes?\b|\brouter\b/i;
-const REDIS = /redis|valkey|bullmq|\bbull\b|sidekiq|celery|\brq\b|resque|horizon/i;
-const OPTIONAL = /optional|enabled|disable|default|\bif\b|unless|\|\||\?\?|false|null|nil|None|local|file|disk|memory/i;
-const STORAGE = /\bs3\b|aws-sdk|boto|minio|bucket|ex_aws|flysystem|active_?storage|object.?storage|storage/i;
 const MIGRATION = /migrat|upgrade|db:prepare|db\s+push|ecto|alembic|flyway|liquibase|schema/i;
 
-function checkDockerfile(ctx: CheckContext, dockerfile: AnalystOutput['dockerfile']): FactCheck {
-  if (dockerfile.value === null) return { fact: 'dockerfile', subject: null, ok: true, reasons: [] };
-  const { path, context } = dockerfile.value;
-  const reasons = [...confidenceReasons(dockerfile.confidence)];
-  if (!Object.prototype.hasOwnProperty.call(ctx.tree, path)) reasons.push(`${path} does not exist`);
-  else if (!listDockerfileCandidates(ctx.tree).includes(path)) reasons.push(`${path} is not a Dockerfile candidate`);
-  const contextDir = context.replace(/^\.\/?/, '').replace(/\/$/, '');
+function simple(id: string, ctx: CheckContext, answer: FactAnswer, supports: Supports): AnswerCheck {
+  return result(id, [...confidenceReasons(answer.confidence), ...checkEvidence(ctx.pack, answer.evidence, supports)]);
+}
+
+export interface DockerfileValue {
+  readonly path: string;
+  readonly context: string;
+}
+
+function checkDockerfile(ctx: CheckContext, id: string, value: DockerfileValue, answer: FactAnswer): AnswerCheck {
+  const reasons = [...confidenceReasons(answer.confidence)];
+  if (!Object.prototype.hasOwnProperty.call(ctx.tree, value.path)) reasons.push(`${value.path} does not exist`);
+  else if (!listDockerfileCandidates(ctx.tree).includes(value.path)) reasons.push(`${value.path} is not a Dockerfile candidate`);
+  const contextDir = value.context.replace(/^\.\/?/, '').replace(/\/$/, '');
   if (contextDir !== '' && !Object.keys(ctx.tree).some((file) => file.startsWith(`${contextDir}/`))) {
-    reasons.push(`the build context ${context} does not exist`);
+    reasons.push(`the build context ${value.context} does not exist`);
   }
-  return { fact: 'dockerfile', subject: null, ok: reasons.length === 0, reasons };
+  return result(id, reasons);
 }
 
-function simple(fact: FactName, ctx: CheckContext, item: { confidence: Confidence; evidence: Evidence[] }, supports: Supports): FactCheck {
-  const reasons = [...confidenceReasons(item.confidence), ...checkEvidence(ctx.pack, item.evidence, supports)];
-  return { fact, subject: null, ok: reasons.length === 0, reasons };
-}
-
-function checkDatabase(ctx: CheckContext, database: AnalystOutput['database']): FactCheck {
-  const supports = database.value === 'postgres' ? POSTGRES : database.value === 'mysql' ? MYSQL : NO_DATABASE;
-  return simple('database', ctx, database, (line) => supports.test(line));
+export interface MigrationValue {
+  readonly mode: 'startup' | 'pre_deploy' | 'none';
+  readonly command: string | null;
 }
 
 /** The files on the image's start path: the Dockerfile, the scripts it starts, and a Procfile. */
-function startPathFiles(ctx: CheckContext, dockerfile: string | null): Set<string> {
-  const files = new Set<string>(startScripts(dockerfile ?? undefined, ctx.tree));
-  if (dockerfile !== null) files.add(dockerfile);
+function startPathFiles(ctx: CheckContext): Set<string> {
+  const files = new Set<string>(startScripts(ctx.dockerfile ?? undefined, ctx.tree));
+  if (ctx.dockerfile !== null) files.add(ctx.dockerfile);
   for (const path of Object.keys(ctx.tree)) if (/(?:^|\/)Procfile$/.test(path)) files.add(path);
   return files;
 }
 
-function checkMigration(
-  ctx: CheckContext,
-  migration: AnalystOutput['migration'],
-  database: AnalystOutput['database']['value'],
-  dockerfile: string | null,
-): FactCheck {
-  const { mode, command } = migration.value;
-  if (mode === 'unknown' && command === null) return { fact: 'migration', subject: null, ok: true, reasons: [] };
-  if (mode === 'none') {
-    const ok = database === 'none';
-    return { fact: 'migration', subject: null, ok, reasons: ok ? [] : ['mode none with a database needs a vendor decision'] };
-  }
-  if (mode === 'pre_deploy' && command === null) {
-    return { fact: 'migration', subject: null, ok: false, reasons: ['pre_deploy without a command'] };
-  }
+function checkMigration(ctx: CheckContext, id: string, value: MigrationValue, answer: FactAnswer): AnswerCheck {
+  const { mode, command } = value;
+  if (mode === 'none') return result(id, ctx.database === 'none' ? [] : ['mode none with a database needs a vendor decision']);
+  if (mode === 'pre_deploy' && command === null) return result(id, ['pre_deploy without a command']);
   const token = command !== null ? distinctiveToken(command) : null;
   // A migration flag of the binary (`-migrate`, `--upgrade`), as the line that defines the flag names it.
   const migrationWords = (command ?? '')
@@ -239,44 +380,77 @@ function checkMigration(
     .filter((part) => part.startsWith('-'))
     .map((part) => part.replace(/^-+/, '').replace(/=.*$/, ''))
     .filter((part) => part.length >= 3 && MIGRATION.test(part));
-  const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((word) => line.includes(word));
-  const check = simple('migration', ctx, migration, supports);
+  const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((part) => line.includes(part));
+  const check = simple(id, ctx, answer, supports);
   if (mode !== 'startup') return check;
-  // A migration at start must be on the start path, not in a dev script or a README.
-  const startPath = startPathFiles(ctx, dockerfile);
-  const offPath = migration.evidence.filter((item) => !startPath.has(item.path)).map((item) => `${item.path} is not on the image start path`);
-  return offPath.length === 0 ? check : { ...check, ok: false, reasons: [...check.reasons, ...offPath] };
+  // A migration at start is on the start path or in the app's own boot code or configuration,
+  // never in a dependency manifest, a dev script, a test or a README.
+  const allowed = new Set([...startPathFiles(ctx), ...productionSources(ctx.tree)]);
+  const offPath = answer.evidence
+    .filter((item) => !allowed.has(item.path))
+    .map((item) => `${item.path} is not on the image start path or in the app's boot code`);
+  return offPath.length === 0 ? check : result(id, [...check.reasons, ...offPath]);
 }
 
-/** Check every analyst fact. The order follows `FACT_NAMES`, then one entry per worker and per variable. */
-export function checkFacts(ctx: CheckContext, output: AnalystOutput, fallbackDockerfile: string | null): FactCheck[] {
-  const dockerfile = checkDockerfile(ctx, output.dockerfile);
-  const selected = dockerfile.ok && output.dockerfile.value !== null ? output.dockerfile.value.path : fallbackDockerfile;
-  const checks: FactCheck[] = [
-    dockerfile,
-    checkPort(ctx, output.port, selected),
-    output.startCommand.value === null
-      ? { fact: 'startCommand', subject: null, ok: true, reasons: [] }
-      : simple('startCommand', ctx, output.startCommand, mentions(distinctiveToken(output.startCommand.value))),
-    output.healthPath.value === null
-      ? { fact: 'healthPath', subject: null, ok: true, reasons: [] }
-      : simple('healthPath', ctx, output.healthPath, (line) => {
-          const path = output.healthPath.value!;
-          const last = path.split('/').filter(Boolean).pop() ?? path;
-          return line.includes(path) || (last.length >= 3 && line.includes(last)) || (path === '/' && SERVES_ROOT.test(line));
-        }),
-    checkDatabase(ctx, output.database),
-    simple('redis', ctx, output.redis, (line) => REDIS.test(line) && (output.redis.value || OPTIONAL.test(line))),
-    simple('storage', ctx, output.storage, (line) => (output.storage.value ? STORAGE.test(line) : OPTIONAL.test(line))),
-    checkMigration(ctx, output.migration, output.database.value, selected),
-  ];
-  const workerIds = new Set<string>();
-  for (const worker of output.workers) {
-    const reasons = [...confidenceReasons(worker.confidence), ...checkEvidence(ctx.pack, worker.evidence, mentions(distinctiveToken(worker.command)))];
-    if (workerIds.has(worker.id)) reasons.push('duplicate worker id');
-    workerIds.add(worker.id);
-    checks.push({ fact: 'workers', subject: worker.id, ok: reasons.length === 0, reasons });
+/** A fact answer's value in its typed shape, or null when it does not parse. */
+export function factValue(question: Question, value: string): number | string | DockerfileValue | MigrationValue | null {
+  if (question.kind !== 'fact') return null;
+  switch (question.fact) {
+    case 'port': {
+      const port = Number(value);
+      return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null;
+    }
+    case 'healthPath':
+      return value.startsWith('/') && value.length <= 200 ? value : null;
+    case 'startCommand':
+      return value.trim().length > 0 ? value.trim() : null;
+    case 'dockerfile':
+    case 'migration': {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(value);
+      } catch {
+        return null;
+      }
+      const record = (parsed ?? {}) as Record<string, unknown>;
+      if (question.fact === 'dockerfile') {
+        return typeof record['path'] === 'string' && typeof record['context'] === 'string' ? { path: record['path'], context: record['context'] } : null;
+      }
+      const mode = record['mode'];
+      const command = record['command'];
+      return (mode === 'startup' || mode === 'pre_deploy' || mode === 'none') && (command === null || (typeof command === 'string' && command.length > 0))
+        ? { mode, command: command as string | null }
+        : null;
+    }
   }
-  for (const variable of output.requiredVariables) checks.push(checkRequiredVariable(ctx, variable));
-  return checks;
+}
+
+export function checkFact(ctx: CheckContext, question: Question, answer: FactAnswer): AnswerCheck {
+  if (question.kind !== 'fact' || answer.value === null) return result(answer.id, []);
+  const value = factValue(question, answer.value);
+  if (value === null) return result(answer.id, [`${answer.value} is not a valid ${question.fact}`]);
+  switch (question.fact) {
+    case 'port':
+      return checkPort(ctx, answer.id, value as number, answer);
+    case 'startCommand':
+      return checkStartCommand(ctx, answer.id, value as string, answer);
+    case 'healthPath': {
+      const path = value as string;
+      const last = path.split('/').filter(Boolean).pop() ?? path;
+      return simple(answer.id, ctx, answer, (line) => line.includes(path) || (last.length >= 3 && line.includes(last)) || (path === '/' && SERVES_ROOT.test(line)));
+    }
+    case 'dockerfile':
+      return checkDockerfile(ctx, answer.id, value as DockerfileValue, answer);
+    case 'migration':
+      return checkMigration(ctx, answer.id, value as MigrationValue, answer);
+  }
+}
+
+/** Check every answer. An answer to an unknown question is never in the output (`fromWire` refuses it). */
+export function checkAnswers(ctx: CheckContext, blockers: readonly BlockerAnswer[], facts: readonly FactAnswer[]): AnswerCheck[] {
+  const questionOf = (id: string) => ctx.pack.questions.find((question) => question.id === id)!;
+  return [
+    ...blockers.map((answer) => checkBlocker(ctx, questionOf(answer.id) as Question & BlockerItem, answer)),
+    ...facts.map((answer) => checkFact(ctx, questionOf(answer.id), answer)),
+  ];
 }

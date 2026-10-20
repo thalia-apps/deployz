@@ -1,0 +1,1254 @@
+{
+  "id": "new-27",
+  "commit": "4cf46ff7b442f6414d3af35787a436ef990683d7",
+  "analyser": "ai@0f3e3a0b-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "apps/web",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "apps/web/Dockerfile"
+    },
+    "build": {
+      "command": "dotenv -c -- turbo run build --filter=@rallly/web",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./docker-start.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/v1/[...route]/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BANNED_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFERENCING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRON_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/app/api/house-keeping/[...method]/route.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "apps/web/.env.sample declares DATABASE_URL",
+            "packages/database/.env.sample declares DATABASE_URL",
+            "packages/posthog/.env.sample declares DATABASE_URL",
+            "read in packages/database/prisma/seed.ts",
+            "read in apps/web/src/env.ts",
+            "read in packages/database/src/client.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EMAIL_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/feature-flags/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_QUEUE_SCHEDULER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_MEET_ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HIDE_ATTRIBUTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KV_REST_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KV_REST_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_API_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/licensing/v1/[...route]/route.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGO_ICON_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGO_URL_DARK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/logger/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILPIT_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/test-helpers/src/mailpit.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAINTENANCE_BYPASS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAINTENANCE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_TEAMS_ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MODERATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PHASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/app/api/status/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/flash/server.ts",
+            "read in packages/utils/src/absolute-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_CDN_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/locale/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_API_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/posthog/src/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/posthog/src/client.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_UI_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/posthog/src/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SELF_HOSTED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/components/environment.tsx",
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/instrumentation-client.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SHORT_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/utils/src/absolute-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/feature-flags/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/logger/src/index.ts",
+            "read in apps/web/src/lib/feature-flags/config.ts",
+            "read in apps/web/src/app/api/status/route.ts",
+            "read in packages/database/src/client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOREPLY_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/send.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOREPLY_EMAIL_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/send.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_DISCOVERY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_EMAIL_CLAIM_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ISSUER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_NAME_CLAIM_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_PICTURE_CLAIM_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPEN_POLL_LIMIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/utils/src/absolute-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRIMARY_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIMARY_COLOR_DARK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTRATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/feature-flags/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/web/.env.sample declares S3_BUCKET_NAME",
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/storage/[...key]/route.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/web/.env.sample declares S3_ENDPOINT",
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/web/.env.sample declares S3_REGION",
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "SELF_HOSTED",
+          "required": true,
+          "secret": false,
+          "source": [
+            "docker-compose.yml build arg SELF_HOSTED=true"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/instrumentation-client.ts",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_FEEDBACK_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/send.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_ENV_VALIDATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PWD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS_SERVERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/emails/src/transport.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/transport.ts",
+            "smtp requires SMTP_USER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SIGNING_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/app/api/stripe/webhook/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPPORT_EMAIL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/emails/src/chrome.ts",
+            "read in packages/emails/src/send.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TURNSTILE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/lib/feature-flags/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_BRANCH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/utils/src/absolute-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in packages/utils/src/absolute-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBEX_ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBEX_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBEX_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZOOM_ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZOOM_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZOOM_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/[...connection]/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZOOM_WEBHOOK_SECRET_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/src/env.ts",
+            "read in apps/web/src/app/api/integrations/zoom/deauthorize/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: NEXT_PUBLIC_BASE_URL, SECRET_PASSWORD, SELF_HOSTED, SUPPORT_EMAIL. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 1,
+    "questions": 0,
+    "generatedAt": "2026-10-20T12:53:29.280Z",
+    "failedChecks": 0,
+    "promptVersion": 14
+  }
+}

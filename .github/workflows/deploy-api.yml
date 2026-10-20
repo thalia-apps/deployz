@@ -224,11 +224,10 @@ jobs:
       AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
       # AI-first application Analysis (docs/decisions/README.md). ANALYSIS_ENGINE
       # is rules (the default), shadow or ai; rules is the one-setting rollback.
-      # The analyst and the reviewer use the gateway above, on its OpenRouter
+      # The analyst uses the gateway above, on its OpenRouter
       # route with OPENROUTER_API_KEY (below).
       ANALYSIS_ENGINE: ${{ vars.ANALYSIS_ENGINE || 'rules' }}
       ANALYSIS_AI_MODEL: ${{ vars.ANALYSIS_AI_MODEL }}
-      ANALYSIS_REVIEWER_MODEL: ${{ vars.ANALYSIS_REVIEWER_MODEL }}
       # Coding-agent fix instructions run on their own model. "openrouter"
       # needs the OPENROUTER_API_KEY secret and uses FIX_INSTRUCTIONS_AI_MODEL
       # (default anthropic/claude-opus-5.5). "gateway" is the rollback: the

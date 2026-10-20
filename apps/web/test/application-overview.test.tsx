@@ -385,6 +385,35 @@ describe('configuration-required action and Share note', () => {
     expect(action?.textContent).toBe('Review required changes');
   });
 
+  it('shows the outcome and the required items in fix-class groups', async () => {
+    mocks.fetchApplication.mockResolvedValue(baseApplication());
+    mocks.fetchReadiness.mockResolvedValue(
+      baseReadiness({
+        state: 'ALMOST_READY',
+        outcome: 'DEPLOYABLE_WITH_CHANGES',
+        requiredCount: 2,
+        findings: [
+          requiredFinding({ id: 'health-check', title: 'No health check', blocking: false, fixClass: 'SETTING' }),
+          requiredFinding({ id: 'local-file-storage', title: 'Files on local disk', blocking: false, fixClass: 'CODE_CHANGE' }),
+        ],
+      }),
+    );
+    mocks.fetchDeploymentsForApplication.mockResolvedValue([]);
+    await act(async () => {
+      renderPage();
+    });
+    await waitForHeading();
+
+    expect(container.querySelector('[data-testid="deployability-outcome"]')?.textContent).toContain(
+      'Deployable after repository changes',
+    );
+    expect(container.querySelector('[data-testid="blocker-group-SETTING"]')?.textContent).toContain('Set in Deployz');
+    expect(container.querySelector('[data-testid="blocker-group-CODE_CHANGE"]')?.textContent).toContain(
+      'Change in your repository',
+    );
+    expect(container.querySelector('[data-testid="blocker-group-CAPABILITY_GAP"]')).toBeNull();
+  });
+
   it('never-eligible states show a short Share note instead of the inactive install-link card', async () => {
     CASES.find((c) => c.name === 'ready-to-test')!.arrange();
     await act(async () => {

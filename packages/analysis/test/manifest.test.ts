@@ -208,12 +208,11 @@ describe('normalizeDeploymentManifest', () => {
     });
     expect(manifest.database.postgres).toBe(false);
     expect(manifest.migration.command).toBe('npm run migrate');
-    expect(manifest.unsupported).toEqual(
-      expect.arrayContaining([expect.stringMatching(/database migration on deploy/i)]),
-    );
-    expect(evaluateManifestReadiness(manifest).state).toBe('NOT_COMPATIBLE');
-    // normalizeDeploymentManifest already calls deploymentManifestSchema.parse,
-    // so unsupported reasons are data, not schema violations.
+    // A setting resolves it (a database, or no separate migration): never a rejection.
+    expect(manifest.unsupported).toEqual([]);
+    const gate = evaluateManifestReadiness(manifest);
+    expect(gate.state).toBe('NEEDS_CONFIGURATION');
+    expect(gate.findings).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'migration-database-missing' })]));
   });
 
   it('does NOT fire the guard when postgres is true (existing migration-command-missing warning path unchanged)', () => {

@@ -172,16 +172,18 @@ describe('buildReadinessReport — state calculation', () => {
     expect(report.state).toBe('NEEDS_CHANGES');
   });
 
-  it('NEEDS_CHANGES: local filesystem persistence is blocking', () => {
+  it('ALMOST_READY: local filesystem persistence is a repository change, not a block', () => {
     const report = buildReadinessReport(analyseRepo(localFsTree));
-    expect(report.state).toBe('NEEDS_CHANGES');
-    expect(report.findings.find((f) => f.id === 'local-file-storage')?.blocking).toBe(true);
+    expect(report.state).toBe('ALMOST_READY');
+    expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+    expect(report.findings.find((f) => f.id === 'local-file-storage')?.blocking).toBe(false);
   });
 
-  it('NEEDS_CHANGES: Dockerfile copies .git (DEPLOY-031) is blocking', () => {
+  it('ALMOST_READY: Dockerfile copies .git (DEPLOY-031) is a repository change, not a block', () => {
     const report = buildReadinessReport(analyseRepo(gitCopyTree));
-    expect(report.state).toBe('NEEDS_CHANGES');
-    expect(report.findings.find((f) => f.id === 'build-context-git-metadata')?.blocking).toBe(true);
+    expect(report.state).toBe('ALMOST_READY');
+    expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+    expect(report.findings.find((f) => f.id === 'build-context-git-metadata')?.blocking).toBe(false);
     expect(report.passed.some((p) => p.id === 'dockerfile-git-copy')).toBe(false);
   });
 
@@ -255,19 +257,21 @@ describe('buildReadinessReport — finding classification', () => {
     expect(finding?.whyItMatters).toContain('PostgreSQL or MySQL');
   });
 
-  it('local filesystem persistence is required + blocking + confirmed', () => {
+  it('local filesystem persistence is required + a code change + confirmed', () => {
     const report = buildReadinessReport(analyseRepo(localFsTree));
     const finding = report.findings.find((f) => f.id === 'local-file-storage');
     expect(finding?.severity).toBe('required');
-    expect(finding?.blocking).toBe(true);
+    expect(finding?.fixClass).toBe('CODE_CHANGE');
+    expect(finding?.blocking).toBe(false);
     expect(finding?.confidence).toBe('confirmed');
   });
 
-  it('a Dockerfile .git copy is required + blocking + confirmed', () => {
+  it('a Dockerfile .git copy is required + a code change + confirmed', () => {
     const report = buildReadinessReport(analyseRepo(gitCopyTree));
     const finding = report.findings.find((f) => f.id === 'build-context-git-metadata');
     expect(finding?.severity).toBe('required');
-    expect(finding?.blocking).toBe(true);
+    expect(finding?.fixClass).toBe('CODE_CHANGE');
+    expect(finding?.blocking).toBe(false);
     expect(finding?.confidence).toBe('confirmed');
   });
 
@@ -293,7 +297,9 @@ describe('buildReadinessReport — finding classification', () => {
     expect(finding).toBeDefined();
     expect(finding?.title).toBe('Runs as several services');
     expect(finding?.severity).toBe('required');
-    expect(finding?.blocking).toBe(true);
+    // Static analysis cannot show that each service is required: the vendor verifies it.
+    expect(finding?.fixClass).toBe('CODE_CHANGE');
+    expect(finding?.blocking).toBe(false);
     expect(report.findings.some((f) => f.id === 'unsupported-message-queue')).toBe(false);
   });
 
@@ -637,5 +643,81 @@ describe('reconcileReadiness', () => {
     const blocked = buildReadinessReport(analyseRepo(mongoTree));
     const reconciled = reconcileReadiness(blocked, { containerPort: 3000, startCommand: 'node x' });
     expect(reconciled.state).toBe('NEEDS_CHANGES');
+  });
+});
+
+describe('buildReadinessReport — deployability outcome', () => {
+  /** The ready app with one detected rejection and the given database flags. */
+  function withRejection(dependency: string, metadata: Record<string, unknown> = {}): AnalysisResult {
+    const base = analyseRepo(readyTree);
+    return {
+      ...base,
+      metadata: { ...base.metadata, ...metadata },
+      rejections: [{ detected: true, dependency, reason: `Unsupported: ${dependency}` }],
+    };
+  }
+
+  it('DEPLOYABLE: no required finding', () => {
+    expect(buildReadinessReport(analyseRepo(readyTree)).outcome).toBe('DEPLOYABLE');
+  });
+
+  it('DEPLOYABLE: only Deployz settings are required', () => {
+    const report = buildReadinessReport(analyseRepo(dockerfileNoPortNoCmdTree));
+    expect(report.state).toBe('ALMOST_READY');
+    expect(report.outcome).toBe('DEPLOYABLE');
+    expect(report.findings.filter((f) => f.severity === 'required').every((f) => f.fixClass === 'SETTING')).toBe(true);
+  });
+
+  it('DEPLOYABLE_WITH_CHANGES: the worst item wins over settings', () => {
+    const report = buildReadinessReport(analyseRepo(noDockerfileTree));
+    expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+    expect(verdictFromReadiness(report.state)).toBe('NEEDS_ATTENTION');
+  });
+
+  it('NOT_DEPLOYABLE: a required capability gap blocks', () => {
+    const report = buildReadinessReport(analyseRepo(mongoTree));
+    expect(report.outcome).toBe('NOT_DEPLOYABLE');
+    expect(report.findings.find((f) => f.id === 'unsupported-database-mongo')).toMatchObject({
+      fixClass: 'CAPABILITY_GAP',
+      blocking: true,
+    });
+    expect(verdictFromReadiness(report.state)).toBe('NOT_COMPATIBLE');
+  });
+
+  it('NOT_DEPLOYABLE: SQLite is the only database driver', () => {
+    const report = buildReadinessReport(withRejection('sqlite', { usesPostgresql: false, usesMysql: false }));
+    expect(report.outcome).toBe('NOT_DEPLOYABLE');
+  });
+
+  it('DEPLOYABLE_WITH_CHANGES: SQLite next to a PostgreSQL or MySQL driver', () => {
+    expect(buildReadinessReport(withRejection('sqlite', { usesPostgresql: true })).outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+    expect(buildReadinessReport(withRejection('sqlite', { usesPostgresql: false, usesMysql: true })).outcome).toBe(
+      'DEPLOYABLE_WITH_CHANGES',
+    );
+  });
+
+  it('DEPLOYABLE_WITH_CHANGES: an unbuildable Dockerfile and several compose services are repository changes', () => {
+    expect(buildReadinessReport(withRejection('no-buildable-dockerfile')).outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+    expect(buildReadinessReport(withRejection('docker-compose-multi-service')).outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+
+  it('keeps the outcome when the vendor resolves a setting', () => {
+    const report = buildReadinessReport(
+      analyseRepo({ ...dockerfileNoPortNoCmdTree, Dockerfile: 'FROM node:20-alpine\nWORKDIR /app\nCOPY . .\nCOPY .git/ .\n' }),
+    );
+    const reconciled = reconcileReadiness(report, { containerPort: 8080, startCommand: 'node src/index.js' });
+    expect(reconciled.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+
+  it('has no outcome for a report stored before fix classes', () => {
+    const stored: ReadinessReport = {
+      state: 'ALMOST_READY',
+      requiredCount: 2,
+      recommendedCount: 0,
+      summary: '',
+      findings: buildReadinessReport(analyseRepo(dockerfileNoPortNoCmdTree)).findings.map(({ fixClass: _fixClass, ...f }) => f),
+      passed: [],
+    };
+    expect(reconcileReadiness(stored, { containerPort: 8080, startCommand: null }).outcome).toBeUndefined();
   });
 });

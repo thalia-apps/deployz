@@ -61,7 +61,7 @@ account:
 
 | Component | What Deployz provisions | Notes |
 | --- | --- | --- |
-| Compute | One build artifact on ECS Fargate: a web service behind an Application Load Balancer, plus one private service per declared background worker, plus a one-shot migration task when the app has a migration command | Needs a Dockerfile that builds a production image: a repository with none (or only development or template Dockerfiles) is `NOT_COMPATIBLE` when the full file list proves it. Per-task CPU/memory comes from the size profile (Small 0.25 vCPU / 512 MiB, Medium 1 vCPU / 2 GiB, Large 2 vCPU / 4 GiB). The web desired count comes from the profile; each worker runs one task. Workers have no URL and no load-balancer route. |
+| Compute | One build artifact on ECS Fargate: a web service behind an Application Load Balancer, plus one private service per declared background worker, plus a one-shot migration task when the app has a migration command | Needs a Dockerfile that builds a production image: a repository with none (or only development or template Dockerfiles) needs a repository change (DEPLOYABLE_WITH_CHANGES) when the full file list proves it. Per-task CPU/memory comes from the size profile (Small 0.25 vCPU / 512 MiB, Medium 1 vCPU / 2 GiB, Large 2 vCPU / 4 GiB). The web desired count comes from the profile; each worker runs one task. Workers have no URL and no load-balancer route. |
 | Database (optional) | RDS PostgreSQL 16 or RDS MySQL 8.0, `db.t3.micro`, 20 GB (autoscaling to 100 GB), gp3, 7-day backups, deletion protection | Provisioned only when the analysis manifest requires PostgreSQL or MySQL. **Retained** on disconnect. |
 | Cache (optional) | ElastiCache Valkey (Redis-compatible), single `cache.t4g.micro` node, no TLS, no cluster mode | Provisioned only when the manifest requires Redis. Deleted on disconnect. |
 | Storage | One S3 bucket, always created | **Retained** on disconnect. |
@@ -110,8 +110,14 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
   genuinely open questions. A queue or a scheduled job provisions only from
   strong, unambiguous evidence; weaker evidence becomes a vendor question
   instead. Output: the application manifest, a readiness
-  report and, on request, fix instructions for a coding agent
-  ([`../ai-analysis.md`](../ai-analysis.md)).
+  report with one deployability outcome and, on request, fix instructions
+  for a coding agent ([`../ai-analysis.md`](../ai-analysis.md)). The
+  outcome is DEPLOYABLE (Deployz settings only), DEPLOYABLE_WITH_CHANGES (a
+  repository change from the closed catalogue of safe fixes) or
+  NOT_DEPLOYABLE (a required capability outside the MVP). Only
+  NOT_DEPLOYABLE is "not compatible". DEPLOYABLE stays "not yet confirmed by
+  a build" until a release build passes; a failed release build changes it
+  to DEPLOYABLE_WITH_CHANGES.
 - **Configuration**: container port, health path, migration command and
   requirement overrides; per-variable environment-variable classification
   (managed by Deployz / set by vendor / set by customer / optional) with

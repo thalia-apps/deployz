@@ -78,6 +78,16 @@ for the second run of the stability criterion.
      the local state.
    - `dockerfile`: the claim includes the build target. A storage reason
      that cites the Dockerfile as its evidence is not a build prediction.
+   - `datastore.required`: one claim for each datastore server that Deployz
+     does not host (MongoDB, Elasticsearch or OpenSearch, ClickHouse,
+     Cassandra, Neo4j, CouchDB, MariaDB). A rejection claims `true`; a
+     blocker that the AI engine dismissed claims `false`. The observation
+     runs none of these services, so its web start is the start without the
+     datastore, the same as the start without Redis. A healthy start shows
+     that the app does not need it. A failed start whose log names the
+     datastore shows that it does. A failed start for another reason is
+     `NOT_CHECKABLE`. Embedded stores (SQLite, H2) are local state and are
+     checked by `storage.local`.
 3. **Full run** (`runcheck:full`). Runs the application with exactly the
    settings that the Analysis produced, and nothing more: the migration
    command first, then the web container with the image command, then each
@@ -98,6 +108,24 @@ application did not need), CONTRADICTED claims per claim type and per
 runtime, NOT_CHECKABLE reasons, unstable facts and the vendor questions per
 repository. The tuning set and the holdout set are
 always reported apart.
+
+The report also gives a 3x3 **outcome matrix** (rows: the predicted
+outcome, columns: the actual outcome):
+
+| Outcome | Predicted (gate state) | Actual (runs) |
+| --- | --- | --- |
+| 1 deployable with Deployz | `DEPLOYABLE` | Both full runs are healthy. The recipe's vendor inputs are Deployz settings. |
+| 2 deployable with changes | `DEPLOYABLE_WITH_CHANGES` | The image does not build for a Dockerfile cause (a repository change), or the recipe has a reviewed `outcomePatch`. |
+| 3 not deployable | `NOT_DEPLOYABLE` | No full run is healthy, the image builds, and the recipe has no `outcomePatch`. |
+
+The predicted outcome is the readiness report's `outcome`. An Analysis file
+from before that field uses the gate state: `NOT_COMPATIBLE` is 3, every
+other state is 1.
+
+A repository whose runs do not decide the outcome (no full run, an unstable
+full run, a limit of the test) is left out of the matrix. The report lists
+the **false deployable** repositories (predicted 1, actual 2 or 3) and the
+**false not deployable** repositories (predicted 3, actual 1 or 2).
 
 ### Production parity
 
@@ -128,6 +156,12 @@ repository needs them (the Dockerfile, the context, build arguments, and the
 fixed non-secret test value), the SQL engine when the application supports
 only MySQL, and one smoke request when a generic request cannot touch the
 database. A person reviews each recipe.
+
+An optional `outcomePatch` holds the reviewed change that makes an
+application deployable with Deployz when it is not deployable as it is:
+environment values that the vendor sets (for example the variable that
+selects PostgreSQL instead of an embedded store) and the reason. It is the
+truth for outcome 2. Add a patch only after a person reviews it.
 
 ### Known-answer fixtures
 
@@ -214,8 +248,11 @@ x86_64 runners):
 2. CONTRADICTED claims are fewer than or equal to the rules baseline, for
    each claim type.
 3. False problems are fewer than the rules baseline.
-4. All fixtures pass.
-5. For an AI engine: no fact changes between two analyses of the same
+4. False deployable outcomes (predicted 1, actual 2 or 3) are **0**, and
+   false not deployable outcomes (predicted 3, actual 1 or 2) are fewer than
+   the rules baseline.
+5. All fixtures pass.
+6. For an AI engine: no fact changes between two analyses of the same
    commit. Run the AI Analysis twice and compare the manifests.
 
 The report gives each criterion per set (tuning and holdout apart) and per

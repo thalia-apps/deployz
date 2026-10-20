@@ -298,12 +298,17 @@ function buildMetadata(
  * Resource facts that the AI Analysis verified (`ai-analysis/merge.ts`). The
  * analysis re-runs with them so every value derived from a resource (the
  * env-var model, the bindings, the database state, the migration mode) comes
- * from the same rules. The rejections never change.
+ * from the same rules. A rejection changes only when a checked AI answer
+ * dismisses it (the item is not used, or a setting replaces it).
  */
 export interface ResourceOverrides {
   readonly database?: 'postgres' | 'mysql' | 'none' | undefined;
   readonly redis?: boolean | undefined;
   readonly storage?: boolean | undefined;
+  /** False: the declared local-filesystem state is not durable app data. */
+  readonly localFilesystem?: false | undefined;
+  /** Rejection reasons that a checked AI answer dismissed. */
+  readonly dismissedRejections?: readonly string[] | undefined;
 }
 
 /**
@@ -321,7 +326,9 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
 
   for (const detector of DETECTORS) {
     const finding = detector(tree);
-    findings.push(finding.detector === 's3' && overrides.storage !== undefined ? { ...finding, detected: overrides.storage } : finding);
+    if (finding.detector === 's3' && overrides.storage !== undefined) findings.push({ ...finding, detected: overrides.storage });
+    else if (finding.detector === 'local-filesystem' && overrides.localFilesystem === false) findings.push({ ...finding, detected: false });
+    else findings.push(finding);
   }
 
   // Redis is computed once here (not folded into DETECTORS/REJECTION_CHECKS,
@@ -344,11 +351,15 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   const assessedMysql = assessMysql(tree);
   const mysql = overrides.database === undefined ? assessedMysql : { ...assessedMysql, required: overrides.database === 'mysql' };
 
-  // The rejections always read the rules' own assessment: an override never adds or removes one.
-  rejections.push(checkRedisUnsupported(tree, assessedRedis));
-  rejections.push(checkMysql(tree));
+  // The rejections always read the rules' own assessment: a resource override never adds or removes one.
+  const dismissed = new Set(overrides.dismissedRejections ?? []);
+  const reject = (finding: RejectionFinding): void => {
+    if (!dismissed.has(finding.reason)) rejections.push(finding);
+  };
+  reject(checkRedisUnsupported(tree, assessedRedis));
+  reject(checkMysql(tree));
   for (const check of REJECTION_CHECKS) {
-    rejections.push(check(tree));
+    reject(check(tree));
   }
 
   const metadata = buildMetadata(findings, redis, postgres);

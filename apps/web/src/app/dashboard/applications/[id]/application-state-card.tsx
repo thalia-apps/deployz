@@ -6,15 +6,19 @@ import { useState, type ReactNode } from 'react';
 
 import { InstallLinkControls } from '@/components/public-install-link-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import type {
   ApplicationAction,
   ApplicationActionId,
+  ApplicationBlocker,
+  ApplicationOutcome,
   ApplicationPresentation,
   SetupLifecycleItem,
 } from '@/lib/application-state';
+import type { DeployabilityOutcome, FixClass } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
 /** The test ids the old readiness page shipped, kept so existing tests and
@@ -28,6 +32,18 @@ const ACTION_TEST_IDS: Partial<Record<ApplicationActionId, string>> = {
   'continue-test': 'readiness-view-deployment',
   'view-test-deployment': 'readiness-view-deployment',
   'review-configuration': 'readiness-review-blocker',
+};
+
+const BLOCKER_GROUPS: { group: FixClass; label: string }[] = [
+  { group: 'SETTING', label: 'Set in Deployz' },
+  { group: 'CODE_CHANGE', label: 'Change in your repository' },
+  { group: 'CAPABILITY_GAP', label: 'Not supported' },
+];
+
+const OUTCOME_BADGE: Record<DeployabilityOutcome, 'success' | 'warning' | 'destructive'> = {
+  DEPLOYABLE: 'success',
+  DEPLOYABLE_WITH_CHANGES: 'warning',
+  NOT_DEPLOYABLE: 'destructive',
 };
 
 const REANALYSE_LOADING_TEXT: Partial<Record<ApplicationActionId, string>> = {
@@ -159,13 +175,10 @@ export function ApplicationStateCard({
           </Alert>
         ))}
 
+        {presentation.outcome ? <DeployabilityOutcomeLine outcome={presentation.outcome} renderAction={renderAction} /> : null}
+
         {presentation.state === 'configuration-required' && presentation.blockers.length > 0 ? (
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {presentation.blockers.slice(0, 5).map((blocker) => (
-              <li key={blocker.id}>{blocker.title}</li>
-            ))}
-            {presentation.blockers.length > 5 ? <li>and {presentation.blockers.length - 5} more</li> : null}
-          </ul>
+          <BlockerGroups blockers={presentation.blockers} />
         ) : null}
 
         {showReadinessSummary ? (
@@ -210,6 +223,44 @@ export function ApplicationStateCard({
         </CardFooter>
       ) : null}
     </Card>
+  );
+}
+
+function DeployabilityOutcomeLine({
+  outcome,
+  renderAction,
+}: {
+  outcome: ApplicationOutcome;
+  renderAction: (item: ApplicationAction, variant: 'default' | 'outline') => ReactNode;
+}) {
+  return (
+    <div data-testid="deployability-outcome" className="flex flex-wrap items-center gap-2 text-sm">
+      <Badge variant={OUTCOME_BADGE[outcome.outcome]}>{outcome.label}</Badge>
+      {outcome.detail ? <span className="text-muted-foreground">{outcome.detail}</span> : null}
+      {outcome.action ? renderAction(outcome.action, 'outline') : null}
+    </div>
+  );
+}
+
+function BlockerGroups({ blockers }: { blockers: ApplicationBlocker[] }) {
+  return (
+    <div className="flex flex-col gap-2" data-testid="blocker-groups">
+      {BLOCKER_GROUPS.map(({ group, label }) => {
+        const items = blockers.filter((blocker) => blocker.group === group);
+        if (items.length === 0) return null;
+        return (
+          <section key={group} aria-label={label} data-testid={`blocker-group-${group}`}>
+            <h3 className="text-sm font-medium">{label}</h3>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {items.slice(0, 5).map((blocker) => (
+                <li key={blocker.id}>{blocker.title}</li>
+              ))}
+              {items.length > 5 ? <li>and {items.length - 5} more</li> : null}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

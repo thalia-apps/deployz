@@ -311,6 +311,29 @@ export const checkEnvRequired: Rule = (claim, run) => {
   return notCheckable('the app was not healthy with the variable either', facts);
 };
 
+/**
+ * The observation runs no MongoDB, Elasticsearch, ClickHouse or MariaDB, so
+ * its web start is the start without that datastore. A healthy start shows
+ * that the app does not need it; a failed start whose log names it shows that
+ * it does.
+ */
+export const checkDatastoreRequired: Rule = (claim, run) => {
+  const facts = ['webHealthy'] as const;
+  const healthy = observed(run, 'webHealthy');
+  if (healthy === null) return notCheckable('the web start was not observed', facts);
+  if (healthy) {
+    return claim.value === true
+      ? contradicted(false, 'the app starts without the datastore', facts)
+      : confirmed('the app starts without the datastore', facts);
+  }
+  const named = new RegExp(String(claim.subject), 'i');
+  const logs = run.webHealthy.evidence.filter((item) => item.kind === 'log' && named.test(item.text));
+  if (logs.length === 0) return notCheckable('the web start failed, and its log does not name the datastore', facts);
+  return claim.value === true
+    ? confirmed('the web start fails, and its log names the datastore', facts)
+    : contradicted(true, 'the web start fails, and its log names the datastore', facts);
+};
+
 const RULES: Record<ClaimType, Rule> = {
   readiness: checkReadiness,
   dockerfile: checkDockerfile,
@@ -324,6 +347,7 @@ const RULES: Record<ClaimType, Rule> = {
   'migration.command': checkMigrationCommand,
   'worker.command': checkWorkerCommand,
   'env.required': checkEnvRequired,
+  'datastore.required': checkDatastoreRequired,
 };
 
 /** The weakest architecture of the used facts decides what the verdict proves. */

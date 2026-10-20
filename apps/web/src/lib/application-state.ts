@@ -11,7 +11,7 @@ import { requiredChangeLabel } from '@/lib/application-configuration';
 import { deploymentDisplayStatus } from '@/lib/deployment-status-groups';
 import type { FleetDeployment } from '@/lib/deployments';
 import type { PublicInstallLinkView } from '@/lib/public-install-links';
-import type { ApplicationReadiness } from '@/lib/readiness';
+import type { ApplicationReadiness, DeployabilityOutcome, FixClass, ReadinessFinding } from '@/lib/readiness';
 import { installReleaseState, type Release } from '@/lib/releases';
 
 // ── Canonical states ────────────────────────────────────────────────────────
@@ -117,6 +117,18 @@ export interface ApplicationNotice {
 export interface ApplicationBlocker {
   id: string;
   title: string;
+  /** Where the vendor resolves it: in Deployz, in the repository, or not at all. */
+  group: FixClass;
+}
+
+/** The deployability outcome with the build check applied. */
+export interface ApplicationOutcome {
+  outcome: DeployabilityOutcome;
+  label: string;
+  /** "Not yet confirmed by a build", or why a build moved the outcome. */
+  detail: string | null;
+  /** Opens the failed release's failure details. */
+  action: ApplicationAction | null;
 }
 
 export interface ApplicationPresentation {
@@ -130,6 +142,8 @@ export interface ApplicationPresentation {
   secondaryActions: ApplicationAction[];
   /** Required changes, shown by the configuration-required card. */
   blockers: ApplicationBlocker[];
+  /** Null when no completed analysis exists or setup is complete. */
+  outcome: ApplicationOutcome | null;
   /** "No blocking issues" / "2 changes required" — never a
    *  passed-check count. Null while no completed analysis exists. */
   readinessSummary: string | null;
@@ -365,6 +379,45 @@ export function releaseReadiness(releases: readonly Release[]): ReleaseReadiness
   return releases.some((r) => r.status === 'FAILED') ? 'failed' : 'unavailable';
 }
 
+// ── Deployability outcome ───────────────────────────────────────────────────
+
+const OUTCOME_LABELS: Record<DeployabilityOutcome, string> = {
+  DEPLOYABLE: 'Deployable with Deployz settings',
+  DEPLOYABLE_WITH_CHANGES: 'Deployable after repository changes',
+  NOT_DEPLOYABLE: 'Not deployable on Deployz',
+};
+
+/** A report stored before fix classes: a blocking finding was a capability gap. */
+function findingFixClass(finding: ReadinessFinding): FixClass {
+  return finding.fixClass ?? (finding.blocking ? 'CAPABILITY_GAP' : 'CODE_CHANGE');
+}
+
+/**
+ * The analysis outcome, checked against the release builds: outcome 1 is not
+ * confirmed until a release build passes, and a failed build with no passed
+ * build moves it to outcome 2. Null for a report stored before the outcome.
+ */
+function deriveOutcome(
+  readiness: ApplicationReadiness,
+  release: ReleaseReadiness | null,
+  releasesHref: string,
+): ApplicationOutcome | null {
+  const outcome = readiness.outcome;
+  if (outcome === undefined) return null;
+  if (outcome !== 'DEPLOYABLE' || release === 'ready') {
+    return { outcome, label: OUTCOME_LABELS[outcome], detail: null, action: null };
+  }
+  if (release === 'failed') {
+    return {
+      outcome: 'DEPLOYABLE_WITH_CHANGES',
+      label: OUTCOME_LABELS.DEPLOYABLE_WITH_CHANGES,
+      detail: 'The release build failed.',
+      action: action('view-releases', 'Review failure details', releasesHref),
+    };
+  }
+  return { outcome, label: OUTCOME_LABELS.DEPLOYABLE, detail: 'Not yet confirmed by a build.', action: null };
+}
+
 function countLabel(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -473,6 +526,7 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
       primaryAction: action('retry-load', 'Try again'),
       secondaryActions: [],
       blockers: [],
+      outcome: null,
       readinessSummary: null,
       recommendationCount: 0,
       lifecycle: null,
@@ -819,7 +873,10 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
     primaryAction,
     secondaryActions,
     blockers:
-      core.state === 'configuration-required' ? required.map((f) => ({ id: f.id, title: requiredChangeLabel(f) })) : [],
+      core.state === 'configuration-required'
+        ? required.map((f) => ({ id: f.id, title: requiredChangeLabel(f), group: findingFixClass(f) }))
+        : [],
+    outcome: analysed && finalLifecycle !== null ? deriveOutcome(readiness, release, releasesHref) : null,
     readinessSummary,
     recommendationCount: recommended.length,
     lifecycle: finalLifecycle,

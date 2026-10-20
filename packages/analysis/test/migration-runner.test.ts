@@ -92,6 +92,20 @@ describe('the migration "Needs input" question', () => {
     expect(resolved.findings.map((finding) => finding.id)).not.toContain('migration-command-needs-input');
   });
 
+  it('says that the migration is unknown when no script was found (the AI Analysis could not tell)', () => {
+    const unknown = { candidate: '', reason: 'The AI Analysis could not tell how this app migrates its database.' };
+    const finding = buildReadinessReport(analysis, { migrationNeedsInput: unknown }).findings.find((entry) => entry.id === 'migration-command-needs-input');
+    expect(finding).toMatchObject({ plainEnglishExplanation: 'Deployz cannot tell how this app migrates its database.', technicalEvidence: unknown.reason });
+  });
+
+  it('a migration the AI left open is a change to verify (outcome 2); a rules candidate is a setting', () => {
+    const unknown = { candidate: '', reason: 'The AI Analysis could not tell how this app migrates its database.' };
+    const fromAi = { ...analysis, metadata: { ...analysis.metadata, aiMigrationQuestion: unknown } };
+    const classOf = (report: ReturnType<typeof buildReadinessReport>) => report.findings.find((entry) => entry.id === 'migration-command-needs-input')?.fixClass;
+    expect(classOf(buildReadinessReport(fromAi, { migrationNeedsInput: unknown }))).toBe('CODE_CHANGE');
+    expect(classOf(buildReadinessReport(analysis, { migrationNeedsInput: needsInput }))).toBe('SETTING');
+  });
+
   it('blocks provisioning until the vendor owns the migration setting', () => {
     const open = normalizeDeploymentManifest({ metadata: { ...analysis.metadata, migrationNeedsInput: needsInput } }, {});
     expect(open.migration.needsCommand).toBe(true);

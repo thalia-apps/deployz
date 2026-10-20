@@ -413,9 +413,9 @@ describe('DeployzStack', () => {
   });
 
   // ANALYSIS_ENGINE is the one-setting rollback of the AI-first Analysis; it and
-  // the per-role model settings must reach the Lambdas or the switch is a no-op.
+  // the analyst model setting must reach the Lambdas or the switch is a no-op.
   describe('application analysis engine env keys', () => {
-    const KEYS = ['ANALYSIS_ENGINE', 'ANALYSIS_AI_MODEL', 'ANALYSIS_REVIEWER_MODEL'];
+    const KEYS = ['ANALYSIS_ENGINE', 'ANALYSIS_AI_MODEL'];
 
     it('passes every analysis engine key into the Lambda environment when set', () => {
       for (const key of KEYS) process.env[key] = `test-value-${key}`;
