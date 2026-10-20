@@ -4,7 +4,7 @@ import { checkClaims } from '../claims/check.js';
 import { extractClaims } from '../claims/extract.js';
 import { makeAnalysis, makeManifest, makeObservation, makeRun } from '../claims/test-support.js';
 import { fullRunSchema, type AnalysisResultFile, type ClaimVerdict, type FullRun, type Observation, type RepositoryReport } from '../contract.js';
-import { fullRunHealth, fullRunsHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
+import { actualOutcome, fullRunHealth, fullRunsHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
 
 type Values = Parameters<typeof makeRun>[0];
 
@@ -346,6 +346,34 @@ describe('summaryReport', () => {
   it('uses the given time and the analyser name', () => {
     const summary = summaryReport([], 'rules@abc1234', { generatedAt: '2026-10-16T12:00:00.000Z' });
     expect(summary).toEqual({ schemaVersion: 1, analyser: 'rules@abc1234', generatedAt: '2026-10-16T12:00:00.000Z', sets: [] });
+  });
+});
+
+describe('outcomes', () => {
+  it('derives the actual outcome from the full runs, the vendor inputs and the reviewed patch', () => {
+    const inputs = [{ name: 'ADMIN_EMAIL', source: { kind: 'fixed' as const, value: 'a@b.c' } }];
+    const patch = { environment: { DB_TYPE: 'postgresdb' }, reason: 'n8n selects PostgreSQL with DB_TYPE' };
+    expect(actualOutcome({}, true)).toBe(1);
+    expect(actualOutcome({ vendorInputs: inputs }, true)).toBe(2);
+    expect(actualOutcome({ outcomePatch: patch }, false)).toBe(2);
+    expect(actualOutcome({}, false)).toBe(3);
+    expect(actualOutcome({}, null)).toBeNull();
+  });
+
+  it('maps the readiness to the predicted outcome and fills the matrix and the release-gate lists', () => {
+    const deployable = report(ready(), {}, fullRun());
+    const falseDeployable = { ...report(ready(), {}, fullRun({ webHealthy: false })), id: 'repo-002' };
+    const notCompatible = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [] });
+    const falseNotDeployable = { ...report(notCompatible, {}, fullRun()), id: 'repo-003' };
+    expect(deployable.outcome).toEqual({ predicted: 1, actual: 1 });
+    expect(falseNotDeployable.outcome).toEqual({ predicted: 3, actual: 1 });
+    const [set] = summaryReport([deployable, falseDeployable, falseNotDeployable], 'ai@x').sets;
+    expect(set!.outcomes).toEqual({ '1': { '1': 1, '2': 0, '3': 1 }, '2': { '1': 0, '2': 0, '3': 0 }, '3': { '1': 1, '2': 0, '3': 0 } });
+    expect(set!.falseDeployable).toEqual(['repo-002']);
+    expect(set!.falseNotDeployable).toEqual(['repo-003']);
+    const text = renderMarkdown(summaryReport([deployable, falseDeployable], 'ai@x', { generatedAt: 'now' }), [deployable, falseDeployable]);
+    expect(text).toContain('Predicted deployable, actually not (must be 0): repo-002');
+    expect(text).toContain('| 1 | 1 | 0 | 1 |');
   });
 });
 

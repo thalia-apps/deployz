@@ -127,11 +127,28 @@ export const recipeSchema = z
       })
       .strict()
       .optional(),
+    /**
+     * A reviewed change that makes the application deployable with Deployz
+     * when it is not deployable as it is (outcome 2): environment values the
+     * vendor sets, for example the setting that selects PostgreSQL. A person
+     * reviews each patch; it is the truth for outcome 2.
+     */
+    outcomePatch: z
+      .object({
+        environment: z.record(z.string().regex(ENV_NAME), z.string()),
+        reason: z.string().min(1),
+      })
+      .strict()
+      .optional(),
     /** Reviewer notes: why each override or input exists. */
     notes: z.array(z.string()).default([]),
   })
   .strict();
 export type Recipe = z.infer<typeof recipeSchema>;
+
+/** 1 = deployable with Deployz, 2 = deployable with changes, 3 = not deployable. */
+export const outcomeSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+export type DeployOutcome = z.infer<typeof outcomeSchema>;
 
 // ── Observation (prompt 4.2) ───────────────────────────────────────────────
 
@@ -471,6 +488,8 @@ export const repositoryReportSchema = z
     unstableFullRun: z.boolean(),
     /** Fixes or vendor decisions the Analysis asked for that the application did not need. */
     falseProblems: z.array(z.string()),
+    /** The outcome the Analysis predicts and the outcome the runs show; null when the runs do not decide it. */
+    outcome: z.object({ predicted: outcomeSchema.nullable(), actual: outcomeSchema.nullable() }).strict(),
     vendorQuestions: z.number().int().nonnegative(),
     unstableFacts: z.array(z.enum(OBSERVATION_FACTS)),
     infrastructureFailures: z.array(z.string()),
@@ -495,6 +514,12 @@ export const summaryReportSchema = z
           hiddenProblems: z.array(z.string()),
           unstableFullRuns: z.array(z.string()),
           falseProblems: z.array(z.object({ id: z.string(), problem: z.string() }).strict()),
+          /** `outcomes[predicted][actual]`: repositories whose actual outcome the runs decide. */
+          outcomes: z.record(z.enum(['1', '2', '3']), z.record(z.enum(['1', '2', '3']), z.number().int().nonnegative())),
+          /** Predicted outcome 1, actual 2 or 3: the release gate needs none. */
+          falseDeployable: z.array(z.string()),
+          /** Predicted outcome 3, actual 1 or 2. */
+          falseNotDeployable: z.array(z.string()),
           contradictedByClaimType: countsSchema,
           contradictedByRuntime: countsSchema,
           notCheckableReasons: countsSchema,

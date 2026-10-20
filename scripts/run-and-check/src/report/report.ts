@@ -7,6 +7,7 @@ import {
   REPOSITORY_SETS,
   type AnalysisResultFile,
   type ClaimVerdict,
+  type DeployOutcome,
   type FullRun,
   type Observation,
   type Recipe,
@@ -160,8 +161,22 @@ function falseProblems(
   return problems;
 }
 
+const PREDICTED: Record<Readiness, DeployOutcome> = { READY: 1, NEEDS_CONFIGURATION: 2, NOT_COMPATIBLE: 3 };
+
+/**
+ * The actual outcome. 1: the application is healthy with the analysed
+ * settings and needs no vendor input. 2: it is healthy only with vendor
+ * inputs, or a reviewed recipe patch makes it deployable. 3: it is not
+ * healthy and no reviewed patch exists. Null when the runs do not decide.
+ */
+export function actualOutcome(recipe: Partial<Pick<Recipe, 'vendorInputs' | 'outcomePatch'>>, healthy: boolean | null): DeployOutcome | null {
+  if (healthy === true) return (recipe.vendorInputs ?? []).length > 0 ? 2 : 1;
+  if (recipe.outcomePatch !== undefined) return 2;
+  return healthy === false ? 3 : null;
+}
+
 export function repositoryReport(
-  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs'>>,
+  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs' | 'outcomePatch'>>,
   analysis: AnalysisResultFile,
   observation: Observation,
   verdicts: readonly ClaimVerdict[],
@@ -190,6 +205,7 @@ export function repositoryReport(
     }
     return entry;
   });
+  const healthy = fullRun === null && unbuildable ? false : fullHealth;
   const failures = [
     ...observation.runs.flatMap((run) => run.infrastructureFailures),
     ...(fullRun?.infrastructureFailures ?? []),
@@ -205,18 +221,31 @@ export function repositoryReport(
     arch: observation.runs[0]!.build.arch,
     readiness,
     verdicts: decided,
-    healthyWithAnalysedSettings: fullRun === null && unbuildable ? false : fullHealth,
+    healthyWithAnalysedSettings: healthy,
     hiddenProblem: readiness === 'READY' && (fullHealth === false || (fullRun === null && unbuildable)),
     unstableFullRun,
     falseProblems: falseProblems(analysis, decided, observation, fullRun, recipe.vendorInputs ?? []),
     vendorQuestions: analysis.vendorQuestions,
     unstableFacts: observation.unstable,
     infrastructureFailures: [...new Set(failures)],
+    outcome: { predicted: readiness === null ? null : PREDICTED[readiness], actual: actualOutcome(recipe, healthy) },
   };
 }
 
 function count(into: Record<string, number>, key: string): void {
   into[key] = (into[key] ?? 0) + 1;
+}
+
+const OUTCOMES = ['1', '2', '3'] as const;
+
+/** `matrix[predicted][actual]` over the repositories whose actual outcome the runs decide. */
+function outcomeMatrix(reports: readonly RepositoryReport[]): Record<(typeof OUTCOMES)[number], Record<(typeof OUTCOMES)[number], number>> {
+  const row = () => ({ '1': 0, '2': 0, '3': 0 });
+  const matrix = { '1': row(), '2': row(), '3': row() };
+  for (const { outcome } of reports) {
+    if (outcome.predicted !== null && outcome.actual !== null) matrix[`${outcome.predicted}`][`${outcome.actual}`] += 1;
+  }
+  return matrix;
 }
 
 /** `runtimes` maps a repository id to `manifest.application.runtime`. */
@@ -248,6 +277,9 @@ export function summaryReport(
         hiddenProblems: inSet.filter((report) => report.hiddenProblem).map((report) => report.id),
         unstableFullRuns: inSet.filter((report) => report.unstableFullRun).map((report) => report.id),
         falseProblems: inSet.flatMap((report) => report.falseProblems.map((problem) => ({ id: report.id, problem }))),
+        outcomes: outcomeMatrix(inSet),
+        falseDeployable: inSet.filter(({ outcome }) => outcome.predicted === 1 && outcome.actual !== null && outcome.actual !== 1).map((report) => report.id),
+        falseNotDeployable: inSet.filter(({ outcome }) => outcome.predicted === 3 && outcome.actual !== null && outcome.actual !== 3).map((report) => report.id),
         contradictedByClaimType,
         contradictedByRuntime,
         notCheckableReasons,
@@ -289,7 +321,17 @@ export function renderMarkdown(summary: SummaryReport, reports: readonly Reposit
       `- Hidden problems: ${set.hiddenProblems.length > 0 ? set.hiddenProblems.join(', ') : 'none'}`,
       `- Unstable full runs: ${set.unstableFullRuns.length > 0 ? set.unstableFullRuns.join(', ') : 'none'}`,
       `- False problems: ${set.falseProblems.length}`,
+      `- Predicted deployable, actually not (must be 0): ${set.falseDeployable.length > 0 ? set.falseDeployable.join(', ') : 'none'}`,
+      `- Predicted not deployable, actually deployable: ${set.falseNotDeployable.length > 0 ? set.falseNotDeployable.join(', ') : 'none'}`,
       '',
+      '### Outcomes (rows: predicted, columns: actual)',
+      '',
+      '1 = deployable with Deployz, 2 = deployable with changes, 3 = not deployable. Repositories whose runs do not decide the outcome are left out.',
+      '',
+      ...table(
+        ['Predicted', 'Actual 1', 'Actual 2', 'Actual 3'],
+        OUTCOMES.map((predicted) => [predicted, ...OUTCOMES.map((actual) => set.outcomes[predicted]?.[actual] ?? 0)]),
+      ),
       '### Repositories',
       '',
       ...table(
