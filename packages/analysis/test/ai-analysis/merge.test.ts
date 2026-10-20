@@ -98,6 +98,21 @@ describe('mergeAiAnswers: open facts', () => {
     expect(result.answers).toEqual([expect.objectContaining({ subject: 'healthPath', decision: 'ai' })]);
   });
 
+  it('fills no fact while another open fact stays unresolved', () => {
+    const withDatabase: FileTree = {
+      ...tree,
+      'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
+      'src/db.js': 'const pool = new Pool({ connectionString: process.env.DATABASE_URL });',
+      '.env.example': 'DATABASE_URL=',
+    };
+    const questions = buildEvidencePack(withDatabase, analyseRepo(withDatabase)).questions;
+    expect(questions.map((question) => (question.kind === 'fact' ? question.fact : question.category))).toEqual(['healthPath', 'migration']);
+    const health = fact(questions[0]!.id, '/', { evidence: cite('src/index.js', 2, "app.use('/'") });
+    const { result } = merge(withDatabase, [], [health, fact(questions[1]!.id, null)]);
+    expect(result.analysis.metadata['healthMode']).toBe('vendor_required');
+    expect(result.answers[0]).toMatchObject({ decision: 'rules', reasons: ['another open fact stays unresolved'] });
+  });
+
   it('an unknown or failing fact leaves the rules question open', () => {
     for (const answer of [fact(id, null), fact(id, '/nope', { evidence: cite('src/index.js', 2, "app.use('/'") })]) {
       const { result } = merge(tree, [], [answer]);

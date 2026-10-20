@@ -131,19 +131,27 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
   }
 
   // ── Open facts: a passing answer fills what the rules left open. ──
+  // All or nothing: the AI fills the open facts only when it resolves every one of them. One fact
+  // left open (an unknown migration) can hide a start failure behind the facts it did resolve.
+  const resolves = (answer: AnalystOutput['facts'][number]): boolean => {
+    const question = pack.questions.find((entry) => entry.id === answer.id);
+    return question?.kind === 'fact' && answer.value !== null && checkOf(answer.id).ok && factValue(question, answer.value) !== null;
+  };
+  const openFacts = pack.questions.filter((question) => question.kind === 'fact');
+  const allResolved = openFacts.every((question) => answers.facts.some((answer) => answer.id === question.id && resolves(answer)));
   for (const answer of answers.facts) {
     const question = pack.questions.find((entry) => entry.id === answer.id);
     if (question?.kind !== 'fact') continue;
     const check = checkOf(answer.id);
     const value = answer.value === null ? null : factValue(question, answer.value);
-    const applies = check.ok && value !== null;
+    const applies = allResolved && resolves(answer);
     merged.push({
       id: answer.id,
       subject: question.fact,
       answer: answer.value === null ? 'unknown' : 'value',
       value,
       decision: applies ? 'ai' : 'rules',
-      reasons: check.reasons,
+      reasons: !allResolved && resolves(answer) ? ['another open fact stays unresolved'] : check.reasons,
     });
     if (!applies) {
       const unverified = question.fact === 'migration' && value !== null ? (value as MigrationValue).command : null;

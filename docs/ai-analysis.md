@@ -312,8 +312,11 @@ is final.
   the database state come from the same rules. When Deployz does not set
   the variable itself (it is not in the binding contract), the vendor must
   set it: it becomes a required variable, and its source names the value
-  (outcome 2, deployable with changes). A passing fact fills the open
-  value. A migration command that fails its check stays an open question
+  (outcome 2, deployable with changes). The open facts are all or nothing:
+  they fill the open values only when every open fact of the repository
+  passes. One fact left open (for example an unknown migration) keeps all
+  the rules values, because it can hide a start failure behind the facts
+  that were resolved (exam: new-23 became READY and did not start). A migration command that fails its check stays an open question
   (`migration-command-needs-input`).
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
