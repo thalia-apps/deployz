@@ -1124,6 +1124,73 @@ describe('BootstrapStack — application provisioning', () => {
     });
   });
 
+  // A role the execution role creates is a separate principal: without these
+  // conditions a template could create a tagged role with any policy and
+  // pass it to ECS — account administrator in one step.
+  describe('roles the application stack creates', () => {
+    function statementGranting(template: Template, action: string): Record<string, unknown> {
+      const granting = inlinePolicyStatements(template, executionRole(template).logicalId).filter(
+        (s) => collectActions([s]).includes(action),
+      );
+      expect(granting, action).toHaveLength(1);
+      return granting[0]!;
+    }
+
+    function boundaryRef(stack: BootstrapStack): unknown {
+      return stack.resolve(stack.applicationRoleBoundary.managedPolicyArn);
+    }
+
+    it('requires the application role boundary to create a role or grant it a policy', () => {
+      const { stack, template } = synth();
+      for (const action of ['iam:CreateRole', 'iam:PutRolePolicy', 'iam:AttachRolePolicy']) {
+        const statement = statementGranting(template, action);
+        const conditions = statement['Condition'] as Record<string, Record<string, unknown>>;
+        expect(conditions['StringEquals']?.['iam:PermissionsBoundary'], action).toEqual(boundaryRef(stack));
+        expect(JSON.stringify(statement['Resource']), action).toContain(':role/deployz/*');
+      }
+    });
+
+    it('attaches only the ECS task-execution managed policy', () => {
+      const { template } = synth();
+      const statement = statementGranting(template, 'iam:AttachRolePolicy');
+      expect((statement['Condition'] as Record<string, unknown>)['ArnEquals']).toEqual({
+        'iam:PolicyARN': 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+      });
+    });
+
+    it('passes only the application roles', () => {
+      const { template } = synth();
+      expect(JSON.stringify(statementGranting(template, 'iam:PassRole')['Resource'])).toContain(
+        ':role/deployz/*',
+      );
+    });
+
+    it('reaches only the application buckets', () => {
+      const { template } = synth();
+      expect(statementGranting(template, 's3:PutBucketPolicy')['Resource']).toBe('arn:aws:s3:::deployz-app*');
+    });
+
+    it('caps application roles without any IAM management, under the size quota', () => {
+      const { stack } = synth();
+      const document = stack.applicationRoleBoundary.document.toJSON() as { Statement: unknown[] };
+      const iamActions = collectActions(document['Statement']).filter((a) => a.startsWith('iam:'));
+      expect(iamActions).toEqual(['iam:PassRole']);
+      expect(collectActions(document['Statement'])).not.toContain('*');
+      expect(JSON.stringify(stack.resolve(document)).replace(/\s/g, '').length).toBeLessThan(
+        IAM_MANAGED_POLICY_MAX_CHARS,
+      );
+    });
+
+    it('tells the relay which boundary to pass', () => {
+      const { stack, template } = synth();
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        Environment: Match.objectLike({
+          Variables: Match.objectLike({ DEPLOYZ_APPLICATION_ROLE_BOUNDARY_ARN: boundaryRef(stack) }),
+        }),
+      });
+    });
+  });
+
   it('lets the relay remember a command it has not finished', () => {
     const { template } = synth();
     const actions = relayRoleActions(template);

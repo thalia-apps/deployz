@@ -44,6 +44,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Superseded 2026-10-20 (the AI answers only the open items) |
 | 2026-10-20 | The Analysis gives one deployability outcome; only a required capability gap is not compatible | Active |
 | 2026-10-20 | The AI Analysis answers only the open items of the rules Analysis, with closed answers and one call; the reviewer is post-MVP | Proposed (release gate not passed) |
+| 2026-10-21 | Every IAM role the application stack creates carries the connector's application role boundary | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1093,3 +1094,47 @@ merge. Full exams on x86_64 runners, each full run twice: AI
 What would change it: a full exam shows a hidden problem or a false
 outcome 1 that the AI causes, the cost or the time per analysis is above the
 budget, or shadow mode shows a new class of failed deploy.
+
+## Application roles carry a permissions boundary (2026-10-21)
+
+Decision: the CloudFormation execution role can create an IAM role, put an
+inline policy on it or attach a policy to it only under `role/deployz/`, only
+for its installation tag, and only when the role carries the connector's
+`ApplicationRoleBoundary` managed policy. It can attach only
+`AmazonECSTaskExecutionRolePolicy`, pass only `role/deployz/*` roles, and
+change only `deployz-app*` S3 buckets. The relay passes the boundary ARN as
+the template parameter `paramRoleBoundaryArn`.
+
+Reason: before this, a template applied through the execution role could
+create a tagged role with any policy and pass it to ECS, so the deploy path
+was account administrator in one step, and the bucket actions reached every
+bucket in the account. The customer guide said so, and a security review
+would stop there. A boundary on the execution role itself does not help: a
+boundary does not carry over to the roles a principal creates. Requiring a
+boundary at role creation is the AWS-recommended way to delegate role
+creation, and BYOC vendors that sell to security-focused customers
+(StreamNative, Omnistrate) use it. The boundary grants only what the
+compiler's roles use, with no IAM management, so a role under it cannot
+create a way out.
+
+Rejected: pre-creating every application role in the connector stack (the
+roles differ for each workload and schedule, so it needs a topology
+redesign), a CloudFormation Guard Hook that checks trust policies (more moving
+parts and a per-operation cost; post-MVP), and a customer stack parameter
+that denies all writes (it blocks deploys; post-MVP).
+
+Compatibility: the template parameter defaults to empty, and an empty value
+leaves the roles without a boundary, which is what a connector published
+before this change expects. A connector with the boundary refuses, before
+`CreateStack`, an artifact compiled before it, because CloudFormation would
+refuse its roles mid-create; that deployment needs a new artifact. Existing
+application stacks are never updated in place, and their deletes need no
+boundary.
+
+Known limit: IAM cannot limit a role's trust policy, so a template can still
+create a role that another account can assume. The boundary limits that role
+to the application's own data.
+
+What would change it: a compiler role needs an action outside the boundary
+(widen the boundary, as a new connector version), or a customer asks for
+proof that no role trusts another account (then the Guard Hook).

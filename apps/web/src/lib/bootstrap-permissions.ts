@@ -90,7 +90,17 @@ const STATEMENT_LABELS: Record<string, string> = {
   ProvisionApplicationRead: 'Read resource configuration',
   ProvisionApplicationStorage: 'Create and configure storage buckets',
   ProvisionApplicationUntaggable: 'Actions that AWS cannot limit by tag',
-  ProvisionApplicationPassRole: 'Give any role in the account to ECS and EventBridge Scheduler',
+  ProvisionApplicationRoleCreate: 'Create application roles',
+  ProvisionApplicationRolePolicy: 'Give application roles their own permissions',
+  ProvisionApplicationRoleAttach: 'Attach the ECS task-execution policy to application roles',
+  ProvisionApplicationPassRole: 'Give the application roles to ECS and EventBridge Scheduler',
+  ApplicationImagePull: 'Download container images',
+  ApplicationLogs: 'Write application logs',
+  ApplicationSecrets: "Read this installation's secrets",
+  ApplicationStorage: 'Read and write files in the application buckets',
+  ApplicationQueues: 'Send and receive application queue messages',
+  ApplicationRunTask: 'Start scheduled application tasks',
+  ApplicationPassRole: 'Give application roles to ECS tasks',
   ProvisionApplicationServiceLinkedRoles: 'Create AWS service-linked roles',
   ProvisionApplicationQueues: 'Manage application queues',
   ProvisionApplicationSchedules: 'Manage application schedules',
@@ -244,6 +254,23 @@ export const CONNECTOR_ROLE = buildRole(connectorRoleId, 'Connector role');
 
 /** The role the connector gives to CloudFormation to build the application stack. */
 export const EXECUTION_ROLE = buildRole(executionRoleId, 'CloudFormation execution role');
+
+const applicationRoleBoundaryId = Object.keys(resources).find(
+  (logicalId) =>
+    logicalId.startsWith('ApplicationRoleBoundary') &&
+    resources[logicalId]?.Type === 'AWS::IAM::ManagedPolicy',
+);
+if (!applicationRoleBoundaryId) throw new Error('The bootstrap template has no application role boundary.');
+
+/** The most that any IAM role in the application stack can do. */
+export const APPLICATION_ROLE_BOUNDARY: PermissionStatement[] = policyStatements(
+  resources[applicationRoleBoundaryId]?.Properties?.PolicyDocument,
+);
+
+/** True when the execution role may create a role only with the application role boundary. */
+export const EXECUTION_ROLE_REQUIRES_BOUNDARY = EXECUTION_ROLE.statements
+  .filter((statement) => statement.actions.includes('iam:CreateRole'))
+  .every((statement) => statement.conditions.some((condition) => condition.includes('iam:PermissionsBoundary')));
 
 /** Roles of the helper functions that run only during connector-stack operations. */
 export const INSTALL_HELPER_ROLES: PermissionRole[] = Object.entries(resources)

@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLICATION_ROLE_BOUNDARY,
   CONNECTOR_ROLE,
   EXECUTION_ROLE,
+  EXECUTION_ROLE_REQUIRES_BOUNDARY,
   INSTALL_HELPER_ROLES,
   isGrantedToConnector,
   type PermissionRole,
@@ -153,6 +155,17 @@ describe('bootstrap permissions ↔ deployed template', () => {
     expect(modelActions(EXECUTION_ROLE)).toEqual(
       expect.arrayContaining(['iam:CreateRole', 'iam:AttachRolePolicy']),
     );
+  });
+
+  it('creates application roles only with the application role boundary, which grants no IAM management', () => {
+    expect(EXECUTION_ROLE_REQUIRES_BOUNDARY).toBe(true);
+    const iamActions = APPLICATION_ROLE_BOUNDARY.flatMap((statement) => statement.actions).filter(
+      (action) => action.startsWith('iam:'),
+    );
+    expect(iamActions).toEqual(['iam:PassRole']);
+    for (const statement of APPLICATION_ROLE_BOUNDARY) {
+      expect(statement.label).not.toBe(statement.sid);
+    }
   });
 
   it('grants the log-read actions nowhere (§16)', () => {

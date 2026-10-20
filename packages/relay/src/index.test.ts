@@ -2066,6 +2066,57 @@ describe('settleInstall derives parameters from the manifest', () => {
 
     expect(install.mock.calls[0]![0]!.parameters).toEqual({ paramAppApiKey: 'k', paramNextauthSecret: 's' });
   });
+
+  // The connector's execution role refuses an IAM role without the
+  // application role boundary, so the relay passes it to every template.
+  it("passes the connector's role boundary to a template that declares it", async () => {
+    const install = vi.fn(async () => ({
+      state: 'succeeded' as const,
+      status: 'CREATE_COMPLETE',
+      outputs: {},
+    }));
+
+    await createInstallExecutor({
+      ...makeInstallDeps(install),
+      roleBoundaryArn: 'arn:aws:iam::123456789012:policy/deployz/Boundary',
+      readTemplateParameters: async () => new Set(['paramAppApiKey', 'paramRoleBoundaryArn']),
+    })({
+      ...command,
+      payload: {
+        templateUrl: ARTIFACT_URL,
+        parameters: { paramAppApiKey: 'k' },
+        redisRequired: false,
+        databaseRequired: false,
+      },
+    });
+
+    expect(install.mock.calls[0]![0]!.parameters).toEqual({
+      paramAppApiKey: 'k',
+      paramRoleBoundaryArn: 'arn:aws:iam::123456789012:policy/deployz/Boundary',
+    });
+  });
+
+  it('refuses, before CreateStack, a template compiled before the role boundary', async () => {
+    const install = vi.fn();
+
+    const result = await createInstallExecutor({
+      ...makeInstallDeps(install),
+      roleBoundaryArn: 'arn:aws:iam::123456789012:policy/deployz/Boundary',
+      readTemplateParameters: async () => new Set(['paramAppApiKey']),
+    })({
+      ...command,
+      payload: {
+        templateUrl: ARTIFACT_URL,
+        parameters: { paramAppApiKey: 'k' },
+        redisRequired: false,
+        databaseRequired: false,
+      },
+    });
+
+    expect(install).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false });
+    expect(String((result as { error?: unknown }).error)).toContain('predates the IAM role boundary');
+  });
 });
 
 describe('readTemplateParameterNames', () => {

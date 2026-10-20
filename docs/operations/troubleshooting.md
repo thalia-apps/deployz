@@ -112,6 +112,13 @@ The worker's watchdog runs every 15 minutes with two clocks per active job:
 
 ## Common situations
 
+**Install fails at once with "The application template predates the IAM role
+boundary".** The connector requires the application role boundary on every
+role it creates, and the deployment's compiled artifact was made before the
+compiler emitted `paramRoleBoundaryArn`. The relay refuses before
+`CreateStack`, so nothing is created. Create a new deployment; it compiles a
+current artifact.
+
 **Install reports failure after exactly three minutes while the stack keeps
 creating.** The relay could not write its pending marker
 (`RELAY_STATE_WRITE_FAILED`). The marker is a Standard-tier SSM SecureString

@@ -719,6 +719,8 @@ export interface InstallExecutorDeps {
   readonly checkAuthority?: (commandId: string) => Promise<boolean | null>;
   /** CloudFormation execution role ARN (`role/deployz/*`), when configured. */
   readonly executionRoleArn?: string;
+  /** Permissions boundary the execution role requires on every application role, when configured. */
+  readonly roleBoundaryArn?: string;
   /**
    * Stage B phase 2 — post-install binding-alias registration. When provided,
    * a successfully verified install registers one extra task-definition
@@ -901,8 +903,25 @@ async function settleInstall(
     Object.assign(parameters, azParams);
   }
 
+  if (deps.roleBoundaryArn !== undefined) {
+    Object.assign(parameters, { [ROLE_BOUNDARY_PARAMETER]: deps.roleBoundaryArn });
+  }
+
   const declared = deps.readTemplateParameters ? await deps.readTemplateParameters(templateUrl) : null;
   if (declared !== null) {
+    // This connector's execution role refuses an IAM role without the
+    // boundary, so a template compiled before the boundary existed would
+    // only fail mid-create and roll back. Refuse it before CreateStack.
+    if (deps.roleBoundaryArn !== undefined && !declared.has(ROLE_BOUNDARY_PARAMETER)) {
+      return {
+        deferred: false,
+        success: false,
+        error:
+          'The application template predates the IAM role boundary this connector ' +
+          'requires, so CloudFormation would refuse its roles — refusing to provision',
+        output: {},
+      };
+    }
     const dropped = Object.keys(parameters).filter((name) => !declared.has(name));
     for (const name of dropped) delete parameters[name];
     if (dropped.length > 0) {
@@ -1024,6 +1043,9 @@ async function settleInstall(
     },
   };
 }
+
+/** The compiler's parameter that carries the application role boundary ARN. */
+const ROLE_BOUNDARY_PARAMETER = 'paramRoleBoundaryArn';
 
 // ── AZ discovery ─────────────────────────────────────────────────────────────
 
@@ -1778,6 +1800,7 @@ function createDefaultInstallDeps(
   const budget = Number(process.env['DEPLOYZ_INSTALL_BUDGET_MS'] ?? '');
   const budgetMs = Number.isFinite(budget) && budget > 0 ? budget : undefined;
   const executionRoleArn = process.env['DEPLOYZ_APPLICATION_EXECUTION_ROLE_ARN'];
+  const roleBoundaryArn = process.env['DEPLOYZ_APPLICATION_ROLE_BOUNDARY_ARN'];
   // Phase 1: stopped-task evidence for a failed install, on the same ECS
   // reads (and IAM) the deploy path's crash-loop detector uses — both for
   // the stack-failure branch and the verification-failure branch.
@@ -1790,6 +1813,7 @@ function createDefaultInstallDeps(
   return {
     installationId,
     ...(executionRoleArn ? { executionRoleArn } : {}),
+    ...(roleBoundaryArn ? { roleBoundaryArn } : {}),
     stoppedTaskEvidence,
     ec2: new EC2Client({}),
     install: (options) =>

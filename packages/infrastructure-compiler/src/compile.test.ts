@@ -29,8 +29,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 // Moved deliberately since: database AZ placement (DbAz parameters) and
 // installation-scoped task families (the Family join and
 // `paramTaskFamilySuffix`) and the 300 s web health-check grace, and the
-// small-v2 profile (db.t3.micro + gp3), each changed every template.
-const POSTGRES_TEMPLATE_HASH_GOLDEN = '57844150a766fb8e5328bab7239b1160f865f90f47a63aac9943851353eb936d';
+// small-v2 profile (db.t3.micro + gp3), and the IAM role boundary
+// (`paramRoleBoundaryArn`), each changed every template.
+const POSTGRES_TEMPLATE_HASH_GOLDEN = '880d46f9c816576bb8aa979035561682b930c93d4e92a1dcf128baa773141277';
 
 /** Evaluates the compiled `Family` join for one stack's suffix parameter value. */
 function familyFor(family: unknown, suffix: string): string {
@@ -1319,7 +1320,7 @@ describe('rds az placement', () => {
       expect(parameters[`paramDbAz${i}`].Default).toBe('');
     }
     const conditions = template['Conditions'] as Record<string, unknown>;
-    expect(Object.keys(conditions)).toHaveLength(DB_ONLY_SUBNET_COUNT);
+    expect(Object.keys(conditions)).toHaveLength(DB_ONLY_SUBNET_COUNT + 1);
     for (let i = 3; i <= DB_AZ_SLOT_COUNT; i++) {
       expect(conditions[`condDbAz${i}`]).toEqual({ 'Fn::Not': [{ 'Fn::Equals': [{ Ref: `paramDbAz${i}` }, ''] }] });
     }
@@ -1630,5 +1631,23 @@ describe('web health-check grace', () => {
     const worker = services.find((r) => r.logicalId === 'JobsService')!;
     expect(web.properties['HealthCheckGracePeriodSeconds']).toBe(300);
     expect(worker.properties).not.toHaveProperty('HealthCheckGracePeriodSeconds');
+  });
+});
+
+describe('IAM role boundary', () => {
+  it('gives every role the relay-supplied boundary, and none when the parameter is empty', () => {
+    const result = compileDeployzInfrastructure({ ir: makePhase5Ir(), region: null });
+    const roles = result.resolvedGraph.resources.filter((r) => r.cfnType === 'AWS::IAM::Role');
+    expect(roles.map((r) => r.resourceRole)).toEqual(expect.arrayContaining(['task-execution-role', 'task-role', 'scheduler-role']));
+    for (const role of roles) {
+      expect(role.properties['PermissionsBoundary'], role.logicalId).toEqual({
+        'Fn::If': ['condRoleBoundary', { Ref: 'paramRoleBoundaryArn' }, { Ref: 'AWS::NoValue' }],
+      });
+    }
+    const parameters = result.template['Parameters'] as Record<string, { Default?: unknown }>;
+    expect(parameters['paramRoleBoundaryArn']?.Default).toBe('');
+    expect((result.template['Conditions'] as Record<string, unknown>)['condRoleBoundary']).toEqual({
+      'Fn::Not': [{ 'Fn::Equals': [{ Ref: 'paramRoleBoundaryArn' }, ''] }],
+    });
   });
 });
