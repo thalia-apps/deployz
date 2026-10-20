@@ -321,8 +321,12 @@ is final.
   they fill the open values only when every open fact of the repository
   passes. One fact left open (for example an unknown migration) keeps all
   the rules values, because it can hide a start failure behind the facts
-  that were resolved (exam: new-23 became READY and did not start). A migration command that fails its check stays an open question
-  (`migration-command-needs-input`).
+  that were resolved (exam: new-23 became READY and did not start). A
+  migration answer that is unknown or fails its own check stays an open
+  vendor question (`migration-command-needs-input`, with the AI command as
+  the candidate, or none): an unknown migration of a required database is
+  never READY, because it can stop the start (Logto refuses to start until
+  its database alterations are deployed).
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.
