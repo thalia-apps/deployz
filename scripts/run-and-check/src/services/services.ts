@@ -43,6 +43,8 @@ const VALKEY_PORT = 6379;
 const MINIO_PORT = 9000;
 const MINIO_REGION = 'us-east-1';
 const POSTGRES_UID = '70';
+/** The `mysql` user of the mysql:8.0 image. */
+const MYSQL_UID = '999';
 const POSTGRES_LOG = '/tmp/pglog/pg.log';
 const INSPECT_APP_NAME = 'rc-inspect';
 const MINIO_TOOLS_PATH = '/opt/bitnami/minio-client/bin:/opt/bitnami/minio/bin:/usr/local/bin:/usr/bin:/bin';
@@ -152,7 +154,10 @@ export function createServices(deps: {
     );
   }
 
-  /** The helper runs on the default network because `apk add` needs the internet. It is harness code. */
+  /**
+   * The helper runs on the default network because `apk add` needs the internet. It is harness code.
+   * One CA signs the PostgreSQL and the MySQL server certificate, as the RDS CA bundle covers both engines.
+   */
   async function createCertificates(id: string, names: ServiceNames): Promise<void> {
     const host = names.postgres;
     const script = [
@@ -161,13 +166,17 @@ export function createServices(deps: {
       'cd /tmp',
       'openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 30 -subj "/CN=Deployz run-and-check CA" 2>/dev/null',
       `openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr -subj "/CN=${host}" 2>/dev/null`,
-      `printf "subjectAltName=DNS:${host}\\n" > ext.cnf`,
+      `printf "subjectAltName=DNS:${host},DNS:${names.mysql}\\n" > ext.cnf`,
       'openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out server.crt -days 30 -extfile ext.cnf 2>/dev/null',
       'cp ca.pem /ca/rds-ca-bundle.pem',
       'chmod 644 /ca/rds-ca-bundle.pem',
       'cp server.key server.crt /pg/',
       `chown ${POSTGRES_UID}:${POSTGRES_UID} /pg/server.key /pg/server.crt`,
       'chmod 600 /pg/server.key',
+      'cp ca.pem /pg/ca.pem && chmod 644 /pg/ca.pem',
+      'cp server.key /pg/mysql-server.key && cp server.crt /pg/mysql-server.crt',
+      `chown ${MYSQL_UID}:${MYSQL_UID} /pg/mysql-server.key /pg/mysql-server.crt`,
+      'chmod 600 /pg/mysql-server.key',
     ].join('\n');
     await call(
       'create certificates',
@@ -272,7 +281,8 @@ export function createServices(deps: {
               MYSQL_PASSWORD: mysqlPassword,
               MYSQL_ROOT_PASSWORD: mysqlRootPassword,
             },
-            volumes: [`${names.dataVolumes.mysql}:/var/lib/mysql`],
+            volumes: [`${names.dataVolumes.mysql}:/var/lib/mysql`, `${names.certVolume}:/certs:ro`],
+            command: ['--ssl-ca=/certs/ca.pem', '--ssl-cert=/certs/mysql-server.crt', '--ssl-key=/certs/mysql-server.key'],
           }),
           runDetached(id, names.network, names.valkey, VALKEY_IMAGE, { cpus: '1', memory: '256m', pids: '128' }, {
             volumes: [`${names.dataVolumes.valkey}:/data`],

@@ -116,7 +116,8 @@ always reported apart.
   ENTRYPOINT with `sh -c` (`workloadContainerCommand`,
   `oneShotContainerCommand`).
 - The application gets the `small-v2` memory (512 MiB). The RDS CA bundle
-  path holds the CA of the local PostgreSQL certificate.
+  path holds the CA that signs the local PostgreSQL and MySQL certificates,
+  so a client that verifies TLS works as it does against RDS.
 
 ### Recipes
 
