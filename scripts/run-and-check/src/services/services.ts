@@ -282,7 +282,14 @@ export function createServices(deps: {
               MYSQL_ROOT_PASSWORD: mysqlRootPassword,
             },
             volumes: [`${names.dataVolumes.mysql}:/var/lib/mysql`, `${names.certVolume}:/certs:ro`],
-            command: ['--ssl-ca=/certs/ca.pem', '--ssl-cert=/certs/mysql-server.crt', '--ssl-key=/certs/mysql-server.key'],
+            // RDS for MySQL 8.0 fixes default_authentication_plugin to mysql_native_password; a MariaDB
+            // `mysql` client (Laravel's schema load in an Alpine image) cannot load caching_sha2_password.
+            command: [
+              '--ssl-ca=/certs/ca.pem',
+              '--ssl-cert=/certs/mysql-server.crt',
+              '--ssl-key=/certs/mysql-server.key',
+              '--default-authentication-plugin=mysql_native_password',
+            ],
           }),
           runDetached(id, names.network, names.valkey, VALKEY_IMAGE, { cpus: '1', memory: '256m', pids: '128' }, {
             volumes: [`${names.dataVolumes.valkey}:/data`],
