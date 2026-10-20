@@ -1011,23 +1011,41 @@ Decision:
   two criteria: no predicted outcome 1 that is really 2 or 3, and fewer false
   outcome 3 than the rules baseline ([`../testing/compatibility.md`](../testing/compatibility.md#release-gate)).
 
-Measured on the 58 exam repositories (tuning and holdout), answers from
-Claude Opus 5.5 in a coding session (no API call), claim check only:
+Measured on the 58 exam repositories (tuning and holdout). The answers came
+from Claude Opus 5.5 in a coding session (no API call), replayed through the
+production checks and merge (`ai@0f3e3a0b-open-items`). One full exam on
+x86_64 runners (runs 39418304789 and 39426064491); a second full exam is
+still needed for the gate.
 
-| | rules@0fc073b8 | rules (current main) | AI open items |
-| --- | --- | --- | --- |
-| False problems, tuning | 12 | 6 | 6 |
-| False problems, holdout | 6 | 5 | 4 |
-| CONTRADICTED claims, tuning | 10 | 6 | 6 |
-| CONTRADICTED claims, holdout | 13 | 12 | 12 |
+| | rules@0fc073b8 | AI open items |
+| --- | --- | --- |
+| False problems, tuning + holdout | 11 + 6 | 6 + 4 |
+| CONTRADICTED claims, tuning + holdout | 14 + 14 | 10 + 13 |
+| Hidden problems, tuning + holdout | 2 + 0 | 2 + 0 |
+| Healthy with the analysed settings, tuning + holdout | 16 + 4 | 19 + 4 |
+| Predicted 1, actually 2 or 3 | 8 + 8 | 6 + 8 |
+| Predicted 3, actually 1 or 2 | 7 + 5 | 7 + 5 |
 
-45 of 58 repositories have an open item. A pack is about 17,000 characters
-(at most 34,000), against about 90,000 before. No claim gets worse than the
-current rules; eight claims change from not checkable to confirmed. Most
-blocker answers are "required": the windows rarely show a switch to a
-supported engine, and the checks refuse the "not used" answers they cannot
-confirm.
+- CONTRADICTED claims are fewer than or equal to the rules for each claim
+  type.
+- The two hidden problems (new-14 Logto, repo-016 Outline) are the rules'
+  own: the manifests are the same as the rules manifests. Outline has no
+  open item; for Logto the analyst answered the migration question
+  "unknown". The AI adds no hidden problem. The first exam had one more
+  (new-23): the AI filled the health path while the migration stayed
+  unknown, the gate said READY, and the app did not start. Since then the
+  open facts are all or nothing.
+- The outcome rows use the gate state (NOT_COMPATIBLE is 3, every other state
+  is 1), because this branch does not have the readiness outcome yet. With
+  that mapping neither engine passes the outcome criteria. The AI does not
+  lower the false outcome 3: most blocker answers are "required", because
+  the windows rarely show a switch to a supported engine, and the checks
+  refuse the "not used" answers that they cannot confirm.
+- 45 of 58 repositories have an open item. A pack is about 17,000
+  characters (at most 34,000), against about 90,000 before, so the cost per
+  analysis is expected to be well below $0.46. The cost and the time are not
+  measured yet: the answers were not API calls.
 
 What would change it: a full exam shows a hidden problem or a false
-outcome 1, the cost or the time per analysis is above the budget, or shadow
-mode shows a new class of failed deploy.
+outcome 1 that the AI causes, the cost or the time per analysis is above the
+budget, or shadow mode shows a new class of failed deploy.
