@@ -242,6 +242,9 @@ frozen manifest.
   generatable name (it usually falls back to a development default). An
   optional secret such as an ACME HMAC key or an analytics project key is
   never minted: a random value turns on a feature that the app then rejects.
+  A minted value is 32 random bytes, base64url. `APP_KEY` gets Laravel's
+  `base64:` form instead: Laravel reads a key without that prefix as raw
+  bytes, and its AES-256 encrypter needs exactly 32.
 - **Credentials:** Deployz never creates AWS access keys or IAM users, and
   never derives a public bucket URL (`S3_PUBLIC_BASE_URL`). The AWS SDK gets
   credentials from the ECS task role through the default credential chain.

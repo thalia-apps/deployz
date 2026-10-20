@@ -109,7 +109,7 @@ export interface ConfigUpdateDeps {
   readonly stackName: string;
   readonly installationId: string;
   /** Mints a generated secret value (injectable for tests). */
-  readonly generateSecret?: () => string;
+  readonly generateSecret?: (key: string) => string;
   /** ALB target-health reader behind the settle gate (the deploy executor's gate). */
   readonly elb: TargetHealthReader;
   /** Carries the rollouts to a later invocation while they run. */
@@ -150,9 +150,13 @@ type ConfigUpdateOutcome =
       readonly rollouts: Readonly<Record<string, ConfigRollout>>;
     };
 
-/** 256 bits of randomness, URL-safe — usable as any session/JWT/encryption secret. */
-export function generateSecretValue(): string {
-  return randomBytes(32).toString('base64url');
+/**
+ * 256 bits of randomness, URL-safe — usable as any session/JWT/encryption secret.
+ * Laravel reads APP_KEY as raw bytes unless it starts with `base64:`, and its
+ * AES-256 encrypter needs exactly 32 bytes, so APP_KEY gets that form.
+ */
+export function generateSecretValue(key?: string): string {
+  return key === 'APP_KEY' ? `base64:${randomBytes(32).toString('base64')}` : randomBytes(32).toString('base64url');
 }
 
 /**
@@ -396,7 +400,7 @@ async function settleConfigUpdate(
     // (an earlier pass, or a value the vendor chose to set) is kept.
     for (const entry of desiredSecrets) {
       if (entry.generated === true && !(typeof merged[entry.key] === 'string' && (merged[entry.key] as string).length > 0)) {
-        merged[entry.key] = (deps.generateSecret ?? generateSecretValue)();
+        merged[entry.key] = (deps.generateSecret ?? generateSecretValue)(entry.key);
         generatedKeys.push(entry.key);
         changed = true;
       }

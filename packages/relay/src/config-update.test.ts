@@ -663,6 +663,13 @@ describe('createConfigUpdateExecutor — generated secrets (Phase 4)', () => {
     expect(a).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(a).not.toBe(b);
   });
+
+  it('gives Laravel APP_KEY the base64: form of exactly 32 bytes', () => {
+    const key = generateSecretValue('APP_KEY');
+    expect(key).toMatch(/^base64:[A-Za-z0-9+/]{43}=$/);
+    expect(Buffer.from(key.slice('base64:'.length), 'base64')).toHaveLength(32);
+    expect(generateSecretValue('SESSION_SECRET')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
 });
 
 describe('CONFIG_UPDATE settlement — success only after every rollout completes', () => {
