@@ -326,7 +326,9 @@ is final.
   vendor question (`migration-command-needs-input`, with the AI command as
   the candidate, or none): an unknown migration of a required database is
   never READY, because it can stop the start (Logto refuses to start until
-  its database alterations are deployed).
+  its database alterations are deployed). Its fix class is CODE_CHANGE (a
+  change to verify, outcome 2); a migration question that the rules ask
+  with a known candidate command stays SETTING.
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.
