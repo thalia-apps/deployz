@@ -1,0 +1,240 @@
+{
+  "id": "repo-004",
+  "commit": "a84533db6ca0a2ff9a47800fbf0326be6d9b3170",
+  "analyser": "ai@6cc47cc6-examA",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "packaging/docker/alpine/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "/usr/bin/miniflux",
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "LISTEN_PID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/http/server/server.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTIFY_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/systemd/systemd.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WATCHDOG_USEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/systemd/systemd.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "postgres",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "packaging/docker/alpine/Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 8080,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/usr/bin/miniflux",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/healthz",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "unknown",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.12513996,
+        "promptTokens": 24926,
+        "completionTokens": 1335
+      },
+      "latencyMs": 16576
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.205417575,
+        "promptTokens": 14912,
+        "completionTokens": 422
+      },
+      "latencyMs": 6931
+    },
+    "latencyMs": 23521,
+    "objections": {
+      "total": 2,
+      "confirmed": 2,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T05:47:21.888Z",
+    "failedChecks": 0,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

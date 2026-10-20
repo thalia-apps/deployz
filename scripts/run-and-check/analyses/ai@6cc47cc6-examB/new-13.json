@@ -1,0 +1,281 @@
+{
+  "id": "new-13",
+  "commit": "d44e104ae3943a9240d5cb6b62e67dff0f069d3a",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "MIX_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tracker/compiler/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tracker/compiler/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database driver: ecto_ch, and the app's Ecto repo runs on ClickHouse through ecto_ch. Deployz does not support ClickHouse."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: ecto_ch, and the app's Ecto repo runs on ClickHouse through ecto_ch. Deployz does not support ClickHouse."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "postgres",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [
+          "low confidence",
+          "mix.exs:167 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "rules"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 8000,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/entrypoint.sh run",
+        "reasons": [
+          "Dockerfile:95 does not support the claim",
+          "rel/docker-entrypoint.sh:5 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "healthPath",
+        "value": null,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "/entrypoint.sh db migrate"
+        },
+        "reasons": [
+          "rel/docker-entrypoint.sh:7 does not support the claim",
+          "rel/docker-entrypoint.sh:8 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": false,
+        "reasons": [
+          "Dockerfile:79 reads it with a default or a guard"
+        ],
+        "subject": "MIX_ENV",
+        "decision": "ai"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.09747144,
+        "promptTokens": 18979,
+        "completionTokens": 1127
+      },
+      "latencyMs": 14986
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.1583307,
+        "promptTokens": 11199,
+        "completionTokens": 399
+      },
+      "latencyMs": 12399
+    },
+    "latencyMs": 27392,
+    "objections": {
+      "total": 0,
+      "confirmed": 0,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:37:48.803Z",
+    "failedChecks": 3,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

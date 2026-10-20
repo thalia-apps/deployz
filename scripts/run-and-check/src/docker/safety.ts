@@ -1,5 +1,5 @@
 /** Options whose next argument is a plain value that the checks must not read as a flag. */
-const VALUE_FLAGS = new Set(['--build-arg', '--label', '--tag', '--file', '--filter', '--format', '--name']);
+const VALUE_FLAGS = new Set(['--build-arg', '--target', '--label', '--tag', '--file', '--filter', '--format', '--name']);
 
 /** `run`/`create`/`exec` options that take a separate value; the first other bare argument is the image or container. */
 const RUN_VALUE_FLAGS = new Set([

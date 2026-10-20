@@ -206,6 +206,20 @@ describe('stable logical identity', () => {
   });
 });
 
+describe('host-checked health check', () => {
+  const targetGroup = (ir: DeployzIR) =>
+    compileDeployzInfrastructure({ ir, region: null }).resolvedGraph.resources.find((r) => r.logicalId === logicalResourceId('endpoint', 'target-group'))!;
+
+  it('accepts 400 only for a workload that checks the Host header', () => {
+    const plain = makeIr({ postgres: false, redis: false });
+    expect(targetGroup(plain).properties).not.toHaveProperty('Matcher');
+
+    const checked = makeIr({ postgres: false, redis: false });
+    checked.workloads[0] = { ...checked.workloads[0]!, healthCheck: { path: '/health', mode: 'explicit', hostChecked: true } };
+    expect(targetGroup(checked).properties['Matcher']).toEqual({ HttpCode: '200,400' });
+  });
+});
+
 describe('stateful safety', () => {
   it('retains the database, its secrets and the bucket; deletes the app secret', () => {
     const { resolvedGraph } = compileDeployzInfrastructure({ ir: makeIr({ postgres: true, redis: false }), region: null });
@@ -681,6 +695,8 @@ describe('mysql database (phase 4b)', () => {
     expect(envNames).toContain('MYSQL_HOST');
     expect(envNames).toContain('MYSQL_PORT');
     expect(envNames).toContain('MYSQL_SSL_CA');
+    // Laravel's name: its schema load passes it to the mysql client as --ssl-ca.
+    expect(envNames).toContain('MYSQL_ATTR_SSL_CA');
     expect(envNames).toContain('NODE_EXTRA_CA_CERTS');
     expect(app.Secrets.map((entry) => entry.Name)).toContain('MYSQL_URL');
     // Every service (workers included) binds the database — Phase 4A envs

@@ -276,6 +276,20 @@ describe('a base image selected by a build argument is a required input', () => 
     expect(required(tree)).toContain('TAG');
   });
 
+  it('follows a FROM that selects a stage by a build argument (livebook shape)', () => {
+    const tree: FileTree = {
+      Dockerfile: dockerfile(
+        'ARG BASE_IMAGE',
+        'ARG VARIANT',
+        'FROM ${BASE_IMAGE} AS base-default',
+        'FROM ${BASE_IMAGE} AS base-cuda',
+        'FROM base-${VARIANT}',
+        'CMD ["x"]',
+      ),
+    };
+    expect(required(tree)).toEqual(expect.arrayContaining(['BASE_IMAGE', 'VARIANT']));
+  });
+
   it('does not require an ARG with a default, an ARG used only in RUN, or one a Compose file sets', () => {
     expect(required({ Dockerfile: dockerfile('ARG BASE_IMAGE=node:22', 'FROM ${BASE_IMAGE}', 'CMD ["x"]') })).not.toContain('BASE_IMAGE');
     expect(required({ Dockerfile: dockerfile('ARG VERSION', 'FROM node:22', 'ARG VERSION', 'RUN echo $VERSION', 'CMD ["x"]') })).not.toContain('VERSION');

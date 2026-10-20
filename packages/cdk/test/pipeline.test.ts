@@ -135,6 +135,8 @@ describe('BuildPipeline', () => {
     expect(sourceJson).toContain('-t $ECR_REPOSITORY_URI:$IMAGE_TAG');
     expect(sourceJson).toContain('$BUILD_CONTEXT');
     expect(sourceJson).not.toContain('$ECR_REPOSITORY_URI:$IMAGE_TAG .');
+    // A detected application stage rides as BUILD_TARGET; unset builds the last stage.
+    expect(sourceJson).toContain('--target $BUILD_TARGET');
   });
 
   it('never falls back to the mutable `latest` tag (§21)', () => {

@@ -92,7 +92,11 @@ Repository (GitHub tree, bounded)
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
   EXPOSE) ranks first, then one that declares a port. Dockerfiles that still
   tie are recorded as `dockerfileSelectionTied` and give the recommended
-  finding `dockerfile-target-unresolved`. The runtime comes from the
+  finding `dockerfile-target-unresolved`. When the last stage is a tooling
+  stage (an artifact, upload, export, publish, lint, build or test stage) and
+  an earlier named stage is the production stage, the analysis records
+  `dockerfileBuildTarget`. The build then runs `docker build --target <stage>`
+  (not for a vendor-overridden Dockerfile). The runtime comes from the
   production stage and the stages it is built `FROM` (leaf to root);
   `COPY --from` counts only when that lineage names no runtime image. A
   `go.mod` with no Go source and a `package.json` with no dependencies are
@@ -142,7 +146,8 @@ Repository (GitHub tree, bounded)
   command, or no build step). A global `ARG` with no default that a `FROM`
   of the production stage lineage reads (`ARG BASE_IMAGE` with
   `FROM ${BASE_IMAGE}`) is a required build variable: the build fails
-  without it. A `go.mod` line marked `// indirect` is not evidence that the
+  without it. A `FROM base-${VARIANT}` also reads the base images of the
+  stages that it can select (`base-default`, `base-cuda`). A `go.mod` line marked `// indirect` is not evidence that the
   app uses S3. A package.json `start` script is
   the container command only when it belongs to a package that the image
   runs (the root, the Dockerfile directory or the runtime WORKDIR), the
@@ -244,24 +249,39 @@ and the release gate are in `docs/decisions/README.md`.
   re-runs a stored row.
 - **Evidence pack** (`evidence-pack.ts`): the Dockerfile candidates, the
   scripts they start, the manifests and process files, and every file that
-  a rules finding names. At most 120,000 characters. Real `.env` files,
+  a rules finding names. At most 90,000 characters. The pack starts with
+  the Deployz binding contract (`bindingContractOf`): the variables Deployz
+  sets always, the ones it sets for this repository by the env-var model,
+  and the standard names it sets when it provisions a database, Redis or S3,
+  so the analyst never lists a supplied name as a vendor variable. The rules
+  signals follow, marked as an unverified first guess. Real `.env` files,
   key files, lockfiles and vendored code are never included. Secrets are
   redacted line by line, env sample values are removed, and a file with a
   private key is left out. Each line keeps its repository line number.
-- **Analyst** (`analyst.ts`): Claude Opus 5.5 returns the facts under a
-  strict schema: Dockerfile and context, port, start command, health path,
-  database engine, Redis, S3, migration mode and command, workers and
-  required variables. Each fact has a value, a confidence and
-  `{path, line, quote}` evidence. The provider is held to a flat list (one
-  entry per fact, the value as JSON text), because Anthropic refuses the
+- **Analyst** (`analyst.ts`, prompt version 5): Claude Opus 5.5 returns the
+  facts under a strict schema: Dockerfile and context, port, start command,
+  health path, database engine, Redis, S3, migration mode and command,
+  workers and required variables. Each fact has a value, a confidence and
+  `{path, line, quote}` evidence. The instructions are the system message
+  and the evidence pack is the user message. They state what Deployz
+  provides, what each kind of error costs (a missing resource crashes the
+  deployment; an extra variable is a needless vendor question), that the
+  rules signals are an unverified first guess, that "unknown" is a vendor
+  question and never a safe default, and how to decide each fact from the
+  effective production start path (a registered health route is enough;
+  the migration modes exclude each other; workers only from the production
+  setup). Reasoning effort: medium. The
+  provider is held to a flat list (one entry per fact, a plain value; JSON
+  only for the Dockerfile and the migration), because Anthropic refuses the
   grammar of the typed schema; the strict typed schema then validates the
-  rebuilt facts. Budget: 16,000 completion tokens,
-  80,000 tokens in total by the reported usage, 240 s.
-- **Reviewer** (`reviewer.ts`): GPT-6 Astra reads the same pack and the
-  facts and returns objections only. An objection whose proposed value
-  passes the checks replaces the fact. Any other objection makes the fact a
-  vendor question. Budget: 12,000 completion tokens,
-  90,000 in total, 180 s.
+  rebuilt facts. Budget: 16,000 completion tokens, 80,000 tokens in total by
+  the reported usage, 240 s.
+- **Reviewer** (`reviewer.ts`, prompt version 2): DeepSeek V4 Pro (a pinned
+  version, another model family than the analyst) reads the same pack and
+  the facts and returns objections only, each with the line that shows the
+  fact is wrong. An objection whose proposed value passes the checks
+  replaces the fact. Any other objection makes the fact a vendor question.
+  Budget: 12,000 completion tokens, 90,000 in total, 180 s.
 - **Checks** (`checks.ts`): each cited line exists in the pack, contains its
   quote (one line of tolerance) and supports the claim. A required variable
   is an unguarded read with no default, and no pack line reads it with a
@@ -277,6 +297,8 @@ and the release gate are in `docs/decisions/README.md`.
   Dockerfile, the resources and the workers the rules value stays. A
   verified database, Redis or S3 fact re-runs `analyseRepo` with the
   override, so the env-var model and the bindings come from the same rules.
+  The AI removes a database that the rules require only with high confidence
+  and verified evidence; otherwise the rules database stays.
   The rejections and the unsupported reasons never change. A variable that
   Deployz provides is never made the vendor's.
 - **Fallback:** an unconfigured gateway, an outage, a timeout (420 s for
@@ -375,7 +397,11 @@ describe the production deployment:
   Compose volume only from the production file and the application service.
   Static, build, source, cache, log and socket mounts do not count. A volume
   that holds only the SQLite file is not local state when PostgreSQL can be
-  selected. An uploads, media or attachments volume is not local state when
+  selected. A Compose volume that holds the SQLite file and otherwise only
+  framework storage (`storage/`, logs, caches) or marker files, as the
+  Dockerfile and its start scripts name them, is not local state when
+  PostgreSQL can be selected. An upload or files directory under it keeps it
+  local state. An uploads, media or attachments volume is not local state when
   the app has an S3 SDK and a variable that selects it (`UPLOAD_PROVIDER`,
   `ACTIVE_STORAGE_SERVICE`, `STORAGE_TYPE`, an `S3_*_BUCKET` name). A
   `VOLUME $VAR` that only the base image sets is decided from the Compose
@@ -607,7 +633,7 @@ diagnostic-vocabulary.ts`) plus a migration.
   AI-first engine off in the API.
 - AI-first Analysis: `ANALYSIS_ENGINE` (`rules` when unset),
   `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5.5`) and
-  `ANALYSIS_REVIEWER_MODEL` (default `openai/gpt-6-astra`), both OpenRouter
+  `ANALYSIS_REVIEWER_MODEL` (default `deepseek/deepseek-v4-pro-0813`), both OpenRouter
   ids. Both roles go through the Cloudflare gateway's OpenRouter route
   (`<AI_GATEWAY_BASE_URL without /compat>/openrouter/v1`) with
   `OPENROUTER_API_KEY`. The gateway is authenticated: the

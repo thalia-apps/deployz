@@ -6,11 +6,12 @@
  *   tsx src/analysis/cli.ts --out <dir>          another output folder
  *   tsx src/analysis/cli.ts --offline            cached GitHub snapshots only
  *   tsx src/analysis/cli.ts --engine ai          the AI engine (needs the gateway settings, see ai-config.ts)
+ *   tsx src/analysis/cli.ts --engine ai --replay <dir>  the AI engine with saved answers <dir>/<id>.json, no model call
  *
  * Writes analyses/<analyser>/<id>.json (`analysisResultFileSchema`).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -20,6 +21,7 @@ import { parse } from 'yaml';
 import { analysisResultFileSchema, recipeSchema, type AnalysisResultFile, type Recipe } from '../contract.js';
 import { formatAiUsage, summariseAiUsage } from './ai-usage.js';
 import { aiAnalyserName, openAnalyser, rulesAnalyserName } from './analyse.js';
+import { replayAnalyst } from './replay.js';
 import { resolveGithubToken } from './snapshot.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +36,8 @@ export interface AnalysisOptions {
   out: string | undefined;
   offline: boolean;
   engine: 'rules' | 'ai';
+  /** A folder of saved analyst answers that replaces the model (engine ai, no reviewer). */
+  replay: string | undefined;
 }
 
 export function parseAnalysisArgs(argv: readonly string[]): AnalysisOptions {
@@ -44,11 +48,13 @@ export function parseAnalysisArgs(argv: readonly string[]): AnalysisOptions {
       out: { type: 'string' },
       offline: { type: 'boolean', default: false },
       engine: { type: 'string', default: 'rules' },
+      replay: { type: 'string' },
     },
     strict: true,
   });
   if (values.engine !== 'rules' && values.engine !== 'ai') throw new Error(`--engine must be rules or ai, not ${values.engine}`);
-  return { ids: values.repo ?? [], out: values.out, offline: values.offline ?? false, engine: values.engine };
+  if (values.replay !== undefined && values.engine !== 'ai') throw new Error('--replay needs --engine ai');
+  return { ids: values.repo ?? [], out: values.out, offline: values.offline ?? false, engine: values.engine, replay: values.replay };
 }
 
 /** The recipe file of an id: `recipes/<id>.yaml`, or `fixtures/<F#>/recipe.yaml` for a fixture. */
@@ -77,13 +83,20 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   }
   const recipes = ids.map(loadRecipe);
 
-  const aiAnalysis = options.engine === 'ai' ? createAnalysisAiGateways(resolveAnalysisAiConfig(process.env)) : undefined;
+  const replay = options.replay !== undefined ? replayAnalyst(resolve(options.replay)) : undefined;
+  const aiAnalysis = replay
+    ? { analyst: replay.gateway }
+    : options.engine === 'ai'
+      ? createAnalysisAiGateways(resolveAnalysisAiConfig(process.env))
+      : undefined;
   if (options.engine === 'ai' && aiAnalysis === undefined) {
     console.error('--engine ai needs AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY.');
     return 1;
   }
-  const analyser = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);
-  const outDir = resolve(options.out ?? join(ANALYSES_DIR, analyser));
+  const defaultName = options.engine === 'ai' ? aiAnalyserName(HARNESS_ROOT) : rulesAnalyserName(HARNESS_ROOT);
+  const outDir = resolve(options.out ?? join(ANALYSES_DIR, defaultName));
+  // The folder names the run: the full runs and the reports key on it too (.runs/full/<analyser>/).
+  const analyser = basename(outDir);
   mkdirSync(outDir, { recursive: true });
 
   const token = options.offline ? null : resolveGithubToken();
@@ -102,6 +115,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   try {
     for (const recipe of recipes) {
       process.stdout.write(`${recipe.id} ... `);
+      replay?.select(recipe.id);
       const file = analysisResultFileSchema.parse(await session.analyse(recipe));
       writeFileSync(join(outDir, `${file.id}.json`), `${JSON.stringify(file, null, 2)}\n`);
       written.push(file);

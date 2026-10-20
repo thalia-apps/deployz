@@ -230,6 +230,8 @@ export const deploymentManifestSchema = z
          * written before the field existed (legacy default behaviour).
          */
         mode: z.enum(['explicit', 'root', 'vendor_required']).optional(),
+        /** The app rejects a Host header it does not know (Django ALLOWED_HOSTS): the ALB health check, which sends the task IP, gets 400. */
+        hostChecked: z.boolean().optional(),
       })
       .strict(),
     database: z

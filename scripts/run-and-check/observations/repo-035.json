@@ -8,33 +8,34 @@
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-18T06:33:08.366Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:25:29.038Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 572,
-          "imageBytes": 74081282,
+          "seconds": 34,
+          "imageBytes": 179685309,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-035:e66a7672e8e5c41549bf53c4a824c72c43ab9079 from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#6 29.24 (41/47) Purging libpq-dev (18.6-r0)\n#6 29.24 (42/47) Purging libunistring (1.4.2-r0)\n#6 29.24 (43/47) Purging libxml2 (2.13.9-r2)\n#6 29.24 (44/47) Purging nghttp2-libs (1.70.0-r0)\n#6 29.24 (45/47) Purging openssl-dev (3.5.9-r0)\n#6 29.25 (46/47) Purging pkgconf (2.5.1-r0)\n#6 29.25 (47/47) Purging zstd-libs (1.5.7-r2)\n#6 29.25 Executing busybox-1.37.0-r31.trigger\n#6 29.26 OK: 16.4 MiB in 46 packages\n#6 DONE 29.4s\n#7 exporting to image\n#7 exporting layers\n#7 exporting layers 0.9s done\n#7 writing image sha256:380c7611c2bbe5bdcd0143b14be04222be5b99070fecc7059d6938a9eaeb2cb2 done\n#7 naming to docker.io/deployz-runcheck/repo-035:e66a7672e8e5c41549bf53c4a824c72c43ab9079 done\n#7 DONE 0.9s\n \u001b[33m3 warnings found (use docker --debug to expand):\n\u001b[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV \"ADMIN_PASSWORD\") (line 10)\n - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV \"MAIL_PASSWORD\") (line 10)\n - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV \"SECRET_KEY\") (line 10)"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -44,12 +45,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=54.797\n18080/ none\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.33\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": " +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:34:57 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:35:05 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
+            "text": "36 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:26:36 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:26:37 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
           }
         ]
       },
@@ -62,17 +63,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 38223,
+            "port": 40971,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n38223 loopback reachable=false"
+            "text": "18080 all reachable=true\n40971 loopback reachable=false"
           }
         ]
       },
@@ -130,7 +131,7 @@
             "status": 404
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -145,7 +146,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -174,7 +175,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -204,13 +205,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -220,7 +221,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -234,7 +235,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -246,7 +247,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -258,58 +259,89 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "no candidate variable"
+        "status": "observed",
+        "value": [
+          {
+            "name": "SECRET_KEY",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without SECRET_KEY",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.322\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without SECRET_KEY",
+            "text": "23 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:27:23 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:27:23 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
+          }
+        ]
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=8.135\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-18 06:38:41 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-18 06:38:41 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-18 06:38:41 +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:38:41 +0000] [11] [INFO] Booting worker with pid: 11\n[2026-10-18 06:38:52 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint \"pg_type_typname_nsp_index\"\nDETAIL:  Key (typname, typnamespace)=(alembic_version, 2200) already exists.\n\n[SQL: \nCREATE TABLE alembic_version (\n\tversion_num VARCHAR(32) NOT NULL, \n\tCONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)\n)\n\n]\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\n[2026-10-18 06:39:51 +0000] [1] [ERROR] Worker (pid:11) exited with code 3.\n[2026-10-18 06:39:51 +0000] [1] [ERROR] Shutting down: Master\n[2026-10-18 06:39:51 +0000] [1] [ERROR] Reason: Worker failed to boot.\n"
+            "text": "04 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:27:04 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:27:05 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
           },
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=157.176\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": " +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:38:40 +0000] [11] [INFO] Booting worker with pid: 11\n[2026-10-18 06:38:53 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
+            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-19 18:27:04 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-19 18:27:04 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-19 18:27:04 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:27:04 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:27:05 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint \"pg_type_typname_nsp_index\"\nDETAIL:  Key (typname, typnamespace)=(alembic_version, 2200) already exists.\n\n[SQL: \nCREATE TABLE alembic_version (\n\tversion_num VARCHAR(32) NOT NULL, \n\tCONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)\n)\n\n]\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\n[2026-10-19 18:27:06 +0000] [1] [ERROR] Worker (pid:8) exited with code 3.\n[2026-10-19 18:27:06 +0000] [1] [ERROR] Shutting down: Master\n[2026-10-19 18:27:06 +0000] [1] [ERROR] Reason: Worker failed to boot.\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=98.121\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.358\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-18 06:35:59 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-18 06:35:59 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-18 06:35:59 +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:35:59 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:36:08 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n"
+            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-19 18:26:45 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-19 18:26:45 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-19 18:26:45 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:26:45 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:26:46 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 200 -> 200\n18080/healthcheck 200 -> 200\n18080/health 308 -> 308\n18080/healthz 308 -> 308\n18080/up 308 -> 308\n18080/api/health 404 -> 404\n18080/status 308 -> 308\n18080/ping 308 -> 308\n18080/_health 308 -> 308\n18080/actuator/health 404 -> 404\n18080/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -321,11 +353,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 54.797,
+            "startSeconds": 7.33,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -350,35 +382,43 @@
         ],
         "migrationCommands": [],
         "workerCommands": [],
-        "variables": [],
+        "variables": [
+          "SECRET_KEY"
+        ],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 17.207,
-        "setA": 240.616,
-        "twoCopies": 216.837
+        "build": 40.75,
+        "setA": 43.678,
+        "twoCopies": 19.056,
+        "requiredVariables": 18.287
       }
     },
     {
-      "startedAt": "2026-10-18T06:41:03.060Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:27:30.819Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 572,
-          "imageBytes": 74081282,
+          "seconds": 34,
+          "imageBytes": 179685309,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -390,7 +430,7 @@
       "webHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -400,12 +440,12 @@
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=219.878\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.335\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#1",
-            "text": " +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:44:31 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:44:45 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
+            "text": "43 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:27:43 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:27:43 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
           }
         ]
       },
@@ -418,17 +458,17 @@
             "reachableFromProbe": true
           },
           {
-            "port": 43879,
+            "port": 36297,
             "bind": "loopback",
             "reachableFromProbe": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "inspect",
             "source": "web#1",
-            "text": "18080 all reachable=true\n43879 loopback reachable=false"
+            "text": "18080 all reachable=true\n36297 loopback reachable=false"
           }
         ]
       },
@@ -486,7 +526,7 @@
             "status": 404
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -501,7 +541,7 @@
           "path": "/",
           "status": 200
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
@@ -530,7 +570,7 @@
           ],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -560,13 +600,13 @@
           "tablesCreatedByStart": true,
           "secondStartHealthy": true
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -576,7 +616,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -590,7 +630,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -602,7 +642,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -614,58 +654,89 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-emulated",
-        "evidence": [],
-        "note": "no candidate variable"
+        "status": "observed",
+        "value": [
+          {
+            "name": "SECRET_KEY",
+            "healthyWithout": true,
+            "healthyWith": true
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web without SECRET_KEY",
+            "text": "healthy=true exited=false oomKilled=false seconds=7.334\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web without SECRET_KEY",
+            "text": "29 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:28:29 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:28:30 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
+          }
+        ]
       },
       "twoCopiesHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#1",
-            "text": "healthy=true exited=false oomKilled=false seconds=647.205\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
-          },
-          {
-            "kind": "log",
-            "source": "web#1",
-            "text": " +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:53:52 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:53:59 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
-          },
-          {
-            "kind": "http",
-            "source": "web#2",
             "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/healthcheck none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/status none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
+            "source": "web#1",
+            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-19 18:28:11 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-19 18:28:11 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-19 18:28:11 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:28:11 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:28:11 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint \"pg_type_typname_nsp_index\"\nDETAIL:  Key (typname, typnamespace)=(alembic_version, 2200) already exists.\n\n[SQL: \nCREATE TABLE alembic_version (\n\tversion_num VARCHAR(32) NOT NULL, \n\tCONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)\n)\n\n]\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\n[2026-10-19 18:28:13 +0000] [1] [ERROR] Worker (pid:8) exited with code 3.\n[2026-10-19 18:28:13 +0000] [1] [ERROR] Shutting down: Master\n[2026-10-19 18:28:13 +0000] [1] [ERROR] Reason: Worker failed to boot.\n"
+          },
+          {
+            "kind": "http",
             "source": "web#2",
-            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-18 06:53:54 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-18 06:53:54 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-18 06:53:54 +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:53:54 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:54:00 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint \"pg_type_typname_nsp_index\"\nDETAIL:  Key (typname, typnamespace)=(alembic_version, 2200) already exists.\n\n[SQL: \nCREATE TABLE alembic_version (\n\tversion_num VARCHAR(32) NOT NULL, \n\tCONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)\n)\n\n]\n(Background on this error at: https://sqlalche.me/e/20/gkpj)\n[2026-10-18 06:55:13 +0000] [1] [ERROR] Worker (pid:12) exited with code 3.\n[2026-10-18 06:55:13 +0000] [1] [ERROR] Shutting down: Master\n[2026-10-18 06:55:13 +0000] [1] [ERROR] Reason: Worker failed to boot.\n"
+            "text": "healthy=true exited=false oomKilled=false seconds=8.076\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#2",
+            "text": "11 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:28:11 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:28:11 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\nINFO  [alembic.runtime.migration] Running upgrade  -> b9a10d5d63ce, Initial migration\nINFO  [alembic.runtime.migration] Running upgrade b9a10d5d63ce -> 26d6a218c329, Add Person.weight column\nINFO  [alembic.runtime.migration] Running upgrade 26d6a218c329 -> f629c8ef4ab0, Initialize all members weights to 1\nINFO  [alembic.runtime.migration] Running upgrade f629c8ef4ab0 -> b78f8a8bdb16, hash project passwords\nINFO  [alembic.runtime.migration] Running upgrade b78f8a8bdb16 -> afbf27e6ef20, add bill.import_date field\nINFO  [alembic.runtime.migration] Running upgrade afbf27e6ef20 -> a67119aa3ee5, Migrate negative weights\nINFO  [alembic.runtime.migration] Running upgrade a67119aa3ee5 -> 6c6fb2b7f229, empty message\nINFO  [alembic.runtime.migration] Running upgrade 6c6fb2b7f229 -> 2dcb0c0048dc, autologger\nINFO  [alembic.runtime.migration] Running upgrade 2dcb0c0048dc -> cb038f79982e, sqlite_autoincrement\nINFO  [alembic.runtime.migration] Running upgrade cb038f79982e -> 927ed575acbd, Add currencies\nINFO  [alembic.runtime.migration] Running upgrade 927ed575acbd -> 7a9b38559992, new bill type attribute added\nINFO  [alembic.runtime.migration] Running wrapper 7a9b38559992 -> 06884b17c50f, fix password hash length\nINFO  [alembic.runtime.migration] Running upgrade 06884b17c50f -> c941aaca38c2, remove ip recording\n/usr/local/lib/python3.11/site-packages/alembic/ddl/postgresql.py:192: UserWarning: autoincrement and existing_autoincrement only make sense for MySQL\n  super().alter_column(\n"
           }
         ]
       },
       "restartHealthy": {
         "status": "observed",
         "value": true,
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "http",
             "source": "web#2",
-            "text": "healthy=true exited=false oomKilled=false seconds=114.218\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
+            "text": "healthy=true exited=false oomKilled=false seconds=7.351\n18080/ 200\n18080/healthcheck 200\n18080/health 308\n18080/healthz 308\n18080/up 308\n18080/api/health 404\n18080/status 308\n18080/ping 308\n18080/_health 308\n18080/actuator/health 404\n8000/ none\n8000/healthcheck none\n8000/health none\n8000/healthz none\n8000/up none\n8000/api/health none\n8000/status none\n8000/ping none\n8000/_health none\n8000/actuator/health none\n8080/ none\n8080/healthcheck none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/status none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n3000/ none\n3000/healthcheck none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/status none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n80/ none\n80/healthcheck none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/status none\n80/ping none\n80/_health none\n80/actuator/health none"
           },
           {
             "kind": "log",
             "source": "web#2",
-            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-18 06:48:53 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-18 06:48:53 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-18 06:48:53 +0000] [1] [INFO] Using worker: sync\n[2026-10-18 06:48:53 +0000] [12] [INFO] Booting worker with pid: 12\n[2026-10-18 06:48:56 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n"
+            "text": "\nUser uid: 0\nUser gid: 0\n\n[2026-10-19 18:27:52 +0000] [1] [INFO] Starting gunicorn 26.2.0\n[2026-10-19 18:27:52 +0000] [1] [INFO] Listening at: http://0.0.0.0:18080 (1)\n[2026-10-19 18:27:52 +0000] [1] [INFO] Using worker: sync\n[2026-10-19 18:27:52 +0000] [8] [INFO] Booting worker with pid: 8\n[2026-10-19 18:27:52 +0000] [1] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl\n/src/ihatemoney/run.py:89: UserWarning: Running a server without changing the SECRET_KEY can lead to user impersonation. Please update your configuration file.\n  warnings.warn(\nINFO  [alembic.runtime.migration] Context impl PostgresqlImpl.\nINFO  [alembic.runtime.migration] Will assume transactional DDL.\n"
+          }
+        ]
+      },
+      "freshContainer": {
+        "status": "observed",
+        "value": {
+          "healthy": true,
+          "changed": []
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "http",
+            "source": "web#1 -> web#2",
+            "text": "18080/ 200 -> 200\n18080/healthcheck 200 -> 200\n18080/health 308 -> 308\n18080/healthz 308 -> 308\n18080/up 308 -> 308\n18080/api/health 404 -> 404\n18080/status 308 -> 308\n18080/ping 308 -> 308\n18080/_health 308 -> 308\n18080/actuator/health 404 -> 404\n18080/ (smoke) 200 -> 200"
           }
         ]
       },
@@ -677,11 +748,11 @@
             "memoryMiB": 512,
             "cpus": 1,
             "healthy": true,
-            "startSeconds": 219.878,
+            "startSeconds": 7.335,
             "oomKilled": false
           }
         ],
-        "arch": "amd64-emulated",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -706,17 +777,24 @@
         ],
         "migrationCommands": [],
         "workerCommands": [],
-        "variables": [],
+        "variables": [
+          "SECRET_KEY"
+        ],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 24.196,
-        "setA": 547.796,
-        "twoCopies": 958.597
+        "build": 1.839,
+        "setA": 27.542,
+        "twoCopies": 18.81,
+        "requiredVariables": 18.294
       }
     }
   ],

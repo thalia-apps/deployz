@@ -17,6 +17,7 @@ const NOTES = [
   'Migrations run at startup.',
   'The app needs process.env.LICENSE_CODE to start.',
   'The app needs process.env.LICENSE_KEY to start.',
+  'The app needs a mysql server.',
 ].join('\n');
 
 const baseTree: FileTree = {
@@ -52,7 +53,7 @@ const noPortReadTree: FileTree = {
   'src/index.ts': baseTree['src/index.ts']!.replace('app.listen(process.env.PORT || 3000);', 'app.listen(3000);'),
 };
 
-const NOTE = { s3: 2, worker: 3, migrate: 4, redis: 5, sqlite: 6, startup: 7 } as const;
+const NOTE = { s3: 2, worker: 3, migrate: 4, redis: 5, sqlite: 6, startup: 7, mysql: 10 } as const;
 
 interface Run {
   readonly rules: AnalysisResult;
@@ -127,7 +128,8 @@ describe('mergeAiFacts: a differing fact that passes', () => {
 
   it('start command: the AI value replaces the startup commands', () => {
     const { merged } = run(baseTree, factsOf({ startCommand: high('node dist/server.js', cite('docs/notes.md', NOTE.worker, 'node dist/queue.js')) }));
-    expect(decision(merged, 'startCommand')?.decision).toBe('question');
+    // The rules know the image command, so a failed description keeps it instead of asking.
+    expect(decision(merged, 'startCommand')?.decision).toBe('rules');
     const passing = run(
       { ...baseTree, 'docs/start.md': 'Start with node dist/server.js' },
       factsOf({ startCommand: high('node dist/server.js', cite('docs/start.md', 1, 'node dist/server.js')) }),
@@ -161,15 +163,25 @@ describe('mergeAiFacts: a differing fact that passes', () => {
   });
 
   it('database: re-runs the rules with the override', () => {
-    const { rules, merged } = run(baseTree, factsOf({ database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')) }));
-    const expected = analyseRepo(baseTree, { database: 'none' });
+    const { rules, merged } = run(baseTree, factsOf({ database: high('mysql' as const, cite('docs/notes.md', NOTE.mysql, 'mysql server')) }));
+    const expected = analyseRepo(baseTree, { database: 'mysql' });
     expect(decision(merged, 'database')?.decision).toBe('ai');
     expect((rules.metadata['postgres'] as { required: boolean }).required).toBe(true);
-    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(false);
+    expect((merged.analysis.metadata['mysql'] as { required: boolean }).required).toBe(true);
     expect(merged.analysis.metadata['envVarModel']).toEqual(expected.metadata['envVarModel']);
     expect(merged.analysis.metadata['migrationMode']).toBe(expected.metadata['migrationMode']);
-    expect(envEntry(merged.analysis, 'DATABASE_URL')).toEqual(envEntry(expected, 'DATABASE_URL'));
-    expect(envEntry(merged.analysis, 'DATABASE_URL')).not.toEqual(envEntry(rules, 'DATABASE_URL'));
+  });
+
+  it('database: removes a database that the rules require only with high confidence and verified evidence', () => {
+    const evidence = cite('docs/notes.md', NOTE.sqlite, 'sqlite file');
+    const medium = run(baseTree, factsOf({ database: { value: 'none' as const, confidence: 'medium' as const, evidence } }));
+    expect(decision(medium.merged, 'database')).toMatchObject({ decision: 'rules', reasons: ['the rules require a database; the AI removes one only with high confidence'] });
+    expect((medium.merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
+    expect(medium.merged.analysis.metadata['envVarModel']).toEqual(medium.rules.metadata['envVarModel']);
+
+    const { merged } = run(baseTree, factsOf({ database: high('none' as const, evidence) }));
+    expect(decision(merged, 'database')?.decision).toBe('ai');
+    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(false);
   });
 
   it('redis: re-runs the rules with the override', () => {
@@ -201,11 +213,23 @@ describe('mergeAiFacts: port, health and start that fail become questions', () =
     expect(finding(merged.analysis, 'health-endpoint')).toMatchObject({ detected: false, mode: 'vendor_required' });
   });
 
-  it('start command', () => {
-    const { merged } = run(baseTree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 4, 'dist/index.js')) }));
+  it('start command, when the rules found no command either', () => {
+    const tree: FileTree = {
+      ...baseTree,
+      Dockerfile: 'FROM node:20\nEXPOSE 3000',
+      'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
+    };
+    const { rules, merged } = run(tree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 2, 'EXPOSE 3000')) }));
+    expect(rules.metadata['startupCommands'] ?? []).toEqual([]);
     expect(decision(merged, 'startCommand')?.decision).toBe('question');
     expect(merged.analysis.metadata['startupCommands']).toEqual([]);
     expect(merged.analysis.metadata['hasStartupCommand']).toBe(false);
+  });
+
+  it('start command: a failed description keeps the command the rules found', () => {
+    const { rules, merged } = run(baseTree, factsOf({ startCommand: high('gunicorn app:app', cite('Dockerfile', 4, 'dist/index.js')) }));
+    expect(decision(merged, 'startCommand')?.decision).toBe('rules');
+    expect(merged.analysis.metadata['startupCommands']).toEqual(rules.metadata['startupCommands']);
   });
 
   it('an open reviewer objection makes a question even when the AI agrees with the rules', () => {
@@ -252,7 +276,7 @@ describe('mergeAiFacts: rejections never change', () => {
     });
     const { rules, merged } = run(rejectedTree, facts);
     expect(rules.rejections.some((item) => item.detected)).toBe(true);
-    expect(decision(merged, 'database')?.decision).toBe('ai');
+    expect(decision(merged, 'storage')?.decision).toBe('ai');
     expect(merged.analysis.rejections).toEqual(rules.rejections);
     expect(merged.analysis.metadata['unsupportedReasons']).toEqual(rules.metadata['unsupportedReasons']);
   });
@@ -312,7 +336,8 @@ describe('mergeAiFacts: required variables', () => {
       requiredVariables: [{ name: 'OPT_FLAG', confidence: 'high', evidence: cite('src/index.ts', 6, 'process.env.OPT_FLAG') }],
     });
     const { merged } = run(baseTree, facts);
-    expect(decision(merged, 'requiredVariables', 'OPT_FLAG')?.decision).toBe('question');
+    expect(decision(merged, 'requiredVariables', 'OPT_FLAG')?.decision).toBe('rules');
+    expect(envEntry(merged.analysis, 'OPT_FLAG')?.['required']).not.toBe(true);
   });
 
   it('makes a rules-required variable optional when the AI omits it and the pack shows a guarded read', () => {
@@ -401,11 +426,23 @@ describe('mergeAiFacts: migration', () => {
   });
 
   it('sets the startup mode with its evidence when the mode passes', () => {
-    const facts = factsOf({ migration: high({ mode: 'startup' as const, command: null }, cite('docs/notes.md', NOTE.startup, 'Migrations run at startup')) });
-    const { merged } = run(baseTree, facts);
+    const tree: FileTree = { ...baseTree, Procfile: 'web: node dist/migrate.js && node dist/index.js\n' };
+    const facts = factsOf({ migration: high({ mode: 'startup' as const, command: null }, cite('Procfile', 1, 'node dist/migrate.js')) });
+    const { merged } = run(tree, facts);
     expect(merged.analysis.metadata['migrationMode']).toBe('startup');
-    expect(merged.analysis.metadata['migrationStartupEvidence']).toEqual([{ path: 'docs/notes.md', line: NOTE.startup, fromDockerCommand: false }]);
+    expect(merged.analysis.metadata['migrationStartupEvidence']).toEqual([{ path: 'Procfile', line: 1, fromDockerCommand: false }]);
     expect(merged.migration).toBeNull();
+  });
+
+  it('keeps the rules mode for "no migration" when the deployment keeps a database', () => {
+    const facts = factsOf({
+      database: { value: 'none' as const, confidence: 'medium' as const, evidence: cite('docs/notes.md', NOTE.sqlite, 'sqlite file') },
+      migration: high({ mode: 'none' as const, command: null }, []),
+    });
+    const { rules, merged } = run(baseTree, facts);
+    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
+    expect(decision(merged, 'migration')).toMatchObject({ decision: 'rules', reasons: ['the deployment keeps a database, so its schema is migrated'] });
+    expect(merged.analysis.metadata['migrationMode']).toBe(rules.metadata['migrationMode']);
   });
 
   it('keeps the rules mode when a mode without a command fails', () => {

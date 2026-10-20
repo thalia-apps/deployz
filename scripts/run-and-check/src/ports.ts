@@ -54,6 +54,8 @@ export interface BuiltImage {
   readonly imageBytes: number | null;
   readonly dockerfile: string;
   readonly context: string;
+  /** The `--target` stage, or null for the last stage. */
+  readonly target: string | null;
   readonly failure: 'dockerfile' | 'infrastructure' | 'emulation' | 'timeout' | null;
   readonly fromCache: boolean;
   readonly evidence: Evidence[];
@@ -163,10 +165,10 @@ export interface Runner {
   start(spec: ContainerSpec): Promise<RunningContainer>;
   /** Runs to completion (migration, one-off commands). */
   runOnce(spec: ContainerSpec, timeoutMs: number): Promise<{ exitCode: number | null; seconds: number; evidence: Evidence[] }>;
-  /** Polls until a path on a reachable port answers 200, the container exits, or the timeout passes. */
+  /** Polls until a path on a reachable port answers 200 (or another `healthyStatuses` code), the container exits, or the timeout passes. */
   waitHealthy(
     container: RunningContainer,
-    options: { ports: number[]; paths: string[]; timeoutMs: number },
+    options: { ports: number[]; paths: string[]; timeoutMs: number; healthyStatuses?: readonly number[] },
   ): Promise<{ healthy: boolean; seconds: number | null; checks: HttpCheck[]; exited: boolean; oomKilled: boolean }>;
   /** Listen sockets inside the container's network namespace (a probe joined with `--network container:<name>`). */
   listenSockets(container: RunningContainer): Promise<ListenSocket[]>;

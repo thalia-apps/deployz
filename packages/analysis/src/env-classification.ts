@@ -52,6 +52,17 @@ export const MANAGED_DATABASE_ENV_VARS = [
 /** Env names the application stack injects for managed object storage. */
 export const MANAGED_STORAGE_ENV_VARS = ['STORAGE_BUCKET', 'S3_BUCKET', 'AWS_S3_BUCKET', 'AWS_REGION'] as const;
 
+/**
+ * The AWS SDK credential names. The ECS task role gives the SDK its credentials
+ * through the default provider chain, so the vendor never supplies static keys.
+ */
+const TASK_ROLE_CREDENTIAL_ENV_VARS = new Set(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN']);
+
+/** True for a credential name that the task role replaces. */
+export function isTaskRoleCredentialName(key: string): boolean {
+  return TASK_ROLE_CREDENTIAL_ENV_VARS.has(key);
+}
+
 /** Env names the container platform always provides. */
 const MANAGED_PLATFORM_ENV_VARS = ['PORT', 'HOSTNAME'] as const;
 
@@ -134,5 +145,9 @@ export function classifyEnvVariables(
   for (const variable of model) if (isDerivedUrlEnvVariable(variable)) managed.add(variable.key);
   const serviceKeys = externalServiceKeys(context.externalServices);
 
-  return model.map((variable) => ({ ...variable, classification: classifyOne(variable, managed, serviceKeys) }));
+  return model.map((variable) =>
+    isTaskRoleCredentialName(variable.key)
+      ? { ...variable, required: false, classification: 'optional' }
+      : { ...variable, classification: classifyOne(variable, managed, serviceKeys) },
+  );
 }

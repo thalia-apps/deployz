@@ -253,7 +253,7 @@ function addConfiguration(input: {
   }
   for (const key of mintedEnvKeys(manifest, null)) {
     if (configured.has(key)) continue;
-    env[key] = generated(services, `minted:${key}`, generateSecretValue);
+    env[key] = generated(services, `minted:${key}`, () => generateSecretValue(key));
     secretNames.add(key);
   }
   return redirected;

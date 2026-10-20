@@ -15,6 +15,8 @@ import {
   detectPackageManager,
   detectBuildCommand,
   detectDockerfileBuildContext,
+  detectDockerfileBuildTarget,
+  detectHostValidation,
   detectGitCopyInDockerfile,
   type FileTree,
   type DetectorFinding,
@@ -30,6 +32,7 @@ import {
 } from '../src/rejection.js';
 
 import { analyseRepo, type AnalysisResult } from '../src/analyser.js';
+import { normalizeDeploymentManifest } from '../src/manifest.js';
 
 // ==========================================================================
 // Corpus fixtures (inline file trees — no real files on disk)
@@ -1180,6 +1183,52 @@ describe('§18 detectors', () => {
         'apps/web/Dockerfile': ['FROM node:20', 'COPY --from=base /turbo.json ./', 'COPY $SRC_DIR ./', 'CMD ["node"]'].join('\n'),
       };
       expect(detectDockerfileBuildContext(tree).detected).toBe(false);
+    });
+  });
+
+  describe('detectHostValidation', () => {
+    it('finds a Host allow list in Django, Rails, ASP.NET and Laravel', () => {
+      expect(detectHostValidation({ 'hc/settings.py': 'if v := os.getenv("ALLOWED_HOSTS"):\n    ALLOWED_HOSTS = v.split(",")\n' }).detected).toBe(true);
+      expect(detectHostValidation({ 'config/environments/production.rb': 'config.hosts << ENV["APP_HOST"]\n' }).detected).toBe(true);
+      expect(detectHostValidation({ 'Web/appsettings.json': '{ "AllowedHosts": "example.com" }' }).detected).toBe(true);
+      expect(detectHostValidation({ 'bootstrap/app.php': '->withMiddleware(fn ($m) => $m->trustHosts(at: ["example.com"]))' }).detected).toBe(true);
+    });
+
+    it('ignores a wildcard, a cleared list and test settings', () => {
+      expect(detectHostValidation({ 'app/settings.py': "ALLOWED_HOSTS = ['*']\n" }).detected).toBe(false);
+      expect(detectHostValidation({ 'config/application.rb': 'config.hosts.clear\n' }).detected).toBe(false);
+      expect(detectHostValidation({ 'appsettings.json': '{ "AllowedHosts": "*" }' }).detected).toBe(false);
+      expect(detectHostValidation({ 'tests/settings.py': "ALLOWED_HOSTS = ['testserver']\n" }).detected).toBe(false);
+    });
+
+    it('marks the manifest health check', () => {
+      const tree: FileTree = { Dockerfile: 'FROM python:3.12\nEXPOSE 8000\nCMD ["gunicorn", "app.wsgi"]', 'app/settings.py': "ALLOWED_HOSTS = [os.environ['APP_HOST']]\n" };
+      expect(normalizeDeploymentManifest(analyseRepo(tree), {}).health.hostChecked).toBe(true);
+      expect(normalizeDeploymentManifest(analyseRepo({ Dockerfile: tree.Dockerfile! }), {}).health).not.toHaveProperty('hostChecked');
+    });
+  });
+
+  describe('detectDockerfileBuildTarget', () => {
+    const kuma = [
+      'FROM node:22 AS build',
+      'RUN npm ci && npm run build',
+      'FROM node:22-slim AS release',
+      'COPY --from=build /app /app',
+      'EXPOSE 3001',
+      'CMD ["node", "server/server.js"]',
+      'FROM louislam/uptime-kuma:base2 AS upload-artifact',
+      'RUN chmod +x /app/extra/upload-github-release-asset.sh',
+    ].join('\n');
+
+    it('names the application stage when the last stage is a tooling stage (uptime-kuma)', () => {
+      const result = detectDockerfileBuildTarget({ 'docker/dockerfile': kuma });
+      expect(result.detected).toBe(true);
+      expect(result.value).toBe('release');
+    });
+
+    it('builds the last stage when it is the application or has a runtime name', () => {
+      expect(detectDockerfileBuildTarget({ Dockerfile: ['FROM node:22 AS build', 'RUN x', 'FROM node:22-slim AS app', 'CMD ["node"]'].join('\n') }).detected).toBe(false);
+      expect(detectDockerfileBuildTarget({ Dockerfile: ['FROM node:22 AS app', 'CMD ["node"]', 'FROM nginx:alpine', 'COPY --from=app /a /usr/share/nginx/html'].join('\n') }).detected).toBe(false);
     });
   });
 });

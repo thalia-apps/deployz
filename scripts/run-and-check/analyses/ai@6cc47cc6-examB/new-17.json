@@ -1,0 +1,160 @@
+{
+  "id": "new-17",
+  "commit": "27f1d4bcdc537c0182886f7fc22c1fcf0befa6e6",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "./espial +RTS -T",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "none",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 3000,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "./espial +RTS -T",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": null,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "none",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05671512,
+        "promptTokens": 9607,
+        "completionTokens": 943
+      },
+      "latencyMs": 12289
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.069911325,
+        "promptTokens": 5042,
+        "completionTokens": 152
+      },
+      "latencyMs": 5615
+    },
+    "latencyMs": 17914,
+    "objections": {
+      "total": 1,
+      "confirmed": 1,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:37:34.261Z",
+    "failedChecks": 0,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

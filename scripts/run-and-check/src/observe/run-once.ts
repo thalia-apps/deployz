@@ -242,6 +242,7 @@ function buildFact(ctx: Ctx, built: BuiltImage): Fact<Of<'build'>> {
     imageBytes: built.imageBytes,
     dockerfile: built.dockerfile,
     context: built.context,
+    target: built.target,
     failure: built.failure,
     fromCache: built.fromCache,
   };
@@ -270,6 +271,7 @@ interface SetAResult {
     | 'localDiskWrites'
     | 'workers'
     | 'restartHealthy'
+    | 'freshContainer'
   >;
 }
 
@@ -444,14 +446,38 @@ async function observeSetA(ctx: Ctx): Promise<SetAResult> {
       if (after.status === 'observed' && after.value?.engine !== null) database = after;
     }
 
+    // web2 is a new container: a new filesystem, and the services that web1 used, as a replaced Fargate task.
+    let web2: { container: RunningContainer; health: Health } | null = null;
     const restartHealthy: Fact<boolean> =
       held.health?.healthy !== true
         ? notRun(ctx.arch, 'web was not healthy')
         : await check(ctx, async () => {
             await runner.stop(web1);
-            const web2 = await startContainer(ctx, scope, 'web', 'web2', null, webEnv);
-            const health = await waitForWeb(ctx, web2, STARTUP_MS);
-            return { value: health.healthy, evidence: await healthEvidence(ctx, 'web#2', web2, health) };
+            const container = await startContainer(ctx, scope, 'web', 'web2', null, webEnv);
+            const health = await waitForWeb(ctx, container, STARTUP_MS);
+            web2 = { container, health };
+            return { value: health.healthy, evidence: await healthEvidence(ctx, 'web#2', container, health) };
+          });
+    const second = web2 as { container: RunningContainer; health: Health } | null;
+    const freshContainer: Fact<Of<'freshContainer'>> =
+      second === null || httpPaths.status !== 'observed' || smoke.status !== 'observed'
+        ? notRun(ctx.arch, 'the first or the second web container gave no answers')
+        : await check(ctx, async () => {
+            const before = new Map<string, number | null>((httpPaths.value ?? []).map((entry) => [`${entry.port}${entry.path}`, entry.status]));
+            const smokePort = held.ports.find((p) => p.reachableFromProbe)?.port ?? held.health?.checks.find((c) => c.status !== null)?.port ?? candidates.ports[0] ?? 8080;
+            if (smoke.value !== null) before.set(`${smokePort}${smoke.value.path} (smoke)`, smoke.value.status);
+            const after = new Map<string, number | null>();
+            if (second.health.healthy) {
+              for (const port of [...new Set((httpPaths.value ?? []).map((entry) => entry.port))]) {
+                const checks = await runner.httpProbe(second.container, port, candidates.healthPaths);
+                for (const c of checks) after.set(`${c.port}${c.path}`, c.status);
+              }
+              const [result] = await runner.httpProbe(second.container, smokePort, [smokePath], recipe.smoke);
+              after.set(`${smokePort}${smokePath} (smoke)`, result?.status ?? null);
+            }
+            const changed = [...before].filter(([key, status]) => after.get(key) !== status).map(([key]) => key);
+            const lines = [...before].map(([key, status]) => `${key} ${status ?? 'none'} -> ${after.get(key) ?? 'none'}`);
+            return { value: { healthy: second.health.healthy, changed }, evidence: [ev(ctx, 'http', 'web#1 -> web#2', lines.join('\n') || 'no probed path')] };
           });
 
     const startupMigration = await check(ctx, async () => ({
@@ -463,7 +489,7 @@ async function observeSetA(ctx: Ctx): Promise<SetAResult> {
 
     return {
       health: held.health,
-      facts: { webHealthy, listeningPorts, httpPaths, smoke, database, startupMigration, redis, objectStorage, localDiskWrites, workers, restartHealthy },
+      facts: { webHealthy, listeningPorts, httpPaths, smoke, database, startupMigration, redis, objectStorage, localDiskWrites, workers, restartHealthy, freshContainer },
     };
   });
 }
@@ -562,6 +588,33 @@ async function observeVariables(ctx: Ctx, healthyWith: boolean, engineWith: 'pos
   return { status: 'error', value, arch: ctx.arch, evidence, note };
 }
 
+/**
+ * Starts the web without the Redis variables, when the app connected to Valkey: an app that only uses
+ * Redis when it is there (a cache, `REDIS_URL` optional) is healthy without it. When the app still
+ * reaches Valkey, or no longer uses the SQL engine of the normal start, the result is null.
+ */
+async function observeRedisWithout(ctx: Ctx, redis: Fact<Of<'redis'>>, engineWith: 'postgres' | 'mysql' | null): Promise<Fact<Of<'redis'>>> {
+  if (redis.status !== 'observed' || redis.value?.connected !== true) return redis;
+  const names = ctx.manifest.redis.envBindings.map((binding) => binding.name);
+  const result = await step(ctx, 'redisWithout', 'web without Redis', () =>
+    withScope(ctx, 'r', async (scope) => {
+      const env = { ...envFor(ctx, scope, 'web') };
+      for (const name of names) delete env[name];
+      const container = await startContainer(ctx, scope, 'web', 'web1', null, env);
+      const health = await waitForWeb(ctx, container, VARIABLE_MS);
+      const evidence = await healthEvidence(ctx, 'web without Redis', container, health);
+      const snap = await ctx.deps.services.inspect(scope.set);
+      const reached = snap.valkey.clients > 0;
+      const sameDatabase = !health.healthy || engineWith === null || snap[engineWith].connections > 0;
+      if (reached) evidence.push(ev(ctx, 'command', 'web without Redis', 'the app still reached Valkey'));
+      if (!sameDatabase) evidence.push(ev(ctx, 'command', 'web without Redis', `healthy, but no ${engineWith} connection`));
+      return { healthyWithout: reached || !sameDatabase ? null : health.healthy, evidence };
+    }),
+  );
+  if (result === null) return { ...redis, value: { ...redis.value, healthyWithout: null }, note: ctx.failures.at(-1) ?? 'web without Redis failed' };
+  return { ...redis, value: { ...redis.value, healthyWithout: result.healthyWithout }, evidence: [...redis.evidence, ...result.evidence] };
+}
+
 // ── Step 5: sizes ──────────────────────────────────────────────────────────
 
 async function observeSizes(ctx: Ctx, health: Health | null): Promise<Fact<Of<'sizes'>>> {
@@ -621,6 +674,7 @@ function skippedRun(ctx: Ctx, startedAt: string, build: Fact<Of<'build'>>, reaso
     requiredVariables: skip(),
     twoCopiesHealthy: skip(),
     restartHealthy: skip(),
+    freshContainer: skip(),
     sizes: skip(),
     candidates: candidatesOf(ctx.candidates),
     infrastructureFailures: ctx.failures,
@@ -668,6 +722,7 @@ export async function runOnce(input: RunInput): Promise<ObservationRun> {
     localDiskWrites: lost(),
     workers: lost(),
     restartHealthy: lost(),
+    freshContainer: lost(),
   };
   const healthy = facts.webHealthy.value === true;
   const unhealthy = <T>(): Fact<T> => notRun<T>(ctx.arch, 'web was not healthy');
@@ -675,6 +730,7 @@ export async function runOnce(input: RunInput): Promise<ObservationRun> {
   const migrationCommands = await observeMigrations(ctx);
   const twoCopiesHealthy = healthy ? await observeTwoCopies(ctx) : unhealthy<boolean>();
   const requiredVariables = healthy ? await observeVariables(ctx, healthy, facts.database.value?.engine ?? null) : unhealthy<Of<'requiredVariables'>>();
+  const redis = healthy ? await observeRedisWithout(ctx, facts.redis, facts.database.value?.engine ?? null) : facts.redis;
   const sizes = await observeSizes(ctx, a?.health ?? null);
 
   return {
@@ -682,6 +738,7 @@ export async function runOnce(input: RunInput): Promise<ObservationRun> {
     harnessVersion: input.harnessVersion,
     build,
     ...facts,
+    redis,
     migrationCommands,
     requiredVariables,
     twoCopiesHealthy,

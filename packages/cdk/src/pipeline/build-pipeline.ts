@@ -228,6 +228,9 @@ export class BuildPipeline extends Construct {
               // straight out of the process environment via --build-arg NAME.
               'export DOCKER_BUILD_ARGS=""',
               'for build_arg_name in $DEPLOYZ_BUILD_ARG_NAMES; do DOCKER_BUILD_ARGS="$DOCKER_BUILD_ARGS --build-arg $build_arg_name"; done',
+              // The application stage of a Dockerfile that ends with a tooling
+              // stage (worker.ts BUILD_TARGET); unset builds the last stage.
+              'if [ -n "$BUILD_TARGET" ]; then DOCKER_BUILD_ARGS="$DOCKER_BUILD_ARGS --target $BUILD_TARGET"; fi',
               'echo "Building Docker image: $ECR_REPOSITORY_URI:$IMAGE_TAG from $DOCKERFILE_PATH (context: $BUILD_CONTEXT)"',
               // Retries ONLY a registry rate limit. Success is read from the
               // image itself rather than an exit status, because the build

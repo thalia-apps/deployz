@@ -13,6 +13,7 @@ import {
   type RepositoryReport,
   type SummaryReport,
 } from '../contract.js';
+import { LOCAL_STATE_REASON } from '../claims/extract.js';
 
 const MAX_PROBLEM_TEXT = 160;
 
@@ -91,7 +92,8 @@ function shorten(text: string): string {
  * A false problem is a fix or a vendor decision that the Analysis asked for
  * and that the application did not need:
  *  - NOT_COMPATIBLE (each `unsupported` reason) while the application is
- *    healthy: the full run, or without one the observation;
+ *    healthy: the full run, or without one the observation. A local-state
+ *    reason is not one when the check confirms the local state;
  *  - a required variable that the application starts without;
  *  - a managed database or Valkey that the application never used;
  *  - gate findings that ask the vendor for something the observation shows
@@ -104,6 +106,7 @@ function falseProblems(
   verdicts: readonly ClaimVerdict[],
   observation: Observation,
   fullRun: FullRun | null,
+  vendorInputs: Recipe['vendorInputs'],
 ): string[] {
   const gate = analysis.gate;
   if (gate === null) return [];
@@ -114,7 +117,11 @@ function falseProblems(
 
   const healthy = fullRun !== null ? fullRunsHealth(fullRun).healthy === true : run.webHealthy.status === 'observed' && run.webHealthy.value === true;
   if (gate.state === 'NOT_COMPATIBLE' && healthy) {
-    for (const finding of findings('unsupported')) problems.push(`NOT_COMPATIBLE but the application is healthy: ${shorten(finding.message)}`);
+    const localState = find('storage.local')?.verdict === 'CONFIRMED';
+    for (const finding of findings('unsupported')) {
+      if (localState && LOCAL_STATE_REASON.test(finding.message)) continue;
+      problems.push(`NOT_COMPATIBLE but the application is healthy: ${shorten(finding.message)}`);
+    }
   }
 
   for (const entry of verdicts) {
@@ -125,12 +132,18 @@ function falseProblems(
       problems.push(`a managed ${claim.value} database is required, but the application made no SQL connection`);
     }
     if (claim.type === 'redis.required' && claim.value === true) {
-      problems.push('Valkey is required, but the application made no connection');
+      problems.push(entry.observed === false && entry.reason === 'the app starts without Redis'
+        ? 'Valkey is required, but the application starts without it'
+        : 'Valkey is required, but the application made no connection');
     }
   }
 
   const database = find('database.engine');
-  if (database?.verdict === 'CONFIRMED' && findings('database-connection-unverified').length > 0) {
+  // A recipe input that wires the database itself (an install string that names ${DB_HOST}) is the vendor's confirmation.
+  const wiredByVendor = vendorInputs.some(
+    (input) => input.source.kind === 'fixed' && /\$\{?(?:DB|DATABASE|MYSQL|POSTGRES|PG)_?[A-Z]*\}?/.test(input.source.value),
+  );
+  if (database?.verdict === 'CONFIRMED' && !wiredByVendor && findings('database-connection-unverified').length > 0) {
     problems.push('the database variable is unverified, but the application connected with the standard bindings');
   }
   const paths = run.httpPaths.status === 'observed' ? (run.httpPaths.value ?? []) : [];
@@ -148,7 +161,7 @@ function falseProblems(
 }
 
 export function repositoryReport(
-  recipe: Pick<Recipe, 'id' | 'set'>,
+  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs'>>,
   analysis: AnalysisResultFile,
   observation: Observation,
   verdicts: readonly ClaimVerdict[],
@@ -162,8 +175,18 @@ export function repositoryReport(
     if (entry.claim.type === 'readiness' && readiness !== null) return decideReadiness(entry, readiness, fullRun, unbuildable);
     // The observation gives every app Valkey, so an app that uses it only when present looks like it needs it.
     // The full run has no Valkey when the claim is false: a healthy full run confirms the claim.
-    if (entry.claim.type === 'redis.required' && entry.claim.value === false && entry.verdict === 'CONTRADICTED' && fullHealth === true) {
+    if (entry.claim.type === 'redis.required' && entry.claim.value === false && entry.verdict !== 'CONFIRMED' && fullHealth === true) {
       return { ...entry, verdict: 'CONFIRMED' as const, reason: 'the full run without Valkey is healthy', observed: undefined };
+    }
+    // A recipe input that switches the migration on at start (miniflux RUN_MIGRATIONS=1) is the vendor's choice:
+    // the start migrates because of it, which does not show that the application has no other migration path.
+    if (
+      entry.claim.type === 'migration.mode' &&
+      entry.verdict === 'CONTRADICTED' &&
+      entry.observed === 'startup' &&
+      (recipe.vendorInputs ?? []).some((input) => /MIGRAT/i.test(input.name))
+    ) {
+      return { ...entry, verdict: 'NOT_CHECKABLE' as const, reason: 'a recipe input switches the migration on at start', observed: undefined };
     }
     return entry;
   });
@@ -185,7 +208,7 @@ export function repositoryReport(
     healthyWithAnalysedSettings: fullRun === null && unbuildable ? false : fullHealth,
     hiddenProblem: readiness === 'READY' && (fullHealth === false || (fullRun === null && unbuildable)),
     unstableFullRun,
-    falseProblems: falseProblems(analysis, decided, observation, fullRun),
+    falseProblems: falseProblems(analysis, decided, observation, fullRun, recipe.vendorInputs ?? []),
     vendorQuestions: analysis.vendorQuestions,
     unstableFacts: observation.unstable,
     infrastructureFailures: [...new Set(failures)],

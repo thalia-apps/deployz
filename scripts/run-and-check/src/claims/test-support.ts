@@ -34,6 +34,7 @@ const HEALTHY_DEFAULTS: FactValues = {
   requiredVariables: [],
   twoCopiesHealthy: true,
   restartHealthy: true,
+  freshContainer: { healthy: true, changed: [] },
   sizes: [],
 };
 

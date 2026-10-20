@@ -126,6 +126,16 @@ export interface AiGenerateOptions {
    */
   readonly reasoning?: boolean | undefined;
   /**
+   * Through OpenRouter: the reasoning effort to ask for, so it does not depend
+   * on the provider's default. Ignored when `reasoning` is false (that asks for low).
+   */
+  readonly reasoningEffort?: 'low' | 'medium' | 'high' | undefined;
+  /**
+   * Instructions sent as the system message. The prompt then holds only the
+   * task data, so untrusted repository content never shares the instruction message.
+   */
+  readonly system?: string | undefined;
+  /**
    * Abandon ONE attempt after this many ms and retry, while the caller's
    * `abortSignal` still bounds the whole call. Measured live: a Workers AI
    * request that normally answers in ~3s occasionally stalls, and without
@@ -402,6 +412,7 @@ export function createAiGateway(
           const { object, usage, response, providerMetadata } = await generateObject({
             model: provider(config.model),
             schema,
+            ...(options.system !== undefined ? { system: options.system } : {}),
             prompt,
             maxOutputTokens: options.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
             // Retries are owned by the loop below (its own bound and
@@ -418,7 +429,11 @@ export function createAiGateway(
                     openrouter: {
                       provider: { require_parameters: true },
                       usage: { include: true },
-                      ...(options.reasoning === false ? { reasoning: { effort: 'low' } } : {}),
+                      ...(options.reasoning === false
+                        ? { reasoning: { effort: 'low' } }
+                        : options.reasoningEffort !== undefined
+                          ? { reasoning: { effort: options.reasoningEffort } }
+                          : {}),
                     },
                   },
                 }

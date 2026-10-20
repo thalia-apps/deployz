@@ -790,8 +790,11 @@ function appEnvironment(ctx: EcsContext, extraEnv: readonly unknown[] = []): { e
     if (ctx.db.engine === 'mysql') {
       // MYSQL_* aliases so engines that read them by name get the same
       // managed values as the generic DATABASE_*/DB_* names.
+      // MYSQL_ATTR_SSL_CA is Laravel's name (config/database.php): its schema load passes it to the mysql
+      // client as --ssl-ca, and without it that client rejects the RDS certificate.
       environment.push(
         { Name: 'MYSQL_SSL_CA', Value: RDS_CA_BUNDLE_PATH },
+        { Name: 'MYSQL_ATTR_SSL_CA', Value: RDS_CA_BUNDLE_PATH },
         { Name: 'MYSQL_HOST', Value: getAtt(ctx.db.instance, 'Endpoint.Address') },
         { Name: 'MYSQL_PORT', Value: String(MYSQL_DB_PORT) },
       );
@@ -1105,6 +1108,9 @@ function compileAlb(ctx: EcsContext, workload: IrWorkload): ResolvedResource[] {
       cfnType: 'AWS::ElasticLoadBalancingV2::TargetGroup',
       properties: {
         HealthCheckPath: ref('paramHealthCheckPath'),
+        // The ALB health check sends the task IP as Host. An app that checks the Host header answers it 400
+        // while it serves its own domain, so for that app 400 also proves the process is up.
+        ...(workload.healthCheck?.hostChecked === true ? { Matcher: { HttpCode: '200,400' } } : {}),
         Port: ref('paramContainerPort'),
         Protocol: 'HTTP',
         Tags: tags(componentId),

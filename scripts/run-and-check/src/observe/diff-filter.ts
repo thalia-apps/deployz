@@ -16,10 +16,22 @@ function stripKind(line: string): string {
   return line.replace(/^[ACD] /, '');
 }
 
+/**
+ * A write that a start makes again and that holds no user data: a hidden file that is not a database
+ * (an `.env` an entrypoint writes from the environment, a licence or version cache, a `.gitignore`
+ * that the app copies), or a lock or temp file.
+ */
+export function isTransientWrite(path: string): boolean {
+  const name = path.split('/').pop() ?? '';
+  if (/\.(?:sqlite3?|db)$/.test(name)) return false;
+  return name.startsWith('.') || /\.(?:lock|tmp|temp|swp)$/.test(name);
+}
+
 function isIgnored(path: string, volumes: readonly string[]): boolean {
   if (MOUNT_POINTS.includes(path) || volumes.includes(path)) return true;
   if (IGNORED_FOLDERS.some((folder) => path === folder || path.startsWith(`${folder}/`))) return true;
   if (/\.(pid|log|sock|ctl)$/.test(path)) return true;
+  if (isTransientWrite(path)) return true;
   return IGNORED_SEGMENT.test(path);
 }
 

@@ -13,7 +13,7 @@
  */
 import { listDockerfileCandidates, type FileTree } from '../detectors.js';
 import type { AnalystOutput, Confidence, Evidence, FactName } from './analyst.js';
-import type { EvidencePack } from './evidence-pack.js';
+import { startScripts, type EvidencePack } from './evidence-pack.js';
 
 export interface FactCheck {
   readonly fact: FactName;
@@ -58,14 +58,22 @@ export function citedLine(pack: EvidencePack, evidence: Evidence): string | null
 }
 
 /** Every evidence item must resolve to a pack line that supports the claim; at least one is needed. */
+/**
+ * Every cited line must exist and contain its quote; at least one of them must
+ * support the claim. A citation is a reasoning chain (the ENTRYPOINT line and
+ * the CMD line, a route and its mount point), so the other lines need not
+ * repeat the value.
+ */
 export function checkEvidence(pack: EvidencePack, evidence: readonly Evidence[], supports: Supports): string[] {
   if (evidence.length === 0) return ['no evidence'];
   const reasons: string[] = [];
+  let supported = false;
   for (const item of evidence) {
     const line = citedLine(pack, item);
     if (line === null) reasons.push(`${item.path}:${item.line} does not exist in the evidence or does not contain the quote`);
-    else if (!supports(line)) reasons.push(`${item.path}:${item.line} does not support the claim`);
+    else if (supports(line)) supported = true;
   }
+  if (!supported) reasons.push(`no cited line supports the claim (${evidence.map((item) => `${item.path}:${item.line}`).join(', ')})`);
   return reasons;
 }
 
@@ -82,7 +90,11 @@ export function distinctiveToken(command: string): string {
   return tokens.sort((a, b) => b.length - a.length)[0] ?? command.trim();
 }
 
-const mentions = (token: string): Supports => (line) => line.includes(token);
+/** The line names the token, or the file name of a path token (`/usr/local/bin/entrypoint.sh` → `entrypoint.sh`). */
+const mentions = (token: string): Supports => {
+  const base = token.split('/').pop() ?? token;
+  return (line) => line.includes(token) || (base.length >= 3 && line.includes(base));
+};
 
 // ── Required variables ─────────────────────────────────────────────────────
 
@@ -167,6 +179,8 @@ export function checkPort(ctx: CheckContext, port: AnalystOutput['port'], docker
 const POSTGRES = /postgres|\bpg\b|psycopg|pgx|lib\/pq|npgsql|postgrex|jdbc:postgresql|pdo_pgsql|asyncpg|sequelize|prisma|typeorm|knex|DATABASE_URL/i;
 const MYSQL = /mysql|mariadb|pdo_mysql|myxql|jdbc:mysql/i;
 const NO_DATABASE = /sqlite|in[-_ ]?memory|\bh2\b|embedded|nedb|bolt|badger/i;
+// A line that serves the root page: the request pipeline or route table of a server-rendered app (`app.UseOqtane(...)`, `app.MapRazorPages()`, `urlpatterns`).
+const SERVES_ROOT = /\.(?:Map|Use)\w*\(|\.Run\(\)|\burlpatterns\b|\broutes?\b|\brouter\b/i;
 const REDIS = /redis|valkey|bullmq|\bbull\b|sidekiq|celery|\brq\b|resque|horizon/i;
 const OPTIONAL = /optional|enabled|disable|default|\bif\b|unless|\|\||\?\?|false|null|nil|None|local|file|disk|memory/i;
 const STORAGE = /\bs3\b|aws-sdk|boto|minio|bucket|ex_aws|flysystem|active_?storage|object.?storage|storage/i;
@@ -195,7 +209,20 @@ function checkDatabase(ctx: CheckContext, database: AnalystOutput['database']): 
   return simple('database', ctx, database, (line) => supports.test(line));
 }
 
-function checkMigration(ctx: CheckContext, migration: AnalystOutput['migration'], database: AnalystOutput['database']['value']): FactCheck {
+/** The files on the image's start path: the Dockerfile, the scripts it starts, and a Procfile. */
+function startPathFiles(ctx: CheckContext, dockerfile: string | null): Set<string> {
+  const files = new Set<string>(startScripts(dockerfile ?? undefined, ctx.tree));
+  if (dockerfile !== null) files.add(dockerfile);
+  for (const path of Object.keys(ctx.tree)) if (/(?:^|\/)Procfile$/.test(path)) files.add(path);
+  return files;
+}
+
+function checkMigration(
+  ctx: CheckContext,
+  migration: AnalystOutput['migration'],
+  database: AnalystOutput['database']['value'],
+  dockerfile: string | null,
+): FactCheck {
   const { mode, command } = migration.value;
   if (mode === 'unknown' && command === null) return { fact: 'migration', subject: null, ok: true, reasons: [] };
   if (mode === 'none') {
@@ -206,7 +233,19 @@ function checkMigration(ctx: CheckContext, migration: AnalystOutput['migration']
     return { fact: 'migration', subject: null, ok: false, reasons: ['pre_deploy without a command'] };
   }
   const token = command !== null ? distinctiveToken(command) : null;
-  return simple('migration', ctx, migration, (line) => (token !== null ? line.includes(token) : MIGRATION.test(line)));
+  // A migration flag of the binary (`-migrate`, `--upgrade`), as the line that defines the flag names it.
+  const migrationWords = (command ?? '')
+    .split(/\s+/)
+    .filter((part) => part.startsWith('-'))
+    .map((part) => part.replace(/^-+/, '').replace(/=.*$/, ''))
+    .filter((part) => part.length >= 3 && MIGRATION.test(part));
+  const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((word) => line.includes(word));
+  const check = simple('migration', ctx, migration, supports);
+  if (mode !== 'startup') return check;
+  // A migration at start must be on the start path, not in a dev script or a README.
+  const startPath = startPathFiles(ctx, dockerfile);
+  const offPath = migration.evidence.filter((item) => !startPath.has(item.path)).map((item) => `${item.path} is not on the image start path`);
+  return offPath.length === 0 ? check : { ...check, ok: false, reasons: [...check.reasons, ...offPath] };
 }
 
 /** Check every analyst fact. The order follows `FACT_NAMES`, then one entry per worker and per variable. */
@@ -224,12 +263,12 @@ export function checkFacts(ctx: CheckContext, output: AnalystOutput, fallbackDoc
       : simple('healthPath', ctx, output.healthPath, (line) => {
           const path = output.healthPath.value!;
           const last = path.split('/').filter(Boolean).pop() ?? path;
-          return line.includes(path) || (last.length >= 3 && line.includes(last));
+          return line.includes(path) || (last.length >= 3 && line.includes(last)) || (path === '/' && SERVES_ROOT.test(line));
         }),
     checkDatabase(ctx, output.database),
     simple('redis', ctx, output.redis, (line) => REDIS.test(line) && (output.redis.value || OPTIONAL.test(line))),
     simple('storage', ctx, output.storage, (line) => (output.storage.value ? STORAGE.test(line) : OPTIONAL.test(line))),
-    checkMigration(ctx, output.migration, output.database.value),
+    checkMigration(ctx, output.migration, output.database.value, selected),
   ];
   const workerIds = new Set<string>();
   for (const worker of output.workers) {

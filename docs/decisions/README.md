@@ -881,6 +881,29 @@ Docker run and as trustworthy (for example production telemetry from real
 customer deployments), or a release gate that real-AWS runs can give at an
 acceptable cost.
 
+## A Host-checking app's health check also accepts 400 (2026-10-20)
+
+Decision: when Analysis finds that the app checks the Host header (Django
+`ALLOWED_HOSTS`, Rails `config.hosts`, ASP.NET `AllowedHosts`, Laravel
+trusted hosts), the manifest sets `health.hostChecked` and the ALB target
+group matcher is `200,400`. Other apps keep `200`.
+
+Reason: an ALB health check always sends the task IP as Host, and AWS cannot
+change it. A Host-checking app answers that probe 400 while it serves its own
+domain, so it never became healthy. A 400 from the Host check still proves
+that the process serves HTTP. The release probe uses the real domain and
+still needs a success.
+
+Rejected: asking the vendor for `ALLOWED_HOSTS=*` (it turns off the app's
+Host protection), injecting the task IP (it changes on every replacement),
+and a TCP health check (an ALB target group has none).
+
+Compatibility: a relay validates the manifest with a strict schema and does
+not read the flag, so the INSTALL payload leaves `health.hostChecked` out.
+
+What would change it: a real-AWS run shows a Host-checking app that answers
+400 while it is broken.
+
 ## AI-first application Analysis (2026-10-19)
 
 Status: proposed. The switch waits for the release gate and a shadow period
@@ -907,8 +930,13 @@ Decision:
 - A fact that passes the checks enters the `DeploymentManifest`. A fact that
   fails becomes a vendor question (NEEDS_CONFIGURATION). The AI never makes a
   silent guess.
-- A reviewer model (GPT-6 Astra) reads the same evidence pack and the
-  analyst's facts and returns objections only. A fixed check decides an
+- A reviewer model (DeepSeek V4 Pro, a pinned version) reads the same
+  evidence pack and the analyst's facts and returns objections only. The
+  first reviewer, GPT-6 Astra, cost about $0.27 of the $0.44 of each
+  analysis; DeepSeek V4 Pro costs about $0.02, and it comes from another
+  model family than the analyst, so it makes other mistakes. Jev was not
+  chosen: its evaluation found no useful signal (see "Jev shadow analysis
+  is not adopted"). A fixed check decides an
   objection. An objection that no check can decide becomes a vendor question.
 - Both models go through Cloudflare AI Gateway, on its OpenRouter route
   with the OpenRouter key (the unified `/compat` endpoint answered 402 for
@@ -923,6 +951,11 @@ Decision:
 - The operating principle does not change: the AI infers, deterministic code
   provisions. The AI never calls AWS, never generates infrastructure, never
   writes a secret value and never sets deployment or job state.
+- The AI can remove a database that the rules require, only with high
+  confidence and evidence that passes the checks (user decision,
+  2026-10-20). An unused RDS instance is a needless cost and a needless
+  vendor question; a wrong removal fails the deployment, so a medium or low
+  confidence keeps the database.
 
 Release gate: the AI engine must pass the gate in
 [`../testing/compatibility.md`](../testing/compatibility.md#release-gate) in

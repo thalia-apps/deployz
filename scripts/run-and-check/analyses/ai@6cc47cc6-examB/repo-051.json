@@ -1,0 +1,756 @@
+{
+  "id": "repo-051",
+  "commit": "c216e43d2499614cbf432b13b0fa918c8fd966e6",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "/app/bin/bundle exec puma -C /app/config/puma.rb --dir /app",
+      "port": 3000
+    },
+    "health": {
+      "path": "/up",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACTIVE_STORAGE_PUBLIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/docuseal.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_MANAGER_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/dotenv.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CERTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/docuseal.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_SEARCH_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/dotenv.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/replace_email_variables.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_URLS_EXPIRE_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/accounts.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GCS_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/docuseal.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRESIGNED_URLS_EXPIRE_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRODUCT_EMAIL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/docuseal.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MAX_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_MIN_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/dotenv.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ATTACHMENTS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/storage.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY_BASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/dotenv.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SESSION_REMEMBER_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_BASIC_AUTH_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_AUTHENTICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/action_mailer_configs_interceptor.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_OPEN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb",
+            "read in lib/action_mailer_configs_interceptor.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_READ_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb",
+            "read in lib/action_mailer_configs_interceptor.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TIMESERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/docuseal.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIPS_MAX_COORD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/load_bmp.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/storage.yml",
+            "read in config/dotenv.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "none",
+        "reasons": [
+          "config/database.yml:25 does not support the claim",
+          "config/database.yml:30 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "rules"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 3000,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/app/bin/bundle exec puma -C /app/config/puma.rb --dir /app",
+        "reasons": [],
+        "subject": null,
+        "decision": "ai"
+      },
+      {
+        "fact": "healthPath",
+        "value": "/up",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "unknown",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.21590316,
+        "promptTokens": 46176,
+        "completionTokens": 1669
+      },
+      "latencyMs": 21184
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.387602325,
+        "promptTokens": 28766,
+        "completionTokens": 639
+      },
+      "latencyMs": 21353
+    },
+    "latencyMs": 42711,
+    "objections": {
+      "total": 0,
+      "confirmed": 0,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:44:06.843Z",
+    "failedChecks": 1,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

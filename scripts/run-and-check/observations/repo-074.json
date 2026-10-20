@@ -4,37 +4,38 @@
   "set": "tuning",
   "repository": "dani-garcia/vaultwarden",
   "commit": "a6c3bd6d1826fb527822df4a2655f34fd440d7d4",
-  "recipeHash": "da34da31ad489aad7a1b623f0b8677bb2c7fc63948901e8fd90ba8cdc907d020",
+  "recipeHash": "53a90037dc91b7e88a96752bfadccde2dbfa2f22d76e5dc23863dac6ae0bb21b",
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-17T14:01:34.808Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:24:46.034Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 294960903,
+          "seconds": 616,
+          "imageBytes": 291734819,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
-          "fromCache": true
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "image-cache",
-            "text": "loaded deployz-runcheck/repo-074:a6c3bd6d1826fb527822df4a2655f34fd440d7d4 from the image cache"
+            "kind": "log",
+            "source": "build",
+            "text": "#28 176.3    Compiling pastey v0.2.3\n#28 176.8    Compiling dotenvy v0.15.7\n#28 176.8    Compiling pico-args v0.5.0\n#28 186.2     Finished `release` profile [optimized] target(s) in 3m 04s\n#28 DONE 186.7s\n#29 [build 11/12] COPY . .\n#29 DONE 0.1s\n#30 [build 12/12] RUN . /env-cargo &&     touch build.rs src/main.rs &&     if xx-info is-cross; then         XX_RUSTFLAGS=\"-C link-arg=-Wl,-rpath-link,/usr/lib/$(xx-info triple)\";         export XX_RUSTFLAGS;     fi &&     PKG_CONFIG=\"$(command -v \"$(xx-info)-pkg-config\")\" xx-cargo build --features sqlite,mysql,postgresql --profile \"release\" &&     if [ \"release\" = \"dev\" ] ; then         ln -vfsr \"/app/target/${CARGO_TARGET}/debug\" /app/target/final ;     else         ln -vfsr \"/app/target/${CARGO_TARGET}/release\" /app/target/final ;     fi\n#30 0.617    Compiling vaultwarden v1.0.0 (/app)\n#30 399.4     Finished `release` profile [optimized] target(s) in 6m 39s\n#30 399.5 '/app/target/final' -> 'x86_64-unknown-linux-gnu/release'\n#30 DONE 399.5s\n#31 [stage-3 5/6] COPY --from=build /app/target/final/vaultwarden .\n#31 DONE 0.0s\n#32 exporting to image\n#32 exporting layers\n#32 exporting layers 1.0s done\n#32 writing image sha256:17add3fc85ccf05aa99ad32c63af141fa392d29740cf137c4ee01c195081c968 done\n#32 naming to docker.io/deployz-runcheck/repo-074:a6c3bd6d1826fb527822df4a2655f34fd440d7d4 done\n#32 DONE 1.0s"
           }
         ]
       },
       "webHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -49,21 +50,21 @@
           {
             "kind": "log",
             "source": "web#1",
-            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-17 14:02:50.847][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
+            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-19 18:35:37.434][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
           }
         ]
       },
       "listeningPorts": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
       "httpPaths": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
@@ -73,7 +74,7 @@
           "path": "/",
           "status": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
@@ -85,7 +86,7 @@
           "tablesAfterStart": [],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -115,13 +116,13 @@
           "tablesCreatedByStart": false,
           "secondStartHealthy": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -131,7 +132,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -145,7 +146,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -157,7 +158,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -169,30 +170,37 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
       },
       "twoCopiesHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
       },
       "restartHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
+      },
+      "freshContainer": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "the first or the second web container gave no answers"
       },
       "sizes": {
         "status": "observed",
@@ -214,7 +222,7 @@
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -229,7 +237,7 @@
           {
             "kind": "log",
             "source": "medium-v1",
-            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-17 14:04:00.382][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
+            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-19 18:35:54.316][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
           }
         ]
       },
@@ -250,33 +258,38 @@
         "workerCommands": [],
         "variables": [],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 30.052,
-        "setA": 59.398,
-        "sizes": 101.666
+        "build": 625.712,
+        "setA": 32.534,
+        "sizes": 16.552
       }
     },
     {
-      "startedAt": "2026-10-17T14:04:45.952Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:36:00.842Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
           "ok": true,
           "exitCode": 0,
-          "seconds": 0,
-          "imageBytes": 294960903,
+          "seconds": 616,
+          "imageBytes": 291734819,
           "dockerfile": "Dockerfile",
           "context": ".",
+          "target": null,
           "failure": null,
           "fromCache": true
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -288,7 +301,7 @@
       "webHealthy": {
         "status": "observed",
         "value": false,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -303,21 +316,21 @@
           {
             "kind": "log",
             "source": "web#1",
-            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-17 14:05:52.740][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
+            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-19 18:36:13.629][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
           }
         ]
       },
       "listeningPorts": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
       "httpPaths": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
@@ -327,7 +340,7 @@
           "path": "/",
           "status": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "container exited"
       },
@@ -339,7 +352,7 @@
           "tablesAfterStart": [],
           "sqliteFileWritten": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -369,13 +382,13 @@
           "tablesCreatedByStart": false,
           "secondStartHealthy": null
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate migration command"
       },
@@ -385,7 +398,7 @@
           "connected": false,
           "clients": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -399,7 +412,7 @@
         "value": {
           "objectsWritten": 0
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -411,7 +424,7 @@
       "localDiskWrites": {
         "status": "observed",
         "value": [],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "diff",
@@ -423,30 +436,37 @@
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "no candidate worker command"
       },
       "requiredVariables": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
       },
       "twoCopiesHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
       },
       "restartHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
         "note": "web was not healthy"
+      },
+      "freshContainer": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "the first or the second web container gave no answers"
       },
       "sizes": {
         "status": "observed",
@@ -468,7 +488,7 @@
             "oomKilled": false
           }
         ],
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
             "kind": "command",
@@ -483,7 +503,7 @@
           {
             "kind": "log",
             "source": "medium-v1",
-            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-17 14:06:34.403][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
+            "text": "/--------------------------------------------------------------------\\\n|                        Starting Vaultwarden                        |\n|--------------------------------------------------------------------|\n| This is an *unofficial* Bitwarden implementation, DO NOT use the   |\n| official channels to report bugs/features, regardless of client.   |\n| Send usage/configuration questions or feature requests to:         |\n|   https://github.com/dani-garcia/vaultwarden/discussions or        |\n|   https://vaultwarden.discourse.group/                             |\n| Report suspected bugs/issues in the software itself at:            |\n|   https://github.com/dani-garcia/vaultwarden/issues/new            |\n\\--------------------------------------------------------------------/\n\n[2026-10-19 18:36:30.478][vaultwarden][ERROR] No persistent volume!\n########################################################################################\n# It looks like you did not configure a persistent volume!                             #\n# This will result in permanent data loss when the container is removed or updated!    #\n# If you really want to use volatile storage set `I_REALLY_WANT_VOLATILE_STORAGE=true` #\n########################################################################################\n\n"
           }
         ]
       },
@@ -504,15 +524,19 @@
         "workerCommands": [],
         "variables": [],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 27.408,
-        "setA": 60.2,
-        "sizes": 39.047
+        "build": 2.785,
+        "setA": 16.834,
+        "sizes": 16.523
       }
     }
   ],

@@ -54,7 +54,20 @@ describe('resolveObjections: replacements', () => {
     expect(result.outcomes.map((item) => item.outcome)).toEqual(['question']);
   });
 
-  it('makes a question of a proposal that does not parse as JSON', () => {
+  it('reads a plain-text proposal, without JSON quotes', () => {
+    const facts = factsOf({ healthPath: { value: '/status', confidence: 'high', evidence: cite('src/server.js', 1, 'server.listen') } });
+    const health: FileTree = { ...tree, 'src/health.js': "app.get('/healthz', ok);" };
+    const result = resolveObjections(
+      { tree: health, pack: packOf(health) },
+      facts,
+      [objection({ fact: 'healthPath', proposedValue: '/healthz', evidence: cite('src/health.js', 1, "'/healthz'") })],
+      'Dockerfile',
+    );
+    expect(result.facts.healthPath.value).toBe('/healthz');
+    expect(result.outcomes.map((item) => item.outcome)).toEqual(['confirmed']);
+  });
+
+  it('makes a question of a proposal that is not a value of the fact', () => {
     const result = resolveObjections(
       ctx,
       wrongPort,

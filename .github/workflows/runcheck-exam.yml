@@ -72,7 +72,8 @@ jobs:
     needs: plan
     if: inputs.mode == 'analyse-ai'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A first, uncached snapshot fetch can wait for the API rate limit to reset (up to an hour).
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -98,6 +99,15 @@ jobs:
 
       - name: Build workspace packages
         run: pnpm turbo run build --filter=./packages/* --filter=@deployz/api
+
+      # The pinned commit never changes, so its GitHub tree and files are
+      # cached: later runs make no GitHub API calls (the job token allows
+      # 1000 requests per hour, which one full exam can use up).
+      - name: Restore the GitHub snapshot
+        uses: actions/cache@v4
+        with:
+          path: scripts/run-and-check/.runs/snapshot-cache
+          key: runcheck-snapshot-${{ matrix.id }}-${{ hashFiles(format('scripts/run-and-check/recipes/{0}.yaml', matrix.id)) }}
 
       - name: AI engine Analysis
         env:

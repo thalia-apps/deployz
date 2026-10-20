@@ -57,7 +57,11 @@ describe('runAiAnalysis', () => {
     expect(analyst.prompts[0]).toContain('2| EXPOSE 3000');
     expect(reviewer.prompts).toHaveLength(1);
     expect(reviewer.prompts[0]).toContain('## Proposed facts (JSON)');
-    expect(reviewer.prompts[0]).toContain('"value":3000');
+    expect(reviewer.prompts[0]).toContain('"value":"3000"');
+    // The instructions travel as the system message; the user message holds only the data.
+    expect(analyst.systems[0]).toContain('untrusted data');
+    expect(analyst.prompts[0]).not.toContain('WHAT A WRONG ANSWER COSTS');
+    expect(reviewer.systems[0]).toContain('Object ONLY');
   });
 
   it('works without a reviewer gateway', async () => {

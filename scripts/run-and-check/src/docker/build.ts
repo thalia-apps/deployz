@@ -16,7 +16,7 @@ const EVIDENCE_CHARS = 2000;
 type Failure = NonNullable<BuiltImage['failure']>;
 
 const INFRASTRUCTURE =
-  /TLS handshake timeout|failed to fetch|i\/o timeout|connection reset|429 Too Many Requests|toomanyrequests|Temporary failure in name resolution|unexpected EOF|failed to resolve source metadata|Could not resolve host|ETIMEDOUT|ECONNRESET|The operation was aborted due to timeout|ERR_PNPM_META_FETCH_FAIL|ERR_SOCKET_TIMEOUT|network timeout|EAI_AGAIN/i;
+  /TLS handshake timeout|failed to fetch|i\/o timeout|connection reset|429 Too Many Requests|toomanyrequests|Temporary failure in name resolution|unexpected EOF|failed to resolve source metadata|Could not resolve host|ETIMEDOUT|ECONNRESET|The operation was aborted due to timeout|ERR_PNPM_META_FETCH_FAIL|ERR_SOCKET_TIMEOUT|network timeout|EAI_AGAIN|stream error: stream ID \d+; INTERNAL_ERROR/i;
 const EMULATION_SIGNAL = /qemu: uncaught target signal|Illegal instruction|Segmentation fault/i;
 
 /** Classifies a failed build from the tail of its log. */
@@ -89,9 +89,12 @@ export async function buildImage(req: BuildRequest, deps: BuildDeps = {}): Promi
   }
   // An arm64 fallback image has its own cache entry and tag, so it never replaces the amd64 image.
   if (req.platform === 'linux/arm64') sha = `${sha}-arm64`;
+  // Another stage is another image: a target has its own cache entry and tag.
+  const target = recipe.build?.target ?? null;
+  if (target !== null) sha = `${sha}-${target}`;
   const ref = imageRef(req.id, sha);
 
-  const base = { image: ref, dockerfile, context };
+  const base = { image: ref, dockerfile, context, target };
   const failedOnCi = req.platform === 'linux/amd64' && !req.noCache ? cache.readFailure(req.id, sha) : null;
   if (failedOnCi !== null) {
     return {
@@ -138,6 +141,7 @@ export async function buildImage(req: BuildRequest, deps: BuildDeps = {}): Promi
       '-f',
       dockerfileArg,
       ...Object.entries(recipe.build?.buildArgs ?? {}).flatMap(([key, value]) => ['--build-arg', `${key}=${value}`]),
+      ...(target === null ? [] : ['--target', target]),
       ...labelArgs(req.id),
       '-t',
       ref,

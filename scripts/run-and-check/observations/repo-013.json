@@ -4,137 +4,242 @@
   "set": "tuning",
   "repository": "louislam/uptime-kuma",
   "commit": "5df2a3c0a8c883f362dd48f6fd422b3ee60e685b",
-  "recipeHash": "de9fb89e47daec6656f90a7a5ded22dc2c2e7e7d7374ddd254362155c13ab67a",
+  "recipeHash": "58a992d044e8235856a08ded945520bc52135bd2472606e9e8e58268ff9926ad",
   "imageDigest": null,
   "runs": [
     {
-      "startedAt": "2026-10-16T20:02:52.153Z",
-      "harnessVersion": "1",
+      "startedAt": "2026-10-19T18:31:32.026Z",
+      "harnessVersion": "2",
       "build": {
         "status": "observed",
         "value": {
-          "ok": false,
-          "exitCode": 1,
-          "seconds": 0,
-          "imageBytes": null,
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 42,
+          "imageBytes": 1727513256,
           "dockerfile": "docker/dockerfile",
           "context": ".",
-          "failure": "dockerfile",
-          "fromCache": true
+          "target": "release",
+          "failure": null,
+          "fromCache": false
         },
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [
           {
-            "kind": "command",
-            "source": "ci-build",
-            "text": "#17 ERROR: process \"/bin/sh -c chmod +x /app/extra/upload-github-release-asset.sh\" did not complete successfully: exit code: 1\nERROR: failed to build: failed to solve: process \"/bin/sh -c chmod +x /app/extra/upload-github-release-asset.sh\" did not complete successfully: exit code: 1"
+            "kind": "log",
+            "source": "build",
+            "text": "#12 6.142 npm notice\n#12 6.142 npm notice New major version of npm available! 10.9.8 -> 12.2.0\n#12 6.142 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0\n#12 6.142 npm notice To update run: npm install -g npm@12.2.0\n#12 6.142 npm notice\n#12 DONE 7.9s\n#13 [build 7/9] COPY . .\n#13 DONE 0.1s\n#14 [build 8/9] COPY --chown=node:node --from=build_healthcheck /app/extra/healthcheck /app/extra/healthcheck\n#14 DONE 0.0s\n#15 [build 9/9] RUN mkdir ./data\n#15 DONE 0.1s\n#16 [release 3/3] COPY --chown=node:node --from=build /app /app\n#16 DONE 4.0s\n#17 exporting to image\n#17 exporting layers\n#17 exporting layers 2.9s done\n#17 writing image sha256:acaef7ddb25762108a1659a57aaf541845ba8ce8c882ea8327e7ac945e98dbf2 done\n#17 naming to docker.io/deployz-runcheck/repo-013:5df2a3c0a8c883f362dd48f6fd422b3ee60e685b-release done\n#17 DONE 2.9s"
           }
         ]
       },
       "webHealthy": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/status none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3001/ none\n3001/status none\n3001/health none\n3001/healthz none\n3001/up none\n3001/api/health none\n3001/ping none\n3001/_health none\n3001/actuator/health none\n3000/ none\n3000/status none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/status none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/status none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "Welcome to Uptime Kuma\nYour Node.js version: 22.22.3\n\u001b[36m2026-10-19T18:33:23Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Env: production\n\u001b[36m2026-10-19T18:33:23Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Uptime Kuma Version: 2.5.3\n\u001b[36m2026-10-19T18:33:23Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Loading modules\n\u001b[36m2026-10-19T18:33:25Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Creating express and socket.io instance\n\u001b[36m2026-10-19T18:33:25Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Server Type: HTTP\n\u001b[36m2026-10-19T18:33:25Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[31mERROR:\u001b[0m Error: Cannot find 'dist/index.html', did you install correctly?\n"
+          }
+        ]
       },
       "listeningPorts": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "container exited"
       },
       "httpPaths": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "container exited"
       },
       "smoke": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "container exited"
       },
       "database": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-013: 0 objects"
+          }
+        ]
       },
       "startupMigration": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
       },
       "migrationCommands": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "no candidate migration command"
       },
       "redis": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
       },
       "objectStorage": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-013: 0 objects"
+          }
+        ]
       },
       "localDiskWrites": {
-        "status": "not_run",
-        "value": null,
-        "arch": "amd64-ci-build",
-        "evidence": [],
-        "note": "build failed"
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
       },
       "workers": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "no candidate worker command"
       },
       "requiredVariables": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "web was not healthy"
       },
       "twoCopiesHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "web was not healthy"
       },
       "restartHealthy": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "web was not healthy"
       },
-      "sizes": {
+      "freshContainer": {
         "status": "not_run",
         "value": null,
-        "arch": "amd64-ci-build",
+        "arch": "amd64-native",
         "evidence": [],
-        "note": "build failed"
+        "note": "the first or the second web container gave no answers"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/status none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3001/ none\n3001/status none\n3001/health none\n3001/healthz none\n3001/up none\n3001/api/health none\n3001/ping none\n3001/_health none\n3001/actuator/health none\n3000/ none\n3000/status none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/status none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/status none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "Welcome to Uptime Kuma\nYour Node.js version: 22.22.3\n\u001b[36m2026-10-19T18:33:40Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Env: production\n\u001b[36m2026-10-19T18:33:40Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Uptime Kuma Version: 2.5.3\n\u001b[36m2026-10-19T18:33:40Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Loading modules\n\u001b[36m2026-10-19T18:33:41Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Creating express and socket.io instance\n\u001b[36m2026-10-19T18:33:41Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Server Type: HTTP\n\u001b[36m2026-10-19T18:33:41Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[31mERROR:\u001b[0m Error: Cannot find 'dist/index.html', did you install correctly?\n"
+          }
+        ]
       },
       "candidates": {
         "injectedPort": 18080,
@@ -157,13 +262,289 @@
           "UPTIME_KUMA_PORT"
         ],
         "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
           "analysis:rules@b028a8bc",
           "fixed-list"
         ]
       },
       "infrastructureFailures": [],
       "timings": {
-        "build": 0.002
+        "build": 83.005,
+        "setA": 37.072,
+        "sizes": 14.979
+      }
+    },
+    {
+      "startedAt": "2026-10-19T18:33:47.089Z",
+      "harnessVersion": "2",
+      "build": {
+        "status": "observed",
+        "value": {
+          "ok": true,
+          "exitCode": 0,
+          "seconds": 42,
+          "imageBytes": 1727513256,
+          "dockerfile": "docker/dockerfile",
+          "context": ".",
+          "target": "release",
+          "failure": null,
+          "fromCache": true
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "image-cache",
+            "text": "loaded deployz-runcheck/repo-013:5df2a3c0a8c883f362dd48f6fd422b3ee60e685b-release from the image cache"
+          }
+        ]
+      },
+      "webHealthy": {
+        "status": "observed",
+        "value": false,
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "web#1",
+            "text": "env names: NODE_ENV, PORT, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER, NODE_EXTRA_CA_CERTS, PGSSLROOTCERT, STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET, AWS_REGION, REDIS_URL, REDIS_HOST, REDIS_PORT, APP_API_KEY, APP_SIGNING_SECRET, DATABASE_PASSWORD, DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL, AWS_ENDPOINT_URL_S3, AWS_S3_FORCE_PATH_STYLE"
+          },
+          {
+            "kind": "http",
+            "source": "web#1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/status none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3001/ none\n3001/status none\n3001/health none\n3001/healthz none\n3001/up none\n3001/api/health none\n3001/ping none\n3001/_health none\n3001/actuator/health none\n3000/ none\n3000/status none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/status none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/status none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "web#1",
+            "text": "Welcome to Uptime Kuma\nYour Node.js version: 22.22.3\n\u001b[36m2026-10-19T18:34:03Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Env: production\n\u001b[36m2026-10-19T18:34:03Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Uptime Kuma Version: 2.5.3\n\u001b[36m2026-10-19T18:34:03Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Loading modules\n\u001b[36m2026-10-19T18:34:04Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Creating express and socket.io instance\n\u001b[36m2026-10-19T18:34:04Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Server Type: HTTP\n\u001b[36m2026-10-19T18:34:04Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[31mERROR:\u001b[0m Error: Cannot find 'dist/index.html', did you install correctly?\n"
+          }
+        ]
+      },
+      "listeningPorts": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "httpPaths": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "smoke": {
+        "status": "observed",
+        "value": {
+          "path": "/",
+          "status": null
+        },
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "container exited"
+      },
+      "database": {
+        "status": "observed",
+        "value": {
+          "engine": null,
+          "connections": 0,
+          "tablesAfterStart": [],
+          "sqliteFileWritten": false
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "postgres",
+            "text": "PostgreSQL log lines \"connection authorized: user=deployz_app\", harness sessions excluded, baseline 3: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "mysql",
+            "text": "SHOW GLOBAL STATUS LIKE 'Connections' = 10, baseline 9, harness sessions 1: 0 application connections; tables in deployz: (none)"
+          },
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          },
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-013: 0 objects"
+          }
+        ]
+      },
+      "startupMigration": {
+        "status": "observed",
+        "value": {
+          "tablesCreatedByStart": false,
+          "secondStartHealthy": null
+        },
+        "arch": "amd64-native",
+        "evidence": []
+      },
+      "migrationCommands": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate migration command"
+      },
+      "redis": {
+        "status": "observed",
+        "value": {
+          "connected": false,
+          "clients": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "valkey",
+            "text": "INFO stats total_connections_received = 3, baseline 2, harness sessions 1: 0 application connections; DBSIZE = 0"
+          }
+        ]
+      },
+      "objectStorage": {
+        "status": "observed",
+        "value": {
+          "objectsWritten": 0
+        },
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "minio",
+            "text": "mc ls --recursive rc-repo-013: 0 objects"
+          }
+        ]
+      },
+      "localDiskWrites": {
+        "status": "observed",
+        "value": [],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "diff",
+            "source": "web#1",
+            "text": "no local writes"
+          }
+        ]
+      },
+      "workers": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "no candidate worker command"
+      },
+      "requiredVariables": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "twoCopiesHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "restartHealthy": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "web was not healthy"
+      },
+      "freshContainer": {
+        "status": "not_run",
+        "value": null,
+        "arch": "amd64-native",
+        "evidence": [],
+        "note": "the first or the second web container gave no answers"
+      },
+      "sizes": {
+        "status": "observed",
+        "value": [
+          {
+            "profile": "small-v2",
+            "memoryMiB": 512,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          },
+          {
+            "profile": "medium-v1",
+            "memoryMiB": 2048,
+            "cpus": 1,
+            "healthy": false,
+            "startSeconds": null,
+            "oomKilled": false
+          }
+        ],
+        "arch": "amd64-native",
+        "evidence": [
+          {
+            "kind": "command",
+            "source": "small-v2",
+            "text": "healthy=false oomKilled=false exited=true"
+          },
+          {
+            "kind": "http",
+            "source": "medium-v1",
+            "text": "healthy=false exited=true oomKilled=false seconds=none\n18080/ none\n18080/status none\n18080/health none\n18080/healthz none\n18080/up none\n18080/api/health none\n18080/ping none\n18080/_health none\n18080/actuator/health none\n3001/ none\n3001/status none\n3001/health none\n3001/healthz none\n3001/up none\n3001/api/health none\n3001/ping none\n3001/_health none\n3001/actuator/health none\n3000/ none\n3000/status none\n3000/health none\n3000/healthz none\n3000/up none\n3000/api/health none\n3000/ping none\n3000/_health none\n3000/actuator/health none\n8080/ none\n8080/status none\n8080/health none\n8080/healthz none\n8080/up none\n8080/api/health none\n8080/ping none\n8080/_health none\n8080/actuator/health none\n80/ none\n80/status none\n80/health none\n80/healthz none\n80/up none\n80/api/health none\n80/ping none\n80/_health none\n80/actuator/health none"
+          },
+          {
+            "kind": "log",
+            "source": "medium-v1",
+            "text": "Welcome to Uptime Kuma\nYour Node.js version: 22.22.3\n\u001b[36m2026-10-19T18:34:20Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Env: production\n\u001b[36m2026-10-19T18:34:20Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Uptime Kuma Version: 2.5.3\n\u001b[36m2026-10-19T18:34:20Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Loading modules\n\u001b[36m2026-10-19T18:34:21Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Creating express and socket.io instance\n\u001b[36m2026-10-19T18:34:21Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[36mINFO:\u001b[0m Server Type: HTTP\n\u001b[36m2026-10-19T18:34:21Z\u001b[0m [\u001b[32mSERVER\u001b[0m] \u001b[31mERROR:\u001b[0m Error: Cannot find 'dist/index.html', did you install correctly?\n"
+          }
+        ]
+      },
+      "candidates": {
+        "injectedPort": 18080,
+        "healthPaths": [
+          "/",
+          "/status",
+          "/health",
+          "/healthz",
+          "/up",
+          "/api/health",
+          "/ping",
+          "/_health",
+          "/actuator/health"
+        ],
+        "migrationCommands": [],
+        "workerCommands": [],
+        "variables": [
+          "LOCALAPPDATA",
+          "PROGRAMFILES",
+          "UPTIME_KUMA_PORT"
+        ],
+        "from": [
+          "analysis:ai@6cc47cc6-examA",
+          "analysis:ai@6cc47cc6-examB",
+          "analysis:rules@0fc073b8",
+          "analysis:rules@33b45417",
+          "analysis:rules@b028a8bc",
+          "fixed-list"
+        ]
+      },
+      "infrastructureFailures": [],
+      "timings": {
+        "build": 8.152,
+        "setA": 16.797,
+        "sizes": 15.332
       }
     }
   ],

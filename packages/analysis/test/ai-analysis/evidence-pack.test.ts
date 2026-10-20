@@ -4,6 +4,7 @@ import { analyseRepo } from '../../src/analyser.js';
 import {
   MAX_FILE_CHARS,
   MAX_PACK_CHARS,
+  bindingContractOf,
   buildEvidencePack,
   isExcludedPath,
   renderEvidencePack,
@@ -176,5 +177,62 @@ describe('renderEvidencePack', () => {
   it('marks a truncated file', () => {
     const tree: FileTree = { ...baseTree, 'requirements.txt': Array.from({ length: 5000 }, (_, i) => `l${i}`).join('\n') };
     expect(renderEvidencePack(pack(tree))).toContain('<<<FILE requirements.txt (first lines only)');
+  });
+});
+
+describe('the Deployz binding contract', () => {
+  const tree: FileTree = {
+    Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "dist/index.js"]',
+    'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
+    'src/index.ts': 'const db = new Pool({ connectionString: process.env.DATABASE_URL });\nconst s = process.env.SESSION_SECRET;\napp.listen(process.env.PORT);',
+  };
+
+  it('lists what Deployz sets always, for this repository, and for each resource it can add', () => {
+    const contract = bindingContractOf(analyseRepo(tree));
+    expect(contract.always).toEqual(['PORT', 'HOSTNAME']);
+    expect(contract.forThisRepository).toContain('DATABASE_URL');
+    expect(contract.forThisRepository).toContain('SESSION_SECRET');
+    expect(contract.whenDatabase).toContain('DATABASE_PASSWORD');
+    expect(contract.whenRedis).toEqual(expect.arrayContaining(['REDIS_URL', 'REDIS_HOST', 'REDIS_PORT']));
+    expect(contract.whenStorage).toContain('S3_BUCKET');
+  });
+
+  it('is rendered before the rules signals, which are marked as unverified', () => {
+    const rendered = renderEvidencePack(buildEvidencePack(tree, analyseRepo(tree)));
+    expect(rendered.indexOf('## Deployz binding contract')).toBeGreaterThanOrEqual(0);
+    expect(rendered.indexOf('## Deployz binding contract')).toBeLessThan(rendered.indexOf('## Rules Analysis signals (JSON, unverified first guess)'));
+  });
+});
+
+describe('buildEvidencePack: entry files and manifest kinds', () => {
+  it('includes route, health and boot files before long manifest lists', () => {
+    const tree: FileTree = {
+      Dockerfile: 'FROM php:8\nCMD ["php-fpm"]',
+      'composer.json': '{}',
+      'bootstrap/app.php': "->withRouting(health: '/up')",
+      'routes/web.php': "Route::get('/', fn () => view('welcome'));",
+      'tests/routes.php': 'test only',
+    };
+    const paths = buildEvidencePack(tree, analyseRepo(tree)).files.map((file) => file.path);
+    expect(paths).toContain('bootstrap/app.php');
+    expect(paths).toContain('routes/web.php');
+    expect(paths).not.toContain('tests/routes.php');
+    expect(paths.indexOf('bootstrap/app.php')).toBeLessThan(paths.indexOf('composer.json'));
+  });
+
+  it('includes a CommonJS start script that the Dockerfile runs', () => {
+    const tree: FileTree = {
+      Dockerfile: 'FROM node:22\nCMD ["node", "docker-entrypoint.cjs"]',
+      'package.json': '{}',
+      'docker-entrypoint.cjs': "require('./cli.js').bootstrap();",
+    };
+    expect(buildEvidencePack(tree, analyseRepo(tree)).files.map((file) => file.path)).toContain('docker-entrypoint.cjs');
+  });
+
+  it('keeps at most four manifests of one kind', () => {
+    const tree: FileTree = { Dockerfile: 'FROM mcr.microsoft.com/dotnet/aspnet:9.0\nCMD ["dotnet", "App.dll"]' };
+    for (let i = 0; i < 10; i++) tree[`src/App.Module${i}/App.Module${i}.csproj`] = '<Project />';
+    const csproj = buildEvidencePack(tree, analyseRepo(tree)).files.filter((file) => file.path.endsWith('.csproj'));
+    expect(csproj).toHaveLength(4);
   });
 });

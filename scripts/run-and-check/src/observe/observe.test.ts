@@ -59,7 +59,7 @@ describe('observe', () => {
     expect(first.database.value).toEqual({ engine: 'postgres', connections: 1, tablesAfterStart: ['users'], sqliteFileWritten: true });
     expect(first.startupMigration.value).toEqual({ tablesCreatedByStart: true, secondStartHealthy: true });
     expect(first.migrationCommands.value).toEqual([{ command: 'npm run migrate', exitCode: 0, createdTables: true, seconds: 3 }]);
-    expect(first.redis.value).toEqual({ connected: true, clients: 1 });
+    expect(first.redis.value).toEqual({ connected: true, clients: 1, healthyWithout: null });
     expect(first.objectStorage.value).toEqual({ objectsWritten: 0 });
     expect(first.localDiskWrites.value).toEqual(['/app/data.sqlite']);
     expect(first.workers.value).toEqual([
@@ -68,6 +68,7 @@ describe('observe', () => {
     expect(first.requiredVariables.value).toEqual([{ name: 'SECRET_KEY', healthyWithout: false, healthyWith: true }]);
     expect(first.twoCopiesHealthy.value).toBe(true);
     expect(first.restartHealthy.value).toBe(true);
+    expect(first.freshContainer.value).toEqual({ healthy: true, changed: [] });
     expect(first.sizes.value).toEqual([{ profile: 'small-v2', memoryMiB: 512, cpus: 1, healthy: true, startSeconds: 5, oomKilled: false }]);
     expect(first.candidates.from).toEqual(['analysis:rules@x', 'fixed-list']);
     expect(first.infrastructureFailures).toEqual([]);
@@ -76,6 +77,13 @@ describe('observe', () => {
     const written = await readFile(finalPath(join(dir, 'observations'), 'repo-001'), 'utf8');
     expect(written.endsWith('}\n')).toBe(true);
     expect(observationSchema.parse(JSON.parse(written))).toEqual(result);
+  });
+
+  it('starts the web without the Redis variables when the app connected to Valkey', async () => {
+    const optional = (await (await setup({ redis: 'optional' })).run()).runs[0]!;
+    expect(optional.redis.value).toEqual({ connected: true, clients: 1, healthyWithout: true });
+    const required = (await (await setup({ redis: 'required' })).run()).runs[0]!;
+    expect(required.redis.value).toEqual({ connected: true, clients: 1, healthyWithout: false });
   });
 
   it('never stores a secret value', async () => {

@@ -6,8 +6,14 @@ source:
   commit: 0d35f6f0ad40759d7ac89edc6ddd8a4aafc636e4
 build:
   dockerfile: Docker/Dockerfile
+vendorInputs:
+  - name: FRESHRSS_INSTALL
+    source:
+      kind: fixed
+      value: "--default-user admin --language en --db-type pgsql --db-host ${DB_HOST} --db-base ${DB_NAME} --db-user ${DB_USER} --db-password ${DB_PASSWORD}"
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch edge, committed 2026-10-18T20:22:11Z. Plain PHP application without a framework."
   - "Source build confirmed: Docker/Dockerfile (debian 13 with Apache and mod_php). COPY . /var/www/FreshRSS copies the source from the repository root (Docker/Dockerfile:19). The Dockerfile is not at the root, so build.dockerfile names it. Docker/Dockerfile-Alpine and the other variants are not used. EXPOSE 80 (line 70)."
   - "The PHP packages are php-sqlite3, php-mysql and php-pgsql (Docker/Dockerfile:13)."
   - "Docker/entrypoint.sh runs cli/do-install.php only when FRESHRSS_INSTALL is set (lines 76-79). The code has no DATABASE_URL name."
+  - "FRESHRSS_INSTALL is the vendor install string (Docker/entrypoint.sh:76-79 expands it with eval, so it names the database variables that Deployz injects). It installs FreshRSS on the managed PostgreSQL database."

@@ -131,7 +131,10 @@ frozen manifest.
   does not evidence as a service SDK. A key that a boot guard, a schema without
   default, an `assert` helper, `ENV.fetch` without default, or a Go `required`
   tag needs stays required. A throw guard inside a request handler, or on a
-  feature switch (`*_ENABLED`), is not a boot guard.
+  feature switch (`*_ENABLED`), is not a boot guard. A read passed straight
+  to a predicate helper (`isEnabled(process.env.X)`, `toBool(...)`) is a flag:
+  unset is false. A name that the operating system sets (`HOME`, `PATH`,
+  `LOCALAPPDATA`, `PROGRAMFILES`) is never required.
 - **Client build-time names.** `NEXT_PUBLIC_*`, `VITE_*`, `REACT_APP_*` and
   `PUBLIC_*` names are inlined at build time. A bare read of one does not
   make it required, unless it is the application's own address
@@ -173,7 +176,10 @@ frozen manifest.
   and framework config files: Rails `config/*.yml`, Laravel `config/*.php` and
   Spring `application*.properties|yml` (a `spring.datasource` property means
   the app reads `SPRING_DATASOURCE_*`). A config-file read without a default
-  is required only for a secret name. JDBC names (`*_DATASOURCE_URL`,
+  is required only for a secret name. A Laravel driver file (`broadcasting`,
+  `cache`, `database`, `filesystems`, `logging`, `mail`, `passport`, `queue`,
+  `session`) holds one block per driver, and the app reads a block only when
+  it selects that driver, so a secret read there is not required. JDBC names (`*_DATASOURCE_URL`,
   `*_JDBC_URL`) get a JDBC URL. A Redis name that ends in `REDIS_URL`,
   `REDIS_URI`, `REDIS_DSN`, `REDIS_HOST` or `REDIS_PORT`, or a prefixed name
   that ends in `_REDIS` (`PAPERLESS_REDIS`, a URL), is bound only when Redis
@@ -236,9 +242,15 @@ frozen manifest.
   generatable name (it usually falls back to a development default). An
   optional secret such as an ACME HMAC key or an analytics project key is
   never minted: a random value turns on a feature that the app then rejects.
+  A minted value is 32 random bytes, base64url. `APP_KEY` gets Laravel's
+  `base64:` form instead: Laravel reads a key without that prefix as raw
+  bytes, and its AES-256 encrypter needs exactly 32.
 - **Credentials:** Deployz never creates AWS access keys or IAM users, and
   never derives a public bucket URL (`S3_PUBLIC_BASE_URL`). The AWS SDK gets
   credentials from the ECS task role through the default credential chain.
+  So the SDK credential names `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+  and `AWS_SESSION_TOKEN` are always optional: the vendor is never asked for
+  them.
   An app that requires static keys (`S3_ACCESS_KEY_ID`) needs a vendor or
   customer value, or a code change to use the default chain.
 

@@ -84,7 +84,9 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
 /** The analyst model (OpenRouter id). Override with `ANALYSIS_AI_MODEL`. */
 export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5.5';
 /** The reviewer model (OpenRouter id). Override with `ANALYSIS_REVIEWER_MODEL`. */
-export const ANALYSIS_REVIEWER_MODEL_DEFAULT = 'openai/gpt-6-astra';
+// A pinned version from another model family than the analyst: it makes other
+// mistakes, and a fixed version keeps two analyses of a commit comparable.
+export const ANALYSIS_REVIEWER_MODEL_DEFAULT = 'deepseek/deepseek-v4-pro-0813';
 
 /** The gateway's OpenRouter route: `…/{account}/{gateway}/openrouter/v1`, from the `/compat` base URL. */
 export function gatewayOpenRouterUrl(baseUrl: string): string {

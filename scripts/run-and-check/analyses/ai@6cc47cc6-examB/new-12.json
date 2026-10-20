@@ -1,0 +1,299 @@
+{
+  "id": "new-12",
+  "commit": "2308bebd2b54edc8ac8d484be5c9b4e972aed7cc",
+  "analyser": "ai@6cc47cc6-examB",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "ops",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "ops/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 4000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "URL_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "ai"
+          ],
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAILER_SMTP_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "ai"
+          ],
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAILER_SMTP_USER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "ai"
+          ],
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAILER_SMTP_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "ai"
+          ],
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: URL_HOST, MAILER_SMTP_HOST, MAILER_SMTP_USER, MAILER_SMTP_PASSWORD. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 7,
+  "ai": {
+    "facts": [
+      {
+        "fact": "database",
+        "value": "postgres",
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "redis",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "storage",
+        "value": false,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "dockerfile",
+        "value": {
+          "path": "ops/Dockerfile",
+          "context": "."
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "port",
+        "value": 4000,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "startCommand",
+        "value": "/opt/app/bin/keila start",
+        "reasons": [
+          "ops/Dockerfile:36 does not support the claim"
+        ],
+        "subject": null,
+        "decision": "question"
+      },
+      {
+        "fact": "healthPath",
+        "value": null,
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "migration",
+        "value": {
+          "mode": "unknown",
+          "command": null
+        },
+        "reasons": [],
+        "subject": null,
+        "decision": "agree"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": true,
+        "reasons": [],
+        "subject": "URL_HOST",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": true,
+        "reasons": [],
+        "subject": "MAILER_SMTP_HOST",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": true,
+        "reasons": [],
+        "subject": "MAILER_SMTP_USER",
+        "decision": "ai"
+      },
+      {
+        "fact": "requiredVariables",
+        "value": true,
+        "reasons": [],
+        "subject": "MAILER_SMTP_PASSWORD",
+        "decision": "ai"
+      }
+    ],
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05657652,
+        "promptTokens": 9762,
+        "completionTokens": 905
+      },
+      "latencyMs": 11585
+    },
+    "reviewer": {
+      "model": "openai/gpt-6-astra",
+      "usage": {
+        "costUsd": 0.10331145,
+        "promptTokens": 5509,
+        "completionTokens": 710
+      },
+      "latencyMs": 15013
+    },
+    "latencyMs": 26611,
+    "objections": {
+      "total": 6,
+      "confirmed": 6,
+      "questions": 0
+    },
+    "generatedAt": "2026-10-19T07:37:45.146Z",
+    "failedChecks": 1,
+    "promptVersions": {
+      "analyst": 3,
+      "reviewer": 1
+    }
+  }
+}

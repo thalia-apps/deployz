@@ -290,6 +290,18 @@ describe('createAiGateway — OpenRouter', () => {
     expect(recorded[0]?.body.chat_template_kwargs).toBeUndefined();
   });
 
+  it('sends the system message apart from the prompt, and the asked reasoning effort', async () => {
+    const recorded: RecordedRequest[] = [];
+    await createAiGateway(openRouter, openRouterFetch(recorded, 'anthropic/claude-opus-5.5'))
+      .generate('the data', schema, { system: 'the instructions', reasoningEffort: 'medium' });
+
+    expect(recorded[0]?.body.messages).toEqual([
+      { role: 'system', content: 'the instructions' },
+      { role: 'user', content: 'the data' },
+    ]);
+    expect(recorded[0]?.body.reasoning).toEqual({ effort: 'medium' });
+  });
+
   it('reports the served model, the token usage, and the cost', async () => {
     const response = await createAiGateway(openRouter, openRouterFetch([], 'anthropic/claude-opus-5.5'))
       .generate('prompt', schema);

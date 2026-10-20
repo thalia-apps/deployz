@@ -249,6 +249,24 @@ describe('stays rejected — durable local state with no object-storage option',
     expect(detectLocalFilesystem(tree).detected).toBe(true);
   });
 
+  it('a Compose volume that holds the embedded database and framework storage, with PostgreSQL (2fauth)', () => {
+    const entrypoint = [
+      'if [ ! -f /2fauth/database.sqlite ]; then touch /2fauth/database.sqlite; fi',
+      'ln -s /2fauth/database.sqlite /srv/database/database.sqlite',
+      'if [ ! -d /2fauth/storage ]; then mv /srv/storage /2fauth/storage; fi',
+      'echo "${COMMIT}" > /2fauth/installed',
+    ].join('\n');
+    const tree = (extra: string): FileTree => ({
+      Dockerfile: `${APP}COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh\nENTRYPOINT ["/usr/local/bin/entrypoint.sh"]\n`,
+      'docker/entrypoint.sh': `${entrypoint}\n${extra}`,
+      'docker/docker-compose.yml': 'services:\n  2fauth:\n    image: 2fauth/2fauth:latest\n    volumes:\n      - ./2fauth:/2fauth\n',
+      'composer.json': JSON.stringify({ require: { 'ext-pdo_pgsql': '*' } }),
+      'config/database.php': "'pgsql' => ['driver' => 'pgsql'],\n",
+    });
+    expect(detectLocalFilesystem(tree('')).detected).toBe(false);
+    expect(detectLocalFilesystem(tree('mkdir -p /2fauth/uploads')).detected).toBe(true);
+  });
+
   it('a volume from a non-selected development Dockerfile is not read, but the selected one is', () => {
     const tree: FileTree = {
       Dockerfile: `${APP}VOLUME /app/data\n`,

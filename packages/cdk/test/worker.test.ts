@@ -323,6 +323,42 @@ describe('worker handler', () => {
     expect(build?.environmentVariables).toContainEqual({ name: 'BUILD_CONTEXT', value: '.' });
   });
 
+  it('builds the detected application stage, and not for an overridden Dockerfile', async () => {
+    const insert = async (name: string, detectedMetadata: Record<string, unknown>) => {
+      const [application] = await db
+        .insert(schema.applications)
+        .values({
+          organizationId,
+          name,
+          githubInstallationId: '4242',
+          repoFullName: `acme/${name}`,
+          repoUrl: `https://github.com/acme/${name}`,
+          defaultBranch: 'main',
+          detectedMetadata,
+        })
+        .returning();
+      const [release] = await db
+        .insert(schema.releases)
+        .values({ applicationId: application!.id, version: 'v1.0.0', gitSha: `sha-${name}` })
+        .returning();
+      await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, `msg-${name}`);
+      return started[started.length - 1]?.environmentVariables ?? [];
+    };
+
+    expect(await insert('kuma', { dockerfilePath: 'docker/dockerfile', dockerfileBuildTarget: 'release' })).toContainEqual({
+      name: 'BUILD_TARGET',
+      value: 'release',
+    });
+    const overridden = await insert('kuma-override', {
+      dockerfilePath: 'docker/dockerfile',
+      dockerfileBuildTarget: 'release',
+      manifestOverrides: { dockerfilePath: 'Dockerfile' },
+    });
+    expect(overridden.some((variable) => variable.name === 'BUILD_TARGET')).toBe(false);
+    const unsafe = await insert('kuma-unsafe', { dockerfilePath: 'Dockerfile', dockerfileBuildTarget: 'release; rm -rf /' });
+    expect(unsafe.some((variable) => variable.name === 'BUILD_TARGET')).toBe(false);
+  });
+
   it('fails the release when the application has no GitHub installation', async () => {
     const [application] = await db
       .insert(schema.applications)

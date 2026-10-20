@@ -54,8 +54,14 @@ describe('citedLine and checkEvidence', () => {
 
   it('reports a bad citation and a line that does not support the claim', () => {
     expect(checkEvidence(pack, cite('missing.js', 1, 'one'), anything)[0]).toContain('does not exist in the evidence');
-    expect(checkEvidence(pack, cite('app.js', 3, 'three'), (line) => line.includes('zzz'))[0]).toContain('does not support the claim');
+    expect(checkEvidence(pack, cite('app.js', 3, 'three'), (line) => line.includes('zzz'))[0]).toContain('no cited line supports the claim');
     expect(checkEvidence(pack, cite('app.js', 3, 'three'), anything)).toEqual([]);
+  });
+
+  it('accepts a reasoning chain: one supporting line is enough when every cited line exists', () => {
+    const chain = [...cite('app.js', 3, 'three'), ...cite('app.js', 1, 'one')];
+    expect(checkEvidence(pack, chain, (line) => line.includes('three'))).toEqual([]);
+    expect(checkEvidence(pack, chain, (line) => line.includes('zzz'))).toHaveLength(1);
   });
 
   it('fails when any one of several citations is bad', () => {
@@ -245,7 +251,23 @@ describe('migration', () => {
   const tree: FileTree = {
     'package.json': '{\n  "scripts": { "migrate": "prisma migrate deploy" }\n}',
     'schema.sql': 'create table a (id int);',
+    Procfile: 'web: npx prisma migrate deploy && node server.js\nworker: node worker.js\n',
   };
+  it('accepts a migrate flag of the binary from the line that defines the flag', () => {
+    const cli = ctxOf({ 'internal/cli/cli.go': 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)\nflag.BoolVar(&flagInfo, "info", false, "")' });
+    const command = (line: number, quote: string) =>
+      checkFacts(
+        cli,
+        factsOf({
+          database: { value: 'postgres', confidence: 'high', evidence: [] },
+          migration: { value: { mode: 'pre_deploy', command: '/usr/bin/app -migrate' }, confidence: 'high', evidence: cite('internal/cli/cli.go', line, quote) },
+        }),
+        null,
+      ).find((c) => c.fact === 'migration')!;
+    expect(command(1, 'flag.BoolVar(&flagMigrate, "migrate", false, flagMigrateHelp)').ok).toBe(true);
+    expect(command(2, 'flag.BoolVar(&flagInfo, "info", false, "")').ok).toBe(false);
+  });
+
   const migrationCheck = (
     migration: AnalystOutput['migration']['value'],
     database: AnalystOutput['database']['value'],
@@ -285,9 +307,15 @@ describe('migration', () => {
     expect(migrationCheck({ mode: 'unknown', command: null }, 'postgres', []).ok).toBe(true);
   });
 
-  it('checks a startup mode without a command against a migration-like line', () => {
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 2, 'prisma migrate deploy')).ok).toBe(true);
-    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 1, '{')).ok).toBe(false);
+  it('checks a startup mode without a command against a migration-like line on the start path', () => {
+    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 1, 'prisma migrate deploy')).ok).toBe(true);
+    expect(migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('Procfile', 2, 'node worker.js')).ok).toBe(false);
+  });
+
+  it('fails a startup mode whose evidence is off the start path (a package script, a README)', () => {
+    const check = migrationCheck({ mode: 'startup', command: null }, 'postgres', cite('package.json', 2, 'prisma migrate deploy'));
+    expect(check.ok).toBe(false);
+    expect(check.reasons).toContain('package.json is not on the image start path');
   });
 });
 
@@ -364,6 +392,13 @@ describe('checkFacts: the other facts', () => {
       null,
     );
     for (const fact of ['startCommand', 'healthPath', 'database', 'redis', 'storage']) expect(find(checks, fact).ok).toBe(false);
+  });
+
+  it('accepts "/" from the request pipeline of a server-rendered app, never from an unrelated line', () => {
+    const site = ctxOf({ 'Server/Program.cs': 'var app = builder.Build();\napp.UseOqtane(configuration);\nvar name = "site";' });
+    const root = (line: number, quote: string) => factsOf({ healthPath: high('/', cite('Server/Program.cs', line, quote)) });
+    expect(find(checkFacts(site, root(2, 'app.UseOqtane(configuration);'), null), 'healthPath').ok).toBe(true);
+    expect(find(checkFacts(site, root(3, 'var name = "site";'), null), 'healthPath').ok).toBe(false);
   });
 
   it('fails a low-confidence fact even with good evidence', () => {

@@ -103,7 +103,13 @@ describe('classifyBuildFailure', () => {
     expect(classifyBuildFailure('Segmentation fault', false).failure).toBe('dockerfile');
     expect(classifyBuildFailure('#12 0.923 fatal error: lfstack.push', false).failure).toBe('emulation');
     expect(classifyBuildFailure('#13 323.3 TimeoutError: The operation was aborted due to timeout', false).failure).toBe('infrastructure');
-    for (const line of ['TLS handshake timeout', 'toomanyrequests: rate limit', 'Could not resolve host: x', 'read: ECONNRESET']) {
+    for (const line of [
+      'TLS handshake timeout',
+      'toomanyrequests: rate limit',
+      'Could not resolve host: x',
+      'read: ECONNRESET',
+      'go: x@v1.0.0: read "https://proxy.golang.org/x/@v/v1.0.0.zip": stream error: stream ID 699; INTERNAL_ERROR; received from peer',
+    ]) {
       expect(classifyBuildFailure(`step\n${line}`, false).failure).toBe('infrastructure');
     }
     expect(classifyBuildFailure('npm ERR! missing script: build', false).failure).toBe('dockerfile');
@@ -199,5 +205,29 @@ describe('buildImage with a failed CI build in the cache', () => {
     const built = await buildImage({ id: 'repo-071', recipe, platform: 'linux/amd64', logDir: dir }, { run, cache });
     expect(built).toMatchObject({ ok: false, arch: 'amd64-ci-build', failure: 'dockerfile', fromCache: true });
     expect(calls).toEqual([]);
+  });
+});
+
+describe('buildImage with a build target', () => {
+  it('builds the named stage, with its own cache entry, past a CI failure of the last stage', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-target-'));
+    const calls: string[][] = [];
+    const run = async (args: readonly string[]) => {
+      calls.push([...args]);
+      return { exitCode: 1, stdout: '', stderr: 'ERROR: failed to solve: stage failed', timedOut: false };
+    };
+    const cache = createImageCache(run, dir);
+    const sha = 'e'.repeat(40);
+    cache.recordFailure('repo-013', sha, { arch: 'amd64-ci-build', failure: 'dockerfile', dockerfile: 'docker/dockerfile', context: '.', lines: ['chmod failed'] });
+    const recipe = recipeSchema.parse({
+      id: 'repo-013',
+      set: 'tuning',
+      source: { kind: 'git', repository: 'louislam/uptime-kuma', commit: sha },
+      build: { dockerfile: 'docker/dockerfile', target: 'release' },
+    });
+    const built = await buildImage({ id: 'repo-013', recipe, platform: 'linux/amd64', logDir: dir }, { run, cache, lock: (fn) => fn() });
+    expect(built).toMatchObject({ ok: false, target: 'release', fromCache: false });
+    const buildArgs = calls.find((args) => args[0] === 'build')!;
+    expect(buildArgs[buildArgs.indexOf('--target') + 1]).toBe('release');
   });
 });

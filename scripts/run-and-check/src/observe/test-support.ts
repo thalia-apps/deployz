@@ -50,6 +50,8 @@ export interface FakeOptions {
   alwaysFailLabel?: string;
   /** The web container is healthy only after a migration ran in its set, and its start creates no table. */
   needsMigration?: boolean;
+  /** The app gets REDIS_URL and connects to Valkey only through it; `required` = it is not healthy without it. */
+  redis?: 'optional' | 'required';
 }
 
 interface SetState {
@@ -96,6 +98,7 @@ export function makeFake(options: FakeOptions = {}): Fake {
         imageBytes: 10,
         dockerfile: 'Dockerfile',
         context: '.',
+        target: null,
         failure: options.buildFails === true ? 'dockerfile' : null,
         fromCache: calls.builds > 1,
         evidence: [],
@@ -134,12 +137,13 @@ export function makeFake(options: FakeOptions = {}): Fake {
         if (spec.role === 'web') {
           calls.webStarts += 1;
           const migrated = options.needsMigration !== true || state.tables.includes('migrated');
-          const healthy = SECRET_KEY_NAME in spec.env && !(broken() && spec.size.memoryMiB < 2048) && migrated;
+          const redisOk = options.redis !== 'required' || 'REDIS_URL' in spec.env;
+          const healthy = SECRET_KEY_NAME in spec.env && !(broken() && spec.size.memoryMiB < 2048) && migrated && redisOk;
           up.set(spec.name, healthy);
           if (healthy) {
             if (options.needsMigration !== true && !state.tables.includes('users')) state.tables.push('users');
             state.pgConns = 1;
-            state.valkeyClients = 1;
+            if (options.redis === undefined || 'REDIS_URL' in spec.env) state.valkeyClients = 1;
           }
         } else {
           up.set(spec.name, true);
@@ -177,7 +181,11 @@ export function makeFake(options: FakeOptions = {}): Fake {
       async stop() {},
     },
     env: ({ services }) => ({
-      env: { DATABASE_URL: `postgres://${services.postgres.host}`, SECRET_KEY: SECRET },
+      env: {
+        DATABASE_URL: `postgres://${services.postgres.host}`,
+        SECRET_KEY: SECRET,
+        ...(options.redis === undefined ? {} : { REDIS_URL: `redis://${services.valkey.host}` }),
+      },
       harnessOnly: [],
       secretNames: ['SECRET_KEY'],
     }),

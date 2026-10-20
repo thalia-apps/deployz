@@ -16,7 +16,7 @@
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
 import { isDerivedS3EnvVariable, postgresSemantic } from '../bindings.js';
 import { isDerivedUrlEnvVariable } from '../derived-url.js';
-import { isGeneratableSecretName } from '../env-classification.js';
+import { isGeneratableSecretName, isTaskRoleCredentialName } from '../env-classification.js';
 import { resolveRedisEnvBindings } from '../redis.js';
 import type { DetectorFinding, FileTree } from '../detectors.js';
 import type { AnalystOutput, FactName } from './analyst.js';
@@ -51,7 +51,7 @@ export interface WorkerCommand {
 
 export interface MergeResult {
   readonly analysis: AnalysisResult;
-  /** Markers for the API: `migrationCommand` and `workers` when the AI decided them. */
+  /** Markers for the API: `migrationCommand`, `noMigration` and `workers` when the AI decided them. */
   readonly aiResolved: readonly string[];
   /** The AI migration command to qualify, or the open question when it was not verified. */
   readonly migration: { readonly command: string } | { readonly candidate: string; readonly reason: string } | null;
@@ -87,13 +87,17 @@ function rulesWorkers(meta: Meta): WorkerCommand[] {
   });
 }
 
+const CLIENT_BUILD_VARIABLE = /^(?:NEXT_PUBLIC|VITE|REACT_APP|NUXT_PUBLIC|PUBLIC|EXPO_PUBLIC|GATSBY)_/;
+
 /**
  * True when the deterministic rules say Deployz supplies this variable: a
  * secret it mints, a binding of a provisioned database, cache or bucket, the
  * app's own URL, or PORT/HOSTNAME. Such a variable never becomes the vendor's.
  */
 function deployzProvides(name: string, meta: Meta, evidencePaths: readonly string[]): boolean {
-  if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name)) return true;
+  if (name === 'PORT' || name === 'HOSTNAME' || isGeneratableSecretName(name) || isTaskRoleCredentialName(name)) return true;
+  // Inlined into the client bundle at build time: the running server never needs it.
+  if (CLIENT_BUILD_VARIABLE.test(name)) return true;
   const variable = { key: name, required: true, secret: false, source: evidencePaths.map((path) => `read in ${path}`) };
   if (isDerivedUrlEnvVariable(variable)) return true;
   if (rulesDatabase(meta) !== 'none' && postgresSemantic(name) !== null) return true;
@@ -135,7 +139,13 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   // ── Resources first: they re-run the rules with the verified overrides. ──
   const overrides: { -readonly [K in keyof ResourceOverrides]: ResourceOverrides[K] } = {};
   const database = facts.database.value;
-  if (record('database', database, decide('database', database !== rulesDatabase(rules.metadata), false)) === 'ai') overrides.database = database;
+  // PostgreSQL wins when the app can run on it (docs/ai-analysis.md): the AI may remove a database the rules
+  // require only with high confidence and verified evidence; a wrong removal fails the deployment.
+  const removesDatabase = database === 'none' && rulesDatabase(rules.metadata) !== 'none';
+  const databaseOutcome = decide('database', database !== rulesDatabase(rules.metadata), false);
+  if (removesDatabase && databaseOutcome.decision === 'ai' && facts.database.confidence !== 'high') {
+    record('database', database, { decision: 'rules', reasons: ['the rules require a database; the AI removes one only with high confidence'] });
+  } else if (record('database', database, databaseOutcome) === 'ai') overrides.database = database;
   const redis = facts.redis.value;
   const rulesRedis = (rules.metadata['redis'] as { required?: unknown } | undefined)?.required === true;
   if (record('redis', redis, decide('redis', redis !== rulesRedis, false)) === 'ai') overrides.redis = redis;
@@ -160,6 +170,7 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
     // The missing-source and tie signals describe the rules' Dockerfile.
     delete meta['dockerfileMissingSources'];
     delete meta['dockerfileSelectionTied'];
+    delete meta['dockerfileBuildTarget'];
     findings = replaceFinding(findings, 'dockerfile', { detected: true, value: dockerfile.path });
   }
 
@@ -180,7 +191,10 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
 
   // ── Start command ──
   const start = facts.startCommand.value;
-  const startDecision = record('startCommand', start, decide('startCommand', start !== null && start !== firstString(meta['startupCommands']), true));
+  // The image runs its own CMD; the start command only answers the gate. A failed
+  // AI description is a question only when the rules found no command either.
+  const rulesStart = firstString(meta['startupCommands']);
+  const startDecision = record('startCommand', start, decide('startCommand', start !== null && start !== rulesStart, rulesStart === null));
   if (startDecision === 'ai' && start !== null) {
     meta['startupCommands'] = [start];
     meta['hasStartupCommand'] = true;
@@ -208,9 +222,16 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   const migration = facts.migration.value;
   let migrationResult: MergeResult['migration'] = null;
   const modeDiffers = migration.mode !== 'unknown' && migration.mode !== meta['migrationMode'];
-  const migrationDecision = record('migration', migration, decide('migration', modeDiffers || migration.command !== null, migration.command !== null));
+  const migrationOutcome = decide('migration', modeDiffers || migration.command !== null, migration.command !== null);
+  // "No migration" holds only when the deployment has no database after the merge
+  // (the analyst may have said "none" for a database that the rules keep).
+  const migrationDecision =
+    migration.mode === 'none' && rulesDatabase(meta) !== 'none' && migrationOutcome.decision === 'ai'
+      ? record('migration', migration, { decision: 'rules', reasons: ['the deployment keeps a database, so its schema is migrated'] })
+      : record('migration', migration, migrationOutcome);
   if (migrationDecision === 'ai') {
     meta['migrationMode'] = migration.mode;
+
     if (migration.mode === 'startup') {
       meta['migrationStartupEvidence'] = facts.migration.evidence.map((item) => ({ path: item.path, line: item.line, fromDockerCommand: false }));
     }
@@ -222,6 +243,12 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   } else if (migrationDecision === 'question' && migration.command !== null) {
     migrationResult = { candidate: migration.command, reason: 'The AI Analysis could not verify this migration command.' };
     meta['aiMigrationQuestion'] = migrationResult;
+  }
+
+  // A "no migration" that holds (verified, or the same as the rules) also removes any
+  // migration script the rules picked: the deployment has no database to migrate.
+  if (migration.mode === 'none' && rulesDatabase(meta) === 'none' && (migrationDecision === 'ai' || migrationDecision === 'agree')) {
+    aiResolved.push('noMigration');
   }
 
   // ── Workers: the rules' declared workers plus every verified AI worker. ──
@@ -251,7 +278,10 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
     const entry = model.find((item) => item['key'] === name);
     // Deployz provides these values itself; they are never the vendor's to supply.
     if (entry?.['classification'] === 'deployz_managed' || entry?.['classification'] === 'deployz_generated') continue;
-    const outcome = decide('requiredVariables', entry?.['required'] !== true, true, name);
+    // A variable that the analyst claims and the checks refute (a default, a guard, low
+    // confidence) is dropped; only an open reviewer objection asks the vendor.
+    const objected = questions.some((question) => question.fact === 'requiredVariables' && question.subject === name);
+    const outcome = decide('requiredVariables', entry?.['required'] !== true, objected, name);
     if (record('requiredVariables', true, outcome, name) === 'agree') continue;
     if (outcome.decision === 'ai' || outcome.decision === 'question') {
       if (entry) Object.assign(entry, { required: true, classification: 'customer_required' });

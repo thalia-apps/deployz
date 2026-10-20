@@ -11,7 +11,7 @@ import { createServices } from '../services/index.js';
 import { observe } from './observe.js';
 import type { ObserveDeps } from './types.js';
 
-const HARNESS_VERSION = '1';
+const HARNESS_VERSION = '2';
 const MAX_PARALLEL = 2;
 const HARNESS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 

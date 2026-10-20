@@ -544,7 +544,7 @@ export function normalizeDeploymentManifest(
         ? { portIsDefault: true }
         : {}),
     },
-    health: normalizeHealthSection(overrides.healthPath, meta),
+    health: { ...normalizeHealthSection(overrides.healthPath, meta), ...(meta['hostChecked'] === true ? { hostChecked: true } : {}) },
     database: {
       // Legacy name for "Deployz provisions a managed relational database";
       // `engine` (Phase 4B) carries which engine it runs.
