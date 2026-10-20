@@ -406,6 +406,7 @@ export const CLAIM_TYPES = [
   'migration.command',
   'worker.command', // one claim per worker
   'env.required', // one claim per required variable
+  'datastore.required', // one claim per datastore server that Deployz does not host (MongoDB, Elasticsearch, ClickHouse, …)
 ] as const;
 export const claimTypeSchema = z.enum(CLAIM_TYPES);
 export type ClaimType = z.infer<typeof claimTypeSchema>;

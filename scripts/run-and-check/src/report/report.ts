@@ -129,6 +129,7 @@ function falseProblems(
     const { claim } = entry;
     if (entry.verdict !== 'CONTRADICTED') continue;
     if (claim.type === 'env.required') problems.push(`${claim.subject} is required, but the application starts without it`);
+    if (claim.type === 'datastore.required' && claim.value === true) problems.push(`the ${claim.subject} datastore is required, but the application starts without it`);
     if (claim.type === 'database.engine' && claim.value !== 'none' && entry.observed === 'none') {
       problems.push(`a managed ${claim.value} database is required, but the application made no SQL connection`);
     }
