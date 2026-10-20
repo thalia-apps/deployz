@@ -14,13 +14,17 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
+import { parse } from 'yaml';
+
 import {
   analysisResultFileSchema,
   fullRunSchema,
   observationSchema,
+  recipeSchema,
   type AnalysisResultFile,
   type FullRun,
   type Observation,
+  type Recipe,
   type RepositoryReport,
 } from '../contract.js';
 import { renderMarkdown, repositoryReport, summaryReport } from '../report/report.js';
@@ -33,6 +37,13 @@ const ANALYSES_DIR = join(HARNESS_ROOT, 'analyses');
 const OBSERVATIONS_DIR = join(HARNESS_ROOT, 'observations');
 const FULL_RUNS_DIR = join(HARNESS_ROOT, '.runs', 'full');
 const REPORTS_DIR = join(HARNESS_ROOT, '.runs', 'reports');
+const RECIPES_DIR = join(HARNESS_ROOT, 'recipes');
+
+/** The vendor inputs of a git recipe; a fixture has none that wire a service. */
+function loadVendorInputs(id: string): Recipe['vendorInputs'] {
+  const path = join(RECIPES_DIR, `${id}.yaml`);
+  return existsSync(path) ? recipeSchema.parse(parse(readFileSync(path, 'utf8'))).vendorInputs : [];
+}
 
 export interface ClaimsOptions {
   ids: string[];
@@ -85,6 +96,7 @@ export function buildReports(
   analyses: readonly AnalysisResultFile[],
   loadObservation: (id: string) => Observation | null,
   loadFullRun: (analyser: string, id: string) => FullRun | null,
+  vendorInputsOf: (id: string) => Recipe['vendorInputs'] = () => [],
 ): { reports: RepositoryReport[]; withoutObservation: string[] } {
   const reports: RepositoryReport[] = [];
   const withoutObservation: string[] = [];
@@ -96,7 +108,7 @@ export function buildReports(
     }
     const verdicts = checkClaims(extractClaims(analysis), observation);
     const fullRun = loadFullRun(analysis.analyser, analysis.id);
-    reports.push(repositoryReport({ id: analysis.id, set: observation.set }, analysis, observation, verdicts, fullRun));
+    reports.push(repositoryReport({ id: analysis.id, set: observation.set, vendorInputs: vendorInputsOf(analysis.id) }, analysis, observation, verdicts, fullRun));
   }
   return { reports, withoutObservation };
 }
@@ -113,6 +125,7 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
     analyses,
     (id) => loadOptional(join(OBSERVATIONS_DIR, `${id}.json`), (value) => observationSchema.parse(value)),
     (name, id) => loadOptional(join(FULL_RUNS_DIR, name, `${id}.json`), (value) => fullRunSchema.parse(value)),
+    loadVendorInputs,
   );
   for (const id of withoutObservation) console.warn(`${id}: no observation, skipped`);
 

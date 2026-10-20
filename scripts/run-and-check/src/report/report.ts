@@ -106,6 +106,7 @@ function falseProblems(
   verdicts: readonly ClaimVerdict[],
   observation: Observation,
   fullRun: FullRun | null,
+  vendorInputs: Recipe['vendorInputs'],
 ): string[] {
   const gate = analysis.gate;
   if (gate === null) return [];
@@ -138,7 +139,11 @@ function falseProblems(
   }
 
   const database = find('database.engine');
-  if (database?.verdict === 'CONFIRMED' && findings('database-connection-unverified').length > 0) {
+  // A recipe input that wires the database itself (an install string that names ${DB_HOST}) is the vendor's confirmation.
+  const wiredByVendor = vendorInputs.some(
+    (input) => input.source.kind === 'fixed' && /\$\{?(?:DB|DATABASE|MYSQL|POSTGRES|PG)_?[A-Z]*\}?/.test(input.source.value),
+  );
+  if (database?.verdict === 'CONFIRMED' && !wiredByVendor && findings('database-connection-unverified').length > 0) {
     problems.push('the database variable is unverified, but the application connected with the standard bindings');
   }
   const paths = run.httpPaths.status === 'observed' ? (run.httpPaths.value ?? []) : [];
@@ -156,7 +161,7 @@ function falseProblems(
 }
 
 export function repositoryReport(
-  recipe: Pick<Recipe, 'id' | 'set'>,
+  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs'>>,
   analysis: AnalysisResultFile,
   observation: Observation,
   verdicts: readonly ClaimVerdict[],
@@ -193,7 +198,7 @@ export function repositoryReport(
     healthyWithAnalysedSettings: fullRun === null && unbuildable ? false : fullHealth,
     hiddenProblem: readiness === 'READY' && (fullHealth === false || (fullRun === null && unbuildable)),
     unstableFullRun,
-    falseProblems: falseProblems(analysis, decided, observation, fullRun),
+    falseProblems: falseProblems(analysis, decided, observation, fullRun, recipe.vendorInputs ?? []),
     vendorQuestions: analysis.vendorQuestions,
     unstableFacts: observation.unstable,
     infrastructureFailures: [...new Set(failures)],
