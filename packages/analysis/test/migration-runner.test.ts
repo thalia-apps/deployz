@@ -92,6 +92,12 @@ describe('the migration "Needs input" question', () => {
     expect(resolved.findings.map((finding) => finding.id)).not.toContain('migration-command-needs-input');
   });
 
+  it('says that the migration is unknown when no script was found (the AI Analysis could not tell)', () => {
+    const unknown = { candidate: '', reason: 'The AI Analysis could not tell how this app migrates its database.' };
+    const finding = buildReadinessReport(analysis, { migrationNeedsInput: unknown }).findings.find((entry) => entry.id === 'migration-command-needs-input');
+    expect(finding).toMatchObject({ plainEnglishExplanation: 'Deployz cannot tell how this app migrates its database.', technicalEvidence: unknown.reason });
+  });
+
   it('blocks provisioning until the vendor owns the migration setting', () => {
     const open = normalizeDeploymentManifest({ metadata: { ...analysis.metadata, migrationNeedsInput: needsInput } }, {});
     expect(open.migration.needsCommand).toBe(true);

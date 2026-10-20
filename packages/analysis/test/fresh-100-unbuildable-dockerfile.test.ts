@@ -41,6 +41,22 @@ describe('a repository with no Dockerfile that builds a production image', () =>
     expect(state).toBe('NOT_COMPATIBLE');
   });
 
+  it('is NOT_COMPATIBLE when the Dockerfile copies nothing from the repository (outline: the app comes from a floating base image)', () => {
+    const outline = [
+      'ARG BASE_IMAGE=outlinewiki/outline-base',
+      'FROM ${BASE_IMAGE} AS base',
+      'FROM node:26.3.0-slim AS runner',
+      'COPY --from=base /opt/outline/build ./build',
+      'COPY --from=base /opt/outline/node_modules ./node_modules',
+      'CMD ["node", "build/server/index.js"]',
+    ].join('\n');
+    const { rejected, state } = gate(withPaths({ ...APP, Dockerfile: outline }));
+    expect(rejected?.reason).toContain('copies nothing from the repository');
+    expect(state).toBe('NOT_COMPATIBLE');
+    const fromSource = 'FROM node:20 AS build\nCOPY . .\nRUN npm ci\nFROM node:20-slim\nCOPY --from=build /app /app\nCMD ["node", "/app/index.js"]\n';
+    expect(gate(withPaths({ ...APP, Dockerfile: fromSource })).rejected).toBeUndefined();
+  });
+
   it('is NOT_COMPATIBLE when the only Dockerfile copies a prebuilt binary the repository lacks', () => {
     const { rejected, state } = gate(
       withPaths({ ...APP, Dockerfile: 'FROM alpine:3.20\nCOPY server /usr/bin/server\nEXPOSE 3000\nCMD ["server"]\n' }),

@@ -135,7 +135,12 @@ Repository (GitHub tree, bounded)
   only development or template files, or a selected Dockerfile that copies
   sources the repository lacks while every other Dockerfile with a CMD or
   ENTRYPOINT also copies a missing source), the repository is
-  NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A capped or partial
+  NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A selected Dockerfile
+  that copies nothing from the build context (no `COPY` or `ADD` without
+  `--from`, no bind mount) is not buildable either: its image runs code from
+  another image, not from the commit (outline copies its build and
+  `node_modules` from the floating `outlinewiki/outline-base` image), unless
+  another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
   file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step

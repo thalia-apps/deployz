@@ -111,6 +111,9 @@ describe('mergeAiAnswers: open facts', () => {
     const { result } = merge(withDatabase, [], [health, fact(questions[1]!.id, null)]);
     expect(result.analysis.metadata['healthMode']).toBe('vendor_required');
     expect(result.answers[0]).toMatchObject({ decision: 'rules', reasons: ['another open fact stays unresolved'] });
+    // The unknown migration of a required database stays a vendor question, never a silent READY.
+    expect(result.migration).toEqual({ candidate: '', reason: 'The AI Analysis could not tell how this app migrates its database.' });
+    expect(result.analysis.metadata['aiMigrationQuestion']).toEqual(result.migration);
   });
 
   it('an unknown or failing fact leaves the rules question open', () => {

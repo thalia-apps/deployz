@@ -637,10 +637,13 @@ export function buildReadinessReport(
       title: 'Choose how Deployz runs database migrations',
       severity: 'required',
       blocking: false,
-      plainEnglishExplanation: `Deployz found the migration script "${candidate}", but cannot confirm that the built image can run it.`,
+      plainEnglishExplanation:
+        candidate === ''
+          ? 'Deployz cannot tell how this app migrates its database.'
+          : `Deployz found the migration script "${candidate}", but cannot confirm that the built image can run it.`,
       whyItMatters:
         'Deployz runs the migration command inside the built image before each release. A command the image cannot run fails every deploy.',
-      technicalEvidence: `Migration script: ${candidate}. Not confirmed because ${reason}.`,
+      technicalEvidence: candidate === '' ? reason : `Migration script: ${candidate}. Not confirmed because ${reason}.`,
       suggestedOutcome:
         'Enter a migration command that the built image can run, or choose "No separate migration" in the application settings.',
       confidence: 'needs_confirmation',

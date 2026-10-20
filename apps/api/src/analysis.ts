@@ -374,7 +374,9 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // history and a repository whose every startable Dockerfile copies a missing
 // build output are unbuildable; a HEALTHCHECK port variable names the port; Node 26
 // images have no Yarn for a Procfile worker. Stored v56 rows can carry those claims.
-export const ANALYSIS_VERSION = 57;
+// Version 58 (AI open items): a Dockerfile that copies nothing from the repository
+// is unbuildable (outline runs a floating base image). Stored v57 rows say READY.
+export const ANALYSIS_VERSION = 58;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

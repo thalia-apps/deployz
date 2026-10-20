@@ -154,9 +154,11 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
       reasons: !allResolved && resolves(answer) ? ['another open fact stays unresolved'] : check.reasons,
     });
     if (!applies) {
-      const unverified = question.fact === 'migration' && value !== null ? (value as MigrationValue).command : null;
-      if (unverified !== null) {
-        migration = { candidate: unverified, reason: 'The AI Analysis could not verify this migration command.' };
+      // The migration of a required database stays a vendor question: an unknown migration can stop
+      // the start (Logto refuses to start with undeployed alterations), so doubt is never READY.
+      if (question.fact === 'migration' && !resolves(answer)) {
+        const unverified = value !== null ? (value as MigrationValue).command : null;
+        migration = { candidate: unverified ?? '', reason: 'The AI Analysis could not tell how this app migrates its database.' };
         meta['aiMigrationQuestion'] = migration;
       }
       continue;
