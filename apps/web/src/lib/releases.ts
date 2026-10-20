@@ -41,7 +41,6 @@ export async function fetchReleases(applicationId: string): Promise<Release[]> {
 export interface CreateReleaseInput {
   version: string;
   gitSha: string;
-  migrationCommand?: string | null;
 }
 
 /** Thrown when a release cannot build because a required build-stage
@@ -70,7 +69,6 @@ export async function createRelease(
       body: JSON.stringify({
         version: input.version,
         gitSha: input.gitSha,
-        migrationCommand: input.migrationCommand ?? null,
       }),
     },
   );

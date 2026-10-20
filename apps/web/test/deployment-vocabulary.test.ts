@@ -310,8 +310,8 @@ describe('actionsUnavailableReason', () => {
       relayStatus: 'DISCONNECTED',
       anyCapabilityGatedOff: true,
     });
-    expect(reason).toContain('relay is offline');
-    expect(reason).not.toContain('connector');
+    expect(reason).toContain('Deployz connector is offline');
+    expect(reason).not.toContain('not supported');
   });
 
   it('gates on a relay that has never connected', () => {
@@ -322,7 +322,7 @@ describe('actionsUnavailableReason', () => {
         relayStatus: 'UNKNOWN',
         anyCapabilityGatedOff: false,
       }),
-    ).toContain('No relay has connected');
+    ).toContain('The Deployz connector has not connected');
   });
 
   it('reports the missing capability only once the relay is online', () => {

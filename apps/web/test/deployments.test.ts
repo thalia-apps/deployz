@@ -85,7 +85,7 @@ describe('actionErrorMessage', () => {
 
   it('explains a deploy refused for an infrastructure change', () => {
     expect(actionErrorMessage(new DeploymentActionError(409, 'INFRASTRUCTURE_CHANGE_REQUIRED'), 'fallback')).toBe(
-      'This application now needs a database or cache that this deployment does not have. Create a new deployment for this customer, or change the requirements back.',
+      "This application's infrastructure changed (database, cache, database engine, workers, queues or schedules), and an existing deployment cannot get these changes. Create a new deployment for this customer, or change the requirements back.",
     );
   });
 
