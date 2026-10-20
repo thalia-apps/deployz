@@ -10,7 +10,7 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 10;
+export const ANALYST_PROMPT_VERSION = 12;
 export const ANALYST_MAX_PROMPT_TOKENS = 60_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
@@ -177,6 +177,8 @@ export function fromWire(wire: AnalystWire): unknown {
     if (entry.fact === 'workers') (output['workers'] as unknown[]).push({ id: entry.subject, command: value, ...item });
     else if (entry.fact === 'requiredVariables') (output['requiredVariables'] as unknown[]).push({ name: entry.subject, ...item });
     else if (entry.fact in output) throw new Error(`the analyst gave ${entry.fact} twice`);
+    // No database answer is no claim: a low-confidence "none" fails the checks, so the rules database stays.
+    else if (entry.fact === 'database' && value === null) output[entry.fact] = { value: 'none', confidence: 'low', evidence: entry.evidence };
     else output[entry.fact] = { value, ...item };
   }
   return output;
@@ -224,7 +226,7 @@ healthPath:
 An unauthenticated HTTP path on the serving port that answers 2xx when the application is up. It must be supported by a route that the started application registers (check route prefixes, mount points and authentication middleware) or by the path a production HEALTHCHECK probes. A probe that references an absent route is not enough. A clearly registered health route is sufficient evidence with high confidence; do not answer "null" because of uncertainty about something else. A health route that the framework itself provides counts when the application enables it (for example a route declared in the framework's routing or bootstrap configuration, or a health endpoint that a monitoring dependency in the production build exposes). When the app registers no health route at all, give the path of a page that it serves with HTTP 200 without login and without a redirect (for example a public start page or the login page itself, never a path that redirects to it), with medium confidence, citing the route or the handler. A server-rendered application (for example a CMS or a web UI that the server renders) that serves its home page without login: give "/", citing the line that maps the root route or the pipeline that serves it. A route in a browser-side router (a front-end router file) is not a server route; use it only when the server also registers it. The load balancer counts only HTTP 200 as healthy. Value "null" only when no such path exists in the evidence.
 
 database:
-"postgres" or "mysql" when the effective production configuration requires that database to start or serve. "none" when it needs no external database (for example SQLite or an embedded store by default), and also when it requires another kind of database: Deployz rejects those by its own deterministic checks. When the application supports several engines, give the one its production configuration selects, and "postgres" when PostgreSQL is one of the supported choices.
+"postgres" when the application can use PostgreSQL: it requires it, or it supports it as one engine choice that an environment variable selects (an engine selector such as DB_CLIENT or DB_TYPE with a PostgreSQL value, or a database URL that the start reads), even when its default is SQLite or another embedded store. Deployz then sets that variable. When the engine is chosen only in a configuration file that the image ships (not from the environment), the shipped choice decides; a bundled driver alone is not enough. "mysql" when MySQL is the only SQL engine it can use. "none" only when it cannot use PostgreSQL or MySQL: it needs no external database, or it needs another kind of database (Deployz rejects those by its own deterministic checks). Give "none" high confidence only when the evidence shows that no PostgreSQL or MySQL support exists.
 
 redis / storage:
 "true" only when Redis, or S3-compatible object storage, is required to start or for essential functionality. Optional caches, optional queues and optional integrations are "false". Local filesystem writes do not imply S3.

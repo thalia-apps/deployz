@@ -816,6 +816,9 @@ function relevancePriority(path: string, protectedPaths: ReadonlySet<string>): n
   if (COMPOSE_REGEX.test(path)) return 0;
   if (ENV_SAMPLE_REGEX.test(path)) return 0;
   if (!isRuntimeSourcePath(path)) return 7; // tests, specs, fixtures, scripts, docs, tool configs
+  // One per runnable ASP.NET project, where it maps its endpoints: a module-heavy
+  // repository has more `.csproj` manifests than the cap holds (OrchardCore).
+  if (/(?:^|\/)Program\.cs$/.test(path)) return 0;
   if (MANIFEST_REGEX.test(path)) return 1;
   if (OTHER_MANIFEST_REGEX.test(path)) return 1;
   if (!path.includes('/')) return 2; // generic (unnamed) root files

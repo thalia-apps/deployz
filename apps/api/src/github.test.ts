@@ -746,6 +746,29 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).not.toHaveProperty('config/locales/en.yml');
   });
 
+  it('keeps an ASP.NET Program.cs inside the cap when manifests alone fill it (OrchardCore)', async () => {
+    const manifests = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
+      path: `src/Modules/M${i}/M${i}.csproj`,
+      type: 'blob' as const,
+      sha: `sha-csproj-${i}`,
+      size: 10,
+    }));
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [...manifests, { path: 'src/Cms.Web/Program.cs', type: 'blob', sha: 'sha-program', size: 10 }],
+        });
+      }
+      const sha = url.split('/').pop();
+      return makeFetchResponse(200, { content: Buffer.from(`content-${sha}`).toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(Object.keys(tree)).toHaveLength(ANALYSIS_MAX_FILES);
+    expect(tree).toHaveProperty('src/Cms.Web/Program.cs');
+  });
+
   it('fetches Laravel route and ASP.NET entry files and keeps them above ordinary source', async () => {
     const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
       path: `src/feature${i}.ts`,

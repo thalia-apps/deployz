@@ -18,6 +18,12 @@ describe('fromWire', () => {
     expect(() => fromWire({ facts: [...wire.facts, wire.facts[1]!] })).toThrow(/twice/);
   });
 
+  it('reads a null database answer as a low-confidence "none", which the checks then refuse', () => {
+    const wire = toWire(factsOf());
+    const unsure = wire.facts.map((entry) => (entry.fact === 'database' ? { ...entry, value: 'null', confidence: 'high' as const } : entry));
+    expect(analystOutputSchema.parse(fromWire({ facts: unsure })).database).toMatchObject({ value: 'none', confidence: 'low' });
+  });
+
   it('leaves a missing fact or a wrongly typed value to the strict schema', () => {
     const wire = toWire(factsOf());
     expect(analystOutputSchema.safeParse(fromWire({ facts: wire.facts.filter((entry) => entry.fact !== 'port') })).success).toBe(false);
