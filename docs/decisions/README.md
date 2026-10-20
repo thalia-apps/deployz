@@ -1013,38 +1013,41 @@ Decision:
 
 Measured on the 58 exam repositories (tuning and holdout). The answers came
 from Claude Opus 5.5 in a coding session (no API call), replayed through the
-production checks and merge (`ai@0f3e3a0b-open-items`). One full exam on
-x86_64 runners (runs 39418304789 and 39426064491); a second full exam is
-still needed for the gate.
+production checks and merge (`ai@0946721d-open-items`). Full exam on x86_64
+runners: run 39435522422 (each full run runs twice).
 
 | | rules@0fc073b8 | AI open items |
 | --- | --- | --- |
-| False problems, tuning + holdout | 11 + 6 | 6 + 4 |
-| CONTRADICTED claims, tuning + holdout | 14 + 14 | 10 + 13 |
-| Hidden problems, tuning + holdout | 2 + 0 | 2 + 0 |
+| Hidden problems, tuning + holdout | 2 + 0 | **0 + 0** |
+| False problems, tuning + holdout | 11 + 6 | 6 + 6 |
+| CONTRADICTED claims, tuning + holdout | 14 + 14 | 8 + 13 |
 | Healthy with the analysed settings, tuning + holdout | 16 + 4 | 19 + 4 |
-| Predicted 1, actually 2 or 3 | 8 + 8 | 6 + 8 |
+| Predicted 1, actually 2 or 3 | 8 + 8 | 5 + 8 |
 | Predicted 3, actually 1 or 2 | 7 + 5 | 7 + 5 |
 
 - CONTRADICTED claims are fewer than or equal to the rules for each claim
   type.
-- The two hidden problems (new-14 Logto, repo-016 Outline) are the rules'
-  own: the manifests are the same as the rules manifests. Outline has no
-  open item; for Logto the analyst answered the migration question
-  "unknown". The AI adds no hidden problem. The first exam had one more
-  (new-23): the AI filled the health path while the migration stayed
-  unknown, the gate said READY, and the app did not start. Since then the
-  open facts are all or nothing.
+- The rules' two hidden problems are fixed. repo-016 (Outline): the
+  Dockerfile copies nothing from the repository; its image runs the floating
+  `outlinewiki/outline-base` build, which crashes on Node 26. The rules now
+  call such a Dockerfile unbuildable. new-14 (Logto): the database is
+  required, the migration is unknown, and the app refuses to start until its
+  alterations are deployed. An AI migration answer that is unknown or fails
+  its check now stays a vendor question, never READY. An earlier exam also
+  showed new-23 READY while its migration was unknown; the open facts are
+  now all or nothing.
+- The migration question costs two false problems in the holdout set
+  (new-2, repo-204: the app migrates at start, but the AI could not prove
+  it). Doubt asks the vendor; it is never READY.
 - The outcome rows use the gate state (NOT_COMPATIBLE is 3, every other state
   is 1), because this branch does not have the readiness outcome yet. With
-  that mapping neither engine passes the outcome criteria. The AI does not
-  lower the false outcome 3: most blocker answers are "required", because
-  the windows rarely show a switch to a supported engine, and the checks
-  refuse the "not used" answers that they cannot confirm.
+  that mapping the outcome criteria are not met: a NEEDS_CONFIGURATION
+  repository counts as predicted 1, and its full run has no vendor answer.
+  The AI does not lower the false outcome 3: most blocker answers are
+  "required", because the windows rarely show a switch to a supported engine.
 - 45 of 58 repositories have an open item. A pack is about 17,000
-  characters (at most 34,000), against about 90,000 before, so the cost per
-  analysis is expected to be well below $0.46. The cost and the time are not
-  measured yet: the answers were not API calls.
+  characters (at most 34,000), against about 90,000 before. The cost and the
+  time are not measured yet: the answers were not API calls.
 
 What would change it: a full exam shows a hidden problem or a false
 outcome 1 that the AI causes, the cost or the time per analysis is above the
