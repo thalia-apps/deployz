@@ -10,7 +10,7 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 9;
+export const ANALYST_PROMPT_VERSION = 10;
 export const ANALYST_MAX_PROMPT_TOKENS = 60_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 16_000;
@@ -241,7 +241,7 @@ workers:
 Each required long-running process that the production setup declares next to the web process and that runs from the same image: a Procfile entry other than web, or a service in the production Compose file that uses the same image or build. Development, test and example Compose files do not count. subject = the identifier exactly as declared, in lower case. value = its command exactly as declared. Exclude optional or development services, one-off jobs, schedulers that only run tasks on demand, and processes that the web container already starts.
 
 requiredVariables:
-Each variable that the vendor must supply because its absence makes startup fail or breaks essential functionality, including explicit fail-fast checks. Reading a variable with no default is not enough by itself: the start path must use it so that the application fails without it. Exclude every name in the Deployz binding contract, build arguments, runtime tuning options and variables that only optional features read. Never treat an external credential (a third-party API key, an SMTP password) as a secret that Deployz can generate. List a variable only when you would ask the vendor for it yourself; when you are unsure, leave it out (an extra variable is a needless question). subject = the exact environment variable name (letters, digits and underscores), never a property, flag or configuration key.
+Each variable that the vendor must supply because its absence makes startup fail or breaks essential functionality, including explicit fail-fast checks. Reading a variable with no default is not enough by itself: the start path must use it so that the application fails without it. Exclude every name in the Deployz binding contract, build arguments, runtime tuning options and variables that only optional features read. A sample-file comment that says a variable is required, or a Compose interpolation that fails without it (\`\${NAME:?err}\`), describes the authors' own deployment, not what the code needs to start: cite the code that the start path runs. Mail sender settings (a from address or name, an SMTP host) are needed only to send mail; the application starts without them. Never treat an external credential (a third-party API key, an SMTP password) as a secret that Deployz can generate. List a variable only when you would ask the vendor for it yourself; when you are unsure, leave it out (an extra variable is a needless question). subject = the exact environment variable name (letters, digits and underscores), never a property, flag or configuration key.
 
 OUTPUT
 Return {"facts":[...]}: exactly one entry for each of dockerfile, port, startCommand, healthPath, database, redis, storage and migration, plus one entry for each worker and each required variable.

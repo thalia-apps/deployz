@@ -379,6 +379,13 @@ describe('checkFacts: the other facts', () => {
     for (const fact of ['startCommand', 'healthPath', 'database', 'redis', 'storage']) expect(find(checks, fact).ok).toBe(false);
   });
 
+  it('accepts "/" from the request pipeline of a server-rendered app, never from an unrelated line', () => {
+    const site = ctxOf({ 'Server/Program.cs': 'var app = builder.Build();\napp.UseOqtane(configuration);\nvar name = "site";' });
+    const root = (line: number, quote: string) => factsOf({ healthPath: high('/', cite('Server/Program.cs', line, quote)) });
+    expect(find(checkFacts(site, root(2, 'app.UseOqtane(configuration);'), null), 'healthPath').ok).toBe(true);
+    expect(find(checkFacts(site, root(3, 'var name = "site";'), null), 'healthPath').ok).toBe(false);
+  });
+
   it('fails a low-confidence fact even with good evidence', () => {
     const checks = checkFacts(
       ctx,

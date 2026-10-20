@@ -179,6 +179,8 @@ export function checkPort(ctx: CheckContext, port: AnalystOutput['port'], docker
 const POSTGRES = /postgres|\bpg\b|psycopg|pgx|lib\/pq|npgsql|postgrex|jdbc:postgresql|pdo_pgsql|asyncpg|sequelize|prisma|typeorm|knex|DATABASE_URL/i;
 const MYSQL = /mysql|mariadb|pdo_mysql|myxql|jdbc:mysql/i;
 const NO_DATABASE = /sqlite|in[-_ ]?memory|\bh2\b|embedded|nedb|bolt|badger/i;
+// A line that serves the root page: the request pipeline or route table of a server-rendered app (`app.UseOqtane(...)`, `app.MapRazorPages()`, `urlpatterns`).
+const SERVES_ROOT = /\.(?:Map|Use)\w*\(|\.Run\(\)|\burlpatterns\b|\broutes?\b|\brouter\b/i;
 const REDIS = /redis|valkey|bullmq|\bbull\b|sidekiq|celery|\brq\b|resque|horizon/i;
 const OPTIONAL = /optional|enabled|disable|default|\bif\b|unless|\|\||\?\?|false|null|nil|None|local|file|disk|memory/i;
 const STORAGE = /\bs3\b|aws-sdk|boto|minio|bucket|ex_aws|flysystem|active_?storage|object.?storage|storage/i;
@@ -254,7 +256,7 @@ export function checkFacts(ctx: CheckContext, output: AnalystOutput, fallbackDoc
       : simple('healthPath', ctx, output.healthPath, (line) => {
           const path = output.healthPath.value!;
           const last = path.split('/').filter(Boolean).pop() ?? path;
-          return line.includes(path) || (last.length >= 3 && line.includes(last));
+          return line.includes(path) || (last.length >= 3 && line.includes(last)) || (path === '/' && SERVES_ROOT.test(line));
         }),
     checkDatabase(ctx, output.database),
     simple('redis', ctx, output.redis, (line) => REDIS.test(line) && (output.redis.value || OPTIONAL.test(line))),

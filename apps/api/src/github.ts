@@ -684,10 +684,12 @@ const CONFIG_ENV_FILE_REGEX =
 // `health.controller.ts`, whose `@Controller('health')` is the only evidence.
 const HEALTH_ROUTE_FILE_REGEX =
   /(?:^|\/)(?:health|healthz|healthcheck|heartbeat)(?:\.controller)?(?:\.[jt]sx?|\/(?:route|index|\+server)\.[jt]sx?)$/i;
-// Laravel declares its routes, and the framework health route (`health: '/up'`),
-// in `routes/*.php` and `bootstrap/app.php`. PHP is not a source extension, so the
-// AI analyst would otherwise never see a Laravel health route.
-const PHP_ROUTE_FILE_REGEX = /(?:^|\/)(?:bootstrap\/app|routes\/[\w.-]+)\.php$/;
+// Route and boot files in languages that are not source extensions: Laravel
+// declares its routes, and the framework health route (`health: '/up'`), in
+// `routes/*.php` and `bootstrap/app.php`; ASP.NET maps its endpoints and health
+// checks in `Program.cs` or `Startup.cs`. Without them the AI analyst never sees
+// those routes.
+const ROUTE_ENTRY_FILE_REGEX = /(?:^|\/)(?:(?:bootstrap\/app|routes\/[\w.-]+)\.php|Program\.cs|Startup\.cs)$/;
 // Lockfiles the §18 package-manager detector needs — matched by BASENAME
 // only (not `isRelevantPath`'s path-prefix shapes): their presence is the
 // signal, never their content, so they are never blob-fetched and never
@@ -736,7 +738,7 @@ function isRelevantPath(path: string): boolean {
   if (DOCKERFILE_REGEX.test(path)) return true;
   if (PRISMA_SCHEMA_REGEX.test(path)) return true;
   if (CONFIG_ENV_FILE_REGEX.test(path)) return true;
-  if (PHP_ROUTE_FILE_REGEX.test(path)) return true;
+  if (ROUTE_ENTRY_FILE_REGEX.test(path)) return true;
   if (COMPOSE_REGEX.test(path)) return true;
   if (ENV_SAMPLE_REGEX.test(path)) return true;
   if (DEPLOYMENT_DESCRIPTOR_REGEX.test(path)) return true;
@@ -818,7 +820,7 @@ function relevancePriority(path: string, protectedPaths: ReadonlySet<string>): n
   if (OTHER_MANIFEST_REGEX.test(path)) return 1;
   if (!path.includes('/')) return 2; // generic (unnamed) root files
   if (PRISMA_SCHEMA_REGEX.test(path) || CONFIG_ENV_FILE_REGEX.test(path) || S6_SCRIPT_REGEX.test(path)) return 3;
-  if (HEALTH_ROUTE_FILE_REGEX.test(path) || PHP_ROUTE_FILE_REGEX.test(path) || ENV_CONFIG_FILE_REGEX.test(path)) return 4;
+  if (HEALTH_ROUTE_FILE_REGEX.test(path) || ROUTE_ENTRY_FILE_REGEX.test(path) || ENV_CONFIG_FILE_REGEX.test(path)) return 4;
   if (ENTRY_FILE_REGEX.test(path)) return 5; // entry, routing and configuration source
   return 6; // other source files
 }
