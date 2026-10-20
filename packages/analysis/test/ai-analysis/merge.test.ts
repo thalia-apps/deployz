@@ -172,11 +172,16 @@ describe('mergeAiFacts: a differing fact that passes', () => {
     expect(merged.analysis.metadata['migrationMode']).toBe(expected.metadata['migrationMode']);
   });
 
-  it('database: never removes a database that the rules require (PostgreSQL wins)', () => {
-    const { rules, merged } = run(baseTree, factsOf({ database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')) }));
-    expect(decision(merged, 'database')).toMatchObject({ decision: 'rules', reasons: ['the rules require a database; the AI never removes one'] });
-    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
-    expect(merged.analysis.metadata['envVarModel']).toEqual(rules.metadata['envVarModel']);
+  it('database: removes a database that the rules require only with high confidence and verified evidence', () => {
+    const evidence = cite('docs/notes.md', NOTE.sqlite, 'sqlite file');
+    const medium = run(baseTree, factsOf({ database: { value: 'none' as const, confidence: 'medium' as const, evidence } }));
+    expect(decision(medium.merged, 'database')).toMatchObject({ decision: 'rules', reasons: ['the rules require a database; the AI removes one only with high confidence'] });
+    expect((medium.merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(true);
+    expect(medium.merged.analysis.metadata['envVarModel']).toEqual(medium.rules.metadata['envVarModel']);
+
+    const { merged } = run(baseTree, factsOf({ database: high('none' as const, evidence) }));
+    expect(decision(merged, 'database')?.decision).toBe('ai');
+    expect((merged.analysis.metadata['postgres'] as { required: boolean }).required).toBe(false);
   });
 
   it('redis: re-runs the rules with the override', () => {
@@ -431,7 +436,7 @@ describe('mergeAiFacts: migration', () => {
 
   it('keeps the rules mode for "no migration" when the deployment keeps a database', () => {
     const facts = factsOf({
-      database: high('none' as const, cite('docs/notes.md', NOTE.sqlite, 'sqlite file')),
+      database: { value: 'none' as const, confidence: 'medium' as const, evidence: cite('docs/notes.md', NOTE.sqlite, 'sqlite file') },
       migration: high({ mode: 'none' as const, command: null }, []),
     });
     const { rules, merged } = run(baseTree, facts);

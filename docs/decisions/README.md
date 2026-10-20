@@ -928,6 +928,11 @@ Decision:
 - The operating principle does not change: the AI infers, deterministic code
   provisions. The AI never calls AWS, never generates infrastructure, never
   writes a secret value and never sets deployment or job state.
+- The AI can remove a database that the rules require, only with high
+  confidence and evidence that passes the checks (user decision,
+  2026-10-20). An unused RDS instance is a needless cost and a needless
+  vendor question; a wrong removal fails the deployment, so a medium or low
+  confidence keeps the database.
 
 Release gate: the AI engine must pass the gate in
 [`../testing/compatibility.md`](../testing/compatibility.md#release-gate) in

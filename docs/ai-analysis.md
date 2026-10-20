@@ -290,6 +290,8 @@ and the release gate are in `docs/decisions/README.md`.
   Dockerfile, the resources and the workers the rules value stays. A
   verified database, Redis or S3 fact re-runs `analyseRepo` with the
   override, so the env-var model and the bindings come from the same rules.
+  The AI removes a database that the rules require only with high confidence
+  and verified evidence; otherwise the rules database stays.
   The rejections and the unsupported reasons never change. A variable that
   Deployz provides is never made the vendor's.
 - **Fallback:** an unconfigured gateway, an outage, a timeout (420 s for

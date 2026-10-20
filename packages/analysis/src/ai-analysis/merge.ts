@@ -139,11 +139,12 @@ export function mergeAiFacts(input: MergeInput): MergeResult {
   // ── Resources first: they re-run the rules with the verified overrides. ──
   const overrides: { -readonly [K in keyof ResourceOverrides]: ResourceOverrides[K] } = {};
   const database = facts.database.value;
-  // PostgreSQL wins when the app can run on it (docs/ai-analysis.md): the AI may add a database, never remove one the rules require.
+  // PostgreSQL wins when the app can run on it (docs/ai-analysis.md): the AI may remove a database the rules
+  // require only with high confidence and verified evidence; a wrong removal fails the deployment.
   const removesDatabase = database === 'none' && rulesDatabase(rules.metadata) !== 'none';
   const databaseOutcome = decide('database', database !== rulesDatabase(rules.metadata), false);
-  if (removesDatabase && databaseOutcome.decision === 'ai') {
-    record('database', database, { decision: 'rules', reasons: ['the rules require a database; the AI never removes one'] });
+  if (removesDatabase && databaseOutcome.decision === 'ai' && facts.database.confidence !== 'high') {
+    record('database', database, { decision: 'rules', reasons: ['the rules require a database; the AI removes one only with high confidence'] });
   } else if (record('database', database, databaseOutcome) === 'ai') overrides.database = database;
   const redis = facts.redis.value;
   const rulesRedis = (rules.metadata['redis'] as { required?: unknown } | undefined)?.required === true;
