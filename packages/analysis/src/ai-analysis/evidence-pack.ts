@@ -88,9 +88,9 @@ const VENDORED = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git)\//;
 const MANIFEST =
   /(?:^|\/)(?:package\.json|composer\.json|pom\.xml|build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|[^/]+\.csproj|mix\.exs|go\.mod|Gemfile|requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|deno\.jsonc?|shard\.yml|build\.sbt|project\.clj|deps\.edn|pubspec\.yaml|gleam\.toml|[^/]+\.cabal|stack\.yaml|dune-project|Procfile|app\.json|render\.yaml|fly\.toml|docker-compose(?:\.production|\.prod)?\.ya?ml|compose(?:\.production|\.prod)?\.ya?ml|schema\.prisma|appsettings(?:\.Production)?\.json|application(?:-prod)?\.(?:properties|ya?ml)|config\/(?:runtime|prod|config)\.exs|config\/database\.ya?ml|config\/database\.php|\.env\.(?:example|sample|template|dist))$/i;
 
-/** Route, health and boot files of the common frameworks. */
+/** Route, health and boot files of the common frameworks, and the CLI file where a binary declares its commands and start switches. */
 const ENTRY_OR_ROUTES =
-  /(?:^|\/)(?:routes?(?:\/[^/]+)?\.(?:php|rb|js|ts|py|go|ex|exs)|[^/]*router[^/]*\.(?:js|ts|go|ex|py)|urls\.py|bootstrap\/app\.php|config\/routes\.rb|Program\.cs|Startup\.cs|[^/]*health[^/]*\.[a-z]+|(?:main|app|server|index|wsgi|asgi)\.(?:js|ts|mjs|py|go|rb))$/i;
+  /(?:^|\/)(?:routes?(?:\/[^/]+)?\.(?:php|rb|js|ts|py|go|ex|exs)|[^/]*router[^/]*\.(?:js|ts|go|ex|py)|urls\.py|bootstrap\/app\.php|config\/routes\.rb|Program\.cs|Startup\.cs|[^/]*health[^/]*\.[a-z]+|(?:main|app|server|index|wsgi|asgi|cli|cmd|commands?)\.(?:js|ts|mjs|py|go|rb))$/i;
 const NOT_PRODUCTION = /(?:^|\/)(?:tests?|spec|__tests__|examples?|docs?|e2e|fixtures?|node_modules|vendor)\//i;
 const MAX_ENTRY_FILES = 8;
 const MAX_MANIFESTS_PER_KIND = 4;
