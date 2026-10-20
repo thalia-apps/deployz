@@ -4,7 +4,7 @@ import { checkClaims } from '../claims/check.js';
 import { extractClaims } from '../claims/extract.js';
 import { makeAnalysis, makeManifest, makeObservation, makeRun } from '../claims/test-support.js';
 import { fullRunSchema, type AnalysisResultFile, type ClaimVerdict, type FullRun, type Observation, type RepositoryReport } from '../contract.js';
-import { actualOutcome, fullRunHealth, fullRunsHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
+import { actualOutcome, fullRunHealth, predictedOutcome, fullRunsHealth, renderMarkdown, repositoryReport, summaryReport } from './report.js';
 
 type Values = Parameters<typeof makeRun>[0];
 
@@ -350,17 +350,22 @@ describe('summaryReport', () => {
 });
 
 describe('outcomes', () => {
-  it('derives the actual outcome from the full runs, the vendor inputs and the reviewed patch', () => {
-    const inputs = [{ name: 'ADMIN_EMAIL', source: { kind: 'fixed' as const, value: 'a@b.c' } }];
+  it('derives the actual outcome from the full runs, the build and the reviewed patch', () => {
     const patch = { environment: { DB_TYPE: 'postgresdb' }, reason: 'n8n selects PostgreSQL with DB_TYPE' };
-    expect(actualOutcome({}, true)).toBe(1);
-    expect(actualOutcome({ vendorInputs: inputs }, true)).toBe(2);
-    expect(actualOutcome({ outcomePatch: patch }, false)).toBe(2);
-    expect(actualOutcome({}, false)).toBe(3);
-    expect(actualOutcome({}, null)).toBeNull();
+    expect(actualOutcome({}, true, false)).toBe(1);
+    expect(actualOutcome({}, false, true)).toBe(2);
+    expect(actualOutcome({ outcomePatch: patch }, false, false)).toBe(2);
+    expect(actualOutcome({}, false, false)).toBe(3);
+    expect(actualOutcome({}, null, false)).toBeNull();
   });
 
-  it('maps the readiness to the predicted outcome and fills the matrix and the release-gate lists', () => {
+  it('reads the predicted outcome from the readiness outcome, else from the gate state', () => {
+    expect(predictedOutcome({ outcome: 'DEPLOYABLE_WITH_CHANGES', gate: { state: 'NOT_COMPATIBLE', findings: [] } })).toBe(2);
+    expect(predictedOutcome({ gate: { state: 'NEEDS_CONFIGURATION', findings: [] } })).toBe(1);
+    expect(predictedOutcome({ gate: { state: 'NOT_COMPATIBLE', findings: [] } })).toBe(3);
+  });
+
+  it('fills the matrix and the release-gate lists', () => {
     const deployable = report(ready(), {}, fullRun());
     const falseDeployable = { ...report(ready(), {}, fullRun({ webHealthy: false })), id: 'repo-002' };
     const notCompatible = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [] });

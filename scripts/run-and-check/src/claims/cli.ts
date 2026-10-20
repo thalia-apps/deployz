@@ -40,9 +40,13 @@ const REPORTS_DIR = join(HARNESS_ROOT, '.runs', 'reports');
 const RECIPES_DIR = join(HARNESS_ROOT, 'recipes');
 
 /** The vendor inputs of a git recipe; a fixture has none that wire a service. */
-function loadVendorInputs(id: string): Recipe['vendorInputs'] {
+type RecipeInputs = Pick<Recipe, 'vendorInputs'> & Partial<Pick<Recipe, 'outcomePatch'>>;
+
+function loadRecipeInputs(id: string): RecipeInputs {
   const path = join(RECIPES_DIR, `${id}.yaml`);
-  return existsSync(path) ? recipeSchema.parse(parse(readFileSync(path, 'utf8'))).vendorInputs : [];
+  if (!existsSync(path)) return { vendorInputs: [] };
+  const { vendorInputs, outcomePatch } = recipeSchema.parse(parse(readFileSync(path, 'utf8')));
+  return outcomePatch === undefined ? { vendorInputs } : { vendorInputs, outcomePatch };
 }
 
 export interface ClaimsOptions {
@@ -96,7 +100,7 @@ export function buildReports(
   analyses: readonly AnalysisResultFile[],
   loadObservation: (id: string) => Observation | null,
   loadFullRun: (analyser: string, id: string) => FullRun | null,
-  vendorInputsOf: (id: string) => Recipe['vendorInputs'] = () => [],
+  recipeOf: (id: string) => RecipeInputs = () => ({ vendorInputs: [] }),
 ): { reports: RepositoryReport[]; withoutObservation: string[] } {
   const reports: RepositoryReport[] = [];
   const withoutObservation: string[] = [];
@@ -108,7 +112,7 @@ export function buildReports(
     }
     const verdicts = checkClaims(extractClaims(analysis), observation);
     const fullRun = loadFullRun(analysis.analyser, analysis.id);
-    reports.push(repositoryReport({ id: analysis.id, set: observation.set, vendorInputs: vendorInputsOf(analysis.id) }, analysis, observation, verdicts, fullRun));
+    reports.push(repositoryReport({ id: analysis.id, set: observation.set, ...recipeOf(analysis.id) }, analysis, observation, verdicts, fullRun));
   }
   return { reports, withoutObservation };
 }
@@ -125,7 +129,7 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
     analyses,
     (id) => loadOptional(join(OBSERVATIONS_DIR, `${id}.json`), (value) => observationSchema.parse(value)),
     (name, id) => loadOptional(join(FULL_RUNS_DIR, name, `${id}.json`), (value) => fullRunSchema.parse(value)),
-    loadVendorInputs,
+    loadRecipeInputs,
   );
   for (const id of withoutObservation) console.warn(`${id}: no observation, skipped`);
 

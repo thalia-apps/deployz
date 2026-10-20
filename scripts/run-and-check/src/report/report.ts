@@ -162,17 +162,25 @@ function falseProblems(
   return problems;
 }
 
-const PREDICTED: Record<Readiness, DeployOutcome> = { READY: 1, NEEDS_CONFIGURATION: 2, NOT_COMPATIBLE: 3 };
+const OUTCOME_OF: Record<NonNullable<AnalysisResultFile['outcome']>, DeployOutcome> = { DEPLOYABLE: 1, DEPLOYABLE_WITH_CHANGES: 2, NOT_DEPLOYABLE: 3 };
+/** Analysis files from before the readiness outcome: the gate state, with NOT_COMPATIBLE as 3 and every other state as 1. */
+const OUTCOME_OF_STATE: Record<Readiness, DeployOutcome> = { READY: 1, NEEDS_CONFIGURATION: 1, NOT_COMPATIBLE: 3 };
+
+export function predictedOutcome(analysis: Pick<AnalysisResultFile, 'outcome' | 'gate'>): DeployOutcome | null {
+  if (analysis.outcome !== undefined) return OUTCOME_OF[analysis.outcome];
+  return analysis.gate === null ? null : OUTCOME_OF_STATE[analysis.gate.state];
+}
 
 /**
- * The actual outcome. 1: the application is healthy with the analysed
- * settings and needs no vendor input. 2: it is healthy only with vendor
- * inputs, or a reviewed recipe patch makes it deployable. 3: it is not
- * healthy and no reviewed patch exists. Null when the runs do not decide.
+ * The actual outcome. 1: both full runs are healthy (recipe vendor inputs
+ * are Deployz settings). 2: the image does not build for a Dockerfile cause
+ * (a repository change), or a reviewed recipe patch makes the application
+ * deployable. 3: no run is healthy and no reviewed patch exists. Null when
+ * the runs do not decide.
  */
-export function actualOutcome(recipe: Partial<Pick<Recipe, 'vendorInputs' | 'outcomePatch'>>, healthy: boolean | null): DeployOutcome | null {
-  if (healthy === true) return (recipe.vendorInputs ?? []).length > 0 ? 2 : 1;
-  if (recipe.outcomePatch !== undefined) return 2;
+export function actualOutcome(recipe: Partial<Pick<Recipe, 'outcomePatch'>>, healthy: boolean | null, unbuildable: boolean): DeployOutcome | null {
+  if (healthy === true) return 1;
+  if (unbuildable || recipe.outcomePatch !== undefined) return 2;
   return healthy === false ? 3 : null;
 }
 
@@ -229,7 +237,7 @@ export function repositoryReport(
     vendorQuestions: analysis.vendorQuestions,
     unstableFacts: observation.unstable,
     infrastructureFailures: [...new Set(failures)],
-    outcome: { predicted: readiness === null ? null : PREDICTED[readiness], actual: actualOutcome(recipe, healthy) },
+    outcome: { predicted: predictedOutcome(analysis), actual: actualOutcome(recipe, healthy, unbuildable) },
   };
 }
 

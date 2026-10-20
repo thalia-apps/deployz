@@ -387,6 +387,8 @@ export const analysisResultFileSchema = z
     vendorQuestions: z.number().int().nonnegative(),
     /** The stage the build targets (`dockerfileBuildTarget`); absent when the build uses the last stage. */
     buildTarget: z.string().optional(),
+    /** The readiness report's deployability outcome; absent in files from before it. */
+    outcome: z.enum(['DEPLOYABLE', 'DEPLOYABLE_WITH_CHANGES', 'NOT_DEPLOYABLE']).optional(),
     /** The AI engine record (`detected_metadata.aiEngine`): status or fallback reason, usage, latency, fact decisions. */
     ai: z.record(z.string(), z.unknown()).nullable().optional(),
   })

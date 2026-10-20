@@ -41,7 +41,8 @@ Three decisions with substantial detail have their own files:
 | 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
 | 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
-| 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Proposed (release gate not passed) |
+| 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Superseded 2026-10-20 (the AI answers only the open items) |
+| 2026-10-20 | The AI Analysis answers only the open items of the rules Analysis, with closed answers and one call; the reviewer is post-MVP | Proposed (release gate not passed) |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -906,8 +907,8 @@ What would change it: a real-AWS run shows a Host-checking app that answers
 
 ## AI-first application Analysis (2026-10-19)
 
-Status: proposed. The switch waits for the release gate and a shadow period
-in production.
+**Superseded 2026-10-20** by "The AI Analysis answers only the open items".
+The analyst no longer finds every fact, and the reviewer is removed.
 
 The rules Analysis (`analyseRepo`) is a large set of hand-written detectors.
 Each new stack, framework or repository layout needs new rules, and the
@@ -967,3 +968,66 @@ What would change it: the AI fails the gate after four tuning rounds (then
 the AI role stays limited to the open questions, as today), the cost or the
 time per analysis is above the budget, or shadow mode shows a new class of
 failed deploy.
+
+## The AI Analysis answers only the open items (2026-10-20)
+
+Status: proposed. The switch waits for the release gate and a shadow period
+in production. This decision replaces "AI-first application Analysis
+(2026-10-19)".
+
+The goal is one of three outcomes for each repository: deployable with
+Deployz (1), deployable with changes (2), not deployable (3). In exam A
+(`ai@6cc47cc6-examA`) the analyst found all ten facts again, and it agreed
+with the rules on most of them (Redis 56 of 56, port 51 of 56, Dockerfile
+50 of 56). It cost $0.46 on average ($0.86 at most) and took about 55 s.
+It could not change a rejection, but most wrong outcomes come from
+rejections (local state, a second Compose service, an unsupported
+datastore). Its checks also added vendor questions (the start command for 21
+repositories, required variables for 29).
+
+Decision:
+
+- The rules Analysis runs first. The AI answers only its open items: a
+  blocker candidate where it is not known if the app needs the item, and a
+  fact that the rules did not resolve (port, start command, health path,
+  Dockerfile, migration mode). A repository with no open item makes no call.
+- Each answer is closed. A blocker: required, optional by setting `<name>`
+  (with the value and the engine it selects), or not used. A fact: a value,
+  or unknown. Each answer has `path:line` evidence from one small evidence
+  window for its question.
+- One Claude Opus 5.5 call per repository. The reviewer model is removed
+  from the MVP path; it is a post-MVP item.
+- Fixed checks decide each answer ([`../ai-analysis.md`](../ai-analysis.md#ai-first-analysis-analysis_engine)).
+  "Optional by setting": the evidence reads the setting and the setting
+  selects an engine that Deployz provides. "Not used": no production source
+  imports or connects to the item. A start command is the image CMD or
+  ENTRYPOINT, or a script that the CMD runs.
+- A checked "not used" or "optional by setting" dismisses the rejection.
+  This changes the earlier rule that the AI never changes a rejection. A
+  setting that Deployz does not set itself becomes a required vendor
+  variable (outcome 2). Every other answer, and every failed check, keeps the
+  rules value.
+- The run-and-check report gives a 3x3 outcome matrix. The release gate adds
+  two criteria: no predicted outcome 1 that is really 2 or 3, and fewer false
+  outcome 3 than the rules baseline ([`../testing/compatibility.md`](../testing/compatibility.md#release-gate)).
+
+Measured on the 58 exam repositories (tuning and holdout), answers from
+Claude Opus 5.5 in a coding session (no API call), claim check only:
+
+| | rules@0fc073b8 | rules (current main) | AI open items |
+| --- | --- | --- | --- |
+| False problems, tuning | 12 | 6 | 6 |
+| False problems, holdout | 6 | 5 | 4 |
+| CONTRADICTED claims, tuning | 10 | 6 | 6 |
+| CONTRADICTED claims, holdout | 13 | 12 | 12 |
+
+45 of 58 repositories have an open item. A pack is about 17,000 characters
+(at most 34,000), against about 90,000 before. No claim gets worse than the
+current rules; eight claims change from not checkable to confirmed. Most
+blocker answers are "required": the windows rarely show a switch to a
+supported engine, and the checks refuse the "not used" answers they cannot
+confirm.
+
+What would change it: a full exam shows a hidden problem or a false
+outcome 1, the cost or the time per analysis is above the budget, or shadow
+mode shows a new class of failed deploy.
