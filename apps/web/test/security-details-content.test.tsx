@@ -343,7 +343,11 @@ describe('SecurityDetailsContent permissions from the template', () => {
     expect(text).toContain('${RelayCredentialFromParam} or ${RelayCredentialGenerated}');
     expect(text).toContain('not after its first check-in');
     expect(text).toContain('A permissions boundary caps the role at these permissions.');
-    expect(text).toContain('It can create IAM roles for your application and attach any policy to them.');
+    expect(text).toContain(
+      'It can create IAM roles for your application only under /deployz/, and each role must have the application role boundary.',
+    );
+    expect(text).not.toContain('attach any policy');
+    expect(text).toContain('Application role boundary');
     expect(text).toContain('It has no permissions boundary.');
   });
 

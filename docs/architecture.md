@@ -439,6 +439,22 @@ currently completed by the web app; see
   configuration); it can list secrets and read their metadata without a
   condition. The relay has no log-reading permissions. Relay-created resources (listener, certificate)
   must carry the installation tag or the relay cannot modify them later.
+- The CloudFormation execution role has no permissions boundary of its own;
+  a boundary does not carry over to the roles it creates. Instead, it can
+  create a role, put an inline policy on it or attach a policy to it only
+  under `role/deployz/`, only for its installation tag, and only when the role
+  carries the connector's application role boundary
+  (`ApplicationRoleBoundary`). The boundary grants image pull, log writes,
+  the installation's tagged secrets, `deployz-app*` buckets and queues,
+  `ecs:RunTask` on `DeployzApp*` task definitions and `iam:PassRole` of
+  `role/deployz/*` to ECS tasks — no IAM management. `iam:AttachRolePolicy`
+  is limited to `AmazonECSTaskExecutionRolePolicy`; `iam:PassRole` is limited
+  to `role/deployz/*`; S3 bucket actions are limited to `deployz-app*`
+  buckets. The relay passes the boundary ARN as the template parameter
+  `paramRoleBoundaryArn` and refuses, before `CreateStack`, a template that
+  does not declare it (an artifact compiled before the boundary). IAM cannot
+  limit a role's trust policy, so a created role can still trust another
+  account; the boundary is what limits it.
 - Relay authentication: a per-link credential minted by the API (hash
   stored; plaintext until first registration), presented as a bearer token;
   the enrollment code is single-use (burned by a conditional update, so two

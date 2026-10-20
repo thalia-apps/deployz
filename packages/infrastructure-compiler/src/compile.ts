@@ -132,7 +132,7 @@ const DB_SUBNET_CIDRS = [
 const DB_AZ_SLOT_COUNT = 8;
 
 // ── Compiler version / capability registry identity ─────────────────────────
-export const COMPILER_VERSION = 'dynamic-compiler-v2-6' as const;
+export const COMPILER_VERSION = 'dynamic-compiler-v2-7' as const;
 
 /** Seconds ECS ignores ALB health checks after a web task starts. */
 export const WEB_HEALTH_CHECK_GRACE_SECONDS = 300;
@@ -631,6 +631,7 @@ function compileEcsShared(ctx: EcsContext, services: readonly IrWorkload[]): Res
         Description: 'Allows ECS to pull the application image, write task logs, and inject secrets from Secrets Manager at task start.',
         ManagedPolicyArns: [join('', ['arn:', ref('AWS::Partition'), ':iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'])],
         Path: '/deployz/',
+        PermissionsBoundary: roleBoundary(),
         Tags: tags(componentId),
       },
     }),
@@ -671,6 +672,7 @@ function compileWorkloadTaskRole(componentId: string, secretArns: readonly strin
         AssumeRolePolicyDocument: { Statement: [{ Action: 'sts:AssumeRole', Effect: 'Allow', Principal: { Service: 'ecs-tasks.amazonaws.com' } }], Version: '2012-10-17' },
         Description: 'Runtime role for the customer application container.',
         Path: '/deployz/',
+        PermissionsBoundary: roleBoundary(),
         Tags: tags(componentId),
       },
     }),
@@ -1373,6 +1375,7 @@ function compileSchedule(ir: DeployzIR, schedule: IrSchedule, ids: NetIds): Reso
         },
         Description: "Allows EventBridge Scheduler to start this schedule's target task.",
         Path: '/deployz/',
+        PermissionsBoundary: roleBoundary(),
         Tags: tags(id),
       },
     }),
@@ -1406,6 +1409,16 @@ function compileSchedule(ir: DeployzIR, schedule: IrSchedule, ids: NetIds): Reso
 
 // ── Parameters / outputs / conditions ───────────────────────────────────────
 
+/**
+ * The permissions boundary of every IAM role this stack creates. The relay
+ * passes its connector's boundary ARN; the connector's execution role
+ * refuses to create a role without it. Empty (a connector published before
+ * the boundary) leaves the role without one, as that connector expects.
+ */
+function roleBoundary(): unknown {
+  return { 'Fn::If': ['condRoleBoundary', ref('paramRoleBoundaryArn'), { Ref: 'AWS::NoValue' }] };
+}
+
 function compileParameters(): ResolvedParameter[] {
   const azParams: ResolvedParameter[] = [];
   for (let i = 1; i <= DB_AZ_SLOT_COUNT; i++) {
@@ -1425,6 +1438,7 @@ function compileParameters(): ResolvedParameter[] {
     { id: 'paramHealthCheckPath', type: 'String', noEcho: true, defaultValue: HEALTH_CHECK_PATH, description: 'Path the ALB target group and container health checks probe.' },
     { id: 'paramAppApiKey', type: 'String', noEcho: true, defaultValue: '', description: 'Application API key (vendor/customer secret).' },
     { id: 'paramAppSigningSecret', type: 'String', noEcho: true, defaultValue: '', description: 'Application signing secret (vendor/customer secret).' },
+    { id: 'paramRoleBoundaryArn', type: 'String', noEcho: false, defaultValue: '', description: "Permissions boundary of every IAM role the stack creates. The relay passes its connector's boundary; empty means none." },
     ...azParams,
   ];
 }
@@ -1593,7 +1607,9 @@ export function compileInfrastructure(input: CompileInput): CompiledGraph {
     throw new Error(`compiler: logical id violations:\n${violations.join('\n')}`);
   }
 
-  const conditions: ResolvedCondition[] = [];
+  const conditions: ResolvedCondition[] = [
+    { id: 'condRoleBoundary', expression: { 'Fn::Not': [{ 'Fn::Equals': [{ Ref: 'paramRoleBoundaryArn' }, ''] }] } },
+  ];
   for (let i = 3; i <= DB_AZ_SLOT_COUNT; i++) {
     conditions.push({
       id: `condDbAz${i}`,

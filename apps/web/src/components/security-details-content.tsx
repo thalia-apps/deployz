@@ -16,9 +16,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  APPLICATION_ROLE_BOUNDARY,
   CONNECTOR_ROLE,
   distinctActionCount,
   EXECUTION_ROLE,
+  EXECUTION_ROLE_REQUIRES_BOUNDARY,
   INSTALL_HELPER_ROLES,
   isGrantedToConnector,
   type PermissionRole,
@@ -53,11 +55,11 @@ const HIGHLIGHTS = [
 /** Why a statement that is not limited to this installation is still contained. */
 const EXCEPTION_NOTES: Record<string, string> = {
   ProvisionApplicationPassRole:
-    'No resource limit: only the receiving service is limited.',
+    'Only roles under /deployz/, and only to the services that run your application.',
   RelayPurgeStorage:
     "S3 does not support tag conditions on these actions. The connector checks each bucket's deployz:installation tag before it deletes anything.",
   ProvisionApplicationStorage:
-    'S3 does not support tag conditions on these actions. Only CloudFormation can use this role.',
+    'S3 does not support tag conditions on these actions. Only buckets whose names start with deployz-app.',
 };
 
 const listClass = 'flex list-disc flex-col gap-1.5 pl-5 text-sm text-muted-foreground';
@@ -336,12 +338,26 @@ function PermissionsTab({ plan }: { plan: DeploymentPlan | null }) {
                 Only CloudFormation can use this role, for this account. It builds your application
                 stack.
                 {executionRoleManagesRoles
-                  ? ' It can create IAM roles for your application and attach any policy to them.'
+                  ? EXECUTION_ROLE_REQUIRES_BOUNDARY
+                    ? ' It can create IAM roles for your application only under /deployz/, and each role must have the application role boundary.'
+                    : ' It can create IAM roles for your application and attach any policy to them.'
                   : null}
                 {EXECUTION_ROLE.hasPermissionsBoundary ? null : ' It has no permissions boundary.'}
               </RoleHeading>
               <StatementList statements={EXECUTION_ROLE.statements} />
             </div>
+            {executionRoleManagesRoles && EXECUTION_ROLE_REQUIRES_BOUNDARY ? (
+              <div className="flex flex-col gap-1">
+                <h4 className="text-sm font-semibold text-foreground">Application role boundary</h4>
+                <p>
+                  These are the most permissions that any IAM role in your application stack can
+                  have, even if a policy grants more. A role can be set up for use from outside your
+                  account, because AWS cannot limit who a role trusts. Such a role can still do only
+                  these actions.
+                </p>
+                <StatementList statements={APPLICATION_ROLE_BOUNDARY} />
+              </div>
+            ) : null}
           </AccordionContent>
         </AccordionItem>
 

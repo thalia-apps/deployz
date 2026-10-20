@@ -23,6 +23,7 @@ export const CONNECTOR_STACK_RESOURCES = [
   'Connector function (AWS Lambda) and its EventBridge schedule, which runs it every minute',
   'Connector role, with a permissions boundary and the provisioner policy',
   'CloudFormation execution role for your application stack',
+  'Permissions boundary for the IAM roles in your application stack',
   "Secrets Manager secret that holds the connector's Deployz credential",
   "Helper functions that create the installation ID and set the connector log's 1-week retention",
   'At run time, the connector writes SSM parameters under /deployz/<installation ID>/ to track unfinished commands',

@@ -411,7 +411,6 @@ const PROVISION_CREATE_ACTIONS = [
   'logs:TagResource',
   'elasticache:CreateCacheSubnetGroup',
   'elasticache:AddTagsToResource',
-  'iam:CreateRole',
   'iam:TagRole',
   // The application stack's UnhealthyTargetAlarm gets stack-level deployz
   // tags via that stack's Tags.of aspect, and CreateStack passes the
@@ -472,9 +471,7 @@ const PROVISION_MANAGE_ACTIONS = [
   'secretsmanager:GetResourcePolicy',
   'secretsmanager:PutResourcePolicy',
   'elasticache:DeleteCacheSubnetGroup',
-  'iam:PutRolePolicy',
   'iam:DeleteRolePolicy',
-  'iam:AttachRolePolicy',
   'iam:DetachRolePolicy',
   'iam:DeleteRole',
   'iam:UntagRole',
@@ -538,8 +535,9 @@ const PROVISION_READ_ACTIONS = [
  * no request tags (CloudFormation tags the bucket afterwards, with
  * `PutBucketTagging`), and bucket actions do not honour `aws:ResourceTag`.
  * Granted without a tag condition rather than with one that could never
- * match — the containment here is the role's trust policy, which admits
- * only CloudFormation acting for this account.
+ * match, and scoped by bucket name instead: the application bucket has no
+ * `BucketName`, so CloudFormation names it after the application stack
+ * (`deployz-app-…`). No other bucket in the account is reachable.
  */
 const PROVISION_STORAGE_ACTIONS = [
   's3:CreateBucket',
@@ -681,6 +679,8 @@ export class BootstrapStack extends Stack {
   public readonly provisionerPolicy: ManagedPolicy;
   /** CloudFormation execution role for the application stack (`role/deployz/*`). */
   public readonly applicationExecutionRole: Role;
+  /** Permissions boundary every application-stack role must carry. */
+  public readonly applicationRoleBoundary: ManagedPolicy;
   /** Deploy-time token resolving to the minted installation UUID. */
   public readonly installationId: string;
 
@@ -1362,7 +1362,7 @@ export class BootstrapStack extends Stack {
     // is scoped to `arn:aws:iam::*:role/deployz/*`. That grant has been here
     // from the start with nothing to point at.
     //
-    // Three things bound the role:
+    // Four things bound the role:
     //
     //   1. Who may assume it — only `cloudformation.amazonaws.com`, and only
     //      on behalf of THIS account. Not the relay, not a user, and not
@@ -1376,6 +1376,12 @@ export class BootstrapStack extends Stack {
     //   3. No wildcards — every action is named. A bare `ec2:*` would make
     //      the tag conditions decorative, since it would carry actions that
     //      cannot be tag-conditioned at all.
+    //   4. The application role boundary — every IAM role it creates, or
+    //      grants a policy to, must carry `applicationRoleBoundary` (below).
+    //      Without it the role could create a tagged role with any policy
+    //      and pass it to ECS: account administrator by one step. The
+    //      boundary on THIS role would not help — a boundary does not carry
+    //      over to the roles a principal creates.
     //
     // Reads, S3 bucket operations and `iam:CreateServiceLinkedRole` are the
     // three groups that genuinely cannot carry a tag condition; each is
@@ -1463,18 +1469,142 @@ export class BootstrapStack extends Stack {
       sid: 'ProvisionApplicationStorage',
       effect: Effect.ALLOW,
       actions: [...PROVISION_STORAGE_ACTIONS],
-      resources: ['*'],
+      resources: ['arn:aws:s3:::deployz-app*'],
+    });
+
+    // The ceiling of every role the application stack creates: the union
+    // of what the compiler's task-execution, task and scheduler roles are
+    // granted, and nothing else — no IAM management, so a role under it
+    // cannot create a way out. A role's trust policy cannot be limited by
+    // IAM; this ceiling is what limits a role trusted by anyone else.
+    const applicationRoleArns = `arn:aws:iam::${this.account}:role/deployz/*`;
+    this.applicationRoleBoundary = new ManagedPolicy(this, 'ApplicationRoleBoundary', {
+      path: '/deployz/',
+      description:
+        'Permissions boundary of every IAM role the Deployz application stack creates.',
+      statements: [
+        new PolicyStatement({
+          sid: 'ApplicationImagePull',
+          effect: Effect.ALLOW,
+          actions: [
+            'ecr:GetAuthorizationToken',
+            'ecr:BatchCheckLayerAvailability',
+            'ecr:GetDownloadUrlForLayer',
+            'ecr:BatchGetImage',
+          ],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationLogs',
+          effect: Effect.ALLOW,
+          actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+          resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:*`],
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationSecrets',
+          effect: Effect.ALLOW,
+          actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
+          resources: ['*'],
+          conditions: {
+            StringEquals: { 'aws:ResourceTag/deployz:installation': this.installationId },
+          },
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationStorage',
+          effect: Effect.ALLOW,
+          actions: [
+            's3:GetObject*',
+            's3:GetBucket*',
+            's3:List*',
+            's3:DeleteObject*',
+            's3:PutObject*',
+            's3:Abort*',
+          ],
+          resources: ['arn:aws:s3:::deployz-app*', 'arn:aws:s3:::deployz-app*/*'],
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationQueues',
+          effect: Effect.ALLOW,
+          actions: [
+            'sqs:SendMessage',
+            'sqs:ReceiveMessage',
+            'sqs:DeleteMessage',
+            'sqs:ChangeMessageVisibility',
+            'sqs:GetQueueAttributes',
+          ],
+          resources: [`arn:aws:sqs:${this.region}:${this.account}:deployz-app*`],
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationRunTask',
+          effect: Effect.ALLOW,
+          actions: ['ecs:RunTask'],
+          resources: [`arn:aws:ecs:${this.region}:${this.account}:task-definition/DeployzApp*`],
+        }),
+        new PolicyStatement({
+          sid: 'ApplicationPassRole',
+          effect: Effect.ALLOW,
+          actions: ['iam:PassRole'],
+          resources: [applicationRoleArns],
+          conditions: { StringEquals: { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' } },
+        }),
+      ],
+    });
+    const boundaryArn = this.applicationRoleBoundary.managedPolicyArn;
+
+    // Role creation, inline policies and managed-policy attachment: only
+    // under `/deployz/`, only for this installation, and only on a role
+    // that carries the application role boundary. `iam:AttachRolePolicy`
+    // is further limited to the one AWS managed policy the compiler
+    // attaches (the ECS task-execution policy).
+    const provisionRoleCreate = new PolicyStatement({
+      sid: 'ProvisionApplicationRoleCreate',
+      effect: Effect.ALLOW,
+      actions: ['iam:CreateRole'],
+      resources: [applicationRoleArns],
+      conditions: {
+        StringEquals: {
+          'aws:RequestTag/deployz:installation': this.installationId,
+          'iam:PermissionsBoundary': boundaryArn,
+        },
+      },
+    });
+    const provisionRolePolicy = new PolicyStatement({
+      sid: 'ProvisionApplicationRolePolicy',
+      effect: Effect.ALLOW,
+      actions: ['iam:PutRolePolicy'],
+      resources: [applicationRoleArns],
+      conditions: {
+        StringEquals: {
+          'aws:ResourceTag/deployz:installation': this.installationId,
+          'iam:PermissionsBoundary': boundaryArn,
+        },
+      },
+    });
+    const provisionRoleAttach = new PolicyStatement({
+      sid: 'ProvisionApplicationRoleAttach',
+      effect: Effect.ALLOW,
+      actions: ['iam:AttachRolePolicy'],
+      resources: [applicationRoleArns],
+      conditions: {
+        StringEquals: {
+          'aws:ResourceTag/deployz:installation': this.installationId,
+          'iam:PermissionsBoundary': boundaryArn,
+        },
+        ArnEquals: {
+          'iam:PolicyARN': 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+        },
+      },
     });
 
     // CloudFormation hands the application's task roles to ECS when it
-    // creates the service. Restricted to the two services that legitimately
-    // receive them, so the role cannot be used to escalate into an
-    // unrelated service by passing a role to it.
+    // creates the service. Restricted to the application's own roles and to
+    // the services that legitimately receive them, so the role cannot hand
+    // another role in the account to anything.
     const provisionPassRole = new PolicyStatement({
       sid: 'ProvisionApplicationPassRole',
       effect: Effect.ALLOW,
       actions: ['iam:PassRole'],
-      resources: ['*'],
+      resources: [applicationRoleArns],
       conditions: {
         StringEquals: {
           'iam:PassedToService': [...PROVISION_APPLICATION_PASS_ROLE_SERVICES],
@@ -1527,6 +1657,9 @@ export class BootstrapStack extends Stack {
         provisionRead,
         provisionStorage,
         provisionUntaggable,
+        provisionRoleCreate,
+        provisionRolePolicy,
+        provisionRoleAttach,
         provisionPassRole,
         provisionServiceLinkedRoles,
         provisionSqs,
@@ -1551,6 +1684,7 @@ export class BootstrapStack extends Stack {
         DEPLOYZ_CONTROL_PLANE_URL: controlPlaneUrlParam.valueAsString,
         DEPLOYZ_ENROLLMENT_CODE: enrollmentCodeParam.valueAsString,
         DEPLOYZ_APPLICATION_EXECUTION_ROLE_ARN: this.applicationExecutionRole.roleArn,
+        DEPLOYZ_APPLICATION_ROLE_BOUNDARY_ARN: this.applicationRoleBoundary.managedPolicyArn,
         // The relay purges its own bootstrap stack (destroy flow). Ref
         // AWS::StackName resolves to the DEPLOYED stack name at runtime —
         // even when the customer renames the stack in the console — where a
