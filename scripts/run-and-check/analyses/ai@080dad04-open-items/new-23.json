@@ -1,0 +1,220 @@
+{
+  "id": "new-23",
+  "commit": "377e6eba316920082e6a90551b488e4599a71eb8",
+  "analyser": "ai@080dad04-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"java\", \"--class-path\", \"/app/main.war\", \"-Dloader.path=main.war!/WEB-INF/classes/,main.war!/WEB-INF/,/app/extra-classes\", \"org.springframework.boot.loader.PropertiesLauncher\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "kind": "jdbc_url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HIBERNATE_DIALECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/resources/application.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPRING_DATASOURCE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/main/resources/application-cds.yaml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/resources/application-cds.yaml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SPRING_DATASOURCE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/resources/application-cds.yaml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "charts/hapi-fhir-jpaserver/Chart.yaml"
+    ],
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (charts/hapi-fhir-jpaserver/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "replay",
+      "usage": {
+        "promptTokens": 0,
+        "completionTokens": 0
+      },
+      "latencyMs": 2
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": "/actuator/health",
+        "answer": "value",
+        "reasons": [
+          "another open fact stays unresolved"
+        ],
+        "subject": "healthPath",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 2,
+    "questions": 2,
+    "generatedAt": "2026-10-20T15:40:22.292Z",
+    "failedChecks": 0,
+    "promptVersion": 14
+  }
+}
