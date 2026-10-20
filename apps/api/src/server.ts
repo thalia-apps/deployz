@@ -3836,7 +3836,6 @@ export async function buildServer({
   const createReleaseBodySchema = z.object({
     version: z.string().min(1),
     gitSha: z.string().min(1),
-    migrationCommand: z.string().nullish(),
   });
 
   const deployBodySchema = z.object({
@@ -5350,7 +5349,6 @@ export async function buildServer({
       applicationId: id,
       version: body.version,
       gitSha: body.gitSha,
-      migrationCommand: body.migrationCommand ?? null,
     });
 
     return reply.code(201).send(row);
