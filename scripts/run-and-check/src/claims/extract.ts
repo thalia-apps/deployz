@@ -58,7 +58,10 @@ function predictsUnbuildable(gate: NonNullable<AnalysisResultFile['gate']>): boo
     (finding) =>
       finding.severity === 'error' &&
       (finding.category === 'container' ||
-        (finding.id === 'unsupported' && /\.git\b|Dockerfile/.test(finding.message) && !/^Unsupported storage:/.test(finding.message))),
+        (finding.id === 'unsupported' &&
+          /\.git\b|Dockerfile/.test(finding.message) &&
+          // A storage reason only cites the Dockerfile; an image that copies nothing from the repository builds.
+          !/^Unsupported storage:|copies nothing from the repository/.test(finding.message))),
   );
 }
 

@@ -58,6 +58,9 @@ describe('extractClaims', () => {
     };
     const file = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [storage] } as never, { buildTarget: 'release' });
     expect(claim(extractClaims(file), 'dockerfile', '.')).toMatchObject({ from: 'application.dockerfilePath', target: 'release' });
+    const foreign = { ...storage, message: 'Unsupported container setup: The Dockerfile (Dockerfile) copies nothing from the repository, so the image runs code from another image.' };
+    const outline = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [foreign] } as never);
+    expect(claim(extractClaims(outline), 'dockerfile', '.')?.from).toBe('application.dockerfilePath');
   });
 
   it('claims a missing Dockerfile as null', () => {
