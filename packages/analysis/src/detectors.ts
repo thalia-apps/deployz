@@ -3552,6 +3552,10 @@ export const OWN_URL_NAME_REGEX =
 const TUNING_NAME_REGEX =
   /(?:^|_)(?:LIMITS?|MAX|MIN|TIMEOUT|INTERVAL|SIZE|BYTES|COUNT|THRESHOLD|CONCURRENCY|THREADS|TTL|PCT|MS|SECONDS|EXPIRY|DURATION|DELAY|RETRIES|ENABLED|DISABLED|DEBUG|VERBOSE|LEVEL|FORMAT)(?:_|$)|^(?:ALLOW|SHOW|USE|ENABLE|DISABLE)_/;
 
+/** Names the operating system sets (uptime-kuma reads LOCALAPPDATA to find a browser on Windows): never vendor input. */
+const PLATFORM_ENV_NAME_REGEX =
+  /^(?:LOCALAPPDATA|APPDATA|PROGRAMFILES|PROGRAMDATA|USERPROFILE|SYSTEMROOT|WINDIR|COMSPEC|HOMEDRIVE|HOMEPATH|HOME|PATH|USER|SHELL|PWD|TMPDIR|TEMP|TMP|LANG|TERM)$/;
+
 /** An integration the app switches on only when its key is present: mail, error and usage monitoring, chat, social login. */
 const OPTIONAL_INTEGRATION_NAME_REGEX =
   /^(?:MAIL|SMTP|EMAIL|MAILER|MAILGUN|SENDGRID|POSTMARK|RESEND|SES|SENTRY|POSTHOG|AMPLITUDE|ANALYTICS|DATADOG|NEWRELIC|NEW_RELIC|BUGSNAG|ROLLBAR|MIXPANEL|SCOUT|SLACK|DISCORD|TELEGRAM|TWILIO|OIDC|OAUTH|SAML|LDAP)_|_CLIENT_(?:ID|SECRET)$/;
@@ -3571,6 +3575,7 @@ function readNeedsValue(
   read: { needsValue: boolean; strong: boolean },
   optionalIntegration: boolean,
 ): boolean {
+  if (PLATFORM_ENV_NAME_REGEX.test(key)) return false;
   if (read.strong) return true;
   if (!read.needsValue) return false;
   if (CLIENT_BUILD_PREFIX_REGEX.test(key)) {
@@ -4456,13 +4461,21 @@ function isRequiredEngineSelector(key: string): boolean {
 }
 
 /** Env reads in framework config files; a read without a default is required only for a secret. */
+const LARAVEL_DRIVER_CONFIG_REGEX = /(?:^|\/)config\/(?:broadcasting|cache|database|filesystems|logging|mail|passport|queue|session)\.php$/i;
+
 function scanConfigFileEnvReads(path: string, content: string): { key: string; needsValue: boolean }[] {
   const found: { key: string; needsValue: boolean }[] = [];
   const add = (key: string, hasDefault: boolean): void => {
     found.push({ key, needsValue: !hasDefault && (isSecretName(key) || OWN_URL_NAME_REGEX.test(key)) });
   };
   if (/\.php$/i.test(path)) {
-    for (const m of content.matchAll(/\benv\(\s*["']([A-Z][A-Z0-9_]*)["']\s*(,)?/g)) add(m[1]!, m[2] !== undefined);
+    // A Laravel driver file holds one block per driver (`'ably' => ['key' => env('ABLY_KEY')]`), and
+    // the app reads a block only when it selects that driver: its secrets are not boot inputs.
+    const driverFile = LARAVEL_DRIVER_CONFIG_REGEX.test(path);
+    for (const m of content.matchAll(/\benv\(\s*["']([A-Z][A-Z0-9_]*)["']\s*(,)?/g)) {
+      const key = m[1]!;
+      add(key, m[2] !== undefined || (driverFile && !OWN_URL_NAME_REGEX.test(key)));
+    }
   } else if (/application[^/]*\.(?:properties|ya?ml)$/i.test(path)) {
     for (const m of content.matchAll(/\$\{([A-Z][A-Z0-9_]*)(:[^}]*)?\}/g)) add(m[1]!, m[2] !== undefined);
     // Spring relaxed binding: a `spring.datasource` property is also read from SPRING_DATASOURCE_*.
@@ -4663,6 +4676,8 @@ export function detectEnvVarModel(
           /^\s*&&/.test(tail) ||
           /&&\s*$/.test(head) ||
           /(?:Boolean\s*\(|!!)\s*$/.test(head) ||
+          // A predicate helper (`isEnabled(process.env.X)`, `toBool(process.env.X)`) reads a flag: unset is false.
+          /\b(?:is[A-Z]\w*|(?:to|parse|as)Bool(?:ean)?)\s*\(\s*$/.test(head) ||
           inConditional;
         // A non-secret read stored as-is (`const url = process.env.X;`,
         // `host: process.env.X,`) proves nothing about need — the consumer

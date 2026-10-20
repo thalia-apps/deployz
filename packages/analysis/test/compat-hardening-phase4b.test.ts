@@ -86,6 +86,16 @@ describe('reads that never need a value', () => {
     expect(isRequired(files, 'STORE_API_SECRET')).toBe(true);
   });
 
+  it('does not require a secret in a Laravel driver file, an OS name, or a flag read by a predicate', () => {
+    const files = {
+      'config/broadcasting.php': "<?php return ['ably' => ['key' => env('ABLY_KEY')]];\n",
+      'config/cache.php': "<?php return ['memcached' => ['sasl' => [env('MEMCACHED_USERNAME'), env('MEMCACHED_PASSWORD')]]];\n",
+      'server/browser.js': "const dir = process.env.LOCALAPPDATA + '/Chromium';\nconst keep = !isEnabled(process.env.STREAM_KEEP_COMPLETED_JOBS);\nconst stripe = new Stripe(process.env.STRIPE_SECRET_KEY);\n",
+    };
+    for (const key of ['ABLY_KEY', 'MEMCACHED_PASSWORD', 'LOCALAPPDATA', 'STREAM_KEEP_COMPLETED_JOBS']) expect(isRequired(files, key)).toBe(false);
+    expect(isRequired(files, 'STRIPE_SECRET_KEY')).toBe(true);
+  });
+
   it('does not treat a Python assignment to os.environ as a read', () => {
     const files = { 'app/main.py': 'import os\nos.environ["MALLOC_ARENA_MAX"] = "2"\nx = os.environ["DATABASE_NAME"]\n' };
     expect(find(files, 'MALLOC_ARENA_MAX')).toBeUndefined();
