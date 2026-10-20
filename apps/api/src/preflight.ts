@@ -156,10 +156,12 @@ export function evaluatePreflight(input: PreflightInput): PreflightResult {
   checks.push({
     id: 'database',
     label: 'Database',
-    status: 'passed',
+    status: blockedIds.has('migration-database-missing') ? 'blocked' : 'passed',
     detail: manifest.database.postgres
       ? `${manifest.database.engine === 'mysql' ? 'MySQL' : 'PostgreSQL'} — Deployz provides a managed database`
-      : 'No database required',
+      : blockedIds.has('migration-database-missing')
+        ? 'A migration command is set, but no database is required'
+        : 'No database required',
   });
   checks.push({
     id: 'redis',

@@ -1000,10 +1000,10 @@ export function checkGcp(tree: FileTree): RejectionFinding {
   const cloudBuild = filePathsMatching(tree, /(?:^|\/)cloudbuild\.ya?ml$|(?:^|\/)\.gcloudignore$/);
   // Google's distroless base images live on gcr.io and say nothing about
   // where the app deploys (Stage A COMP-008).
-  const gcrBase = contentMatches(
-    tree,
-    /(?:^|\/)Dockerfile(?:\.[\w.-]+)?$/i,
-    /^FROM\s+(?:[^/\s]+\/)?gcr\.io\/(?!distroless\/)/m,
+  // A Dockerfile in a deployment sample directory (kubernetes/minikube/) is
+  // an alternative setup Deployz ignores.
+  const gcrBase = outsideDeploymentSamples(
+    contentMatches(tree, /(?:^|\/)Dockerfile(?:\.[\w.-]+)?$/i, /^FROM\s+(?:[^/\s]+\/)?gcr\.io\/(?!distroless\/)/m),
   );
   if (appEngine.length > 0 || cloudBuild.length > 0 || gcrBase.length > 0) {
     const evidence = (appEngine[0] ?? cloudBuild[0] ?? gcrBase[0]) ?? '';

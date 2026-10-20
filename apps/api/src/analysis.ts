@@ -374,9 +374,15 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // history and a repository whose every startable Dockerfile copies a missing
 // build output are unbuildable; a HEALTHCHECK port variable names the port; Node 26
 // images have no Yarn for a Procfile worker. Stored v56 rows can carry those claims.
-// Version 58 (AI open items): a Dockerfile that copies nothing from the repository
-// is unbuildable (outline runs a floating base image). Stored v57 rows say READY.
-export const ANALYSIS_VERSION = 58;
+// Version 58 (deployability outcome): every finding has a fix class and the
+// report has an outcome; only a required capability gap is NOT_COMPATIBLE. A
+// Dockerfile in a deployment sample directory is not a Google Cloud file, and a
+// compose file in a `*.Tests` directory is test tooling. Stored v57 rows reject
+// fixable apps.
+// Version 59 (AI open items): a Dockerfile that copies nothing from the repository
+// is unbuildable (outline runs a floating base image), and a migration that the AI
+// could not resolve is a change to verify. Stored v58 rows say deployable.
+export const ANALYSIS_VERSION = 59;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

@@ -142,6 +142,13 @@ plain links):
    application that has never had an eligible install link (still inside the
    setup lifecycle, no live link yet) gets no separate card at all — the
    primary card names the reason in one line near the lifecycle instead.
+   While setup is not complete, the primary card shows the deployability
+   outcome as one badge line ("Deployable with Deployz settings",
+   "Deployable after repository changes", "Not deployable on Deployz"), with
+   "Not yet confirmed by a build" or a "Review failure details" link to
+   Releases (see [`ai-analysis.md`](ai-analysis.md#compatibility-findings)).
+   Required changes show in three groups: "Set in Deployz", "Change in your
+   repository" and "Not supported".
    When the readiness payload carries an `architecture` block, the page also
    shows the compact "Architecture detected" card: the detected components
    grouped by plan group, each marked Detected automatically, Confirmed or
