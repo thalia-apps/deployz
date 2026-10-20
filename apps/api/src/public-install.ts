@@ -841,7 +841,6 @@ async function ensureInitialRelease(
     applicationId: application.id,
     version: sha.slice(0, 12),
     gitSha: sha,
-    migrationCommand: null,
   });
 }
 

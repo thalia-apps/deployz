@@ -306,7 +306,7 @@ describe('a development-named Dockerfile is dev-only only when its content agree
   const paths = (tree: FileTree, list: string[]): FileTree => Object.defineProperty(tree, TREE_PATHS, { value: list });
 
   it('accepts a sole Dockerfile.dev that builds the app and starts it for production (postiz shape)', () => {
-    const tree = paths({ 'Dockerfile.dev': dockerfile('FROM node:22', 'RUN pnpm run build', 'CMD ["node", "server.js"]') }, ['Dockerfile.dev']);
+    const tree = paths({ 'Dockerfile.dev': dockerfile('FROM node:22', 'COPY . .', 'RUN pnpm run build', 'CMD ["node", "server.js"]') }, ['Dockerfile.dev']);
     expect(detectUnbuildableDockerfile(tree)).toBeNull();
   });
 

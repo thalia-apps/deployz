@@ -23,6 +23,7 @@ import {
   redactSecrets,
   verdictFromReadiness,
   type AiGateway,
+  type DeployabilityOutcome,
   type PassedCheck,
   type ReadinessFinding,
   type ReadinessState,
@@ -1314,6 +1315,8 @@ type DeploymentRequirementDriftRow = Pick<DeploymentRow, 'id' | 'state' | 'desir
 interface ReadinessResponse {
   analysisStatus: string;
   state: ReadinessState;
+  /** The deployability outcome. Absent while analysis is incomplete and on reports stored before it. */
+  outcome?: DeployabilityOutcome;
   requiredCount: number;
   recommendedCount: number;
   /** One short explanation of the state. Null while analysis is incomplete. */
@@ -1519,6 +1522,7 @@ async function computeReadiness(
   const body = report
     ? {
         state: report.state as ReadinessState,
+        ...(report.outcome !== undefined ? { outcome: report.outcome } : {}),
         requiredCount: report.requiredCount,
         recommendedCount: report.recommendedCount,
         summary: report.summary,
@@ -3836,7 +3840,6 @@ export async function buildServer({
   const createReleaseBodySchema = z.object({
     version: z.string().min(1),
     gitSha: z.string().min(1),
-    migrationCommand: z.string().nullish(),
   });
 
   const deployBodySchema = z.object({
@@ -5350,7 +5353,6 @@ export async function buildServer({
       applicationId: id,
       version: body.version,
       gitSha: body.gitSha,
-      migrationCommand: body.migrationCommand ?? null,
     });
 
     return reply.code(201).send(row);

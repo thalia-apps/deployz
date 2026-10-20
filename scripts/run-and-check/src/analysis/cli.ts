@@ -36,7 +36,7 @@ export interface AnalysisOptions {
   out: string | undefined;
   offline: boolean;
   engine: 'rules' | 'ai';
-  /** A folder of saved analyst answers that replaces the model (engine ai, no reviewer). */
+  /** A folder of saved analyst answers that replaces the model (engine ai). */
   replay: string | undefined;
 }
 

@@ -1,7 +1,7 @@
 /**
  * Cost and time per analysis for an AI analyser run, from the `ai` record of
- * each result file. The analyst cost uses the Claude Opus 5.5 list price; the
- * reviewer is reported in tokens because its price is not pinned here.
+ * each result file. The analyst cost uses the Claude Opus 5.5 list price. An
+ * analysis whose rules left no open item makes no call and costs nothing.
  */
 import type { AnalysisResultFile } from '../contract.js';
 
@@ -15,9 +15,10 @@ interface Call {
 
 export interface AiUsageSummary {
   readonly analyses: number;
+  /** Analyses that called the model (the others had no open item). */
+  readonly calls: number;
   readonly fallbacks: Record<string, number>;
   readonly analystTokens: { readonly prompt: number; readonly completion: number };
-  readonly reviewerTokens: { readonly prompt: number; readonly completion: number };
   readonly analystCostUsd: number;
   readonly latencyMs: { readonly mean: number; readonly max: number };
 }
@@ -25,9 +26,9 @@ export interface AiUsageSummary {
 export function summariseAiUsage(files: readonly AnalysisResultFile[]): AiUsageSummary {
   const fallbacks: Record<string, number> = {};
   const analyst = { prompt: 0, completion: 0 };
-  const reviewer = { prompt: 0, completion: 0 };
   const latencies: number[] = [];
   let analyses = 0;
+  let calls = 0;
   for (const file of files) {
     const ai = file.ai;
     if (!ai) continue;
@@ -37,21 +38,19 @@ export function summariseAiUsage(files: readonly AnalysisResultFile[]): AiUsageS
       continue;
     }
     analyses += 1;
-    const a = ai['analyst'] as Call | undefined;
-    const r = ai['reviewer'] as Call | null | undefined;
+    const a = ai['analyst'] as Call | null | undefined;
+    if (a) calls += 1;
     analyst.prompt += a?.usage?.promptTokens ?? 0;
     analyst.completion += a?.usage?.completionTokens ?? 0;
-    reviewer.prompt += r?.usage?.promptTokens ?? 0;
-    reviewer.completion += r?.usage?.completionTokens ?? 0;
     if (typeof ai['latencyMs'] === 'number') latencies.push(ai['latencyMs']);
   }
   const per = (value: number) => (analyses === 0 ? 0 : Math.round(value / analyses));
   const cost = (analyst.prompt * ANALYST_PRICE.input + analyst.completion * ANALYST_PRICE.output) / 1_000_000;
   return {
     analyses,
+    calls,
     fallbacks,
     analystTokens: { prompt: per(analyst.prompt), completion: per(analyst.completion) },
-    reviewerTokens: { prompt: per(reviewer.prompt), completion: per(reviewer.completion) },
     analystCostUsd: analyses === 0 ? 0 : cost / analyses,
     latencyMs: {
       mean: latencies.length === 0 ? 0 : Math.round(latencies.reduce((sum, value) => sum + value, 0) / latencies.length),
@@ -63,8 +62,8 @@ export function summariseAiUsage(files: readonly AnalysisResultFile[]): AiUsageS
 export function formatAiUsage(summary: AiUsageSummary): string {
   const fallbacks = Object.entries(summary.fallbacks).map(([reason, count]) => `${reason} ${count}`).join(', ') || 'none';
   return [
-    `AI analyses: ${summary.analyses}; fallbacks: ${fallbacks}`,
-    `Per analysis: analyst ${summary.analystTokens.prompt} prompt + ${summary.analystTokens.completion} completion tokens (about $${summary.analystCostUsd.toFixed(3)}); reviewer ${summary.reviewerTokens.prompt} + ${summary.reviewerTokens.completion} tokens`,
+    `AI analyses: ${summary.analyses} (${summary.calls} with a model call); fallbacks: ${fallbacks}`,
+    `Per analysis: ${summary.analystTokens.prompt} prompt + ${summary.analystTokens.completion} completion tokens (about $${summary.analystCostUsd.toFixed(3)})`,
     `Time per analysis: mean ${(summary.latencyMs.mean / 1000).toFixed(1)} s, max ${(summary.latencyMs.max / 1000).toFixed(1)} s`,
   ].join('\n');
 }

@@ -477,6 +477,28 @@ describe('env.required', () => {
   });
 });
 
+describe('datastore.required', () => {
+  const MONGO = { type: 'datastore.required', subject: 'mongo', value: true } as const;
+  const failedWith = (text: string) => {
+    const run = makeRun({ webHealthy: false });
+    const observation = makeObservation({ ...run, webHealthy: { ...run.webHealthy, evidence: [{ kind: 'log', source: 'web#1', text }] } });
+    return checkClaims([{ ...MONGO, from: 'test' }, { ...MONGO, value: false, from: 'test' }], observation);
+  };
+
+  it('a start without the datastore that is healthy contradicts "required" and confirms "not required"', () => {
+    expect(check(MONGO, { webHealthy: true })).toMatchObject({ verdict: 'CONTRADICTED', observed: false });
+    expect(check({ ...MONGO, value: false }, { webHealthy: true }).verdict).toBe('CONFIRMED');
+  });
+
+  it('a failed start whose log names the datastore confirms "required"', () => {
+    expect(failedWith('MongooseServerSelectionError: connect ECONNREFUSED').map((entry) => entry.verdict)).toEqual(['CONFIRMED', 'CONTRADICTED']);
+  });
+
+  it('a failed start for another reason decides nothing', () => {
+    expect(failedWith('Error: Cannot find module').map((entry) => entry.verdict)).toEqual(['NOT_CHECKABLE', 'NOT_CHECKABLE']);
+  });
+});
+
 describe('facts that were not observed', () => {
   it.each<[Claim['type'], Claim['value'], ObservationFactName]>([
     ['dockerfile', 'Dockerfile', 'build'],

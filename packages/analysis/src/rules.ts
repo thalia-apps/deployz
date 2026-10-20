@@ -54,9 +54,9 @@ export interface CompatibilityResult {
  * Evaluate the §19 readiness verdict from an analysis result.
  *
  * Delegates to the semantic readiness report:
- *   - any blocking REQUIRED finding (§10 rejection, local filesystem) →
+ *   - any blocking REQUIRED finding (a required capability gap) →
  *     NOT_COMPATIBLE;
- *   - any other REQUIRED finding (container setup, health check) →
+ *   - any other REQUIRED finding (a setting or a repository change) →
  *     NEEDS_ATTENTION;
  *   - otherwise READY. RECOMMENDED findings (migrations for a detected
  *     database, a worker start command) never block READY.

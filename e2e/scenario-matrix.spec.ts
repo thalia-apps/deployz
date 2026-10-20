@@ -33,10 +33,12 @@ import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForIns
 interface ReadinessResponse {
   analysisStatus: string;
   state: string;
+  outcome?: string;
   requiredCount: number;
   findings: Array<{
     id: string;
     blocking?: boolean;
+    fixClass?: string;
     title?: string;
     plainEnglishExplanation?: string;
     technicalEvidence?: string;
@@ -163,7 +165,7 @@ test.describe('unsupported-database (D)', () => {
 });
 
 test.describe('repairable-local-filesystem (E)', () => {
-  test('@scenario:repairable-local-fs a local-filesystem app is refused at deployment creation and the coding-agent repair guidance surfaces', async ({
+  test('@scenario:repairable-local-fs a local-filesystem app is deployable with changes, is refused at deployment creation, and the coding-agent repair guidance surfaces', async ({
     request,
   }) => {
     test.setTimeout(30_000);
@@ -172,14 +174,17 @@ test.describe('repairable-local-filesystem (E)', () => {
 
     const { applicationId } = await seedAnalysedApplication(request, 'deployz-demo/local-fs-app', suffix);
 
-    // The real analysis classifies the repo as needing changes, with the
-    // persistent-local-disk finding as the ONE blocking finding.
+    // The real analysis classifies the repo as deployable with changes: the
+    // persistent-local-disk finding is a repository change (CODE_CHANGE), not a
+    // capability gap, so it is required but not blocking in the report.
     const readiness = await getReadiness(request, applicationId);
     expect(readiness.analysisStatus).toBe('COMPLETE');
-    expect(readiness.state).toBe('NEEDS_CHANGES');
+    expect(readiness.state).toBe('ALMOST_READY');
+    expect(readiness.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
     const localFs = readiness.findings.find((f) => f.id === 'local-file-storage');
     expect(localFs).toBeDefined();
-    expect(localFs?.blocking).toBe(true);
+    expect(localFs?.fixClass).toBe('CODE_CHANGE');
+    expect(localFs?.blocking).toBe(false);
     expect(localFs?.title).toBe('Files stored on local disk');
     expect(localFs?.technicalEvidence).toContain('VOLUME /data');
 

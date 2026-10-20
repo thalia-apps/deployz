@@ -213,7 +213,7 @@ export function isRuntimeSourcePath(path: string): boolean {
 // Compose files that describe dev/test/example tooling rather than the app's
 // own production deployment shape — by path segment or by filename flavour.
 const NON_PRODUCTION_COMPOSE_SEGMENT_REGEX =
-  /(?:^|\/)(?:development|dev|test|testing|tests|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
+  /(?:^|\/)(?:development|dev|test|testing|tests|[\w.-]+[._-]tests?|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
 const NON_PRODUCTION_COMPOSE_FILENAME_REGEX =
   /(?:docker-compose|compose)[.-](?:dev|development|test|testing|override|local|example|sample|ci|e2e|debug|demo|build)(?:[.-][\w.-]+)?\.ya?ml$/i;
 const COMPOSE_FILE_REGEX = /(?:^|\/)(?:docker-compose|compose)(?:\.(?:prod|production))?\.ya?ml$/i;
@@ -5746,6 +5746,14 @@ function isDevOnlyDockerfile(path: string, content: string): boolean {
  * candidate with a CMD or ENTRYPOINT copies missing sources too. A generated
  * directory and `COPY --from=` never reject on their own.
  */
+/** A COPY or ADD from the build context (not `--from` another stage or image), or a bind mount of it. */
+function copiesFromContext(dockerfile: string): boolean {
+  return dockerfile
+    .replace(/\\\r?\n/g, ' ')
+    .split(/\r?\n/)
+    .some((line) => (/^\s*(?:COPY|ADD)\s/i.test(line) && !/--from=/i.test(line)) || (/--mount=type=bind/i.test(line) && !/\bfrom=/i.test(line)));
+}
+
 export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
   if (!paths || paths.includes('.gitmodules')) return null;
@@ -5762,6 +5770,15 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   const missing = detectDockerfileMissingCopySources(tree).filter(
     (source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? ''),
   );
+  // An image that takes nothing from the build context runs code from another image, not
+  // from this commit (outline copies build/ and node_modules/ from the floating outline-base image).
+  const selectedPath = selectedDockerfile(tree)?.path;
+  if (missing.length === 0 && selectedPath !== undefined && !copiesFromContext(tree[selectedPath] ?? '')) {
+    const fromContext = buildable.some(
+      (path) => path !== selectedPath && /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) && copiesFromContext(tree[path] ?? ''),
+    );
+    return fromContext ? null : `The Dockerfile (${selectedPath}) copies nothing from the repository, so the image runs code from another image, not from this commit.`;
+  }
   if (missing.length === 0) return null;
   if (tracked.length === 1) {
     return `The only Dockerfile (${tracked[0]}) copies ${missing.slice(0, 3).join(', ')}, which the repository does not contain.`;

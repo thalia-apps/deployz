@@ -141,6 +141,8 @@ export type {
   ReadinessState,
   FindingSeverity,
   FindingConfidence,
+  FixClass,
+  DeployabilityOutcome,
   ReadinessFinding,
   PassedCheck,
   ReadinessReport,

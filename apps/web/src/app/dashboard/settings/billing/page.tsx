@@ -57,7 +57,7 @@ function EvaluationCard({ billing }: { billing: BillingSummary }) {
       <Card>
         <CardHeader>
           <CardTitle>What starts billing</CardTitle>
-          <CardDescription>Your first customer deployment.</CardDescription>
+          <CardDescription>Your subscription.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex items-center justify-between text-sm">
@@ -82,10 +82,11 @@ function EvaluationCard({ billing }: { billing: BillingSummary }) {
             </div>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            A test deployment of your own app is free. A customer deployment is charged only while it
-            is live.
+            The platform fee starts when you subscribe. You subscribe before a customer can confirm an
+            invitation, or when you add your first customer deployment. A test deployment of your own
+            app is free. A customer deployment is charged only while it is live.
             {included > 0
-              ? ` ${included} production ${included === 1 ? 'deployment is' : 'deployments are'} included. The platform fee starts with your first customer deployment; the per-deployment fee applies only to live deployments beyond the included ones.`
+              ? ` ${included} production ${included === 1 ? 'deployment is' : 'deployments are'} included. The per-deployment fee applies only to live deployments beyond the included ones.`
               : ''}
           </p>
         </CardContent>

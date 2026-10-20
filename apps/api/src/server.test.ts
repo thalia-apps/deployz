@@ -5007,6 +5007,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
           manifest: {
             ...READY_MANIFEST,
             database: { postgres },
+            // A migration command without a database is a configuration error.
+            migration: { command: postgres ? READY_MANIFEST.migration.command : null },
             redis: { required: redis, envBindings: [] },
           },
         },

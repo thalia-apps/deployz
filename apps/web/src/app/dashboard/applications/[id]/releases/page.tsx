@@ -202,7 +202,6 @@ function CreateReleaseForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const version = String(form.get('version') ?? '').trim();
-    const migrationCommand = String(form.get('migrationCommand') ?? '').trim();
     setPending(true);
     setError(null);
     setMissingBuildKeys(null);
@@ -214,7 +213,6 @@ function CreateReleaseForm({
       const release = await createRelease(applicationId, {
         version,
         gitSha,
-        migrationCommand: migrationCommand.length > 0 ? migrationCommand : null,
       });
       onCreated(release);
     } catch (err) {
@@ -258,18 +256,6 @@ function CreateReleaseForm({
             defaultBranch={data?.application.defaultBranch ?? null}
             onReadyChange={setCommitReady}
           />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="migrationCommand">Migration command (optional)</Label>
-              <Input
-                id="migrationCommand"
-                name="migrationCommand"
-                placeholder={data?.application.migrationCommand ?? "npm run migrate"}
-              />
-              <p className="text-xs text-muted-foreground">
-                Runs in the customer&apos;s account before this release starts. Leave empty to use the
-                detected command.
-              </p>
-            </div>
           <div className="flex items-center gap-3">
             <Button type="submit" loading={pending} loadingText="Creating release…" disabled={!commitReady}>
               Create release

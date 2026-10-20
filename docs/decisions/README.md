@@ -35,13 +35,15 @@ Three decisions with substantial detail have their own files:
 | 2026-10-09 | Every environment-specific deploy value is a GitHub Environment variable, and the stage gate derives its rules from the stage name | Active |
 | 2026-10-09 | GitHub Actions authenticates to AWS with OIDC and one IAM role for each Environment | Active |
 | 2026-10-09 | One release workflow promotes a commit through staging to production, and the production deploy jobs wait for an approval | Active |
-| 2026-10-10 | A repository with no buildable Dockerfile is NOT_COMPATIBLE when the evidence is complete | Active |
-| 2026-10-10 | An image that runs several supervised application processes (s6-overlay, supervisord) is NOT_COMPATIBLE | Active |
+| 2026-10-10 | A repository with no buildable Dockerfile is NOT_COMPATIBLE when the evidence is complete | Superseded 2026-10-20 (a repository change, DEPLOYABLE_WITH_CHANGES) |
+| 2026-10-10 | An image that runs several supervised application processes (s6-overlay, supervisord) is NOT_COMPATIBLE | Superseded 2026-10-20 (a repository change, DEPLOYABLE_WITH_CHANGES) |
 | 2026-10-12 | A deploy fails closed when the application needs a database or cache that the deployment does not have | Active |
 | 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
 | 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
-| 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Proposed (release gate not passed) |
+| 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Superseded 2026-10-20 (the AI answers only the open items) |
+| 2026-10-20 | The Analysis gives one deployability outcome; only a required capability gap is not compatible | Active |
+| 2026-10-20 | The AI Analysis answers only the open items of the rules Analysis, with closed answers and one call; the reviewer is post-MVP | Proposed (release gate not passed) |
 | 2026-10-21 | Every IAM role the application stack creates carries the connector's application role boundary | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
@@ -907,8 +909,8 @@ What would change it: a real-AWS run shows a Host-checking app that answers
 
 ## AI-first application Analysis (2026-10-19)
 
-Status: proposed. The switch waits for the release gate and a shadow period
-in production.
+**Superseded 2026-10-20** by "The AI Analysis answers only the open items".
+The analyst no longer finds every fact, and the reviewer is removed.
 
 The rules Analysis (`analyseRepo`) is a large set of hand-written detectors.
 Each new stack, framework or repository layout needs new rules, and the
@@ -968,6 +970,130 @@ What would change it: the AI fails the gate after four tuning rounds (then
 the AI role stays limited to the open questions, as today), the cost or the
 time per analysis is above the budget, or shadow mode shows a new class of
 failed deploy.
+
+## One deployability outcome per repository (2026-10-20)
+
+Decision: the readiness report gives one outcome. DEPLOYABLE: Deployz
+settings only. DEPLOYABLE_WITH_CHANGES: a repository change from the closed
+catalogue of safe fixes in the fix instructions. NOT_DEPLOYABLE: the app needs
+a capability outside the MVP. One table (`FIX_CLASSES` in
+`readiness-report.ts`) gives each finding a fix class (SETTING, CODE_CHANGE,
+CAPABILITY_GAP), and the worst required item wins. Only NOT_DEPLOYABLE is
+`NOT_COMPATIBLE`; the other two are `READY` or `NEEDS_ATTENTION`.
+
+Reason: the report put every blocking finding in NEEDS_CHANGES, and
+`verdictFromReadiness` showed it as NOT_COMPATIBLE, also when a known
+repository change fixes it. On the 32 run-and-check repositories with an
+observed outcome, the old verdict was correct for 20 and gave 9 false "not
+compatible" results: a `.git` copy, an unbuildable Dockerfile, a
+`*_CONFIG_DIR`, a Dockerfile in `kubernetes/minikube/` read as Google Cloud,
+a `BTCPayServer.Tests/` compose file read as production, and a migration
+command without a database. A false rejection loses a vendor who could deploy;
+a fixable app needs instructions, not a refusal.
+
+Rules:
+
+- A finding is a CAPABILITY_GAP only when the app clearly needs it. When that
+  is not clear, it is a CODE_CHANGE with a "verify" step for the coding agent.
+  Several Compose application services and a MariaDB driver are CODE_CHANGE.
+- SQLite is a CAPABILITY_GAP only when it is the only database driver.
+- A migration command without a database is a configuration error
+  (`migration-database-missing`), not a rejection.
+- Build check: DEPLOYABLE shows "not yet confirmed by a build" until a
+  release build passes. Failed release builds with no passed build move it to
+  DEPLOYABLE_WITH_CHANGES with the build-failure details. Static rules do not
+  predict every build failure (rallly, Smartstore, undb in the observations).
+
+The deployment gate (`evaluateManifestReadiness`) still blocks every
+repository change before a deployment: the outcome changes the verdict and
+the vendor's next step, not what can deploy.
+
+What would change it: a run-and-check measurement that shows a false
+DEPLOYABLE or DEPLOYABLE_WITH_CHANGES for an app that needs a capability, or
+a new MVP capability (a persistent volume, several services) that makes a
+CODE_CHANGE a SETTING.
+
+## The AI Analysis answers only the open items (2026-10-20)
+
+Status: proposed. The switch waits for the release gate and a shadow period
+in production. This decision replaces "AI-first application Analysis
+(2026-10-19)".
+
+The goal is one of three outcomes for each repository: deployable with
+Deployz (1), deployable with changes (2), not deployable (3). In exam A
+(`ai@6cc47cc6-examA`) the analyst found all ten facts again, and it agreed
+with the rules on most of them (Redis 56 of 56, port 51 of 56, Dockerfile
+50 of 56). It cost $0.46 on average ($0.86 at most) and took about 55 s.
+It could not change a rejection, but most wrong outcomes come from
+rejections (local state, a second Compose service, an unsupported
+datastore). Its checks also added vendor questions (the start command for 21
+repositories, required variables for 29).
+
+Decision:
+
+- The rules Analysis runs first. The AI answers only its open items: a
+  blocker candidate where it is not known if the app needs the item, and a
+  fact that the rules did not resolve (port, start command, health path,
+  Dockerfile, migration mode). A repository with no open item makes no call.
+- Each answer is closed. A blocker: required, optional by setting `<name>`
+  (with the value and the engine it selects), or not used. A fact: a value,
+  or unknown. Each answer has `path:line` evidence from one small evidence
+  window for its question.
+- One Claude Opus 5.5 call per repository. The reviewer model is removed
+  from the MVP path; it is a post-MVP item.
+- Fixed checks decide each answer ([`../ai-analysis.md`](../ai-analysis.md#ai-first-analysis-analysis_engine)).
+  "Optional by setting": the evidence reads the setting and the setting
+  selects an engine that Deployz provides. "Not used": no production source
+  imports or connects to the item. A start command is the image CMD or
+  ENTRYPOINT, or a script that the CMD runs.
+- A checked "not used" or "optional by setting" dismisses the rejection.
+  This changes the earlier rule that the AI never changes a rejection. A
+  setting that Deployz does not set itself becomes a required vendor
+  variable (outcome 2). Every other answer, and every failed check, keeps the
+  rules value.
+- The run-and-check report gives a 3x3 outcome matrix. The release gate adds
+  two criteria: no predicted outcome 1 that is really 2 or 3, and fewer false
+  outcome 3 than the rules baseline ([`../testing/compatibility.md`](../testing/compatibility.md#release-gate)).
+
+Measured on the 58 exam repositories (tuning and holdout), after the merge
+with the deployability outcome. The answers came from Claude Opus 5.5 in a
+coding session (no API call), replayed through the production checks and
+merge. Full exams on x86_64 runners, each full run twice: AI
+`ai@080dad04-open-items` (run 39451043684), rules `rules@080dad04` (run
+39451101030). The predicted outcome is the readiness report's `outcome`.
+
+| | rules@0fc073b8 | rules@080dad04 | AI open items |
+| --- | --- | --- | --- |
+| Hidden problems, tuning + holdout | 2 + 0 | 1 + 0 | **0 + 0** |
+| False problems, tuning + holdout | 11 + 6 | 6 + 5 | 6 + 6 |
+| CONTRADICTED claims, tuning + holdout | 14 + 14 | 9 + 14 | 8 + 14 |
+| Predicted 1, actually 2 or 3 | — | 5 + 8 | 2 + 4 |
+| Predicted 3, actually 1 or 2 | — | 0 + 0 | 0 + 0 |
+
+- CONTRADICTED claims are fewer than or equal to `rules@080dad04` for each
+  claim type.
+- The two hidden problems of `rules@0fc073b8` are fixed. repo-016 (Outline):
+  the Dockerfile copies nothing from the repository and runs the floating
+  `outlinewiki/outline-base` build, so it is not buildable (a repository
+  change). new-14 (Logto): the AI could not resolve the migration of its
+  required database; that migration question is now a change to verify
+  (CODE_CHANGE, outcome 2), not a setting.
+- Predicted 1, actually 2 or 3, is not 0 (the gate needs 0). new-27 and new-31
+  do not build: the product's build check makes them outcome 2 after the
+  first failed release build, but the harness does not apply it. new-20 and
+  new-26 ask the vendor for a setting (a required variable) that the full run
+  does not supply, so the harness counts them as 3. new-15 (Homarr, a second
+  server on the same port) and new-17 (Espial, SQLite in `/app/data`) are
+  real misses of the Analysis.
+- False outcome 3 is 0 for both engines, so it cannot be fewer than the
+  rules.
+- 45 of 58 repositories have an open item. A pack is about 17,000
+  characters (at most 34,000), against about 90,000 before. The cost and the
+  time are not measured yet: the answers were not API calls.
+
+What would change it: a full exam shows a hidden problem or a false
+outcome 1 that the AI causes, the cost or the time per analysis is above the
+budget, or shadow mode shows a new class of failed deploy.
 
 ## Application roles carry a permissions boundary (2026-10-21)
 

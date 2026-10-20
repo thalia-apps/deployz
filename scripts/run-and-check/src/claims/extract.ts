@@ -58,8 +58,40 @@ function predictsUnbuildable(gate: NonNullable<AnalysisResultFile['gate']>): boo
     (finding) =>
       finding.severity === 'error' &&
       (finding.category === 'container' ||
-        (finding.id === 'unsupported' && /\.git\b|Dockerfile/.test(finding.message) && !/^Unsupported storage:/.test(finding.message))),
+        (finding.id === 'unsupported' &&
+          /\.git\b|Dockerfile/.test(finding.message) &&
+          // A storage reason only cites the Dockerfile; an image that copies nothing from the repository builds.
+          !/^Unsupported storage:|copies nothing from the repository/.test(finding.message))),
   );
+}
+
+/** A datastore server that Deployz does not host. Embedded stores (SQLite, H2) are local state, not a server. */
+const DATASTORE_SERVER = /mongo|elastic|opensearch|clickhouse|cassandra|neo4j|couch|mariadb/i;
+const DATASTORE_REASON = /^Unsupported (?:database|search engine)/;
+
+/** The datastore a rejection reason or a dependency names, in lower case (`mongoose` → `mongo`). */
+function datastoreOf(text: string): string | null {
+  return text.match(DATASTORE_SERVER)?.[0]?.toLowerCase() ?? null;
+}
+
+/**
+ * One claim per datastore server: true for each datastore rejection, false
+ * for each datastore blocker that the AI engine dismissed (its `ai` record).
+ */
+function datastoreClaims(file: AnalysisResultFile, manifest: DeploymentManifest): Claim[] {
+  const claims = new Map<string, Claim>();
+  for (const reason of manifest.unsupported) {
+    const datastore = DATASTORE_REASON.test(reason) ? datastoreOf(reason) : null;
+    if (datastore !== null) claims.set(datastore, { type: 'datastore.required', subject: datastore, value: true, from: 'unsupported' });
+  }
+  const answers = Array.isArray(file.ai?.['answers']) ? (file.ai['answers'] as Array<Record<string, unknown>>) : [];
+  for (const answer of answers) {
+    const datastore = typeof answer['subject'] === 'string' ? datastoreOf(answer['subject']) : null;
+    if (datastore !== null && answer['decision'] === 'ai' && !claims.has(datastore)) {
+      claims.set(datastore, { type: 'datastore.required', subject: datastore, value: false, from: 'ai.answers' });
+    }
+  }
+  return [...claims.values()];
 }
 
 function databaseEngine(manifest: DeploymentManifest): 'postgres' | 'mysql' | 'none' {
@@ -117,5 +149,6 @@ export function extractClaims(file: AnalysisResultFile): Claim[] {
   for (const name of vendorRequiredVariables(manifest)) {
     claims.push({ type: 'env.required', subject: name, value: true, from: `environment.variables.${name}` });
   }
+  claims.push(...datastoreClaims(file, manifest));
   return claims;
 }

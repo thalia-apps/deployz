@@ -49,7 +49,7 @@ const EXPRESS_POSTGRES_APP: Record<string, string> = {
 };
 
 const SQLITE_APP: Record<string, string> = {
-  Dockerfile: 'FROM node:20-alpine\nCMD ["node", "server.js"]\n',
+  Dockerfile: 'FROM node:20-alpine\nCOPY . .\nCMD ["node", "server.js"]\n',
   'package.json': JSON.stringify({
     name: 'notes',
     scripts: { start: 'node server.js' },

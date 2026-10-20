@@ -261,8 +261,8 @@ export const BUSY_ACTION_COPY =
  * so the disabled button and the server-side refusal can never disagree.
  */
 export const RELAY_UNREACHABLE_ACTION_COPY: Record<Exclude<RelayStatus, 'CONNECTED'>, string> = {
-  UNKNOWN: "No relay has connected to this deployment yet, so these actions aren't available.",
-  DISCONNECTED: "The relay is offline, so these actions aren't available until it reconnects.",
+  UNKNOWN: "The Deployz connector has not connected to this deployment, so these actions aren't available.",
+  DISCONNECTED: "The Deployz connector is offline, so these actions aren't available until it reconnects.",
 };
 
 /**

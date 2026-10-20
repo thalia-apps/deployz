@@ -65,7 +65,6 @@ vi.mock('../src/app/dashboard/applications/[id]/application-page-context', () =>
         id: 'app-1',
         repoFullName: 'acme/api',
         defaultBranch: 'main',
-        migrationCommand: 'pnpm prisma migrate deploy',
       },
     },
   }),
@@ -339,10 +338,9 @@ describe('Create release form', () => {
     });
   }
 
-  it('shows the detected migration command as the placeholder', async () => {
+  it('has no per-release migration command field', async () => {
     await openForm();
-    const input = container.querySelector('#migrationCommand') as HTMLInputElement;
-    expect(input.placeholder).toBe('pnpm prisma migrate deploy');
+    expect(container.querySelector('#migrationCommand')).toBeNull();
   });
 
   it('shows the BUILD_CONFIGURATION_MISSING message and a link to Configuration when a release cannot build', async () => {
@@ -430,7 +428,7 @@ describe('Release infrastructure line', () => {
     });
     expect(container.textContent).toContain('Infrastructure requirements changed');
     expect(container.textContent).toContain(
-      'This release requires infrastructure changes. Automatic infrastructure upgrades are not supported yet.',
+      'This release needs infrastructure changes. Deployz cannot apply them to an existing deployment. Create a new deployment for each customer that needs this release.',
     );
     expect(container.querySelector('[data-testid="release-infrastructure-none"]')).toBeNull();
   });

@@ -15,7 +15,7 @@ behind the AI boundary are in `docs/decisions/README.md`.
   changes deployment or job state, never flips a failure code, and never
   produces a secret value. It flips a deterministic Analysis verdict in two
   cases only: the Compose multi-service downgrade (see "AI fallback"), and
-  a checked fact under `ANALYSIS_ENGINE=ai` (see "AI-first Analysis").
+  a checked answer under `ANALYSIS_ENGINE=ai` (see "AI-first Analysis").
 - Every AI output crosses a strict Zod schema before anything reads it. A
   malformed, oversized or missing answer degrades to the deterministic
   result — an analysis still completes, a diagnosis still shows copy-map
@@ -31,7 +31,8 @@ Repository (GitHub tree, bounded)
   → analyseRepo: deterministic detectors + rejection checks
   → ANALYSIS_ENGINE=rules (default): AI fallback ONLY for an
     unresolved question; merge is deterministic-always-wins
-    ANALYSIS_ENGINE=ai: checked AI facts can replace rule values
+    ANALYSIS_ENGINE=ai: checked AI answers fill the open facts and
+    can dismiss a blocker candidate
   → ApplicationAnalysis (canonical, typed, evidenced)
   → ReadinessReport (findings) · DeploymentManifest (contract)
   → Preflight gate at every path into provisioning
@@ -134,14 +135,19 @@ Repository (GitHub tree, bounded)
   only development or template files, or a selected Dockerfile that copies
   sources the repository lacks while every other Dockerfile with a CMD or
   ENTRYPOINT also copies a missing source), the repository is
-  NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A capped or partial
+  a repository change (`no-buildable-dockerfile`) instead. A selected
+  Dockerfile that copies nothing from the build context (no `COPY` or `ADD`
+  without `--from`, no bind mount) is not buildable either: its image runs
+  code from another image, not from the commit (outline copies its build and
+  `node_modules` from the floating `outlinewiki/outline-base` image), unless
+  another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
   file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
   fallback and no `git clone` or `git init` in the Dockerfile, gives the
-  blocking finding `build-context-git-metadata`: the source archive has no
-  `.git`. A single Dockerfile with a development
+  required finding `build-context-git-metadata` (a repository change): the
+  source archive has no `.git`. A single Dockerfile with a development
   name is development-only only when its content shows it (a dev server, no
   command, or no build step). A global `ARG` with no default that a `FROM`
   of the production stage lineage reads (`ARG BASE_IMAGE` with
@@ -241,72 +247,98 @@ The AI-first engine (`packages/analysis/src/ai-analysis/`) is built and
 tested. It is not switched on: the default engine is `rules`. The decision
 and the release gate are in `docs/decisions/README.md`.
 
+The engine does not find the facts again. The rules Analysis runs first. The
+AI answers only the items that the rules left open. Every other rules value
+is final.
+
 - **Setting:** `ANALYSIS_ENGINE=rules|shadow|ai` (worker Lambda and API).
   `rules` runs the rules Analysis only. `shadow` runs the AI next to the
   rules, stores its result as `detected_metadata.aiEngine`, and changes
   nothing else. `ai` uses the merged AI result. `rules` is the one-setting
   rollback. The commit cache includes the engine, so a change of engine
   re-runs a stored row.
-- **Evidence pack** (`evidence-pack.ts`): the Dockerfile candidates, the
-  scripts they start, the manifests and process files, and every file that
-  a rules finding names. At most 90,000 characters. The pack starts with
-  the Deployz binding contract (`bindingContractOf`): the variables Deployz
-  sets always, the ones it sets for this repository by the env-var model,
-  and the standard names it sets when it provisions a database, Redis or S3,
-  so the analyst never lists a supplied name as a vendor variable. The rules
-  signals follow, marked as an unverified first guess. Real `.env` files,
-  key files, lockfiles and vendored code are never included. Secrets are
-  redacted line by line, env sample values are removed, and a file with a
-  private key is left out. Each line keeps its repository line number.
-- **Analyst** (`analyst.ts`, prompt version 5): Claude Opus 5.5 returns the
-  facts under a strict schema: Dockerfile and context, port, start command,
-  health path, database engine, Redis, S3, migration mode and command,
-  workers and required variables. Each fact has a value, a confidence and
-  `{path, line, quote}` evidence. The instructions are the system message
-  and the evidence pack is the user message. They state what Deployz
-  provides, what each kind of error costs (a missing resource crashes the
-  deployment; an extra variable is a needless vendor question), that the
-  rules signals are an unverified first guess, that "unknown" is a vendor
-  question and never a safe default, and how to decide each fact from the
-  effective production start path (a registered health route is enough;
-  the migration modes exclude each other; workers only from the production
-  setup). Reasoning effort: medium. The
-  provider is held to a flat list (one entry per fact, a plain value; JSON
-  only for the Dockerfile and the migration), because Anthropic refuses the
-  grammar of the typed schema; the strict typed schema then validates the
-  rebuilt facts. Budget: 16,000 completion tokens, 80,000 tokens in total by
-  the reported usage, 240 s.
-- **Reviewer** (`reviewer.ts`, prompt version 2): DeepSeek V4 Pro (a pinned
-  version, another model family than the analyst) reads the same pack and
-  the facts and returns objections only, each with the line that shows the
-  fact is wrong. An objection whose proposed value passes the checks
-  replaces the fact. Any other objection makes the fact a vendor question.
-  Budget: 12,000 completion tokens, 90,000 in total, 180 s.
-- **Checks** (`checks.ts`): each cited line exists in the pack, contains its
-  quote (one line of tolerance) and supports the claim. A required variable
-  is an unguarded read with no default, and no pack line reads it with a
-  default or a guard. The port is in the production stage `EXPOSE`,
-  `ENV PORT` or `HEALTHCHECK`, or the app reads `PORT`. A low-confidence
-  fact never passes.
-- **Merge** (`merge.ts`): a fact that agrees with the rules changes nothing.
-  A different fact that passes enters the analysis (metadata and the
-  detector finding). A different fact that fails, or an open objection,
-  becomes a vendor question when the manifest has one: the port, the start
-  command, the health path, the migration command
-  (`migration-command-needs-input`) or a required variable. For the
-  Dockerfile, the resources and the workers the rules value stays. A
-  verified database, Redis or S3 fact re-runs `analyseRepo` with the
-  override, so the env-var model and the bindings come from the same rules.
-  The AI removes a database that the rules require only with high confidence
-  and verified evidence; otherwise the rules database stays.
-  The rejections and the unsupported reasons never change. A variable that
-  Deployz provides is never made the vendor's.
-- **Fallback:** an unconfigured gateway, an outage, a timeout (420 s for
+- **Open items** (`open-items.ts`):
+  - A blocker candidate: a rejection where it is not known if the app needs
+    the item. These are an unsupported datastore (MongoDB, Elasticsearch,
+    ClickHouse, MariaDB, SQLite, H2 and the other database rejections, but
+    not a missing PostgreSQL extension), durable local state (a declared
+    data directory, a `VOLUME`, Compose named volumes), and a second
+    application service in the production Compose file.
+  - A fact that the rules did not resolve: no port, no start command, no
+    health path (`vendor_required`), no Dockerfile or a tied choice, or an
+    unknown migration mode for a required database.
+  - A repository with no open item makes no model call.
+- **Evidence pack** (`evidence-pack.ts`): the selected Dockerfile and the
+  scripts it starts (the start path, shown once), then one small evidence
+  window for each question. A window holds the lines around the best search
+  hits (8 lines before and after) with their repository line numbers. A hit
+  that reads an environment variable ranks first; for a health path a quoted
+  health route ranks first, and a browser-side router ranks last. Start and
+  migration questions also get the `scripts` block of `package.json`.
+  Limits: 8,000 characters for the start path, 8,000 for each question,
+  40,000 for the pack. The pack starts with the Deployz binding contract
+  (`bindingContractOf`). Real `.env` files, key files, lockfiles, vendored
+  code, tests, examples, hidden folders and browser bundles are never
+  included. Secrets are redacted line by line, env sample values are
+  removed, and a file with a private key is left out.
+- **Analyst** (`analyst.ts`, prompt version 14): one Claude Opus 5.5 call
+  answers every question. Each answer is closed:
+  - a blocker: `required`, `optional_by_setting` (the variable, the value,
+    and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
+    `not_used`;
+  - a fact: a value, or `unknown`.
+  Each answer has a confidence and `{path, line, quote}` evidence. When a
+  window does not let the model decide, it answers `required` or `unknown`.
+  The provider is held to a flat list of plain strings; the strict schemas
+  then validate each answer. Reasoning effort: medium. Budget: 12,000
+  completion tokens, 50,000 tokens in total by the reported usage, 180 s.
+- **Checks** (`checks.ts`): each cited line exists in a window and contains
+  its quote (one line of tolerance). A low-confidence answer never passes.
+  - `optional_by_setting`: a cited line reads the setting, the value selects
+    the engine (the value names it, or a cited line maps the value to it),
+    and the engine can replace the blocker (a datastore: PostgreSQL or
+    MySQL; local state: S3, PostgreSQL or MySQL). MinIO is not S3.
+  - `not_used`: no production source file imports or connects to the
+    datastore (dependency manifests, tests, documents and deployment files
+    do not count); no production line uses the declared path or variable of
+    the local state; a second Compose service is a third-party image (it
+    does not build from the repository) that no production line names.
+  - Start command: the final stage's CMD, its ENTRYPOINT, both together, a
+    `package.json` script that the CMD runs, or a script file that the CMD
+    starts. Nothing else, never a description.
+  - Port: in the production stage `EXPOSE`, `ENV PORT` or `HEALTHCHECK`, or
+    the app reads `PORT`. Health path: a cited line registers the route.
+    Startup migration: cited on the start path or in the app's boot code or
+    configuration, never in a dependency manifest.
+- **Merge** (`merge.ts`): `required` or a failed check keeps the rules
+  value. A passing `not_used` or `optional_by_setting` dismisses the
+  rejection; `analyseRepo` re-runs with the dismissed reason and with the
+  engine that the setting selects, so the env-var model, the bindings and
+  the database state come from the same rules. When Deployz does not set
+  the variable itself (it is not in the binding contract), the vendor must
+  set it: it becomes a required variable, and its source names the value
+  (outcome 2, deployable with changes). The open facts are all or nothing:
+  they fill the open values only when every open fact of the repository
+  passes. One fact left open (for example an unknown migration) keeps all
+  the rules values, because it can hide a start failure behind the facts
+  that were resolved (exam: new-23 became READY and did not start). A
+  migration answer that is unknown or fails its own check stays an open
+  vendor question (`migration-command-needs-input`, with the AI command as
+  the candidate, or none): an unknown migration of a required database is
+  never READY, because it can stop the start (Logto refuses to start until
+  its database alterations are deployed). Its fix class is CODE_CHANGE (a
+  change to verify, outcome 2); a migration question that the rules ask
+  with a known candidate command stays SETTING.
+- **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.
 - **Spend log:** the gateway logs one line per call (model, latency, tokens,
-  attempts). `aiEngine` keeps the usage and the latency of each call and the
-  decision for each fact.
+  attempts). `aiEngine` keeps the usage and the latency of the call (null
+  without a call), the number of questions, the failed checks, each answer
+  with its decision, and the setting changes.
+- **Post-MVP:** a second reviewer model. It was removed from the MVP path:
+  the checks decide each closed answer, and a reviewer objection only added
+  vendor questions.
 
 ## The canonical model
 
@@ -326,13 +358,42 @@ explains; the manifest is the contract.
 ## Compatibility findings
 
 `buildReadinessReport` (`readiness-report.ts`) produces findings with stable
-ids, a `required` / `recommended` severity and a `blocking` flag:
+ids, a `required` / `recommended` severity, a fix class and a `blocking` flag.
+One table (`FIX_CLASSES`) gives each finding id its fix class, in line with
+the remediation classes of the fix instructions:
+
+| Fix class | Resolved by | Outcome when it is the worst required item |
+|---|---|---|
+| `SETTING` | a Deployz setting (port, start command, health check path, migration choice, Dockerfile path) | `DEPLOYABLE` |
+| `CODE_CHANGE` | a repository change from the fix-instructions catalogue | `DEPLOYABLE_WITH_CHANGES` |
+| `CAPABILITY_GAP` | nothing in the MVP: the app needs a capability that Deployz does not provide | `NOT_DEPLOYABLE` |
+
+The worst required item sets the report `outcome`. Recommended findings never
+change it. A finding is a `CAPABILITY_GAP` only when the app clearly needs the
+capability. When that is not clear, the finding is a `CODE_CHANGE`, and the
+fix instructions tell the coding agent to verify it first. SQLite is a gap
+only when it is the only database driver: an app with a PostgreSQL or MySQL
+driver too can select that engine. Local disk writes, a persistent volume
+(also a `*_CONFIG_DIR`), several Compose application services, an unbuildable
+Dockerfile (`no-buildable-dockerfile`), a `.git` copy
+(`build-context-git-metadata`) and a MariaDB driver are `CODE_CHANGE`. A
+finding id that the table does not know is a `CODE_CHANGE`.
 
 | Spec severity | Deployz | Meaning |
 |---|---|---|
-| BLOCKER | `required` + `blocking` | NEEDS_CHANGES / NOT_COMPATIBLE — a code change is needed |
-| WARNING | `required` | ALMOST_READY / NEEDS_ATTENTION — fixable configuration |
+| BLOCKER | `required` + `blocking` | NEEDS_CHANGES / NOT_COMPATIBLE — a required capability gap |
+| WARNING | `required` | ALMOST_READY / NEEDS_ATTENTION — a setting or a repository change |
 | RECOMMENDATION | `recommended` | never blocks READY |
+
+The application page shows the outcome on the Overview card, with the
+required items in three groups: "Set in Deployz", "Change in your
+repository" and "Not supported". The build check applies to
+`DEPLOYABLE`: it shows "Not yet confirmed by a build" until a release build
+passes. When release builds failed and none passed, the outcome becomes
+`DEPLOYABLE_WITH_CHANGES` and the card links to the failure details of the
+release (`release-build-failure.ts`). Static rules do not predict every build
+failure (a missing `.next/standalone`, a .NET module build, a frozen lockfile
+that is out of date).
 
 Ids: `unsupported-database-*` (MySQL is a supported engine, so only the
 still-unsupported engines land here — MariaDB-only setups, MongoDB,
@@ -341,8 +402,9 @@ JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
 service and declared workers), `unsupported-persistent-volume`,
-`unsupported-gpu`, `local-file-storage`
-(blocking); `container-setup`, `port-unresolved`, `start-command-missing`,
+`unsupported-gpu`, `local-file-storage`,
+`unsupported-no-dockerfile`, `build-context-git-metadata`
+(blocking only as a `CAPABILITY_GAP`, see above); `container-setup`, `port-unresolved`, `start-command-missing`,
 `health-check`, `localhost-binding`, `migration-command-needs-input`
 (required); `database-migrations`,
 `worker-command`, `worker-process`, `dockerfile-target-unresolved`
@@ -382,7 +444,8 @@ describe the production deployment:
 
 - Compose: only the production Compose file counts. It is the root
   `docker-compose.production.yml`/`docker-compose.yml`, not a file in a
-  `dev`, `test`, `docs`, `examples`, `contrib`, `build` or `demo` directory,
+  `dev`, `test`, `docs`, `examples`, `contrib`, `build` or `demo` directory
+  or a test project directory (`BTCPayServer.Tests`),
   not an `override`/`dev`/`ci` variant, and not a file that mounts the
   repository checkout (`.:/app`). Services on the same build or image are one
   application: the extra services are workers or replicas. Infrastructure
@@ -422,9 +485,12 @@ describe the production deployment:
   warning and the manifest field `ignoredDeploymentFiles`. Root-level files,
   files elsewhere, and the manifests of a Go module that imports
   `client-go` or `controller-runtime` still block. Azure files still block.
+  A Dockerfile in one of these directories with a `gcr.io` base image
+  (`kubernetes/minikube/Dockerfile`) is not a Google Cloud file.
 
 Adding a rule: add the finding in `readiness-report.ts` (id, copy, severity,
-confidence), a test in `readiness-report.test.ts`, and — when the deployment
+confidence, and its fix class in `FIX_CLASSES`), a test in
+`readiness-report.test.ts`, and — when the deployment
 gate must enforce it — the matching check in `manifest.ts` /
 `preflight.ts`. Bump `ANALYSIS_VERSION`.
 
@@ -632,9 +698,8 @@ diagnostic-vocabulary.ts`) plus a migration.
   `AI_FIXTURE_MODE=true` swaps in canned answers for E2E and switches the
   AI-first engine off in the API.
 - AI-first Analysis: `ANALYSIS_ENGINE` (`rules` when unset),
-  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5.5`) and
-  `ANALYSIS_REVIEWER_MODEL` (default `deepseek/deepseek-v4-pro-0813`), both OpenRouter
-  ids. Both roles go through the Cloudflare gateway's OpenRouter route
+  `ANALYSIS_AI_MODEL` (default `anthropic/claude-opus-5.5`, an OpenRouter
+  id). The analyst goes through the Cloudflare gateway's OpenRouter route
   (`<AI_GATEWAY_BASE_URL without /compat>/openrouter/v1`) with
   `OPENROUTER_API_KEY`. The gateway is authenticated: the
   `cf-aig-authorization` token is `AI_GATEWAY_TOKEN`, or `AI_PROVIDER_API_KEY`
@@ -675,7 +740,7 @@ diagnostic-vocabulary.ts`) plus a migration.
   (`pnpm runcheck:*`) checks each Analysis claim against the running
   application; see [`testing/compatibility.md`](testing/compatibility.md).
 - AI-first Analysis: `packages/analysis/test/ai-analysis/` tests every
-  check, the reviewer resolution and every merge rule with fake gateways;
+  open item, window, check and merge rule with fake gateways;
   `apps/api/src/analysis-engine.test.ts` tests the three engines and the
   fallback. The exam runs the engine with
   `pnpm runcheck:analyse --engine ai` ([`testing/compatibility.md`](testing/compatibility.md)).

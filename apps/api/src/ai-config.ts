@@ -74,8 +74,7 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
   };
 }
 
-// AI-first application Analysis (docs/decisions/README.md): the analyst and the
-// reviewer go through the shared Cloudflare gateway to its OpenRouter route,
+// AI-first application Analysis (docs/decisions/README.md): the analyst goes through the shared Cloudflare gateway to its OpenRouter route,
 // with the OpenRouter key. The gateway's unified /compat endpoint answers 402
 // for these models. The production gateway is authenticated and
 // AI_PROVIDER_API_KEY is its token (the /compat calls send it as the bearer),
@@ -83,10 +82,6 @@ export function describeAiGatewayConfig(source: Record<string, string | undefine
 
 /** The analyst model (OpenRouter id). Override with `ANALYSIS_AI_MODEL`. */
 export const ANALYSIS_AI_MODEL_DEFAULT = 'anthropic/claude-opus-5.5';
-/** The reviewer model (OpenRouter id). Override with `ANALYSIS_REVIEWER_MODEL`. */
-// A pinned version from another model family than the analyst: it makes other
-// mistakes, and a fixed version keeps two analyses of a commit comparable.
-export const ANALYSIS_REVIEWER_MODEL_DEFAULT = 'deepseek/deepseek-v4-pro-0813';
 
 /** The gateway's OpenRouter route: `…/{account}/{gateway}/openrouter/v1`, from the `/compat` base URL. */
 export function gatewayOpenRouterUrl(baseUrl: string): string {
@@ -98,8 +93,6 @@ export interface AnalysisAiConfig {
   readonly engine: AnalysisEngine;
   /** Undefined without AI_GATEWAY_BASE_URL and OPENROUTER_API_KEY: the engine then runs the rules only. */
   readonly analyst: AiGatewayConfig | undefined;
-  /** Undefined when the gateway is not configured. */
-  readonly reviewer: AiGatewayConfig | undefined;
 }
 
 export function resolveAnalysisAiConfig(source: Record<string, string | undefined>): AnalysisAiConfig {
@@ -107,21 +100,17 @@ export function resolveAnalysisAiConfig(source: Record<string, string | undefine
   const baseUrl = source.AI_GATEWAY_BASE_URL;
   const providerApiKey = source.OPENROUTER_API_KEY;
   const gatewayToken = source.AI_GATEWAY_TOKEN || source.AI_PROVIDER_API_KEY || undefined;
-  const role = (model: string): AiGatewayConfig | undefined =>
+  const analyst: AiGatewayConfig | undefined =
     baseUrl && providerApiKey && providerApiKey !== gatewayToken
-      ? { provider: 'openrouter', baseUrl: gatewayOpenRouterUrl(baseUrl), providerApiKey, gatewayToken, model }
+      ? { provider: 'openrouter', baseUrl: gatewayOpenRouterUrl(baseUrl), providerApiKey, gatewayToken, model: source.ANALYSIS_AI_MODEL || ANALYSIS_AI_MODEL_DEFAULT }
       : undefined;
-  return {
-    engine,
-    analyst: role(source.ANALYSIS_AI_MODEL || ANALYSIS_AI_MODEL_DEFAULT),
-    reviewer: role(source.ANALYSIS_REVIEWER_MODEL || ANALYSIS_REVIEWER_MODEL_DEFAULT),
-  };
+  return { engine, analyst };
 }
 
 /** The gateways the analysis runner uses, or undefined when the analyst is not configured. */
 export function createAnalysisAiGateways(config: AnalysisAiConfig): AiAnalysisGateways | undefined {
   if (!config.analyst) return undefined;
-  return { analyst: createAiGateway(config.analyst), reviewer: config.reviewer ? createAiGateway(config.reviewer) : undefined };
+  return { analyst: createAiGateway(config.analyst) };
 }
 
 // Fix-instructions model configuration. Only the coding-agent fix prompt uses

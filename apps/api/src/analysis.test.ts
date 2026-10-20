@@ -1150,7 +1150,7 @@ describe('analysis — runApplicationAnalysis (real mode failure paths)', () => 
               scripts: { start: 'node index.js', 'db:migrate': 'npx drizzle-kit migrate' },
               dependencies: { express: '^4.18.0', pg: '^8.12.0', 'drizzle-kit': '^0.31.0' },
             })
-          : 'FROM node:20-alpine\nHEALTHCHECK CMD curl -f http://localhost:3000/health\nCMD ["node", "index.js"]\n';
+          : 'FROM node:20-alpine\nCOPY . .\nHEALTHCHECK CMD curl -f http://localhost:3000/health\nCMD ["node", "index.js"]\n';
       return {
         status: 200,
         headers: { get: () => null },

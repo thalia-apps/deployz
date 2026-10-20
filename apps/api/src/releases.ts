@@ -60,7 +60,6 @@ export async function createReleaseRecord(
     applicationId: string;
     version: string;
     gitSha: string;
-    migrationCommand?: string | null;
   },
 ): Promise<typeof schema.releases.$inferSelect> {
   const row = await db.transaction(async (tx) => {
@@ -70,7 +69,6 @@ export async function createReleaseRecord(
         applicationId: params.applicationId,
         version: params.version,
         gitSha: params.gitSha,
-        migrationCommand: params.migrationCommand ?? null,
         buildStatus: 'PENDING',
         createdBy: params.userId,
         updatedBy: params.userId,

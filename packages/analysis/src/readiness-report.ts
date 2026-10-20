@@ -11,10 +11,12 @@
  * can never add, remove, or resolve a finding.
  *
  * Classification policy:
- *   - REQUIRED + blocking: an architectural incompatibility (§10 rejections,
- *     persistent local filesystem). State becomes NEEDS_CHANGES.
- *   - REQUIRED + fixable: Deployz cannot deploy reliably without it
- *     (container setup, health check). State becomes ALMOST_READY.
+ *   - REQUIRED + blocking: a capability the app needs and Deployz does not
+ *     provide (FIX_CLASSES: CAPABILITY_GAP). State becomes NEEDS_CHANGES and
+ *     the outcome NOT_DEPLOYABLE.
+ *   - REQUIRED + fixable: a Deployz setting or a repository change resolves
+ *     it (container setup, health check, local disk writes). State becomes
+ *     ALMOST_READY; the outcome is DEPLOYABLE or DEPLOYABLE_WITH_CHANGES.
  *   - RECOMMENDED: deployment can proceed, but reliability/configuration
  *     could improve (migrations for a detected database). Never blocks READY.
  *
@@ -50,6 +52,20 @@ export type FindingSeverity = 'required' | 'recommended';
  */
 export type FindingConfidence = 'confirmed' | 'likely' | 'needs_confirmation';
 
+/**
+ * What resolving a finding takes: a Deployz setting, a repository change from
+ * the fix-instructions catalogue, or a capability Deployz does not provide in
+ * the MVP. The worst required finding sets the deployability outcome.
+ */
+export type FixClass = 'SETTING' | 'CODE_CHANGE' | 'CAPABILITY_GAP';
+
+/**
+ * The deployability outcome: DEPLOYABLE — Deployz settings only;
+ * DEPLOYABLE_WITH_CHANGES — a repository change from the closed catalogue of
+ * safe fixes; NOT_DEPLOYABLE — the app needs a capability outside the MVP.
+ */
+export type DeployabilityOutcome = 'DEPLOYABLE' | 'DEPLOYABLE_WITH_CHANGES' | 'NOT_DEPLOYABLE';
+
 /** One unresolved readiness finding, in UI-ready plain English. */
 export interface ReadinessFinding {
   /** Stable machine id (e.g. 'container-setup'). */
@@ -60,11 +76,13 @@ export interface ReadinessFinding {
   title: string;
   severity: FindingSeverity;
   /**
-   * True for architectural incompatibilities (unsupported database, local
-   * filesystem persistence) that force NEEDS_CHANGES; false for fixable
-   * required findings (ALMOST_READY).
+   * True only for a required capability gap (NOT_DEPLOYABLE), which forces
+   * NEEDS_CHANGES; false for required findings a setting or a repository
+   * change resolves (ALMOST_READY).
    */
   blocking: boolean;
+  /** Absent on reports stored before the deployability outcome. */
+  fixClass?: FixClass;
   /** One-sentence plain-English statement of the problem. */
   plainEnglishExplanation: string;
   /** Why Deployz needs this, in plain English. */
@@ -85,6 +103,8 @@ export interface PassedCheck {
 /** The complete semantic readiness report persisted with each analysis. */
 export interface ReadinessReport {
   state: Exclude<ReadinessState, 'ANALYSIS_INCOMPLETE'>;
+  /** Absent on reports stored before the deployability outcome. */
+  outcome?: DeployabilityOutcome;
   requiredCount: number;
   recommendedCount: number;
   /** One short, jargon-free explanation of the state. */
@@ -348,6 +368,68 @@ function rejectionCopy(dependency: string): RejectionCopy {
     return ARCHITECTURE_COPY;
   }
   return OTHER_DB_COPY;
+}
+
+// ── Fix classes ─────────────────────────────────────────────────────────────
+
+/**
+ * Finding id → fix class, in line with the remediation classes of
+ * fix-instructions.ts (ITEM_BUILDERS): a finding a Deployz setting resolves
+ * (RESOLVABLE_FINDINGS, NEEDS_INPUT, ALREADY_SUPPORTED) is SETTING; an
+ * APPLICATION_FIX or a CONFIGURATION_FIX in the repository is CODE_CHANGE;
+ * a DEPLOYZ_LIMITATION or UNSUPPORTED item is a CAPABILITY_GAP only when
+ * `capabilityRequired` shows the app needs it. An id the table does not know
+ * is CODE_CHANGE: the coding agent verifies it first.
+ */
+const FIX_CLASSES: Record<string, FixClass> = {
+  'port-unresolved': 'SETTING',
+  'start-command-missing': 'SETTING',
+  'health-check': 'SETTING',
+  'migration-command-needs-input': 'SETTING',
+  'dockerfile-target-unresolved': 'SETTING',
+  'database-migrations': 'SETTING',
+  'worker-process': 'SETTING',
+  'async-workloads': 'SETTING',
+  'async-question': 'SETTING',
+  'container-setup': 'CODE_CHANGE',
+  'unsupported-no-dockerfile': 'CODE_CHANGE',
+  'build-context-git-metadata': 'CODE_CHANGE',
+  'localhost-binding': 'CODE_CHANGE',
+  'local-file-storage': 'CODE_CHANGE',
+  'unsupported-persistent-volume': 'CODE_CHANGE',
+  'unsupported-multi-service': 'CODE_CHANGE',
+  'worker-command': 'CODE_CHANGE',
+  'unsupported-database-mariadb': 'CODE_CHANGE',
+  'unsupported-database-sqlite': 'CAPABILITY_GAP',
+  'unsupported-database-mongo': 'CAPABILITY_GAP',
+  'unsupported-database-elasticsearch': 'CAPABILITY_GAP',
+  'unsupported-database-other': 'CAPABILITY_GAP',
+  'unsupported-redis-setup': 'CAPABILITY_GAP',
+  'unsupported-message-queue': 'CAPABILITY_GAP',
+  'unsupported-gpu': 'CAPABILITY_GAP',
+  'unsupported-architecture': 'CAPABILITY_GAP',
+};
+
+/**
+ * Whether the app clearly needs the capability a CAPABILITY_GAP finding names.
+ * SQLite is required only when it is the only database driver: an app that
+ * also has a PostgreSQL or MySQL driver can be configured to use that engine.
+ */
+function capabilityRequired(finding: ReadinessFinding, metadata: Record<string, unknown>): boolean {
+  if (finding.id === 'unsupported-database-sqlite') {
+    return metadata['usesPostgresql'] !== true && metadata['usesMysql'] !== true;
+  }
+  return true;
+}
+
+function fixClassOf(finding: ReadinessFinding, metadata: Record<string, unknown>): FixClass {
+  const key = finding.id.startsWith('async-question-') ? 'async-question' : finding.id;
+  const fixClass = FIX_CLASSES[key] ?? 'CODE_CHANGE';
+  if (fixClass === 'CAPABILITY_GAP' && !capabilityRequired(finding, metadata)) return 'CODE_CHANGE';
+  // A migration the AI Analysis left unknown or could not verify is a change to verify in the
+  // repository, not a setting: an unknown migration can stop the start (Logto's database alterations).
+  if (finding.id === 'migration-command-needs-input' && metadata['aiMigrationQuestion'] !== undefined) return 'CODE_CHANGE';
+  return fixClass;
 }
 
 function rejectionFinding(rejection: RejectionFinding): ReadinessFinding {
@@ -637,10 +719,13 @@ export function buildReadinessReport(
       title: 'Choose how Deployz runs database migrations',
       severity: 'required',
       blocking: false,
-      plainEnglishExplanation: `Deployz found the migration script "${candidate}", but cannot confirm that the built image can run it.`,
+      plainEnglishExplanation:
+        candidate === ''
+          ? 'Deployz cannot tell how this app migrates its database.'
+          : `Deployz found the migration script "${candidate}", but cannot confirm that the built image can run it.`,
       whyItMatters:
         'Deployz runs the migration command inside the built image before each release. A command the image cannot run fails every deploy.',
-      technicalEvidence: `Migration script: ${candidate}. Not confirmed because ${reason}.`,
+      technicalEvidence: candidate === '' ? reason : `Migration script: ${candidate}. Not confirmed because ${reason}.`,
       suggestedOutcome:
         'Enter a migration command that the built image can run, or choose "No separate migration" in the application settings.',
       confidence: 'needs_confirmation',
@@ -744,18 +829,35 @@ export function buildReadinessReport(
     )
     .map((f) => ({ id: f.detector, label: PASSED_LABELS[f.detector] ?? f.details ?? f.detector }));
 
-  return assembleReport(findings, passed);
+  const classified = findings.map((f): ReadinessFinding => {
+    const fixClass = fixClassOf(f, metadata);
+    return { ...f, fixClass, blocking: f.severity === 'required' && fixClass === 'CAPABILITY_GAP' };
+  });
+  return assembleReport(classified, passed);
 }
 
-/** Order the findings (required first), derive the state and its summary. */
+/**
+ * The worst fix class among the required findings. A report stored before
+ * fix classes has no outcome: its blocking flag is the only signal.
+ */
+function outcomeOf(required: ReadinessFinding[]): DeployabilityOutcome | undefined {
+  if (required.some((f) => f.fixClass === undefined)) return undefined;
+  if (required.some((f) => f.fixClass === 'CAPABILITY_GAP')) return 'NOT_DEPLOYABLE';
+  if (required.some((f) => f.fixClass === 'CODE_CHANGE')) return 'DEPLOYABLE_WITH_CHANGES';
+  return 'DEPLOYABLE';
+}
+
+/** Order the findings (required first), derive the state, the outcome and the summary. */
 function assembleReport(findings: ReadinessFinding[], passed: PassedCheck[]): ReadinessReport {
   const required = findings.filter((f) => f.severity === 'required');
   const recommended = findings.filter((f) => f.severity === 'recommended');
   const state: ReadinessReport['state'] =
     required.some((f) => f.blocking) ? 'NEEDS_CHANGES' : required.length > 0 ? 'ALMOST_READY' : 'READY';
+  const outcome = outcomeOf(required);
 
   return {
     state,
+    ...(outcome !== undefined ? { outcome } : {}),
     requiredCount: required.length,
     recommendedCount: recommended.length,
     summary: STATE_SUMMARY[state],

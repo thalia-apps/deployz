@@ -58,6 +58,9 @@ describe('extractClaims', () => {
     };
     const file = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [storage] } as never, { buildTarget: 'release' });
     expect(claim(extractClaims(file), 'dockerfile', '.')).toMatchObject({ from: 'application.dockerfilePath', target: 'release' });
+    const foreign = { ...storage, message: 'Unsupported container setup: The Dockerfile (Dockerfile) copies nothing from the repository, so the image runs code from another image.' };
+    const outline = makeAnalysis(makeManifest(), { state: 'NOT_COMPATIBLE', findings: [foreign] } as never);
+    expect(claim(extractClaims(outline), 'dockerfile', '.')?.from).toBe('application.dockerfilePath');
   });
 
   it('claims a missing Dockerfile as null', () => {
@@ -95,6 +98,15 @@ describe('extractClaims', () => {
   ])('claims local storage for the reason "%s"', (reason) => {
     const claims = claimsOf({ unsupported: [reason] }, 'NOT_COMPATIBLE');
     expect(claim(claims, 'storage.local')?.value).toBe(true);
+  });
+
+  it('claims each rejected datastore server as required, and each one the AI dismissed as not required', () => {
+    const unsupported = ['Unsupported database dependency: mongoose, and a mongodb service is defined.', 'Unsupported database: SQLite driver better-sqlite3.'];
+    const claims = claimsOf({ unsupported }, 'NOT_COMPATIBLE');
+    expect(claims.filter((entry) => entry.type === 'datastore.required')).toEqual([{ type: 'datastore.required', subject: 'mongo', value: true, from: 'unsupported' }]);
+    const ai = { status: 'ok', answers: [{ subject: '@elastic/elasticsearch', decision: 'ai' }, { subject: 'clickhouse', decision: 'rules' }] };
+    const dismissed = extractClaims(makeAnalysis(makeManifest(), { state: 'READY', findings: [] }, { ai }));
+    expect(dismissed.filter((entry) => entry.type === 'datastore.required')).toEqual([{ type: 'datastore.required', subject: 'elastic', value: false, from: 'ai.answers' }]);
   });
 
   it('does not claim local storage for another unsupported reason', () => {
