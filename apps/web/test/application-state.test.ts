@@ -581,7 +581,8 @@ describe('readiness summary, blockers and recommendations', () => {
     );
     expect(result.state).toBe('configuration-required');
     expect(result.readinessSummary).toBe(expected);
-    expect(result.blockers).toEqual(findings.map((f) => ({ id: f.id, title: f.title })));
+    // A finding stored before fix classes: a blocking finding is a capability gap.
+    expect(result.blockers).toEqual(findings.map((f) => ({ id: f.id, title: f.title, group: 'CAPABILITY_GAP' })));
   });
 
   it('reads "No blocking issues" in ready-to-test — the analysis result, not release readiness', () => {
@@ -753,8 +754,8 @@ describe('install link derivation', () => {
 describe('release naming', () => {
   it('configuration-required: blockers use requiredChangeLabel, one action to #required-changes', () => {
     const findings = [
-      requiredFinding({ id: 'container-setup', title: 'Container detection failed' }),
-      requiredFinding({ id: 'health-check', title: 'No health check' }),
+      requiredFinding({ id: 'container-setup', title: 'Container detection failed', fixClass: 'CODE_CHANGE' }),
+      requiredFinding({ id: 'health-check', title: 'No health check', fixClass: 'SETTING' }),
     ];
     const result = deriveApplicationPresentation(
       makeInput({ readiness: { state: 'NEEDS_CHANGES', findings, requiredCount: 2 } }),
@@ -762,8 +763,8 @@ describe('release naming', () => {
     expect(result.state).toBe('configuration-required');
     expect(result.heading).toBe('2 changes required before you can deploy');
     expect(result.blockers).toEqual([
-      { id: 'container-setup', title: requiredChangeLabel(findings[0]!) },
-      { id: 'health-check', title: requiredChangeLabel(findings[1]!) },
+      { id: 'container-setup', title: requiredChangeLabel(findings[0]!), group: 'CODE_CHANGE' },
+      { id: 'health-check', title: requiredChangeLabel(findings[1]!), group: 'SETTING' },
     ]);
     expect(result.blockers.map((b) => b.title)).toEqual([
       'Add container build instructions (Dockerfile)',
@@ -1184,5 +1185,58 @@ describe('applicationListBadge', () => {
     expect(
       applicationListBadge(app, readiness(), [customer({ id: 'c1', state: 'FAILED' })]).label,
     ).toBe('Needs attention');
+  });
+});
+
+describe('deployability outcome and build check', () => {
+  const settingOnly = {
+    state: 'ALMOST_READY' as const,
+    outcome: 'DEPLOYABLE' as const,
+    findings: [requiredFinding({ id: 'health-check', blocking: false, fixClass: 'SETTING' })],
+    requiredCount: 1,
+  };
+
+  it('DEPLOYABLE is not yet confirmed until a release build passes', () => {
+    const result = deriveApplicationPresentation(makeInput({ readiness: settingOnly, releases: [] }));
+    expect(result.outcome).toEqual({
+      outcome: 'DEPLOYABLE',
+      label: 'Deployable with Deployz settings',
+      detail: 'Not yet confirmed by a build.',
+      action: null,
+    });
+  });
+
+  it('DEPLOYABLE is confirmed by a passed release build', () => {
+    const result = deriveApplicationPresentation(makeInput({ readiness: settingOnly, releases: [release()] }));
+    expect(result.outcome).toMatchObject({ outcome: 'DEPLOYABLE', detail: null });
+  });
+
+  it('a failed release build with no passed build moves DEPLOYABLE to DEPLOYABLE_WITH_CHANGES', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({ readiness: settingOnly, releases: [release({ status: 'FAILED', failureReason: 'build failed' })] }),
+    );
+    expect(result.outcome).toEqual({
+      outcome: 'DEPLOYABLE_WITH_CHANGES',
+      label: 'Deployable after repository changes',
+      detail: 'The release build failed.',
+      action: { id: 'view-releases', label: 'Review failure details', href: '/dashboard/applications/app-1/releases', external: false },
+    });
+  });
+
+  it('groups the required items by fix class', () => {
+    const findings = [
+      requiredFinding({ id: 'health-check', blocking: false, fixClass: 'SETTING' }),
+      requiredFinding({ id: 'local-file-storage', blocking: false, fixClass: 'CODE_CHANGE' }),
+      requiredFinding({ id: 'unsupported-database-mongo', blocking: true, fixClass: 'CAPABILITY_GAP' }),
+    ];
+    const result = deriveApplicationPresentation(
+      makeInput({ readiness: { state: 'NEEDS_CHANGES', outcome: 'NOT_DEPLOYABLE', findings, requiredCount: 3 } }),
+    );
+    expect(result.blockers.map((b) => b.group)).toEqual(['SETTING', 'CODE_CHANGE', 'CAPABILITY_GAP']);
+    expect(result.outcome).toMatchObject({ outcome: 'NOT_DEPLOYABLE', label: 'Not deployable on Deployz', detail: null });
+  });
+
+  it('shows no outcome for a report stored before it', () => {
+    expect(deriveApplicationPresentation(makeInput()).outcome).toBeNull();
   });
 });

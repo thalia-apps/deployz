@@ -35,13 +35,14 @@ Three decisions with substantial detail have their own files:
 | 2026-10-09 | Every environment-specific deploy value is a GitHub Environment variable, and the stage gate derives its rules from the stage name | Active |
 | 2026-10-09 | GitHub Actions authenticates to AWS with OIDC and one IAM role for each Environment | Active |
 | 2026-10-09 | One release workflow promotes a commit through staging to production, and the production deploy jobs wait for an approval | Active |
-| 2026-10-10 | A repository with no buildable Dockerfile is NOT_COMPATIBLE when the evidence is complete | Active |
-| 2026-10-10 | An image that runs several supervised application processes (s6-overlay, supervisord) is NOT_COMPATIBLE | Active |
+| 2026-10-10 | A repository with no buildable Dockerfile is NOT_COMPATIBLE when the evidence is complete | Superseded 2026-10-20 (a repository change, DEPLOYABLE_WITH_CHANGES) |
+| 2026-10-10 | An image that runs several supervised application processes (s6-overlay, supervisord) is NOT_COMPATIBLE | Superseded 2026-10-20 (a repository change, DEPLOYABLE_WITH_CHANGES) |
 | 2026-10-12 | A deploy fails closed when the application needs a database or cache that the deployment does not have | Active |
 | 2026-10-12 | The per-environment workflow guards parse the workflows, and they match the production zone id by shape | Active |
 | 2026-10-14 | An install that never verifies fails after a 30-minute window, driven by the heartbeat | Active |
 | 2026-10-16 | Docker run-and-check replaces the label benchmarks (Stage A compatibility and remediation) | Active |
 | 2026-10-19 | AI-first application Analysis: an AI analyst infers the facts, fixed checks verify them, the rules stay as the fallback | Proposed (release gate not passed) |
+| 2026-10-20 | The Analysis gives one deployability outcome; only a required capability gap is not compatible | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -967,3 +968,45 @@ What would change it: the AI fails the gate after four tuning rounds (then
 the AI role stays limited to the open questions, as today), the cost or the
 time per analysis is above the budget, or shadow mode shows a new class of
 failed deploy.
+
+## One deployability outcome per repository (2026-10-20)
+
+Decision: the readiness report gives one outcome. DEPLOYABLE: Deployz
+settings only. DEPLOYABLE_WITH_CHANGES: a repository change from the closed
+catalogue of safe fixes in the fix instructions. NOT_DEPLOYABLE: the app needs
+a capability outside the MVP. One table (`FIX_CLASSES` in
+`readiness-report.ts`) gives each finding a fix class (SETTING, CODE_CHANGE,
+CAPABILITY_GAP), and the worst required item wins. Only NOT_DEPLOYABLE is
+`NOT_COMPATIBLE`; the other two are `READY` or `NEEDS_ATTENTION`.
+
+Reason: the report put every blocking finding in NEEDS_CHANGES, and
+`verdictFromReadiness` showed it as NOT_COMPATIBLE, also when a known
+repository change fixes it. On the 32 run-and-check repositories with an
+observed outcome, the old verdict was correct for 20 and gave 9 false "not
+compatible" results: a `.git` copy, an unbuildable Dockerfile, a
+`*_CONFIG_DIR`, a Dockerfile in `kubernetes/minikube/` read as Google Cloud,
+a `BTCPayServer.Tests/` compose file read as production, and a migration
+command without a database. A false rejection loses a vendor who could deploy;
+a fixable app needs instructions, not a refusal.
+
+Rules:
+
+- A finding is a CAPABILITY_GAP only when the app clearly needs it. When that
+  is not clear, it is a CODE_CHANGE with a "verify" step for the coding agent.
+  Several Compose application services and a MariaDB driver are CODE_CHANGE.
+- SQLite is a CAPABILITY_GAP only when it is the only database driver.
+- A migration command without a database is a configuration error
+  (`migration-database-missing`), not a rejection.
+- Build check: DEPLOYABLE shows "not yet confirmed by a build" until a
+  release build passes. Failed release builds with no passed build move it to
+  DEPLOYABLE_WITH_CHANGES with the build-failure details. Static rules do not
+  predict every build failure (rallly, Smartstore, undb in the observations).
+
+The deployment gate (`evaluateManifestReadiness`) still blocks every
+repository change before a deployment: the outcome changes the verdict and
+the vendor's next step, not what can deploy.
+
+What would change it: a run-and-check measurement that shows a false
+DEPLOYABLE or DEPLOYABLE_WITH_CHANGES for an app that needs a capability, or
+a new MVP capability (a persistent volume, several services) that makes a
+CODE_CHANGE a SETTING.

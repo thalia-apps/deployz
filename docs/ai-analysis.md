@@ -134,14 +134,14 @@ Repository (GitHub tree, bounded)
   only development or template files, or a selected Dockerfile that copies
   sources the repository lacks while every other Dockerfile with a CMD or
   ENTRYPOINT also copies a missing source), the repository is
-  NOT_COMPATIBLE (`no-buildable-dockerfile`) instead. A capped or partial
+  a repository change (`no-buildable-dockerfile`) instead. A capped or partial
   file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
   fallback and no `git clone` or `git init` in the Dockerfile, gives the
-  blocking finding `build-context-git-metadata`: the source archive has no
-  `.git`. A single Dockerfile with a development
+  required finding `build-context-git-metadata` (a repository change): the
+  source archive has no `.git`. A single Dockerfile with a development
   name is development-only only when its content shows it (a dev server, no
   command, or no build step). A global `ARG` with no default that a `FROM`
   of the production stage lineage reads (`ARG BASE_IMAGE` with
@@ -326,13 +326,42 @@ explains; the manifest is the contract.
 ## Compatibility findings
 
 `buildReadinessReport` (`readiness-report.ts`) produces findings with stable
-ids, a `required` / `recommended` severity and a `blocking` flag:
+ids, a `required` / `recommended` severity, a fix class and a `blocking` flag.
+One table (`FIX_CLASSES`) gives each finding id its fix class, in line with
+the remediation classes of the fix instructions:
+
+| Fix class | Resolved by | Outcome when it is the worst required item |
+|---|---|---|
+| `SETTING` | a Deployz setting (port, start command, health check path, migration choice, Dockerfile path) | `DEPLOYABLE` |
+| `CODE_CHANGE` | a repository change from the fix-instructions catalogue | `DEPLOYABLE_WITH_CHANGES` |
+| `CAPABILITY_GAP` | nothing in the MVP: the app needs a capability that Deployz does not provide | `NOT_DEPLOYABLE` |
+
+The worst required item sets the report `outcome`. Recommended findings never
+change it. A finding is a `CAPABILITY_GAP` only when the app clearly needs the
+capability. When that is not clear, the finding is a `CODE_CHANGE`, and the
+fix instructions tell the coding agent to verify it first. SQLite is a gap
+only when it is the only database driver: an app with a PostgreSQL or MySQL
+driver too can select that engine. Local disk writes, a persistent volume
+(also a `*_CONFIG_DIR`), several Compose application services, an unbuildable
+Dockerfile (`no-buildable-dockerfile`), a `.git` copy
+(`build-context-git-metadata`) and a MariaDB driver are `CODE_CHANGE`. A
+finding id that the table does not know is a `CODE_CHANGE`.
 
 | Spec severity | Deployz | Meaning |
 |---|---|---|
-| BLOCKER | `required` + `blocking` | NEEDS_CHANGES / NOT_COMPATIBLE — a code change is needed |
-| WARNING | `required` | ALMOST_READY / NEEDS_ATTENTION — fixable configuration |
+| BLOCKER | `required` + `blocking` | NEEDS_CHANGES / NOT_COMPATIBLE — a required capability gap |
+| WARNING | `required` | ALMOST_READY / NEEDS_ATTENTION — a setting or a repository change |
 | RECOMMENDATION | `recommended` | never blocks READY |
+
+The application page shows the outcome on the Overview card, with the
+required items in three groups: "Set in Deployz", "Change in your
+repository" and "Not supported". The build check applies to
+`DEPLOYABLE`: it shows "Not yet confirmed by a build" until a release build
+passes. When release builds failed and none passed, the outcome becomes
+`DEPLOYABLE_WITH_CHANGES` and the card links to the failure details of the
+release (`release-build-failure.ts`). Static rules do not predict every build
+failure (a missing `.next/standalone`, a .NET module build, a frozen lockfile
+that is out of date).
 
 Ids: `unsupported-database-*` (MySQL is a supported engine, so only the
 still-unsupported engines land here — MariaDB-only setups, MongoDB,
@@ -341,8 +370,9 @@ JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
 service and declared workers), `unsupported-persistent-volume`,
-`unsupported-gpu`, `local-file-storage`
-(blocking); `container-setup`, `port-unresolved`, `start-command-missing`,
+`unsupported-gpu`, `local-file-storage`,
+`unsupported-no-dockerfile`, `build-context-git-metadata`
+(blocking only as a `CAPABILITY_GAP`, see above); `container-setup`, `port-unresolved`, `start-command-missing`,
 `health-check`, `localhost-binding`, `migration-command-needs-input`
 (required); `database-migrations`,
 `worker-command`, `worker-process`, `dockerfile-target-unresolved`
@@ -382,7 +412,8 @@ describe the production deployment:
 
 - Compose: only the production Compose file counts. It is the root
   `docker-compose.production.yml`/`docker-compose.yml`, not a file in a
-  `dev`, `test`, `docs`, `examples`, `contrib`, `build` or `demo` directory,
+  `dev`, `test`, `docs`, `examples`, `contrib`, `build` or `demo` directory
+  or a test project directory (`BTCPayServer.Tests`),
   not an `override`/`dev`/`ci` variant, and not a file that mounts the
   repository checkout (`.:/app`). Services on the same build or image are one
   application: the extra services are workers or replicas. Infrastructure
@@ -422,9 +453,12 @@ describe the production deployment:
   warning and the manifest field `ignoredDeploymentFiles`. Root-level files,
   files elsewhere, and the manifests of a Go module that imports
   `client-go` or `controller-runtime` still block. Azure files still block.
+  A Dockerfile in one of these directories with a `gcr.io` base image
+  (`kubernetes/minikube/Dockerfile`) is not a Google Cloud file.
 
 Adding a rule: add the finding in `readiness-report.ts` (id, copy, severity,
-confidence), a test in `readiness-report.test.ts`, and — when the deployment
+confidence, and its fix class in `FIX_CLASSES`), a test in
+`readiness-report.test.ts`, and — when the deployment
 gate must enforce it — the matching check in `manifest.ts` /
 `preflight.ts`. Bump `ANALYSIS_VERSION`.
 

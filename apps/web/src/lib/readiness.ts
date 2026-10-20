@@ -38,6 +38,10 @@ export type ReadinessState = 'READY' | 'ALMOST_READY' | 'NEEDS_CHANGES' | 'ANALY
 
 export type FindingSeverity = 'required' | 'recommended';
 export type FindingConfidence = 'confirmed' | 'likely' | 'needs_confirmation';
+/** What resolving a finding takes (mirrors @deployz/analysis). */
+export type FixClass = 'SETTING' | 'CODE_CHANGE' | 'CAPABILITY_GAP';
+/** The deployability outcome (mirrors @deployz/analysis). */
+export type DeployabilityOutcome = 'DEPLOYABLE' | 'DEPLOYABLE_WITH_CHANGES' | 'NOT_DEPLOYABLE';
 
 /** One unresolved readiness finding (mirrors @deployz/analysis). */
 export interface ReadinessFinding {
@@ -46,6 +50,8 @@ export interface ReadinessFinding {
   title: string;
   severity: FindingSeverity;
   blocking: boolean;
+  /** Absent on reports stored before the deployability outcome. */
+  fixClass?: FixClass;
   plainEnglishExplanation: string;
   whyItMatters: string;
   technicalEvidence: string;
@@ -113,6 +119,8 @@ export interface ApplicationArchitecture {
 export interface ApplicationReadiness {
   analysisStatus: AnalysisStatus;
   state: ReadinessState;
+  /** Absent while analysis is incomplete and on reports stored before the outcome. */
+  outcome?: DeployabilityOutcome;
   requiredCount: number;
   recommendedCount: number;
   summary: string | null;

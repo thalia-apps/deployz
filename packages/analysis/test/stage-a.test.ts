@@ -429,6 +429,10 @@ describe('COMP-008 — a distroless base image is not a Google Cloud deployment'
     expect(checkGcp({ 'packaging/docker/distroless/Dockerfile': 'FROM gcr.io/distroless/base-debian13:nonroot\n' }).detected).toBe(false);
     expect(checkGcp({ Dockerfile: 'FROM gcr.io/my-project/base:latest\n' }).detected).toBe(true);
   });
+
+  it('ignores a gcr.io base in a deployment sample directory (kubernetes/minikube/)', () => {
+    expect(checkGcp({ 'kubernetes/minikube/Dockerfile': 'FROM gcr.io/k8s-minikube/kicbase:v0.0.44\n' }).detected).toBe(false);
+  });
 });
 
 describe('COMP-009 — Compose service counting', () => {
@@ -455,6 +459,12 @@ describe('COMP-009 — Compose service counting', () => {
         '.examples/docker-compose-grafana/compose.yaml': 'services:\n  gatus:\n    image: twinproduction/gatus\n  grafana:\n    image: grafana/grafana\n',
       }).detected,
     ).toBe(false);
+  });
+
+  it('ignores a compose file in a test project directory (BTCPayServer.Tests/)', () => {
+    const compose = 'services:\n  tests:\n    build: .\n  nbxplorer:\n    image: nicolasdorier/nbxplorer\n  merchant_lnd:\n    image: btcpayserver/lnd\n';
+    expect(checkDockerComposeMultiService({ 'docker-compose.yml': compose }).detected).toBe(true);
+    expect(checkDockerComposeMultiService({ 'BTCPayServer.Tests/docker-compose.yml': compose }).detected).toBe(false);
   });
 });
 

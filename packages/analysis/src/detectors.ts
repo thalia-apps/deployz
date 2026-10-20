@@ -213,7 +213,7 @@ export function isRuntimeSourcePath(path: string): boolean {
 // Compose files that describe dev/test/example tooling rather than the app's
 // own production deployment shape — by path segment or by filename flavour.
 const NON_PRODUCTION_COMPOSE_SEGMENT_REGEX =
-  /(?:^|\/)(?:development|dev|test|testing|tests|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
+  /(?:^|\/)(?:development|dev|test|testing|tests|[\w.-]+[._-]tests?|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
 const NON_PRODUCTION_COMPOSE_FILENAME_REGEX =
   /(?:docker-compose|compose)[.-](?:dev|development|test|testing|override|local|example|sample|ci|e2e|debug|demo|build)(?:[.-][\w.-]+)?\.ya?ml$/i;
 const COMPOSE_FILE_REGEX = /(?:^|\/)(?:docker-compose|compose)(?:\.(?:prod|production))?\.ya?ml$/i;

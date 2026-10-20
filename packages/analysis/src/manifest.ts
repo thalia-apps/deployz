@@ -467,16 +467,6 @@ export function normalizeDeploymentManifest(
   if (meta['copiesGitDirectory'] === true) {
     unsupported.push('The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain');
   }
-  // Inconsistency guard: a migration command configured without PostgreSQL.
-  // The only source of manifest.migration.command is overrides.migrationCommand
-  // (line ~377), so this catches the case where a vendor set a migration command
-  // but the manifest's postgres requirement resolves to false — never silently
-  // provision RDS to resolve the mismatch.
-  if (overrides.migrationCommand && overrides.migrationCommand.length > 0 && !postgresRequired) {
-    unsupported.push(
-      'This app is configured to run a database migration on deploy but the manifest does not require a database — Deployz cannot run migrations without a provisioned database',
-    );
-  }
   // Phase 4A — background workers are first-class workloads. Each DECLARED
   // run process becomes a `workers[]` entry the graph compiles into its own
   // ECS service (one build artifact, one command per workload). Worker-like
@@ -796,6 +786,19 @@ export function evaluateManifestReadiness(
       message:
         'Deployz did not find which environment variable the app reads for its database connection. ' +
         'In Configuration, set that variable to "Managed by Deployz" and choose the database value.',
+    });
+  }
+
+  // Inconsistency guard: a migration command without a database. A setting
+  // resolves it (a database, or no separate migration) — never silently
+  // provision a database to resolve the mismatch.
+  if (manifest.migration.command && !manifest.database.postgres) {
+    errors.push({
+      id: 'migration-database-missing',
+      category: 'database',
+      severity: 'error',
+      message:
+        'This app is configured to run a database migration on deploy but the manifest does not require a database. Turn on the managed database, or choose "No separate migration" in the application settings.',
     });
   }
 

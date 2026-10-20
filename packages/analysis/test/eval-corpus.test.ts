@@ -145,7 +145,7 @@ const corpus: { name: string; tree: FileTree; expected: Expectation }[] = [
       'server.js': "require('express')().get('/health', (_q, r) => r.send('ok')).listen(3000);\n",
     },
     expected: {
-      readinessState: 'NEEDS_CHANGES',
+      readinessState: 'ALMOST_READY',
       findings: ['local-file-storage'],
       gate: 'NOT_COMPATIBLE',
       runtime: 'node',

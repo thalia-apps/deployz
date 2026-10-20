@@ -237,18 +237,18 @@ describe('evaluateCompatibility — blocking rules (→ NOT_COMPATIBLE)', () => 
     expect(analyseRepo(noPostgresTree).metadata['databaseState']).toBe('none');
   });
 
-  it('local filesystem usage → NOT_COMPATIBLE (local-file-storage)', () => {
+  it('local filesystem usage is a repository change → NEEDS_ATTENTION (local-file-storage)', () => {
     const result = evaluateCompatibility(analyseRepo(localFsTree));
-    expect(result.verdict).toBe('NOT_COMPATIBLE');
+    expect(result.verdict).toBe('NEEDS_ATTENTION');
     expect(codes(result)).toEqual(['local-file-storage']);
-    expect(result.reason).toBe(NEEDS_CHANGES_REASON);
+    expect(result.reason).toBe(ALMOST_READY_REASON);
   });
 
-  it('Dockerfile copies .git → NOT_COMPATIBLE (build-context-git-metadata)', () => {
+  it('Dockerfile copies .git is a repository change → NEEDS_ATTENTION (build-context-git-metadata)', () => {
     const result = evaluateCompatibility(analyseRepo(gitCopyTree));
-    expect(result.verdict).toBe('NOT_COMPATIBLE');
+    expect(result.verdict).toBe('NEEDS_ATTENTION');
     expect(codes(result)).toEqual(['build-context-git-metadata']);
-    expect(result.reason).toBe(NEEDS_CHANGES_REASON);
+    expect(result.reason).toBe(ALMOST_READY_REASON);
   });
 
   it('lists ALL §10 rejections when multiple fire (no database at all never fires one)', () => {
