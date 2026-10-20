@@ -312,9 +312,9 @@ describe('§61 failure codes', () => {
     expect(FAILURE_REMEDIATION.REDIS_CONNECTION_FAILED.fix.toLowerCase()).toMatch(/redeploy/);
   });
 
-  it('REDIS_PROVISIONING_FAILED remediation mentions retrying and service limits', () => {
+  it('REDIS_PROVISIONING_FAILED remediation mentions support and service limits', () => {
     const { fix } = FAILURE_REMEDIATION.REDIS_PROVISIONING_FAILED;
-    expect(fix.toLowerCase()).toMatch(/retry/);
+    expect(fix.toLowerCase()).toMatch(/support/);
     expect(fix.toLowerCase()).toMatch(/limit/);
   });
 
@@ -495,6 +495,14 @@ describe('recoverability and customer stack status label', () => {
   it('recoverability copy is jargon-free', () => {
     for (const copy of Object.values(RECOVERABILITY_COPY)) {
       expect(copy).not.toMatch(JARGON_PATTERN);
+    }
+  });
+
+  it('points every DEPLOYZ_ACTION fix at support, never at a retry the dashboard does not offer', () => {
+    for (const code of FAILURE_CODES.filter((c) => FAILURE_RECOVERABILITY[c] === 'DEPLOYZ_ACTION')) {
+      const { fix } = FAILURE_REMEDIATION[code];
+      expect(fix, code).toMatch(/^Contact Deployz support/);
+      expect(fix, code).not.toMatch(/\bretry\b|deploy (it|again)/i);
     }
   });
 

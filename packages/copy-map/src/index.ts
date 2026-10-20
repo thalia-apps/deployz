@@ -625,7 +625,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   RELAY_DISCONNECTED: {
     what: 'The helper running in your customer’s cloud account stopped checking in.',
     why: 'It was removed, it lost its credential, or the account can no longer reach Deployz.',
-    fix: 'Use Issue new install link on this deployment. Your customer then updates the existing connector stack in their AWS account with the new RelayCredential and EnrollmentCode.',
+    fix: 'Ask your customer to update the existing connector stack in their AWS account. If they cannot, contact Deployz support.',
   },
   ECS_DEPLOYMENT_FAILED: {
     what: 'The new version could not be rolled out.',
@@ -670,7 +670,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   IMAGE_PULL_FAILED: {
     what: 'The application image could not be downloaded into your customer’s account.',
     why: 'The image is missing, or the account is not allowed to download it.',
-    fix: 'Publish the release again, then deploy it. If it keeps failing, remove and re-create the deployment.',
+    fix: 'Contact Deployz support. The image must be made available again before this deployment can continue.',
   },
   CONTAINER_START_FAILED: {
     what: 'The application started and then stopped.',
@@ -689,7 +689,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   },
   UNSUPPORTED_ARCHITECTURE: {
     what: 'This application cannot be deployed as it is built.',
-    why: 'It uses something Deployz does not support yet.',
+    why: 'It uses something Deployz does not support.',
     fix: 'Open the application’s readiness screen for the specific change needed, make it, and publish a new release.',
   },
   UNKNOWN: {
@@ -700,7 +700,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   REDIS_PROVISIONING_FAILED: {
     what: 'The cache this application needs could not be set up.',
     why: 'A limit was hit, or the resource was rejected, in your customer’s cloud account while the cache was being created.',
-    fix: 'Retry the deployment. If it keeps failing, ask your customer to check their cloud account’s service limits for caches in this region.',
+    fix: 'Contact Deployz support. Your customer can also check their cloud account’s service limits for caches in this region.',
   },
   REDIS_CONNECTION_FAILED: {
     what: 'The application started but could not reach its cache.',
@@ -715,7 +715,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   RELAY_STATE_WRITE_FAILED: {
     what: 'Deployz lost track of an install that was still running in your customer’s cloud account.',
     why: 'The Deployz connector could not save its own progress marker.',
-    fix: 'The setup may have finished on its own — check its status, then retry the install. Contact Deployz support if it happens again.',
+    fix: 'Contact Deployz support. The setup may have finished on its own, so check the deployment status first.',
   },
 };
 
@@ -1011,7 +1011,7 @@ export const PLAN_COMPONENT_KIND_DISPLAY: Record<string, string> = {
 export const RELEASE_INFRASTRUCTURE_COPY = {
   noChanges: 'No infrastructure changes',
   changedTitle: 'Infrastructure requirements changed',
-  changedBody: 'This release requires infrastructure changes. Automatic infrastructure upgrades are not supported yet.',
+  changedBody: 'This release needs infrastructure changes. Deployz cannot apply them to an existing deployment. Create a new deployment for each customer that needs this release.',
 } as const;
 
 // ── §42 onboarding steps ────────────────────────────────────────────────────

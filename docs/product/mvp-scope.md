@@ -146,8 +146,10 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
   cache but retains the database, its credentials and the bucket; Purge
   deletes the retained items. The customer deletes the connector (bootstrap)
   stack themselves.
-- **Billing**: Paddle subscription, $49/month platform fee from the first
-  production deployment plus $19/month per live production deployment; the
+- **Billing**: Paddle subscription, $49/month platform fee from the moment
+  the vendor subscribes (before a customer can confirm an invitation, or when
+  the vendor adds the first customer deployment) plus $19/month per live
+  production deployment; the
   evaluation (analysis, configuration, releases, one TEST deployment) is
   free. See [`../billing/paddle-billing.md`](../billing/paddle-billing.md).
 - **Team Admin**: an internal support and recovery console with read-only

@@ -407,7 +407,7 @@ export function actionErrorMessage(caught: unknown, fallback: string): string {
     return "Deployz can't reach this deployment's connector. Ask the customer to reconnect it, then try again.";
   }
   if (caught instanceof DeploymentActionError && caught.code === 'INFRASTRUCTURE_CHANGE_REQUIRED') {
-    return 'This application now needs a database or cache that this deployment does not have. Create a new deployment for this customer, or change the requirements back.';
+    return "This application's infrastructure changed (database, cache, database engine, workers, queues or schedules), and an existing deployment cannot get these changes. Create a new deployment for this customer, or change the requirements back.";
   }
   return fallback;
 }
