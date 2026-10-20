@@ -178,6 +178,16 @@ export function repositoryReport(
     if (entry.claim.type === 'redis.required' && entry.claim.value === false && entry.verdict !== 'CONFIRMED' && fullHealth === true) {
       return { ...entry, verdict: 'CONFIRMED' as const, reason: 'the full run without Valkey is healthy', observed: undefined };
     }
+    // A recipe input that switches the migration on at start (miniflux RUN_MIGRATIONS=1) is the vendor's choice:
+    // the start migrates because of it, which does not show that the application has no other migration path.
+    if (
+      entry.claim.type === 'migration.mode' &&
+      entry.verdict === 'CONTRADICTED' &&
+      entry.observed === 'startup' &&
+      (recipe.vendorInputs ?? []).some((input) => /MIGRAT/i.test(input.name))
+    ) {
+      return { ...entry, verdict: 'NOT_CHECKABLE' as const, reason: 'a recipe input switches the migration on at start', observed: undefined };
+    }
     return entry;
   });
   const failures = [

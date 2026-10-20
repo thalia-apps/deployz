@@ -171,6 +171,17 @@ describe('repositoryReport', () => {
       ]);
     });
 
+    it('does not count a start migration that a recipe input switches on against a pre_deploy claim', () => {
+      const analysis = makeAnalysis(makeManifest({ migration: { command: 'app -migrate', mode: 'pre_deploy' } }));
+      const observation = makeObservation(makeRun({ startupMigration: { tablesCreatedByStart: true, secondStartHealthy: true } }));
+      const verdicts = checkClaims(extractClaims(analysis), observation);
+      const switched = [{ name: 'RUN_MIGRATIONS', source: { kind: 'fixed' as const, value: '1' } }];
+      const mode = (vendorInputs: typeof switched) =>
+        repositoryReport({ id: 'repo-001', set: 'tuning', vendorInputs }, analysis, observation, verdicts, null).verdicts.find((v) => v.claim.type === 'migration.mode');
+      expect(mode([])?.verdict).toBe('CONTRADICTED');
+      expect(mode(switched)?.verdict).toBe('NOT_CHECKABLE');
+    });
+
     it('does not list it when a recipe input wires the database itself', () => {
       const finding = { id: 'database-connection-unverified', category: 'database', severity: 'error', message: 'x' } as const;
       const analysis = makeAnalysis(makeManifest({ database: { postgres: true } }), { state: 'NEEDS_CONFIGURATION', findings: [finding] });
