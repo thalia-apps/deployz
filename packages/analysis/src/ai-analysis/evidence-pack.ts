@@ -155,11 +155,28 @@ function escape(text: string): string {
 
 /** What each fact question searches the production files for. */
 const FACT_SEARCH: Record<string, RegExp> = {
-  dockerfile: /^\s*(?:FROM|COPY|ADD|CMD|ENTRYPOINT)\b/,
   port: /\bPORT\b|\.listen\(|\blisten\b|server\.port|--port\b|\bbind\b.*:\d{2,5}|ASPNETCORE_URLS|EXPOSE/,
   startCommand: /"(?:start|serve|prod|production|start:prod)"\s*:|^\s*web:|\bexec\b/,
   healthPath: /health|ready|alive|\bping\b|\/status\b|Map(?:Get|HealthChecks)|@(?:Get|RequestMapping)\(|\.get\(\s*["']\/["']|urlpatterns|\broutes?\b/i,
   migration: /migrat|db:prepare|db\s+push|alembic|flyway|liquibase|ecto\.migrate|syncdb|schema:update/i,
+};
+
+/** A line that reads the environment: the switches a blocker or a fact most often turns on. */
+const READS_ENV = /process\.env|getenv|environ|ENV\[|ENV\.fetch|System\.get_?env|Environment\.GetEnvironmentVariable|os\.Getenv|\benv\(|\$\{\w/;
+/** A quoted health-like route: the decisive line of a health path. */
+const HEALTH_ROUTE = /["'`]\/(?:api\/)?(?:health\w*|healthz|readyz?|livez?|alive|ping|status|up)\b/i;
+/** Files on or near the start path: entrypoints, boot code, the server's main file. */
+const START_FILE = /(?:^|\/)(?:[^/]*entrypoint[^/]*|start[^/]*|boot[^/]*|run[^/]*\.sh|[^/]*\.sh|Program\.cs|Startup\.cs|main\.\w+|server\.\w+|app\.\w+|application\.\w+|index\.\w+|config\/initializers\/[^/]+|release\.ex|rel\/[^/]+)$/i;
+
+/** The rank of a hit, best first: what makes a line decisive for the question. */
+type Rank = (path: string, line: string) => number;
+
+const RANKS: Record<string, Rank> = {
+  blocker: (_path, line) => (READS_ENV.test(line) ? 0 : 1),
+  port: (path, line) => (/\bPORT\b/.test(line) && READS_ENV.test(line) ? 0 : START_FILE.test(path) ? 1 : 2),
+  startCommand: (path) => (START_FILE.test(path) ? 0 : 1),
+  healthPath: (path, line) => (HEALTH_ROUTE.test(line) || /health/i.test(path) ? 0 : /route|router|urls|controller/i.test(path) ? 1 : 2),
+  migration: (path) => (START_FILE.test(path) ? 0 : 1),
 };
 
 /** The search pattern of a blocker: any of its terms as a whole word. */
@@ -169,31 +186,29 @@ function blockerSearch(item: BlockerItem): RegExp {
 }
 
 const DEPLOYMENT_FILE = /(?:^|\/)(?:Dockerfile[^/]*|[^/]*\.dockerfile|(?:docker-)?compose[^/]*\.ya?ml)$/i;
-/** A line that reads the environment: the switches a blocker or a fact most often turns on. */
-const READS_ENV = /process\.env|getenv|environ|ENV\[|ENV\.fetch|System\.get_?env|Environment\.GetEnvironmentVariable|os\.Getenv|env\(|\$\{\w/;
-/** Hits scanned before ranking, so a large repository stays cheap. */
-const MAX_CANDIDATES = 200;
+/** Hits kept per rank, so a large repository stays cheap. */
+const MAX_CANDIDATES_PER_RANK = 60;
 
 /**
- * Windows around the best hits of `pattern` in the production files. A hit
- * that reads the environment ranks first; then the files the reason names,
- * then source and configuration, then the deployment files (a Compose file
- * repeats the paths the reason names). Windows of one file never overlap.
+ * Windows around the best hits of `pattern` in the production files, by
+ * `rank`, then in file order: the files the reason names first, then source
+ * and configuration, then the deployment files (a Compose file repeats the
+ * paths the reason names). Windows of one file never overlap.
  */
-function hitWindows(tree: FileTree, pattern: RegExp, first: readonly string[], skip: ReadonlySet<string>, budget: number): PackFile[] {
+function hitWindows(tree: FileTree, pattern: RegExp, rank: Rank, first: readonly string[], skip: ReadonlySet<string>, budget: number): PackFile[] {
   const production = Object.keys(tree).filter(isProductionFile).sort();
   const ordered = [...first, ...production.filter((path) => !DEPLOYMENT_FILE.test(path)), ...production.filter((path) => DEPLOYMENT_FILE.test(path))];
-  const candidates: Array<{ path: string; number: number; rank: number; order: number }> = [];
+  const byRank: Array<Array<{ path: string; number: number }>> = [];
   for (const path of [...new Set(ordered)].filter((entry) => !skip.has(entry))) {
-    if (candidates.length >= MAX_CANDIDATES) break;
     for (const [index, line] of (tree[path] ?? '').split(/\r?\n/).entries()) {
-      if (pattern.test(line)) candidates.push({ path, number: index + 1, rank: READS_ENV.test(line) ? 0 : 1, order: candidates.length });
+      if (!pattern.test(line)) continue;
+      const level = (byRank[rank(path, line)] ??= []);
+      if (level.length < MAX_CANDIDATES_PER_RANK) level.push({ path, number: index + 1 });
     }
   }
-  const chosen = candidates.sort((a, b) => a.rank - b.rank || a.order - b.order);
   const windows: PackFile[] = [];
   let remaining = budget;
-  for (const hit of chosen) {
+  for (const hit of byRank.flatMap((level) => level ?? [])) {
     if (windows.length >= MAX_HITS || remaining < 300) break;
     const shown = windows.filter((file) => file.path === hit.path);
     if (shown.some((file) => hit.number >= file.start && hit.number < file.start + file.lines.length)) continue;
@@ -216,18 +231,33 @@ function namedPaths(text: string, tree: FileTree): string[] {
     .filter((path) => path.length > 0 && Object.prototype.hasOwnProperty.call(tree, path));
 }
 
-function questionWindows(tree: FileTree, item: OpenItem, startPath: ReadonlySet<string>): PackFile[] {
+/** The `scripts` block of the package.json files next to the Dockerfile and at the root: what `npm start` runs. */
+function packageScripts(tree: FileTree, dockerfile: string | undefined): PackFile[] {
+  const directory = dockerfile?.includes('/') ? dockerfile.slice(0, dockerfile.lastIndexOf('/') + 1) : '';
+  return [...new Set([`${directory}package.json`, 'package.json'])].flatMap((path) => {
+    const lines = (tree[path] ?? '').split(/\r?\n/);
+    const start = lines.findIndex((line) => line.includes('"scripts"'));
+    if (start === -1) return [];
+    const end = lines.findIndex((line, index) => index > start && /^\s*}/.test(line));
+    return window(path, tree[path] ?? '', start + 1, Math.min(end === -1 ? start + 40 : end + 1, start + 40), 3_000) ?? [];
+  });
+}
+
+function questionWindows(tree: FileTree, item: OpenItem, startPath: ReadonlySet<string>, dockerfile: string | undefined): PackFile[] {
   if (item.kind === 'blocker') {
     const named = namedPaths(item.reason, tree).filter((path) => !isExcludedPath(path));
-    return hitWindows(tree, blockerSearch(item), named, startPath, MAX_QUESTION_CHARS);
+    return hitWindows(tree, blockerSearch(item), RANKS['blocker']!, named, startPath, MAX_QUESTION_CHARS);
   }
   if (item.fact === 'dockerfile') {
     return listDockerfileCandidates(tree)
       .slice(0, 4)
       .flatMap((path) => window(path, tree[path] ?? '', 1, 60, MAX_QUESTION_CHARS / 4) ?? []);
   }
-  const manifests = Object.keys(tree).filter((path) => /(?:^|\/)(?:package\.json|Procfile)$/.test(path) && path.split('/').length <= 2);
-  return hitWindows(tree, FACT_SEARCH[item.fact]!, manifests, startPath, MAX_QUESTION_CHARS);
+  const scripts = item.fact === 'startCommand' || item.fact === 'migration' ? packageScripts(tree, dockerfile) : [];
+  const procfiles = Object.keys(tree).filter((path) => /(?:^|\/)Procfile$/.test(path) && path.split('/').length <= 2);
+  const budget = MAX_QUESTION_CHARS - scripts.reduce((sum, file) => sum + size(file), 0);
+  const skip = new Set([...startPath, ...scripts.map((file) => file.path)]);
+  return [...scripts, ...hitWindows(tree, FACT_SEARCH[item.fact]!, RANKS[item.fact]!, procfiles, skip, budget)];
 }
 
 /** Build the pack: the shared start path, then one window set per open question, inside `MAX_PACK_CHARS`. */
@@ -248,7 +278,7 @@ export function buildEvidencePack(tree: FileTree, analysis: AnalysisResult): Evi
   let packRemaining = MAX_PACK_CHARS - (MAX_START_PATH_CHARS - remaining);
   for (const [index, item] of collectOpenItems(tree, analysis).entries()) {
     const windows: PackFile[] = [];
-    for (const file of questionWindows(tree, item, shown)) {
+    for (const file of questionWindows(tree, item, shown, selected)) {
       if (size(file) > packRemaining) break;
       windows.push(file);
       packRemaining -= size(file);

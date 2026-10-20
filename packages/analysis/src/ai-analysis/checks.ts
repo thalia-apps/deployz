@@ -189,7 +189,7 @@ export const ENGINE_PATTERN: Record<SupportedEngine, RegExp> = {
   postgres: /postgres|\bpg\b|pgsql|psql/i,
   mysql: /mysql/i,
   redis: /redis|valkey/i,
-  s3: /\bs3\b|minio|bucket/i,
+  s3: /\bs3\b|\baws\b|amazon/i,
 };
 
 /** The engines a setting may select for each blocker category. */
@@ -325,8 +325,9 @@ export function isImageStartCommand(tree: FileTree, dockerfile: string | null, c
 }
 
 function checkStartCommand(ctx: CheckContext, id: string, command: string, answer: FactAnswer): AnswerCheck {
-  if (answer.confidence !== 'low' && isImageStartCommand(ctx.tree, ctx.dockerfile, command)) return result(id, []);
-  return result(id, [...confidenceReasons(answer.confidence), ...checkEvidence(ctx.pack, answer.evidence, mentions(distinctiveToken(command)))]);
+  const reasons = confidenceReasons(answer.confidence);
+  if (!isImageStartCommand(ctx.tree, ctx.dockerfile, command)) reasons.push('it is not the image CMD or ENTRYPOINT, or a script that the CMD runs');
+  return result(id, reasons);
 }
 
 // ── The other facts ────────────────────────────────────────────────────────
@@ -382,9 +383,12 @@ function checkMigration(ctx: CheckContext, id: string, value: MigrationValue, an
   const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((part) => line.includes(part));
   const check = simple(id, ctx, answer, supports);
   if (mode !== 'startup') return check;
-  // A migration at start must be on the start path, not in a dev script or a README.
-  const startPath = startPathFiles(ctx);
-  const offPath = answer.evidence.filter((item) => !startPath.has(item.path)).map((item) => `${item.path} is not on the image start path`);
+  // A migration at start is on the start path or in the app's own boot code or configuration,
+  // never in a dependency manifest, a dev script, a test or a README.
+  const allowed = new Set([...startPathFiles(ctx), ...productionSources(ctx.tree)]);
+  const offPath = answer.evidence
+    .filter((item) => !allowed.has(item.path))
+    .map((item) => `${item.path} is not on the image start path or in the app's boot code`);
   return offPath.length === 0 ? check : result(id, [...check.reasons, ...offPath]);
 }
 

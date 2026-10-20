@@ -43,6 +43,14 @@ describe('checkBlocker: optional by setting', () => {
     expect(check.reasons).toContain('no cited line shows that DB_TYPE=sql selects postgres');
   });
 
+  it('does not read MinIO as S3', () => {
+    const tree: FileTree = { ...MONGO_OR_POSTGRES, 'src/files.js': "const type = process.env.STORAGE_TYPE || 'local';" };
+    const local = contextOf(tree);
+    const question: Question & BlockerItem = { id: 'q1', kind: 'blocker', category: 'local_state', dependency: 'local-filesystem', reason: 'x', terms: ['STORAGE'], windows: [] };
+    const minio = blocker('q1', 'optional_by_setting', { setting: 'STORAGE_TYPE', settingValue: 'minio', engine: 's3', evidence: cite('src/files.js', 1, 'process.env.STORAGE_TYPE') });
+    expect(checkBlocker(local, question, minio).reasons).toContain('no cited line shows that STORAGE_TYPE=minio selects s3');
+  });
+
   it('fails for an engine that does not replace a datastore, a low confidence or a missing setting', () => {
     expect(checkBlocker(ctx, question, answer({ engine: 'redis', settingValue: 'redis' })).ok).toBe(false);
     expect(checkBlocker(ctx, question, answer({ confidence: 'low' })).reasons).toContain('low confidence');
@@ -156,11 +164,19 @@ describe('checkFact', () => {
     expect(checkFact(ctx, portQuestion, fact('q9', '3000', { evidence: cite('Dockerfile', 2, 'EXPOSE 3000') })).ok).toBe(true);
   });
 
-  it('migration: a startup migration must be cited on the image start path', () => {
+  it('startCommand: accepts only the image command, never a description', () => {
+    const start: Question = { id: 'q6', kind: 'fact', fact: 'startCommand', windows: [] };
+    expect(checkFact(ctx, start, fact('q6', 'node src/index.js')).ok).toBe(true);
+    expect(checkFact(ctx, start, fact('q6', 'The image runs node src/index.js', { evidence: cite('Dockerfile', 3, 'src/index.js') })).ok).toBe(false);
+  });
+
+  it('migration: a startup migration is cited on the start path or in boot code, never in a manifest', () => {
     const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
     const startup = JSON.stringify({ mode: 'startup', command: null });
-    const db = { ...ctx, database: 'postgres' as const };
-    expect(checkFact(db, migration, fact('q8', startup, { evidence: cite('Dockerfile', 3, 'CMD') })).ok).toBe(false);
+    const boot = contextOf({ ...tree, 'src/boot.js': 'await db.migrate.latest();' });
+    const db = { ...boot, pack: { ...boot.pack, startPath: [...boot.pack.startPath, { path: 'src/boot.js', start: 1, lines: ['await db.migrate.latest();'] }] }, database: 'postgres' as const };
+    expect(checkFact(db, migration, fact('q8', startup, { evidence: cite('src/boot.js', 1, 'db.migrate.latest()') })).ok).toBe(true);
+    expect(checkFact(db, migration, fact('q8', startup, { evidence: cite('package.json', 1, 'express') })).ok).toBe(false);
     expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'none', command: null }))).reasons).toEqual(['mode none with a database needs a vendor decision']);
   });
 });

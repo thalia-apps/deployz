@@ -152,7 +152,7 @@ The scanner found an item that Deployz cannot host (a datastore it does not prov
 FACT QUESTIONS (kind "fact")
 Give value, or answer "unknown" with value null:
 - port: the HTTP port the production container listens on after Deployz sets PORT ("8080"). When the app reads PORT, give the port that the Dockerfile sets or the app's default. EXPOSE alone is not enough.
-- startCommand: the image's effective start command, as the final stage's ENTRYPOINT and CMD give it. Describe it; never invent a replacement.
+- startCommand: the image's effective start command as one command line (for example "node server.js"), as the final stage's ENTRYPOINT and CMD give it, or the command of the script that the CMD runs. Never prose, never a replacement. A command that the base image provides and the windows do not show is "unknown".
 - healthPath: an unauthenticated path on the serving port that answers HTTP 200 without a redirect when the app is up: a registered health route, the path a production HEALTHCHECK probes, or a public page (for example "/" of a server-rendered app, or the login page). A route of a browser-side router is not a server route.
 - migration: {"mode":"startup|pre_deploy|none","command":null|"..."} as JSON text. "startup" = the start path (ENTRYPOINT, CMD, a script they run, or boot code) runs the schema migrations; command is null. "pre_deploy" = the start path does not migrate, and command is a migration command that the built image can run. "none" = no schema to migrate. A step behind a switch that is off by default does not run. Seeding is not a migration.
 - dockerfile: {"path":"...","context":"."} as JSON text: the Dockerfile that builds the production image from source and its build context.
