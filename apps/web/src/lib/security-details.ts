@@ -113,7 +113,7 @@ export const SECRET_HANDLING_STATEMENT =
 export const DELETION_STEPS = [
   'Your software provider starts "Remove deployment" from the Deployz dashboard.',
   'The connector removes the application and most of its networking. It removes only resources tagged for this deployment.',
-  'Removal keeps your database (deletion protection on, AWS automated backups continue), its credentials, the storage bucket, the network parts the database uses, the HTTPS certificates, and the connector. These retained resources can continue to cost money.',
+  'Removal keeps your database (deletion protection on, AWS automated backups continue), its credentials, the storage bucket, the network parts the database uses, and the connector. These retained resources can continue to cost money.',
   '"Delete retained data" is a separate, explicitly confirmed step your software provider runs while the connector is online. It deletes the database without a final snapshot, the bucket, application secrets, certificates, and the remaining network.',
   'The connector stack is yours to delete at any time. Keep it until retained data is deleted, because deletion runs through it.',
   'Deployz keeps its operational metadata for the deployment (IDs, states, timestamps) for your records and billing history.',
