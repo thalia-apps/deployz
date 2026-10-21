@@ -111,6 +111,7 @@ export interface UpdateApplicationInput {
   containerPort?: number | null;
   healthPath?: string | null;
   migrationCommand?: string | null;
+  resetMigrationCommand?: true;
   databaseRequired?: boolean | null;
   storageRequired?: boolean | null;
   redisRequired?: boolean | null;

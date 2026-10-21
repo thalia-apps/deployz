@@ -828,7 +828,8 @@ function EnvironmentVariablesTable({
           {dirty && saveState !== 'saving' ? <p className="text-xs text-muted-foreground">Unsaved changes.</p> : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          Build values apply to new builds. Runtime values reach running deployments within minutes.
+          Build values apply to new builds. For each build value, the Dockerfile must declare ARG with the same name,
+          or Docker does not receive the value. Runtime values reach running deployments within minutes.
         </p>
       </CardContent>
     </Card>

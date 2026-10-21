@@ -59,6 +59,16 @@ jobs:
           ...(p.awsEscalation.length?['','AWS escalation (manual): '+p.awsEscalation.join(' ; ')]:[])].join('\n');
           require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,s+'\n')"
 
+      # Non-blocking: these files feed customer-facing docs in the separate
+      # docs repository.
+      - name: Docs review notice
+        continue-on-error: true
+        run: |
+          if git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD \
+            | grep -Eq '^(packages/cdk/src/bootstrap/|apps/api/src/billing-[^/]*\.ts$|apps/api/src/retry-eligibility\.ts$|apps/api/src/install-link-lifecycle\.ts$|packages/copy-map/|apps/web/src/lib/security-details\.ts$)'; then
+            echo "Check thalia-apps/deployz-docs for customer-facing changes." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # Static checks, unit and integration tests. Runs from the workspace root
   # so every selected Vitest project runs in one parallel invocation.
   test-build:
