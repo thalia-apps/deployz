@@ -1,0 +1,161 @@
+{
+  "id": "repo-074",
+  "commit": "a6c3bd6d1826fb527822df4a2655f34fd440d7d4",
+  "analyser": "ai@fac42408-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/start.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0628452,
+        "promptTokens": 12625,
+        "completionTokens": 649
+      },
+      "latencyMs": 9529
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [
+          "Cargo.toml is not on the image start path or in the app's boot code"
+        ],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9531,
+    "questions": 2,
+    "generatedAt": "2026-10-21T07:56:27.003Z",
+    "failedChecks": 1,
+    "promptVersion": 14
+  }
+}
