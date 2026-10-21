@@ -1127,6 +1127,63 @@ What would change it: a full exam shows a hidden problem or a false
 outcome 1 that the AI causes, the cost or the time per analysis is above the
 budget, or shadow mode shows a new class of failed deploy.
 
+### Live engine measurement (2026-10-21)
+
+Two live runs of the production engine (`ANALYSIS_ENGINE=ai`, OpenRouter,
+`anthropic/claude-opus-5.5`, prompt version 14) on main 0c21c52e:
+`ai@0c21c52e-live` (run 39603707809) and `ai@0c21c52e-live2` (run
+39603711909). Full exam of `ai@0c21c52e-live`: run 39630983428. The
+comparison is with `ai@fac42408-open-items` (analyses run 39564872355, full
+run 39591576160). These analyses also came from live gateway calls, not from
+replayed answers. The rules baseline is `rules@bd38acd3` (full run 39591579170).
+
+| | rules@bd38acd3 | ai@fac42408-open-items | ai@0c21c52e-live |
+| --- | --- | --- | --- |
+| Hidden problems, tuning + holdout | 1 + 0 (new-14) | 0 + 0 | **0 + 0** |
+| False problems, tuning + holdout | 1 + 1 | 1 + 0 (new-7) | **1 + 0** (new-7) |
+| CONTRADICTED claims, tuning + holdout | 9 + 12 | 8 + 12 | **8 + 12** |
+| Predicted 1, actually 2 or 3 | 4 + 6 | 1 + 4 | **1 + 4** |
+| Predicted 3, actually 1 or 2 | 0 + 0 | 0 + 0 | **0 + 0** |
+
+Outcome matrix of `ai@0c21c52e-live` (rows: predicted 1, 2, 3; columns:
+actual 1, 2, 3). Tuning: `15 0 1 / 4 7 8 / 0 0 3`. Holdout: `4 2 2 / 1 5 5 /
+0 0 1`. new-14 and new-17 are decided here and not in run 39591576160,
+because that run has no full-run result for them. Their outcomes agree with
+the analysis.
+
+- AI fallbacks: 0 in each run. 41 of 58 repositories make one call; 17 have
+  no open item.
+- Cost: $2.02 for each run of 58 repositories, $0.049 for each call on
+  average. About 10,000 prompt tokens and 480 completion tokens for each call.
+- Latency for each call: median 7.8 s and 7.5 s, 90th percentile 11.2 s and
+  12.5 s, maximum 16.9 s.
+- Stability: `pnpm runcheck:stability` finds 0 changed claims between the
+  two live runs, and 0 between each live run and `ai@fac42408-open-items`.
+- 66 questions in each run. The fixed checks accept 9 answers (7 migration
+  modes, 1 health path, 1 port) and the same 9 in each run. No checked
+  answer dismisses a rejection.
+- 4 answers change between the three runs. The checks reject each changed
+  answer, so the rules value stays: new-25 and repo-053 migration ("low
+  confidence"), new-9 Compose services `not_used` ("exactly one listed
+  service must build the app"), repo-204 health path `/rest/health` ("no
+  cited line supports the claim").
+
+The checks reject most of the answers that have a value. These are the
+candidate fixes (no change in this measurement):
+
+- "another open fact stays unresolved" rejects a correct-looking value
+  (new-1 and new-23 health path, new-26 and repo-071 migration).
+- A migration answer that cites a build file (`.csproj`, `pom.xml`,
+  `Cargo.toml`, `build.gradle`) is rejected because the file is not on the
+  start path (new-8, new-10, new-24, repo-074, repo-205). The prompt can ask
+  for the boot code that runs the migration.
+- "no cited line supports the claim" for new-1, new-13 and new-14
+  migration commands.
+- new-28: migration mode `none` with a database always needs a vendor
+  decision, so that answer can never pass.
+- The misses that stay are the same as before: new-15 (predicted 1, a second
+  server on the same port) and new-7 (false problem, scoold).
+
 ## Application roles carry a permissions boundary (2026-10-21)
 
 Decision: the CloudFormation execution role can create an IAM role, put an
