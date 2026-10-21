@@ -3,10 +3,16 @@ import { and, eq } from 'drizzle-orm';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
-import { applyBillingTransition, type BillingSnapshot } from './billing-domain.js';
+import {
+  applyBillingTransition,
+  servingBillingEvent,
+  type BillingEvent,
+  type BillingSnapshot,
+  type ServingSnapshot,
+} from './billing-domain.js';
 import { recordEvent, type EventWriter } from './events.js';
 
-// Idempotent DB helpers for the two billing transitions the deployment
+// Idempotent DB helpers for the billing transitions the deployment
 // lifecycle hooks into (docs/billing/paddle-billing.md, "The lifecycle, end
 // to end"). Each computes the pure domain patch, applies it with a WHERE guard
 // on the expected previous billing_state (so two concurrent writers can
@@ -18,7 +24,7 @@ import { recordEvent, type EventWriter } from './events.js';
 type BillingWriter = Pick<RuntimeDb, 'update'> & EventWriter;
 
 /** The subset of a deployment row the billing writes need. */
-export interface BillableDeployment extends BillingSnapshot {
+export interface BillableDeployment extends BillingSnapshot, ServingSnapshot {
   id: string;
   organizationId: string;
   customerId: string;
@@ -28,9 +34,13 @@ export interface BillableDeployment extends BillingSnapshot {
 async function applyBillingWrite(
   db: BillingWriter,
   deployment: BillableDeployment,
-  event: 'LIVE' | 'REMOVED',
+  event: BillingEvent,
   now: Date,
-  eventType: 'deployment.billing_started' | 'deployment.billing_stopped',
+  eventType:
+    | 'deployment.billing_started'
+    | 'deployment.billing_paused'
+    | 'deployment.billing_resumed'
+    | 'deployment.billing_stopped',
   actorType: 'user' | 'relay' | 'system',
   actorId: string,
 ): Promise<boolean> {
@@ -58,18 +68,28 @@ async function applyBillingWrite(
     actorId,
     deploymentId: deployment.id,
     customerId: deployment.customerId,
-    payload: { deploymentType: deployment.deploymentType, billingState: patch.billingState },
+    payload: {
+      deploymentType: deployment.deploymentType,
+      billingState: patch.billingState,
+      // The serving facts behind the transition, so a pause or resume is
+      // auditable from the event alone.
+      state: deployment.state,
+      relayStatus: deployment.relayStatus,
+    },
   });
   return true;
 }
 
 /**
- * The deployment reached its first verified READY stage — called from
+ * The deployment is verified READY — called from
  * `advanceStepTimingsAfterWrite`, itself only ever invoked from the relay-
- * authenticated write paths (heartbeat, job-result). `actor` defaults to
- * `relay`, which matches every other event those call sites record (e.g.
- * `deployment.reconciled`); the Phase 10 safety job overrides it, because a
- * promotion it makes was not the relay's doing.
+ * authenticated write paths (heartbeat, job-result), and from the Phase 10
+ * safety job. Starts billing on the first one and resumes a PAUSED one. A
+ * row that still reads FAILED or DISCONNECTED is not serving, so nothing
+ * moves: resuming it would only be paused again by the next safety-job pass.
+ * `actor` defaults to `relay`, which matches every other event those call
+ * sites record (e.g. `deployment.reconciled`); the Phase 10 safety job
+ * overrides it, because a promotion it makes was not the relay's doing.
  */
 export function markDeploymentLive(
   db: BillingWriter,
@@ -80,15 +100,41 @@ export function markDeploymentLive(
     actorId: deployment.installationId ?? deployment.id,
   },
 ): Promise<boolean> {
+  if (servingBillingEvent(deployment) === 'NOT_SERVING') return Promise.resolve(false);
   return applyBillingWrite(
     db,
     deployment,
     'LIVE',
     now,
-    'deployment.billing_started',
+    deployment.billingState === 'PAUSED' ? 'deployment.billing_resumed' : 'deployment.billing_started',
     actor.actorType,
     actor.actorId,
   );
+}
+
+/**
+ * Moves billing with whether the deployment serves the customer — called
+ * only from the Phase 10 safety job, so it follows the persisted signals on
+ * the existing 15-minute cadence, never a single missed heartbeat
+ * (servingBillingEvent). ACTIVE -> PAUSED when the deployment is FAILED or
+ * its connector is DISCONNECTED; PAUSED -> ACTIVE when it is connected and
+ * HEALTHY or UPDATE_AVAILABLE again. NOT_STARTED is never touched here:
+ * first activation needs a verified READY stage. True when billing moved.
+ */
+export function syncServingBilling(
+  db: BillingWriter,
+  deployment: BillableDeployment,
+  now: Date,
+): Promise<boolean> {
+  const event = servingBillingEvent(deployment);
+  const actor = { actorType: 'system', actorId: 'billing-safety-job' } as const;
+  if (event === 'NOT_SERVING') {
+    return applyBillingWrite(db, deployment, event, now, 'deployment.billing_paused', actor.actorType, actor.actorId);
+  }
+  if (event === 'LIVE' && deployment.billingState === 'PAUSED') {
+    return markDeploymentLive(db, deployment, now, actor);
+  }
+  return Promise.resolve(false);
 }
 
 /**

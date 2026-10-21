@@ -146,6 +146,30 @@ describe('billing lifecycle', () => {
     expect(events.filter((e) => e.eventType === 'deployment.billing_started')).toHaveLength(1);
   });
 
+  it('1b. a PAUSED deployment resumes billing at its next verified READY heartbeat', async () => {
+    const startedAt = new Date('2026-01-01T00:00:00.000Z');
+    const { deployment, token, installationId } = await seedDeployment({
+      deploymentType: 'PRODUCTION',
+      relayStatus: 'DISCONNECTED',
+      billingState: 'PAUSED',
+      billingStartedAt: startedAt,
+      defaultHttps: { hostname: 'd-bl-1b.deployz.dev', status: 'ACTIVE', checkCycle: 1, lastError: null },
+    });
+
+    const response = await heartbeat(installationId, token);
+    expect(response.statusCode, response.body).toBe(200);
+
+    const row = await fetchDeployment(deployment.id);
+    expect(row.billingState).toBe('ACTIVE');
+    expect(row.billingStartedAt).toEqual(startedAt);
+    const events = await db
+      .select({ eventType: schema.eventLogs.eventType })
+      .from(schema.eventLogs)
+      .where(eq(schema.eventLogs.deploymentId, deployment.id));
+    expect(events.filter((e) => e.eventType === 'deployment.billing_resumed')).toHaveLength(1);
+    expect(events.filter((e) => e.eventType === 'deployment.billing_started')).toHaveLength(0);
+  });
+
   it('2. a TEST deployment that reaches READY stays NOT_STARTED', async () => {
     const { deployment, token, installationId } = await seedDeployment({
       deploymentType: 'TEST',
@@ -288,6 +312,26 @@ describe('billing lifecycle', () => {
     expect(events.filter((e) => e.eventType === 'deployment.billing_stopped')).toHaveLength(1);
   });
 
+  it('5b. POST /destroy stops billing for a PAUSED deployment for good', async () => {
+    const { deployment } = await seedDeployment({
+      deploymentType: 'PRODUCTION',
+      billingState: 'PAUSED',
+      billingStartedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const destroyResponse = await app.inject({
+      method: 'POST',
+      url: `/api/deployments/${deployment.id}/destroy`,
+      headers: { 'content-type': 'application/json', cookie },
+      payload: '{}',
+    });
+    expect(destroyResponse.statusCode, destroyResponse.body).toBe(202);
+
+    const row = await fetchDeployment(deployment.id);
+    expect(row.billingState).toBe('STOPPED');
+    expect(row.billingStoppedAt).not.toBeNull();
+  });
+
   it('6. POST /destroy on a never-installed PRODUCTION deployment sets STOPPED', async () => {
     const { deployment } = await seedDeployment({
       deploymentType: 'PRODUCTION',
@@ -345,6 +389,7 @@ describe('billing lifecycle', () => {
     await seedDeployment({ deploymentType: 'PRODUCTION', billingState: 'ACTIVE', billingStartedAt: new Date() });
     await seedDeployment({ deploymentType: 'PRODUCTION', billingState: 'NOT_STARTED' });
     await seedDeployment({ deploymentType: 'PRODUCTION', billingState: 'STOPPED', billingStoppedAt: new Date() });
+    await seedDeployment({ deploymentType: 'PRODUCTION', billingState: 'PAUSED', billingStartedAt: new Date() });
     // Hand-crafted inconsistent row (never reachable through the domain
     // rules) to prove the summary route filters on BOTH columns, not just
     // billingState. A separate application avoids the Phase 7 one-active-
@@ -377,8 +422,14 @@ describe('billing lifecycle', () => {
 
     const response = await app.inject({ method: 'GET', url: '/api/billing/summary', headers: { cookie } });
     expect(response.statusCode, response.body).toBe(200);
-    const body = response.json() as { deployments: unknown[]; total: number };
+    const body = response.json() as {
+      deployments: unknown[];
+      total: number;
+      productionDeployments: { active: number; paused: number };
+    };
     expect(body.deployments).toHaveLength(expectedCount);
     expect(body.total).toBe(49 + expectedCount * 19);
+    expect(body.productionDeployments.active).toBe(expectedCount);
+    expect(body.productionDeployments.paused).toBe(1);
   });
 });

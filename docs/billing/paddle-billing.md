@@ -12,8 +12,10 @@ shipped.
   deployment of the vendor's own app per application. No card, no clock.
 - **$49/month platform** starts with the vendor's first *customer*
   deployment — the moment they ask Deployz to run their app for someone else.
-- **$19/month per customer deployment, once it is live** — billed only from
-  the first verified READY stage, and stopped the moment removal is accepted.
+- **$19/month per customer deployment, while it serves the customer** —
+  billed from the first verified READY stage, paused while the deployment is
+  failed or its connector is disconnected, resumed when it serves again, and
+  stopped the moment removal is accepted.
 - **Payment state never touches running customer infrastructure.** A vendor
   whose card fails, or who cancels, keeps every existing deployment operable:
   deploy, rollback, restart, configure, destroy. Only *new* customer
@@ -29,7 +31,7 @@ organization's included allowance (see "Included production deployments").
 | Deployz owns | Paddle owns |
 |---|---|
 | Whether a deployment may be created (entitlements) | Charging the card |
-| `billing_state` per deployment (NOT_STARTED / ACTIVE / STOPPED) | Proration when the count changes mid-cycle |
+| `billing_state` per deployment (NOT_STARTED / ACTIVE / PAUSED / STOPPED) | Proration when the count changes mid-cycle |
 | The billable deployment quantity pushed as an absolute number: `max(live − included, 0)` | Invoices, receipts, tax |
 | The included production deployment allowance (admin-set, per organization) | Nothing — Paddle never learns it exists |
 | The checkout intent (a parked request, never a deployment) | The checkout overlay and the card form |
@@ -48,7 +50,9 @@ Four tables (`packages/db/src/schema/billing.ts`), two columns on
 
 - `deployments.deployment_type` (TEST / PRODUCTION) and
   `deployments.billing_state` with `billing_started_at` / `billing_stopped_at`.
-  Test deployments never bill from any state (matrix §1).
+  `PAUSED` (migration 0053) marks a deployment that was live and does not
+  serve the customer now. Test deployments never bill from any state
+  (matrix §1).
 - `billing_subscriptions` — one row per organization, `provider = PADDLE`.
   No row means evaluation. Status ∈ ACTIVE / PAST_DUE / PAUSED / CANCELED.
 - `billing_provider_events` — every webhook delivery, `provider_event_id`
@@ -105,23 +109,52 @@ Paddle as an **absolute** quantity on the per-deployment item —
 `prorated_immediately`, `on_payment_failure: apply_change`. Never a delta:
 running it twice yields the same subscription as once.
 
-### 4. Removal → billing stops (Phases 2, 9)
+### 4. Not serving → billing pauses; serving again → it resumes
 
-ACTIVE → STOPPED when removal is *accepted* (the destroy request), with
-idempotent backstops at DESTROY success and force-complete. STOPPED is
+A production deployment is billed only while it serves the customer.
+
+- **Pause:** ACTIVE → PAUSED when the deployment is `FAILED` (nothing runs
+  for the customer) or its connector is `DISCONNECTED`. The safety job
+  (step 5) makes this decision on its 15-minute pass, from persisted
+  columns only. `relayStatus` becomes `DISCONNECTED` only after
+  `RELAY_STALE_AFTER_MS` (15 minutes) without a check-in, so a short
+  heartbeat gap never changes the Paddle quantity.
+- **Resume:** PAUSED → ACTIVE at the next verified READY stage on the relay
+  write paths (the same hook that starts billing), or on the next safety-job
+  pass when the connector is `CONNECTED` and the deployment is `HEALTHY` or
+  `UPDATE_AVAILABLE`. `billing_started_at` is not rewritten.
+- **Not paused:** a failed update over a running release. The deployment
+  returns to `HEALTHY` / `UPDATE_AVAILABLE` because the previous release
+  still serves (`docs/deployment-resilience.md`), so it stays billed. Runtime
+  health (`healthStatus`) alone does not pause billing.
+- **Never billed:** a production deployment that never went live stays
+  NOT_STARTED, also when its first install fails.
+
+Each pause and resume writes `deployment.billing_paused` or
+`deployment.billing_resumed` to `event_logs`, with the deployment `state` and
+`relayStatus` that caused it, and reconciles the organization.
+`servingBillingEvent` and `syncServingBilling`
+(`apps/api/src/billing-domain.ts`, `billing-lifecycle.ts`) are the only
+implementation.
+
+### 5. Removal → billing stops (Phases 2, 9)
+
+ACTIVE or PAUSED → STOPPED when removal is *accepted* (the destroy request),
+with idempotent backstops at DESTROY success and force-complete. STOPPED is
 terminal. Reconcile runs again; when the last live deployment goes, the item
 is removed rather than set to zero (its minimum quantity is 1).
 
-### 5. The safety net (Phase 10)
+### 6. The safety net (Phase 10)
 
 Every request-path billing write is best-effort — a Paddle failure never
 fails a deployment. `sweepBilling`, on the worker's existing 15-minute
 schedule, closes the gaps that leaves: promotes a READY production deployment
-still NOT_STARTED (signal: the persisted `step_timings.READY`), releases
+still NOT_STARTED (signal: the persisted `step_timings.READY`), pauses and
+resumes live deployments with their serving state (step 4), releases
 webhook rows abandoned in RECEIVED so Paddle's redelivery is processed, and
 reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
 
-### 6. Paying, managing, lapsing (Phases 11–14)
+### 7. Paying, managing, lapsing (Phases 11–14)
 
 - Two app-wide banners, and only two: PAST_DUE (deep-links to Paddle's card
   form) and CANCELED. Evaluation gets none.
@@ -130,6 +163,8 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
   billing" into Paddle's hosted portal via a short-lived session for the
   organization's own customer id.
 - Entitlements by status: matrix §4. Existing deployments are never gated.
+- The billing page shows `N active · P paused · M included · K billed`;
+  the paused count shows only when it is not zero.
 - Admins see live count, subscription, last reconciled, recent outcomes, and
   can run the same `reconcileBilling` on demand, audited.
 
@@ -147,8 +182,8 @@ billableDeploymentQuantity =
 ```
 
 where "active production billing deployments" is `count(deployment_type =
-PRODUCTION AND billing_state = ACTIVE)` — the same predicate as before
-(`billing-matrix.md` §2). `billableDeploymentQuantity` /
+PRODUCTION AND billing_state = ACTIVE)` (`billing-matrix.md` §2). A PAUSED
+deployment is not in the count, so it does not use the allowance. `billableDeploymentQuantity` /
 `productionDeploymentCounts` in `apps/api/src/billing-domain.ts` are the
 only implementation; `reconcileBilling`, `GET /api/billing/summary` and the
 admin vendor detail all read them.
@@ -205,12 +240,13 @@ after, and a decrease warns that the next invoice may increase.
 
 ### What the vendor sees
 
-The Billing page shows the pool — `N active · M included · K billed × $19` —
+The Billing page shows the pool — `N active · P paused · M included · K billed × $19` —
 and never labels an individual deployment free or paid. The create page says
 whether the next production deployment is covered or is the first billed one,
 and that the platform subscription still starts with the first one. A live
 production deployment's detail reads "Counts toward your production
-deployment total", and the disconnect dialog says the count goes down and
+deployment total" (a paused one reads "Billing paused — not counted while it
+is failed or disconnected"), and the disconnect dialog says the count goes down and
 billing adjusts if the billable quantity changes. Customer-facing install and
 deploy-link pages never show any of it.
 

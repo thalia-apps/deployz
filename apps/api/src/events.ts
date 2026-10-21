@@ -65,6 +65,8 @@ export type DeploymentEventType =
   // (apps/api/src/billing-domain.ts / billing-lifecycle.ts).
   | 'deployment.billing_started'
   | 'deployment.billing_stopped'
+  | 'deployment.billing_paused'
+  | 'deployment.billing_resumed'
   // Paddle migration Phase 8 — a parked production deployment was created
   // from the Paddle ACTIVE webhook (apps/api/src/billing-checkout.ts).
   | 'billing.subscription_activated'
