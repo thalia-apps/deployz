@@ -131,32 +131,26 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
   }
 
   // ── Open facts: a passing answer fills what the rules left open. ──
-  // All or nothing: the AI fills the open facts only when it resolves every one of them. One fact
-  // left open (an unknown migration) can hide a start failure behind the facts it did resolve.
-  const resolves = (answer: AnalystOutput['facts'][number]): boolean => {
-    const question = pack.questions.find((entry) => entry.id === answer.id);
-    return question?.kind === 'fact' && answer.value !== null && checkOf(answer.id).ok && factValue(question, answer.value) !== null;
-  };
-  const openFacts = pack.questions.filter((question) => question.kind === 'fact');
-  const allResolved = openFacts.every((question) => answers.facts.some((answer) => answer.id === question.id && resolves(answer)));
+  // Each fact on its own: an open fact that stays unresolved keeps its rules finding, and an
+  // unresolved migration becomes a vendor question below, so a resolved fact never hides it.
   for (const answer of answers.facts) {
     const question = pack.questions.find((entry) => entry.id === answer.id);
     if (question?.kind !== 'fact') continue;
     const check = checkOf(answer.id);
     const value = answer.value === null ? null : factValue(question, answer.value);
-    const applies = allResolved && resolves(answer);
+    const applies = value !== null && check.ok;
     merged.push({
       id: answer.id,
       subject: question.fact,
       answer: answer.value === null ? 'unknown' : 'value',
       value,
       decision: applies ? 'ai' : 'rules',
-      reasons: !allResolved && resolves(answer) ? ['another open fact stays unresolved'] : check.reasons,
+      reasons: check.reasons,
     });
     if (!applies) {
       // The migration of a required database stays a vendor question: an unknown migration can stop
       // the start (Logto refuses to start with undeployed alterations), so doubt is never READY.
-      if (question.fact === 'migration' && !resolves(answer)) {
+      if (question.fact === 'migration') {
         const unverified = value !== null ? (value as MigrationValue).command : null;
         migration = { candidate: unverified ?? '', reason: 'The AI Analysis could not tell how this app migrates its database.' };
         meta['aiMigrationQuestion'] = migration;

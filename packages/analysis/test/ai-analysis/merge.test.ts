@@ -99,7 +99,7 @@ describe('mergeAiAnswers: open facts', () => {
     expect(result.answers).toEqual([expect.objectContaining({ subject: 'healthPath', decision: 'ai' })]);
   });
 
-  it('fills no fact while another open fact stays unresolved', () => {
+  it('a passing fact applies while another open fact stays unresolved, and the unknown migration stays a vendor question', () => {
     const withDatabase: FileTree = {
       ...tree,
       'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4', pg: '^8' } }),
@@ -110,8 +110,8 @@ describe('mergeAiAnswers: open facts', () => {
     expect(questions.map((question) => (question.kind === 'fact' ? question.fact : question.category))).toEqual(['healthPath', 'migration']);
     const health = fact(questions[0]!.id, '/', { evidence: cite('src/index.js', 2, "app.use('/'") });
     const { result } = merge(withDatabase, [], [health, fact(questions[1]!.id, null)]);
-    expect(result.analysis.metadata['healthMode']).toBe('vendor_required');
-    expect(result.answers[0]).toMatchObject({ decision: 'rules', reasons: ['another open fact stays unresolved'] });
+    expect(result.analysis.metadata).toMatchObject({ healthPath: '/', healthMode: 'explicit' });
+    expect(result.answers.map((answer) => answer.decision)).toEqual(['ai', 'rules']);
     // The unknown migration of a required database stays a vendor question, never a silent READY.
     expect(result.migration).toEqual({ candidate: '', reason: 'The AI Analysis could not tell how this app migrates its database.' });
     expect(result.analysis.metadata['aiMigrationQuestion']).toEqual(result.migration);
