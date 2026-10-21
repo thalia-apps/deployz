@@ -105,7 +105,7 @@ export function distinctiveToken(command: string): string {
 }
 
 /** The line names the token, or the file name of a path token (`/usr/local/bin/entrypoint.sh` → `entrypoint.sh`). */
-const mentions = (token: string): Supports => {
+const mentions = (token: string): ((line: string) => boolean) => {
   const base = token.split('/').pop() ?? token;
   return (line) => line.includes(token) || (base.length >= 3 && line.includes(base));
 };
