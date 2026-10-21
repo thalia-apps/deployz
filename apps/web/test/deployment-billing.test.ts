@@ -12,7 +12,7 @@ import {
 // ever names a per-deployment price.
 describe('deploymentBillingLabel', () => {
   it('a test deployment is always free, whatever its billing state says', () => {
-    for (const billingState of ['NOT_STARTED', 'ACTIVE', 'STOPPED'] as const) {
+    for (const billingState of ['NOT_STARTED', 'ACTIVE', 'PAUSED', 'STOPPED'] as const) {
       expect(deploymentBillingLabel({ deploymentType: 'TEST', billingState })).toBe(
         'Free test deployment',
       );
@@ -29,6 +29,12 @@ describe('deploymentBillingLabel', () => {
     expect(
       deploymentBillingLabel({ deploymentType: 'PRODUCTION', billingState: 'NOT_STARTED' }),
     ).toBe('Counts toward your production deployment total once live');
+  });
+
+  it('a failed or disconnected production deployment is paused and not counted', () => {
+    expect(deploymentBillingLabel({ deploymentType: 'PRODUCTION', billingState: 'PAUSED' })).toBe(
+      'Billing paused — not counted while it is failed or disconnected',
+    );
   });
 
   it('a removed production deployment no longer counts', () => {

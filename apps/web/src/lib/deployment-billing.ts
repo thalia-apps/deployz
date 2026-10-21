@@ -28,6 +28,8 @@ export interface BillingLabelSource {
 /** Live production deployments, the included allowance, and what is billed. */
 export interface ProductionDeploymentCounts {
   active: number;
+  /** Live once, but failed or disconnected now: not billed until it serves again. */
+  paused: number;
   included: number;
   /** max(active − included, 0). */
   billable: number;
@@ -37,15 +39,17 @@ export interface ProductionDeploymentCounts {
  * The one-line answer to "what does this deployment mean for my bill?".
  *
  * Reads the deployment's own billing state, never its health: a deployment
- * that is temporarily unhealthy still counts, and one that never came up
- * never did. That is the whole point of billing_state being separate from
- * §46 state. Never a per-deployment price — see the pooled rule above.
+ * counts while it serves the customer, a failed or disconnected one is
+ * PAUSED, and one that never came up never counted. Never a per-deployment
+ * price — see the pooled rule above.
  */
 export function deploymentBillingLabel(deployment: BillingLabelSource): string {
   if (deployment.deploymentType === 'TEST') return 'Free test deployment';
   switch (deployment.billingState) {
     case 'ACTIVE':
       return 'Counts toward your production deployment total';
+    case 'PAUSED':
+      return 'Billing paused — not counted while it is failed or disconnected';
     case 'STOPPED':
       return 'No longer counts toward your production deployment total';
     default:

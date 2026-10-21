@@ -68,12 +68,14 @@ export const infrastructureSizeTierEnum = pgEnum('infrastructure_size_tier', ['s
 export const deploymentTypeEnum = pgEnum('deployment_type', ['TEST', 'PRODUCTION']);
 
 // deployments.billing_state — Paddle migration Phase 2 billing state machine.
-// NOT_STARTED -> ACTIVE on the deployment's first READY stage, ACTIVE ->
-// STOPPED once removal is accepted. STOPPED is terminal.
+// NOT_STARTED -> ACTIVE on the deployment's first READY stage, ACTIVE <->
+// PAUSED while it stops and starts serving the customer (failed or
+// disconnected), any -> STOPPED once removal is accepted. STOPPED is terminal.
 export const deploymentBillingStateEnum = pgEnum('deployment_billing_state', [
   'NOT_STARTED',
   'ACTIVE',
   'STOPPED',
+  'PAUSED',
 ]);
 
 // §46 deployment states — product vocabulary. Customers never see raw

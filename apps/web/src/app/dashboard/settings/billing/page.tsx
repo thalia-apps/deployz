@@ -16,7 +16,8 @@ import { subscriptionStatusLabel } from '@/lib/organization-vocabulary';
 //
 // Included production deployments: the allowance is pooled across the
 // organization, so the page never labels one deployment free and another
-// paid — it shows active, included and billed counts, and bills the pool.
+// paid — it shows active, paused, included and billed counts, and bills the
+// pool. A paused deployment (failed or disconnected) is not billed.
 //
 // §65: jargon-free. The provider is never named at the top level.
 export default async function BillingPage() {
@@ -84,7 +85,8 @@ function EvaluationCard({ billing }: { billing: BillingSummary }) {
           <p className="text-xs text-muted-foreground">
             The platform fee starts when you subscribe. You subscribe before a customer can confirm an
             invitation, or when you add your first customer deployment. A test deployment of your own
-            app is free. A customer deployment is charged only while it is live.
+            app is free. A customer deployment is charged only while it runs for your customer. A
+            failed or disconnected deployment is not charged.
             {included > 0
               ? ` ${included} production ${included === 1 ? 'deployment is' : 'deployments are'} included. The per-deployment fee applies only to live deployments beyond the included ones.`
               : ''}
@@ -136,6 +138,7 @@ function SubscribedCard({ billing }: { billing: BillingSummary }) {
             </div>
             <p className="text-muted-foreground tabular-nums" data-testid="billing-production-counts">
               {counts.active} active
+              {counts.paused > 0 ? ` · ${counts.paused} paused` : ''}
               {counts.included > 0 ? ` · ${counts.included} included` : ''}
               {` · ${counts.billable} billed × ${formatDollars(billing.deploymentPrice)}`}
             </p>
@@ -181,7 +184,8 @@ function SubscribedCard({ billing }: { billing: BillingSummary }) {
         A test deployment of your own app is not charged.
         {counts.included > 0
           ? ` ${counts.included} production ${counts.included === 1 ? 'deployment is' : 'deployments are'} included; ${formatDollars(billing.deploymentPrice)}/month applies to each live deployment beyond that.`
-          : ` ${formatDollars(billing.deploymentPrice)}/month applies to each live customer deployment and stops when it is removed.`}
+          : ` ${formatDollars(billing.deploymentPrice)}/month applies to each customer deployment while it runs for your customer, and stops when it is removed.`}
+        {' A failed or disconnected deployment is paused and not charged. Charges start again when it is ready.'}
       </p>
     </>
   );

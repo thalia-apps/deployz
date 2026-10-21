@@ -9,27 +9,49 @@ test rather than an oversight. Keep this file and those tests in step.
 `applyBillingTransition(deployment, event, now)` — `apps/api/src/billing-domain.ts`.
 Walked cell by cell in `apps/api/src/billing-matrix.test.ts`.
 
-The function takes no `state` (deployment lifecycle) input on purpose: no
-health, rollback or recovery signal can ever move billing.
+A production deployment is billed only while it serves the customer.
+`LIVE` is a verified READY stage, or the safety job seeing the deployment
+serve again. `NOT_SERVING` is the safety job seeing it `FAILED` or its
+connector `DISCONNECTED`. Runtime health (`healthStatus`) alone never moves
+billing.
 
-| Type | Billing state | `LIVE` (first verified READY) | `REMOVED` (removal accepted) |
-|---|---|---|---|
-| TEST | NOT_STARTED | — | — |
-| TEST | ACTIVE | — | — |
-| TEST | STOPPED | — | — |
-| PRODUCTION | NOT_STARTED | → ACTIVE, `billingStartedAt` | → STOPPED, `billingStoppedAt` |
-| PRODUCTION | ACTIVE | — (write-once) | → STOPPED, `billingStoppedAt` |
-| PRODUCTION | STOPPED | — (terminal) | — (terminal) |
+| Type | Billing state | `LIVE` | `NOT_SERVING` | `REMOVED` (removal accepted) |
+|---|---|---|---|---|
+| TEST | NOT_STARTED | — | — | — |
+| TEST | ACTIVE | — | — | — |
+| TEST | PAUSED | — | — | — |
+| TEST | STOPPED | — | — | — |
+| PRODUCTION | NOT_STARTED | → ACTIVE, `billingStartedAt` | — (never billed) | → STOPPED, `billingStoppedAt` |
+| PRODUCTION | ACTIVE | — (write-once) | → PAUSED | → STOPPED, `billingStoppedAt` |
+| PRODUCTION | PAUSED | → ACTIVE (resume) | — | → STOPPED, `billingStoppedAt` |
+| PRODUCTION | STOPPED | — (terminal) | — (terminal) | — (terminal) |
 
 "—" means no patch at all. A TEST deployment never bills from any cell; a
 never-live PRODUCTION deployment that is removed goes straight to STOPPED so
 it can never activate later.
 
+## 1b. Serving signal
+
+`servingBillingEvent({ state, relayStatus })` — `billing-domain.ts`, in
+`billing-domain.test.ts`. The safety job applies it to ACTIVE and PAUSED
+production rows (`syncServingBilling`, `packages/cdk/test/worker-billing.test.ts`).
+
+| Deployment `state` | `relayStatus` | Event |
+|---|---|---|
+| FAILED | any | `NOT_SERVING` |
+| any | DISCONNECTED (persisted after 15 min without a check-in) | `NOT_SERVING` |
+| HEALTHY / UPDATE_AVAILABLE | CONNECTED | `LIVE` (resumes only a PAUSED row) |
+| anything else (INSTALLING, UPDATING, …) | CONNECTED / UNKNOWN | none — keep the billing state |
+
+The relay write paths apply `LIVE` at a verified READY stage, but not to a row
+that still reads `FAILED` or `DISCONNECTED`. A failed update over a running
+release never reaches `FAILED`, so it stays billed.
+
 ## 2. Billable predicate and quantity
 
-`isBillableDeployment` — true only for PRODUCTION + ACTIVE. Six cells, all in
-`billing-matrix.test.ts`. `countBillableDeployments` sums it into the active
-production deployment count.
+`isBillableDeployment` — true only for PRODUCTION + ACTIVE. Eight cells, all in
+`billing-matrix.test.ts`; PAUSED is not billable. `countBillableDeployments`
+sums it into the active production deployment count.
 
 `billableDeploymentQuantity(active, included) = max(active − included, 0)`,
 with `included = organization.included_production_deployments` (default 0),
@@ -44,6 +66,7 @@ is the ONLY number reconciliation ever pushes to Paddle
 | 1 | 10000 | 0 | removed — never negative |
 | 0..4 | 2 | 0, 0, 0, 1, 2 | crosses the threshold one at a time |
 | TEST rows, any state | any | not counted | never consume the allowance |
+| PAUSED rows | any | not counted | shown as `paused`, never consume the allowance |
 
 ## 3. Paddle subscription status → Deployz status
 

@@ -6,6 +6,7 @@ import {
   countBillableDeployments,
   productionDeploymentCounts,
   isBillableDeployment,
+  servingBillingEvent,
   DEPLOYMENT_PRICE_DOLLARS,
   PLATFORM_PRICE_DOLLARS,
 } from './billing-domain.js';
@@ -35,11 +36,39 @@ describe('applyBillingTransition', () => {
     ).toEqual({ billingState: 'ACTIVE', billingStartedAt: now });
   });
 
-  // Rule 3: ACTIVE ignores every health/state change — expressed here as no
-  // function taking `state` at all, so a second LIVE on ACTIVE is the only
-  // way to probe it, and it must be a no-op (rule 5 covers the exact case).
+  // Rule 3: PAUSED + LIVE -> ACTIVE; billingStartedAt is not rewritten.
+  it('a PAUSED PRODUCTION deployment resumes on LIVE', () => {
+    expect(
+      applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'PAUSED' }, 'LIVE', now),
+    ).toEqual({ billingState: 'ACTIVE' });
+  });
 
-  // Rule 4: PRODUCTION + not STOPPED + REMOVED -> STOPPED.
+  // Rule 4: ACTIVE + NOT_SERVING -> PAUSED; a never-live deployment stays unbilled.
+  it('an ACTIVE PRODUCTION deployment pauses on NOT_SERVING', () => {
+    expect(
+      applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'ACTIVE' }, 'NOT_SERVING', now),
+    ).toEqual({ billingState: 'PAUSED' });
+  });
+
+  it('a never-live PRODUCTION deployment ignores NOT_SERVING — a failed first install was never billed', () => {
+    expect(
+      applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'NOT_STARTED' }, 'NOT_SERVING', now),
+    ).toBeNull();
+  });
+
+  it('NOT_SERVING on an already PAUSED deployment is a no-op', () => {
+    expect(
+      applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'PAUSED' }, 'NOT_SERVING', now),
+    ).toBeNull();
+  });
+
+  // Rule 5: PRODUCTION + not STOPPED + REMOVED -> STOPPED.
+  it('a PAUSED PRODUCTION deployment stops on REMOVED', () => {
+    expect(
+      applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'PAUSED' }, 'REMOVED', now),
+    ).toEqual({ billingState: 'STOPPED', billingStoppedAt: now });
+  });
+
   it('an ACTIVE PRODUCTION deployment stops on REMOVED', () => {
     expect(
       applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'ACTIVE' }, 'REMOVED', now),
@@ -52,7 +81,7 @@ describe('applyBillingTransition', () => {
     ).toEqual({ billingState: 'STOPPED', billingStoppedAt: now });
   });
 
-  // Rule 5: STOPPED is terminal; timestamps are write-once.
+  // Rule 6: STOPPED is terminal; timestamps are write-once.
   it('LIVE after STOPPED is a no-op', () => {
     expect(
       applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'STOPPED' }, 'LIVE', now),
@@ -70,11 +99,32 @@ describe('applyBillingTransition', () => {
       applyBillingTransition({ deploymentType: 'PRODUCTION', billingState: 'ACTIVE' }, 'LIVE', now),
     ).toBeNull();
   });
+});
 
-  // "ACTIVE stays ACTIVE when nothing but health changes": the structural
-  // guarantee is that no transition function accepts `state` at all, so a
-  // health/rollback/recovery change cannot even be expressed as an input —
-  // only LIVE and REMOVED exist, and LIVE on ACTIVE is already a no-op above.
+describe('servingBillingEvent', () => {
+  it('a FAILED deployment is not serving, whatever the connector says', () => {
+    expect(servingBillingEvent({ state: 'FAILED', relayStatus: 'CONNECTED' })).toBe('NOT_SERVING');
+  });
+
+  it('a DISCONNECTED connector is not serving, whatever the deployment says', () => {
+    expect(servingBillingEvent({ state: 'HEALTHY', relayStatus: 'DISCONNECTED' })).toBe('NOT_SERVING');
+    expect(servingBillingEvent({ state: 'UPDATING', relayStatus: 'DISCONNECTED' })).toBe('NOT_SERVING');
+  });
+
+  it('a connected HEALTHY or UPDATE_AVAILABLE deployment is serving', () => {
+    expect(servingBillingEvent({ state: 'HEALTHY', relayStatus: 'CONNECTED' })).toBe('LIVE');
+    expect(servingBillingEvent({ state: 'UPDATE_AVAILABLE', relayStatus: 'CONNECTED' })).toBe('LIVE');
+  });
+
+  it('a running update keeps the billing state as it is', () => {
+    // A failed update returns to HEALTHY / UPDATE_AVAILABLE (the previous
+    // release still serves), so it never reads as NOT_SERVING.
+    expect(servingBillingEvent({ state: 'UPDATING', relayStatus: 'CONNECTED' })).toBeNull();
+  });
+
+  it('a connector that never reported keeps the billing state as it is', () => {
+    expect(servingBillingEvent({ state: 'HEALTHY', relayStatus: 'UNKNOWN' })).toBeNull();
+  });
 });
 
 describe('isBillableDeployment', () => {
@@ -92,6 +142,10 @@ describe('isBillableDeployment', () => {
 
   it('is false for PRODUCTION + STOPPED', () => {
     expect(isBillableDeployment({ deploymentType: 'PRODUCTION', billingState: 'STOPPED' })).toBe(false);
+  });
+
+  it('is false for PRODUCTION + PAUSED', () => {
+    expect(isBillableDeployment({ deploymentType: 'PRODUCTION', billingState: 'PAUSED' })).toBe(false);
   });
 });
 
@@ -137,15 +191,16 @@ describe('billableDeploymentQuantity (included production deployments)', () => {
 });
 
 describe('productionDeploymentCounts', () => {
-  it('reports active, included and billable from the rows and the allowance', () => {
+  it('reports active, paused, included and billable from the rows and the allowance', () => {
     const rows = [
       { deploymentType: 'PRODUCTION', billingState: 'ACTIVE' },
       { deploymentType: 'PRODUCTION', billingState: 'ACTIVE' },
       { deploymentType: 'PRODUCTION', billingState: 'ACTIVE' },
+      { deploymentType: 'PRODUCTION', billingState: 'PAUSED' },
       { deploymentType: 'PRODUCTION', billingState: 'NOT_STARTED' },
       { deploymentType: 'TEST', billingState: 'ACTIVE' },
     ] as const;
-    expect(productionDeploymentCounts(rows, 2)).toEqual({ active: 3, included: 2, billable: 1 });
+    expect(productionDeploymentCounts(rows, 2)).toEqual({ active: 3, paused: 1, included: 2, billable: 1 });
   });
 
   it('a TEST deployment never consumes the allowance', () => {
@@ -153,7 +208,7 @@ describe('productionDeploymentCounts', () => {
       { deploymentType: 'TEST', billingState: 'ACTIVE' },
       { deploymentType: 'TEST', billingState: 'NOT_STARTED' },
     ] as const;
-    expect(productionDeploymentCounts(rows, 1)).toEqual({ active: 0, included: 1, billable: 0 });
+    expect(productionDeploymentCounts(rows, 1)).toEqual({ active: 0, paused: 0, included: 1, billable: 0 });
   });
 });
 

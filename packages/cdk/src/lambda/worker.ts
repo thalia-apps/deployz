@@ -18,7 +18,7 @@
 import { and, eq, inArray, isNotNull, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 
 import { reconcileBilling } from '@deployz/api/billing';
-import { markDeploymentLive } from '@deployz/api/billing-lifecycle';
+import { markDeploymentLive, syncServingBilling } from '@deployz/api/billing-lifecycle';
 import { fanOutConfigUpdate, listVendorValues } from '@deployz/api/config';
 import { mintInstallationToken } from '@deployz/api/github';
 import type { SecretCipher } from '@deployz/api/pending-secrets';
@@ -1065,7 +1065,8 @@ export async function sweepStuckBuilds(deps: WorkerDeps, now: Date = new Date())
 // Every billing write in the request path is best-effort by design: a Paddle
 // failure or a lost write must never fail a deployment. This sweep is what
 // makes that safe — it runs on the same 15-minute schedule as the watchdogs
-// and closes the three gaps that leaves.
+// and closes the three gaps that leaves. It is also where billing pauses and
+// resumes with whether a live deployment serves the customer.
 
 /** A webhook event row still claimed after this long was abandoned by a crash. */
 const STUCK_WEBHOOK_EVENT_MS = 10 * 60 * 1000;
@@ -1076,6 +1077,8 @@ const RECONCILE_STALE_AFTER_MS = 60 * 60 * 1000;
 export interface BillingSweepResult {
   /** Deployments observed READY whose billing activation never landed. */
   promoted: number;
+  /** Live deployments whose billing paused or resumed with their serving state. */
+  servingChanged: number;
   /** Webhook event rows released so Paddle's next redelivery is processed. */
   unstuck: number;
   /** Organizations whose subscription quantity was re-checked against Paddle. */
@@ -1090,9 +1093,18 @@ export interface BillingSweepResult {
  *     not a re-derivation: advanceStepTimings always stamps the active step,
  *     and markDeploymentLive runs independently of that write, so a row with
  *     a READY timing and no billing state is exactly a missed activation.
- *     DELETING/DELETED rows are excluded — the billing state machine
- *     deliberately ignores `state`, so this query has to exclude them itself,
- *     or the sweep would start billing something being torn down.
+ *     DELETING/DELETED rows are excluded — the billing state machine does
+ *     not read the lifecycle state for activation, so this query has to
+ *     exclude them itself, or the sweep would start billing something being
+ *     torn down.
+ *
+ *  1b. Pauses billing for an ACTIVE production deployment that no longer
+ *     serves the customer (FAILED, or connector DISCONNECTED) and resumes a
+ *     PAUSED one that is connected and HEALTHY / UPDATE_AVAILABLE again
+ *     (syncServingBilling). DISCONNECTED is persisted only after
+ *     RELAY_STALE_AFTER_MS, and this pass runs every 15 minutes, so a short
+ *     heartbeat gap never changes the Paddle quantity. The relay write paths
+ *     resume a PAUSED deployment sooner, at its next verified READY stage.
  *
  *  2. Releases `billing_provider_events` rows abandoned in RECEIVED. A crash
  *     between the insert and processing leaves a row that makes Paddle's
@@ -1142,6 +1154,25 @@ export async function sweepBilling(
     }
   }
 
+  // 1b. Serving changes on live deployments.
+  const live = await db
+    .select()
+    .from(schema.deployments)
+    .where(
+      and(
+        eq(schema.deployments.deploymentType, 'PRODUCTION'),
+        inArray(schema.deployments.billingState, ['ACTIVE', 'PAUSED']),
+        notInArray(schema.deployments.state, ['DELETING', 'DELETED']),
+      ),
+    );
+  let servingChanged = 0;
+  for (const deployment of live) {
+    if (await syncServingBilling(db, deployment, now)) {
+      servingChanged += 1;
+      organizationsToReconcile.add(deployment.organizationId);
+    }
+  }
+
   // 2. Abandoned webhook events.
   const unstuck = await db
     .update(schema.billingProviderEvents)
@@ -1176,7 +1207,7 @@ export async function sweepBilling(
     await reconcileBilling({ db, paddle, now: () => now }, organizationId);
   }
 
-  return { promoted, unstuck: unstuck.length, reconciled: organizationsToReconcile.size };
+  return { promoted, servingChanged, unstuck: unstuck.length, reconciled: organizationsToReconcile.size };
 }
 
 /**

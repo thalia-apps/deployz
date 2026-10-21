@@ -62,8 +62,9 @@ export default function PricingPage() {
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground">
             The base subscription covers your dashboard, GitHub integration and readiness checks.
-            Test deployments are not charged. Each live customer deployment adds $19/month and
-            stops when it is removed.
+            Test deployments are not charged. Each customer deployment adds $19/month only while it
+            runs for your customer. A failed or disconnected deployment is not charged, and charges
+            stop when it is removed.
           </p>
         </section>
 

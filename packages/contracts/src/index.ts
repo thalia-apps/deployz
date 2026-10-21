@@ -67,9 +67,10 @@ export const deploymentTypeSchema = z.enum(['TEST', 'PRODUCTION']);
 export type DeploymentType = z.infer<typeof deploymentTypeSchema>;
 
 // deployments.billing_state — Paddle migration Phase 2 billing state machine.
-// NOT_STARTED -> ACTIVE on the deployment's first READY stage, ACTIVE ->
-// STOPPED once removal is accepted. STOPPED is terminal.
-export const deploymentBillingStateSchema = z.enum(['NOT_STARTED', 'ACTIVE', 'STOPPED']);
+// NOT_STARTED -> ACTIVE on the deployment's first READY stage, ACTIVE <->
+// PAUSED while it stops and starts serving the customer (failed or
+// disconnected), any -> STOPPED once removal is accepted. STOPPED is terminal.
+export const deploymentBillingStateSchema = z.enum(['NOT_STARTED', 'ACTIVE', 'PAUSED', 'STOPPED']);
 export type DeploymentBillingState = z.infer<typeof deploymentBillingStateSchema>;
 
 // organization.included_production_deployments — the admin-set number of live
