@@ -119,7 +119,15 @@ Repository (GitHub tree, bounded)
   another language than the one the image starts, when two apps in the
   repository register a route and the start command does not name one of
   them, or when a front web server hides the app behind a prefix. In these
-  cases the detector reports no path and the vendor is asked. A Dockerfile
+  cases the detector reports no path. Without a path the health check
+  probes `/` and also accepts a redirect (`health.redirectsAccepted`, ALB
+  matcher 200-399), and the vendor is not asked. The vendor is asked only
+  when a health handler file exists whose route was not resolved
+  (`HealthController`, `HealthAction`, `health_check.ex`; a prefixed check
+  such as `RedisHealthCheck.cs` checks a dependency and does not count).
+  An image `ENV` that sets the path of a SQLite file
+  (`ENV SQLITE_DATABASE=/app/data/app.sqlite3`) is an unsupported database
+  when the app has no PostgreSQL driver. A Dockerfile
   that is a git symlink is read from its target file. A package.json worker
   script is not a worker when it is a dev or watch command, or when the
   start command already runs the worker. A Procfile process is not a worker
@@ -270,7 +278,8 @@ is final.
     data directory, a `VOLUME`, Compose named volumes), and a second
     application service in the production Compose file.
   - A fact that the rules did not resolve: no port, no start command, no
-    health path (`vendor_required`), no Dockerfile or a tied choice, or an
+    health path (`vendor_required`: a health handler whose route was not
+    resolved), no Dockerfile or a tied choice, or an
     unknown migration mode for a required database.
   - A repository with no open item makes no model call.
 - **Evidence pack** (`evidence-pack.ts`): the selected Dockerfile and the

@@ -194,11 +194,11 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     const readiness = (row.detectedMetadata as { readiness: ReadinessReport }).readiness;
     expect(readiness.state).toBe('NEEDS_CHANGES');
-    // No Dockerfile, no health endpoint, plus the blocking Redis rejection.
-    expect(readiness.requiredCount).toBe(3);
+    // No Dockerfile, plus the blocking Redis rejection. No health route: the default `/` is the health check.
+    expect(readiness.requiredCount).toBe(2);
     expect(readiness.findings.some((f) => f.id === 'unsupported-redis-setup' && f.blocking)).toBe(true);
     expect(readiness.findings.some((f) => f.id === 'container-setup')).toBe(true);
-    expect(readiness.findings.some((f) => f.id === 'health-check')).toBe(true);
+    expect(readiness.findings.some((f) => f.id === 'health-check')).toBe(false);
   });
 
   it('analyses the static-api fixture (no database) to COMPLETE/READY with databaseRequired false', async () => {
@@ -302,9 +302,9 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     const row = await loadApplication(db, application.id);
     expect(row.analysisStatus).toBe('COMPLETE');
-    // The nested Dockerfile satisfies container setup, but there is no
-    // health endpoint or HEALTHCHECK anywhere in this fixture.
-    expect(row.compatibilityStatus).toBe('NEEDS_ATTENTION');
+    // The nested Dockerfile satisfies container setup. There is no health
+    // endpoint or HEALTHCHECK anywhere in this fixture: the default `/` checks it.
+    expect(row.compatibilityStatus).toBe('READY');
 
     const metadata = row.detectedMetadata as {
       dockerfilePath?: string;
@@ -314,16 +314,12 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
     expect(metadata.dockerfilePath).toBe('apps/api/Dockerfile');
     expect(metadata.aiAnalysis?.unresolved).toContain('monorepo-target');
     expect(metadata.aiAnalysis?.warnings).toContain('AI analysis unavailable');
-    expect(metadata.readiness.state).toBe('ALMOST_READY');
-    expect(metadata.readiness.findings).toEqual([
-      expect.objectContaining({ id: 'health-check', severity: 'required', blocking: false }),
-    ]);
+    expect(metadata.readiness.findings.map((f) => f.id)).not.toContain('health-check');
 
     // §11.1 end-to-end: analysis → manifest → manifest readiness. The MVP is
     // ONE selected app; the manifest gate must point at the nested app with a
-    // repo-root build context. Stage B phase 5: this fixture has NO health
-    // evidence at all, so the gate asks the vendor for a health path instead
-    // of silently defaulting to /health.
+    // repo-root build context. This fixture has NO health evidence at all, so
+    // the health check probes `/` and also accepts a redirect.
     const manifest = normalizeDeploymentManifest(analysis, {});
     expect(manifest.application.root).toBe('apps/api');
     expect(manifest.application.dockerfilePath).toBe('apps/api/Dockerfile');
@@ -331,10 +327,9 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
     expect(manifest.web.command).toContain('src/index.js');
     expect(manifest.web.port).toBe(3000);
     expect(manifest.unsupported).toEqual([]);
-    expect(manifest.health.mode).toBe('vendor_required');
+    expect(manifest.health).toEqual({ path: '/', mode: 'root', redirectsAccepted: true });
     const gate = evaluateManifestReadiness(manifest);
-    expect(gate.state).toBe('NEEDS_CONFIGURATION');
-    expect(gate.findings.some((f) => f.id === 'health-path-required')).toBe(true);
+    expect(gate.findings.some((f) => f.id === 'health-path-required')).toBe(false);
     // The same flow accepts the vendor-corrected overrides verbatim — the
     // PATCH surface feeds this exact normalizer at deployment creation.
     const overridden = normalizeDeploymentManifest(analysis, {

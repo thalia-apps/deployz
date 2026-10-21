@@ -646,7 +646,7 @@ function normalizeDockerfile(content: string): string {
  * the image to deploy) and whose lineage runs something, plus every stage it
  * is built `FROM`. Global `ARG`s before the first `FROM` come first.
  */
-function productionStageText(content: string): string {
+export function productionStageText(content: string): string {
   const clean = normalizeDockerfile(content);
   const stages = parseDockerfileStages(clean);
   if (stages.length === 0) return clean;
@@ -851,7 +851,7 @@ export function listDockerfileCandidates(tree: FileTree): string[] {
 }
 
 /** The Dockerfile Deployz would build — the top-ranked usable candidate — with its content. */
-function selectedDockerfile(tree: FileTree): { path: string; content: string } | null {
+export function selectedDockerfile(tree: FileTree): { path: string; content: string } | null {
   const path = listDockerfileCandidates(tree).find((candidate) => !isUnusableDockerfile(candidate, tree[candidate] ?? ''));
   if (path === undefined) return null;
   return { path, content: tree[path] ?? '' };

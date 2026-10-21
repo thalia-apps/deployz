@@ -36,6 +36,7 @@ import {
   detectDeclaredWorkerCommands,
   hasPreDeployMigration,
   isRuntimeSourcePath,
+  TREE_PATHS,
   detectDockerfileMissingCopySources,
   dockerfileSelectionTied,
   pathInRuntimeImage,
@@ -77,6 +78,13 @@ import { assessRedis, resolveRedisEnvBindings } from './redis.js';
 import { deriveAmbiguities } from './evidence.js';
 import { deriveInfrastructureBindings, prismaDatasourceEnvNames } from './bindings.js';
 import { detectAsyncWorkloads } from './async-detection.js';
+
+/**
+ * A server file that handles a health route (`HealthAction.php`, `GreenfieldHealthController.cs`, `health_check.ex`).
+ * A prefixed check without a handler word (`RedisHealthCheck.cs`) checks a dependency, not a route.
+ */
+const HEALTH_HANDLER_FILE_REGEX =
+  /(?:^|\/)(?:health[_-]?(?:check)?|\w*?health[_-]?(?:check)?[_-]?(?:action|controller|handler|endpoint|route|resource|view))\.(?:php|py|rb|exs?|go|java|kt|cs|[cm]?[jt]s)$/i;
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -365,15 +373,25 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   const metadata = buildMetadata(findings, redis, postgres);
 
   // Stage B phase 5: surface the health endpoint's resolved path and MODE so
-  // manifest normalization never silently assumes `/health`. `vendor_required`
-  // means no health evidence exists — the deployment gate must ask the vendor.
+  // manifest normalization never silently assumes `/health`. Without health
+  // evidence the check probes `/` and also accepts a redirect (a login or setup
+  // page proves the server is up). `vendor_required` is kept for an app with a
+  // health handler whose route was not resolved: it has a route that `/` may not be.
   const healthFinding = findings.find((f) => f.detector === 'health-endpoint');
   if (healthFinding?.detected) {
     metadata['healthPath'] = healthFinding.path ?? null;
     metadata['healthMode'] = healthFinding.mode ?? 'explicit';
-  } else {
+  } else if (
+    ((tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS] ?? Object.keys(tree)).some(
+      (path) => HEALTH_HANDLER_FILE_REGEX.test(path) && isRuntimeSourcePath(path),
+    )
+  ) {
     metadata['healthPath'] = null;
     metadata['healthMode'] = 'vendor_required';
+  } else {
+    metadata['healthPath'] = '/';
+    metadata['healthMode'] = 'root';
+    metadata['healthRedirectsAccepted'] = true;
   }
 
   // Stage B phase 7 (COMP-030): the port's provenance, so the deployment gate
