@@ -175,17 +175,23 @@ export function predictedOutcome(analysis: Pick<AnalysisResultFile, 'outcome' | 
  * The actual outcome. 1: both full runs are healthy (recipe vendor inputs
  * are Deployz settings). 2: the image does not build for a Dockerfile cause
  * (a repository change), or a reviewed recipe patch makes the application
- * deployable. 3: no run is healthy and no reviewed patch exists. Null when
- * the runs do not decide.
+ * deployable. A healthy run of an application with reviewed local state is
+ * also 2: the fresh start wrote none of the data that a replaced task loses.
+ * 3: no run is healthy and no reviewed patch exists. Null when the runs do
+ * not decide.
  */
-export function actualOutcome(recipe: Partial<Pick<Recipe, 'outcomePatch'>>, healthy: boolean | null, unbuildable: boolean): DeployOutcome | null {
-  if (healthy === true) return 1;
+export function actualOutcome(
+  recipe: Partial<Pick<Recipe, 'outcomePatch' | 'localState'>>,
+  healthy: boolean | null,
+  unbuildable: boolean,
+): DeployOutcome | null {
+  if (healthy === true) return recipe.localState === undefined ? 1 : 2;
   if (unbuildable || recipe.outcomePatch !== undefined) return 2;
   return healthy === false ? 3 : null;
 }
 
 export function repositoryReport(
-  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs' | 'outcomePatch'>>,
+  recipe: Pick<Recipe, 'id' | 'set'> & Partial<Pick<Recipe, 'vendorInputs' | 'outcomePatch' | 'localState' | 'setupWizard'>>,
   analysis: AnalysisResultFile,
   observation: Observation,
   verdicts: readonly ClaimVerdict[],
@@ -211,6 +217,16 @@ export function repositoryReport(
       (recipe.vendorInputs ?? []).some((input) => /MIGRAT/i.test(input.name))
     ) {
       return { ...entry, verdict: 'NOT_CHECKABLE' as const, reason: 'a recipe input switches the migration on at start', observed: undefined };
+    }
+    // A fresh start writes no user data, so reviewed local state is the truth for the local-state claim.
+    if (entry.claim.type === 'storage.local' && recipe.localState !== undefined) {
+      return entry.claim.value === true
+        ? { ...entry, verdict: 'CONFIRMED' as const, reason: 'a reviewed recipe note shows durable local state', observed: undefined }
+        : { ...entry, verdict: 'CONTRADICTED' as const, reason: 'a reviewed recipe note shows durable local state', observed: true };
+    }
+    // An app that takes its database in a setup wizard makes no SQL connection before the wizard is done.
+    if (entry.claim.type === 'database.engine' && entry.verdict === 'CONTRADICTED' && entry.observed === 'none' && recipe.setupWizard !== undefined) {
+      return { ...entry, verdict: 'NOT_CHECKABLE' as const, reason: 'the app takes its database in a setup wizard that the observation does not complete', observed: undefined };
     }
     return entry;
   });

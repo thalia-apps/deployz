@@ -85,10 +85,11 @@ function migrationModeOf(
 /**
  * The manifest health section (Stage B phase 5). A vendor-supplied path is
  * always `explicit`; otherwise the analysed health mode decides: `root` when
- * the app's own HEALTHCHECK probes `/`, `explicit` when a route/HEALTHCHECK
- * URL names the path, and `vendor_required` when there is NO health evidence —
- * no silent `/health` assumption (the deployment gate blocks that case). Only
- * metadata written before the mode existed keeps the historical default.
+ * the app's own HEALTHCHECK probes `/` or there is no health evidence (then
+ * `redirectsAccepted`), `explicit` when a route/HEALTHCHECK URL names the path,
+ * and `vendor_required` when the app has a health handler whose route was not
+ * resolved (the deployment gate asks the vendor). Only metadata written before
+ * the mode existed keeps the historical default.
  */
 function normalizeHealthSection(
   overridePath: string | null | undefined,
@@ -534,7 +535,12 @@ export function normalizeDeploymentManifest(
         ? { portIsDefault: true }
         : {}),
     },
-    health: { ...normalizeHealthSection(overrides.healthPath, meta), ...(meta['hostChecked'] === true ? { hostChecked: true } : {}) },
+    health: {
+      ...normalizeHealthSection(overrides.healthPath, meta),
+      ...(meta['hostChecked'] === true ? { hostChecked: true } : {}),
+      // Only the default `/`: a path the vendor enters must answer 200.
+      ...(meta['healthRedirectsAccepted'] === true && (overrides.healthPath ?? null) === null ? { redirectsAccepted: true } : {}),
+    },
     database: {
       // Legacy name for "Deployz provisions a managed relational database";
       // `engine` (Phase 4B) carries which engine it runs.

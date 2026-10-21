@@ -256,7 +256,8 @@ const corpus: { name: string; tree: FileTree; expected: Expectation }[] = [
     },
     expected: {
       readinessState: 'ALMOST_READY',
-      findings: ['container-setup', 'health-check'],
+      // No health route: the default `/` is the health check.
+      findings: ['container-setup'],
       gate: 'NEEDS_CONFIGURATION',
       runtime: 'node',
       framework: 'koa',

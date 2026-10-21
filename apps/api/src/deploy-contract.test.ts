@@ -430,6 +430,28 @@ describe('deploy contract, busy gate and restart', () => {
       expect(job?.idempotencyKey).toBe(`${deployment.id}:DEPLOY_RELEASE:${releaseId}:migration:skip`);
     });
 
+    it('resets to detected: the marker goes and existing deployments run the frozen command again', async () => {
+      const { appId, releaseId, deployment } = await migratingSetup('v7.2.1');
+      await setMigration(appId, null);
+
+      const reset = await app.inject({
+        method: 'PATCH',
+        url: `/api/applications/${appId}`,
+        headers: { cookie, 'content-type': 'application/json' },
+        payload: JSON.stringify({ resetMigrationCommand: true }),
+      });
+      expect(reset.statusCode, reset.body).toBe(200);
+      const [row] = await db.select().from(schema.applications).where(eq(schema.applications.id, appId));
+      expect(row?.detectedMetadata?.['vendorOverrides']).not.toContain('migrationCommand');
+
+      await post(`/api/deployments/${deployment.id}/deploy`, { releaseId });
+      const [job] = await deployJobs(deployment.id);
+      expect(job?.payload).not.toHaveProperty('migrationPolicy');
+      expect(job?.payload).toMatchObject({
+        migrationTask: { identity: migrationIdentity('npm run db:migrate', digestOf('v7.2.1')) },
+      });
+    });
+
     it('treats a correction equal to the frozen command as the frozen policy', async () => {
       const { appId, releaseId, deployment } = await migratingSetup('v7.3.0');
       await setMigration(appId, 'npm run db:migrate');

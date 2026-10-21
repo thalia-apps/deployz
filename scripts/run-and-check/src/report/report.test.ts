@@ -207,6 +207,24 @@ describe('repositoryReport', () => {
       expect(report(analysis, migrated).falseProblems).toEqual(['a migration command is required, but the application migrates at start']);
     });
 
+    it('does not list a local-state reason that a reviewed recipe note confirms, and counts the healthy run as outcome 2', () => {
+      const observation = makeObservation(makeRun({}));
+      const verdicts = checkClaims(extractClaims(notCompatible), observation);
+      const result = repositoryReport({ id: 'repo-001', set: 'tuning', localState: 'notebooks in /data' }, notCompatible, observation, verdicts, fullRun());
+      expect(result.falseProblems).toEqual([]);
+      expect(verdictOf(result, 'storage.local')).toMatchObject({ verdict: 'CONFIRMED', reason: 'a reviewed recipe note shows durable local state' });
+      expect(result.outcome.actual).toBe(2);
+    });
+
+    it('does not list a managed database of an app that takes it in a setup wizard', () => {
+      const analysis = makeAnalysis(makeManifest({ database: { postgres: true } }));
+      const observation = makeObservation(makeRun({}));
+      const verdicts = checkClaims(extractClaims(analysis), observation);
+      const result = repositoryReport({ id: 'repo-001', set: 'tuning', setupWizard: 'install page' }, analysis, observation, verdicts, null);
+      expect(result.falseProblems).toEqual([]);
+      expect(verdictOf(result, 'database.engine')?.verdict).toBe('NOT_CHECKABLE');
+    });
+
     it('lists a missing Dockerfile when the repository builds one', () => {
       const finding = { id: 'dockerfile-missing', category: 'container', severity: 'error', message: 'x' } as const;
       const manifest = makeManifest({ application: { root: '.', runtime: 'node', framework: null, dockerfilePath: null } });
@@ -357,6 +375,7 @@ describe('outcomes', () => {
     expect(actualOutcome({ outcomePatch: patch }, false, false)).toBe(2);
     expect(actualOutcome({}, false, false)).toBe(3);
     expect(actualOutcome({}, null, false)).toBeNull();
+    expect(actualOutcome({ localState: 'uploads in data/' }, true, false)).toBe(2);
   });
 
   it('reads the predicted outcome from the readiness outcome, else from the gate state', () => {

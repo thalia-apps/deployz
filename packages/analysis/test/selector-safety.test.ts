@@ -261,3 +261,15 @@ describe('Dockerfile VOLUME whose variable only the base image sets (COMP-052, s
     expect(detectLocalFilesystem(searxng('')).detected).toBe(true);
   });
 });
+
+describe('debug tool storage selector (Laravel debugbar)', () => {
+  it('does not require the storage driver of a debug tool', () => {
+    const tree: FileTree = { 'config/debugbar.php': "<?php\nreturn ['storage' => ['driver' => env('DEBUGBAR_STORAGE_DRIVER', 'file')]];\n" };
+    expect(variable(tree, 'DEBUGBAR_STORAGE_DRIVER', STORAGE)).toMatchObject({ required: false });
+  });
+
+  it('still requires the app storage driver with a local default', () => {
+    const tree: FileTree = { 'config/app.php': "<?php\nreturn ['uploads' => env('UPLOADS_DRIVER', 'local')];\n" };
+    expect(variable(tree, 'UPLOADS_DRIVER', STORAGE)).toMatchObject({ required: true });
+  });
+});

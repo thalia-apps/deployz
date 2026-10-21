@@ -209,12 +209,14 @@ export function requireTaskFamilySuffix(spec: DeploymentSpecV2, installationId: 
 
 /**
  * The manifest the relay validates. A relay validates it with a strict schema, so a relay built before a
- * field existed would reject the whole manifest. The relay never reads `health.hostChecked` (the compiled
- * template already carries its health-check matcher), so the payload leaves it out.
+ * field existed would reject the whole manifest. The relay never reads `health.hostChecked` or
+ * `health.redirectsAccepted` (the compiled template already carries its health-check matcher), so the payload
+ * leaves them out.
  */
 function relayManifest(manifest: DeploymentManifest): DeploymentManifest {
   const health = { ...manifest.health };
   delete health.hostChecked;
+  delete health.redirectsAccepted;
   return { ...manifest, health };
 }
 

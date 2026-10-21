@@ -96,7 +96,7 @@ describe('health-path detection across frameworks (COMP-005)', () => {
       'src/main/resources/application.properties': 'management.endpoints.web.exposure.include=info,metrics\n',
       'src/main/java/com/app/App.java': 'public class App {}\n',
     };
-    expect(analyseHealth(tree).metaMode).toBe('vendor_required');
+    expect(analyseHealth(tree).metaMode).toBe('root');
   });
 
   it('Rails: get "/up" in config/routes.rb', () => {
@@ -196,20 +196,38 @@ describe('health modes (Stage B phase 5)', () => {
     expect(health.metaMode).toBe('root');
   });
 
-  it('no health evidence anywhere is vendor_required and blocks the deployment gate', () => {
+  it('no health evidence anywhere probes / and also accepts a redirect', () => {
     const tree: FileTree = {
       ...NODE_APP,
       'src/index.ts': "import express from 'express';\nconst app = express();\napp.listen(3000);\n",
     };
-    const health = analyseHealth(tree);
-    expect(health.metaMode).toBe('vendor_required');
-    expect(health.metaPath).toBeNull();
+    expect(analyseHealth(tree)).toMatchObject({ metaMode: 'root', metaPath: '/' });
 
     const manifest = normalizeDeploymentManifest(analyseRepo(tree), {});
-    expect(manifest.health.mode).toBe('vendor_required');
-    const result = evaluateManifestReadiness(manifest);
-    expect(result.state).toBe('NEEDS_CONFIGURATION');
-    expect(result.findings.some((f) => f.id === 'health-path-required')).toBe(true);
+    expect(manifest.health).toEqual({ path: '/', mode: 'root', redirectsAccepted: true });
+    expect(evaluateManifestReadiness(manifest).findings.some((f) => f.id === 'health-path-required')).toBe(false);
+    // A path the vendor enters must answer 200.
+    expect(normalizeDeploymentManifest(analyseRepo(tree), { healthPath: '/status' }).health).toEqual({ path: '/status', mode: 'explicit' });
+  });
+
+  it.each(['src/Action/HealthAction.php', 'lib/app_web/health_check.ex', 'Controllers/GreenfieldHealthController.cs'])(
+    'an unresolved health handler (%s) is vendor_required and blocks the deployment gate',
+    (handler) => {
+      const tree: FileTree = {
+        ...NODE_APP,
+        'src/index.ts': "import express from 'express';\nconst app = express();\napp.listen(3000);\n",
+        [handler]: '',
+      };
+      expect(analyseHealth(tree)).toMatchObject({ metaMode: 'vendor_required', metaPath: null });
+      const result = evaluateManifestReadiness(normalizeDeploymentManifest(analyseRepo(tree), {}));
+      expect(result.state).toBe('NEEDS_CONFIGURATION');
+      expect(result.findings.some((f) => f.id === 'health-path-required')).toBe(true);
+    },
+  );
+
+  it('a dependency health check (RedisHealthCheck.cs) is not a health handler', () => {
+    const tree: FileTree = { ...NODE_APP, 'src/index.ts': 'app.listen(3000);\n', 'src/HealthChecks/RedisHealthCheck.cs': '' };
+    expect(analyseHealth(tree).metaMode).toBe('root');
   });
 
   it('existing JS route evidence still resolves explicit and the gate passes', () => {

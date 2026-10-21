@@ -66,13 +66,16 @@ Every failure carries one of 24 stable codes and a recoverability class
 | `MIGRATION_FAILED` | USER_ACTION | The one-off migration task exited non-zero (the command replaces the image ENTRYPOINT and runs as `sh -c <command>`; the image must contain `sh`) |
 | `ECS_DEPLOYMENT_FAILED` | USER_ACTION | The circuit breaker rolled the service back; the previous release keeps serving |
 | `RDS_AZ_CAPACITY` | USER_ACTION | RDS returned `InsufficientDBInstanceCapacity` for the requested instance class. Regional capacity, not a quota or permissions fault. The retry rediscovers AZs; wait for the rollback to finish first |
-| `DATABASE_CREATE_FAILED` / `DATABASE_CONNECTION_FAILED` / `RDS_UNAVAILABLE` | USER_ACTION / RECONCILE_FIRST | RDS provisioning or connectivity; the app must accept `sslmode=require` with the RDS CA bundle the template mounts |
+| `DATABASE_CREATE_FAILED` / `DATABASE_CONNECTION_FAILED` | USER_ACTION / RECONCILE_FIRST | RDS provisioning or connectivity; the app must accept `sslmode=require` with the RDS CA bundle the template mounts |
 | `REDIS_PROVISIONING_FAILED` / `REDIS_CONNECTION_FAILED` | DEPLOYZ_ACTION / RECONCILE_FIRST | Valkey replication group; TLS clients (`rediss://`) are unsupported |
 | `RELAY_DISCONNECTED` | RECONCILE_FIRST | No heartbeat for 15 minutes, or a WAITING job aged past 24 hours |
 | `RELAY_STATE_WRITE_FAILED` | DEPLOYZ_ACTION | The relay could not write its SSM pending marker (4 KB cap) |
 | `DOMAIN_OPERATION_TIMEOUT` | RECONCILE_FIRST | A domain job passed its staleness bound |
 | `UNSUPPORTED_ARCHITECTURE` | TERMINAL | Rejected at analysis |
 | `UNKNOWN` | RECONCILE_FIRST | Re-offers exhausted or an unclassified error; the AI explanation is available here |
+
+`RDS_UNAVAILABLE` stays in the database enum and the copy map, but no code
+produces it. Do not expect to see it.
 
 ## Stuck operations
 

@@ -179,4 +179,18 @@ describe('checkFact', () => {
     expect(checkFact(db, migration, fact('q8', startup, { evidence: cite('package.json', 1, 'express') })).ok).toBe(false);
     expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'none', command: null }))).reasons).toEqual(['mode none with a database needs a vendor decision']);
   });
+
+  it('migration: arguments added to a package script must be shown by a cited line', () => {
+    const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
+    const scripts = contextOf(tree);
+    const lines = ['"alteration": "logto db alt",', 'npm run alteration deploy latest'];
+    const db = { ...scripts, pack: { ...scripts.pack, startPath: [...scripts.pack.startPath, { path: 'docs/deploy.md', start: 1, lines }] }, database: 'postgres' as const };
+    const deploy = (command: string) => JSON.stringify({ mode: 'pre_deploy', command });
+    const script = cite('docs/deploy.md', 1, '"alteration": "logto db alt"');
+    expect(checkFact(db, migration, fact('q8', deploy('npm run alteration deploy'), { evidence: script })).reasons).toEqual([
+      'no cited line shows the script arguments "deploy"',
+    ]);
+    expect(checkFact(db, migration, fact('q8', deploy('npm run alteration deploy latest'), { evidence: [...script, ...cite('docs/deploy.md', 2, 'npm run alteration deploy latest')] })).ok).toBe(true);
+    expect(checkFact(db, migration, fact('q8', deploy('npm run alteration'), { evidence: script })).ok).toBe(true);
+  });
 });

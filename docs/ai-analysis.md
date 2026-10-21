@@ -119,7 +119,15 @@ Repository (GitHub tree, bounded)
   another language than the one the image starts, when two apps in the
   repository register a route and the start command does not name one of
   them, or when a front web server hides the app behind a prefix. In these
-  cases the detector reports no path and the vendor is asked. A Dockerfile
+  cases the detector reports no path. Without a path the health check
+  probes `/` and also accepts a redirect (`health.redirectsAccepted`, ALB
+  matcher 200-399), and the vendor is not asked. The vendor is asked only
+  when a health handler file exists whose route was not resolved
+  (`HealthController`, `HealthAction`, `health_check.ex`; a prefixed check
+  such as `RedisHealthCheck.cs` checks a dependency and does not count).
+  An image `ENV` that sets the path of a SQLite file
+  (`ENV SQLITE_DATABASE=/app/data/app.sqlite3`) is an unsupported database
+  when the app has no PostgreSQL driver. A Dockerfile
   that is a git symlink is read from its target file. A package.json worker
   script is not a worker when it is a dev or watch command, or when the
   start command already runs the worker. A Procfile process is not a worker
@@ -165,7 +173,12 @@ Repository (GitHub tree, bounded)
   `call_command('migrate')`) sets the migration mode to `startup`. Then no
   pre-deploy command is kept. Only the real start path counts: the image
   CMD or ENTRYPOINT and the scripts it runs (a `./app migrate && ./app`
-  subcommand, a `migrate deploy` wrapper), a Procfile `web:` line, the s6
+  subcommand, a `migrate deploy` wrapper, an interpreter that runs the
+  app's migrate script file such as `node ./db/migrations/pg/migrate.cjs`,
+  or the app's own install or upgrade command, such as
+  `bin/console app:install` or `app-installer init`, when the app also
+  declares a migration library: Doctrine Migrations, Phinx or
+  FluentMigrator), a Procfile `web:` line, the s6
   init scripts behind `/init`, and a Go migrator call (`migrations.Up`,
   `goose.Up`, `AutoMigrate`) in a server start file or an `Init` function it
   calls. A runner must be a call, not a declaration. Browser, CLI,
@@ -265,7 +278,8 @@ is final.
     data directory, a `VOLUME`, Compose named volumes), and a second
     application service in the production Compose file.
   - A fact that the rules did not resolve: no port, no start command, no
-    health path (`vendor_required`), no Dockerfile or a tied choice, or an
+    health path (`vendor_required`: a health handler whose route was not
+    resolved), no Dockerfile or a tied choice, or an
     unknown migration mode for a required database.
   - A repository with no open item makes no model call.
 - **Evidence pack** (`evidence-pack.ts`): the selected Dockerfile and the
@@ -309,7 +323,10 @@ is final.
   - Port: in the production stage `EXPOSE`, `ENV PORT` or `HEALTHCHECK`, or
     the app reads `PORT`. Health path: a cited line registers the route.
     Startup migration: cited on the start path or in the app's boot code or
-    configuration, never in a dependency manifest.
+    configuration, never in a dependency manifest. A migration command that
+    adds arguments to a package script (`npm run alteration deploy`) needs
+    a cited line that shows those arguments; the AI can invent an argument
+    or leave out a required one, and then the migration fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the

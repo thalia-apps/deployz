@@ -234,6 +234,14 @@ describe('COMP-029 — PostgreSQL drivers beyond Node, Python, Ruby and Go', () 
     expect(checkSqlite(php)).toMatchObject({ detected: false });
   });
 
+  it('rejects an image that sets the path of its SQLite file, unless the app has a PostgreSQL driver', () => {
+    const image: FileTree = {
+      Dockerfile: 'FROM debian:12\nCOPY app /app\nENV SQLITE_DATABASE=/app/data/app.sqlite3\nCMD ["/app/server"]\n',
+    };
+    expect(checkSqlite(image)).toMatchObject({ detected: true, dependency: 'sqlite' });
+    expect(checkSqlite({ ...image, 'package.json': JSON.stringify({ dependencies: { pg: '^8' } }) })).toMatchObject({ detected: false });
+  });
+
   it('treats a direct driver in a runtime manifest as a configured engine, not a tool or indirect one', () => {
     expect(
       assessPostgres({

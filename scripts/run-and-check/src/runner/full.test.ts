@@ -109,6 +109,26 @@ describe('runFull', () => {
     expect(runs(fake.calls).map((call) => call[call.indexOf('--name') + 1])).not.toContain('repo-001-migration');
   });
 
+  it('probes the reviewed recipe health path only when the Analysis asks the vendor for one', async () => {
+    const healthOf = async (mode: 'explicit' | 'vendor_required') => {
+      const file = analysis();
+      const result = await runFull({
+        analysis: { ...file, manifest: { ...file.manifest!, health: { path: '/', mode } } },
+        image: 'deployz-runcheck/repo-001:abc',
+        arch: 'amd64-emulated',
+        recipe: recipe({ healthPath: '/rest/health' }),
+        runner: createRunner({ docker: fakeDocker().docker, labelArgs, probeImage: 'probe:1', pollIntervalMs: 1 }),
+        services: fakeServices(),
+        env: productionEnvironment,
+        logDir,
+        workerWindowMs: 20,
+      });
+      return result.evidence.find((item) => item.source === 'health')?.text;
+    };
+    expect(await healthOf('vendor_required')).toMatch(/^GET \/rest\/health -> 200/);
+    expect(await healthOf('explicit')).toMatch(/^GET \/ -> 200/);
+  });
+
   it('reports a web container that exits as not healthy', async () => {
     const { result } = await run(analysis({ migrationCommand: 'npm run migrate' }, 'pre_deploy'), { exitAfterInspects: 0 });
     expect(result).toMatchObject({ webHealthy: false, healthPathStatus: null, smokeStatus: null });

@@ -184,6 +184,7 @@ describe('post-install configuration', () => {
     expect(payload['manifest']).toMatchObject({ web: { port: 3000 } });
     // A relay validates the manifest strictly; the payload never carries a field the relay does not read.
     expect((payload['manifest'] as { health: Record<string, unknown> }).health).not.toHaveProperty('hostChecked');
+    expect((payload['manifest'] as { health: Record<string, unknown> }).health).not.toHaveProperty('redirectsAccepted');
     // Control-plane-minted identity tags — stable internal ids only, with the
     // selected release named because one exists.
     expect(payload['tags']).toEqual({

@@ -194,11 +194,11 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     const readiness = (row.detectedMetadata as { readiness: ReadinessReport }).readiness;
     expect(readiness.state).toBe('NEEDS_CHANGES');
-    // No Dockerfile, no health endpoint, plus the blocking Redis rejection.
-    expect(readiness.requiredCount).toBe(3);
+    // No Dockerfile, plus the blocking Redis rejection. No health route: the default `/` is the health check.
+    expect(readiness.requiredCount).toBe(2);
     expect(readiness.findings.some((f) => f.id === 'unsupported-redis-setup' && f.blocking)).toBe(true);
     expect(readiness.findings.some((f) => f.id === 'container-setup')).toBe(true);
-    expect(readiness.findings.some((f) => f.id === 'health-check')).toBe(true);
+    expect(readiness.findings.some((f) => f.id === 'health-check')).toBe(false);
   });
 
   it('analyses the static-api fixture (no database) to COMPLETE/READY with databaseRequired false', async () => {
@@ -302,8 +302,8 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     const row = await loadApplication(db, application.id);
     expect(row.analysisStatus).toBe('COMPLETE');
-    // The nested Dockerfile satisfies container setup, but there is no
-    // health endpoint or HEALTHCHECK anywhere in this fixture.
+    // The nested Dockerfile satisfies container setup, but the health handler
+    // (apps/api/src/health-controller.js) has no route that analysis resolves.
     expect(row.compatibilityStatus).toBe('NEEDS_ATTENTION');
 
     const metadata = row.detectedMetadata as {
@@ -321,9 +321,8 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     // §11.1 end-to-end: analysis → manifest → manifest readiness. The MVP is
     // ONE selected app; the manifest gate must point at the nested app with a
-    // repo-root build context. Stage B phase 5: this fixture has NO health
-    // evidence at all, so the gate asks the vendor for a health path instead
-    // of silently defaulting to /health.
+    // repo-root build context. The health handler has no resolved route, so
+    // the gate asks the vendor for a health path instead of probing `/`.
     const manifest = normalizeDeploymentManifest(analysis, {});
     expect(manifest.application.root).toBe('apps/api');
     expect(manifest.application.dockerfilePath).toBe('apps/api/Dockerfile');
