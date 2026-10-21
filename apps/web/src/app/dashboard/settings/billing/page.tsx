@@ -84,7 +84,7 @@ function EvaluationCard({ billing }: { billing: BillingSummary }) {
           ) : null}
           <p className="text-xs text-muted-foreground">
             The platform fee starts when you subscribe. You subscribe before a customer can confirm an
-            invitation, or when you add your first customer deployment. A test deployment of your own
+            invitation. A test deployment of your own
             app is free. A customer deployment is charged only while it runs for your customer. A
             failed or disconnected deployment is not charged.
             {included > 0

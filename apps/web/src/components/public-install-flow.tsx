@@ -420,7 +420,7 @@ function SizeChoice({ option, plan }: { option: PublicInstallSizeOption; plan: P
       <span className="flex flex-col gap-1.5">
         <span className="flex flex-wrap items-center gap-2 font-medium">
           {option.label}
-          {option.recommended ? <Badge variant="secondary">Vendor recommended</Badge> : null}
+          {option.recommended ? <Badge variant="secondary">Recommended by your software provider</Badge> : null}
         </span>
         <span className="text-xs text-muted-foreground">{resources.join(' · ')}</span>
       </span>

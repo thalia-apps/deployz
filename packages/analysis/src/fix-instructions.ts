@@ -469,7 +469,7 @@ const ITEM_BUILDERS: Record<string, (finding: ReadinessFinding, facts: FixInstru
     ],
     constraints: ['Do not use a development, watch, or preview command.'],
     doneWhen: ['The built container starts the production server with no extra arguments.'],
-    settings: ['Without a repository change, the vendor can enter the start command in the Deployz application settings.'],
+    settings: [],
   }),
   'port-unresolved': (_finding, facts) => ({
     name: 'Application port undeclared',

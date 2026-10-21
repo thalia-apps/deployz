@@ -588,7 +588,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   AWS_SCP_BLOCKED: {
     what: 'Setup was blocked by a policy in your customer’s cloud organization.',
     why: 'Their organization restricts what can be created in this account or region.',
-    fix: 'Ask your customer to allow the Deployz setup in this account, or to choose an account without that restriction, then run the install link again.',
+    fix: 'Ask your customer to allow the Deployz setup in this account, or to choose an account without that restriction, then select Retry deployment.',
   },
   PORT_MISMATCH: {
     what: 'The application started but nothing answered on the expected port.',
@@ -628,27 +628,27 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   AWS_PERMISSION_DENIED: {
     what: 'The helper was refused permission for something this deployment needs.',
     why: 'The permissions granted at install time do not cover this action.',
-    fix: 'Ask your customer to re-run the install link so the setup can grant the current permissions.',
+    fix: 'Ask your customer to update the existing connector stack in their AWS account so it grants the current permissions, then try again.',
   },
   STACK_CREATE_FAILED: {
     what: 'The initial setup in your customer’s account did not complete.',
     why: 'One of the resources being created failed, so the whole setup was rolled back.',
-    fix: 'Open Technical detail for the failing resource, then ask your customer to run the install link again.',
+    fix: 'Open Technical detail for the failing resource, then select Retry deployment.',
   },
   STACK_DELETE_FAILED: {
     what: 'Disconnecting this deployment did not complete.',
     why: 'One of the resources being removed failed, so the removal stopped part-way.',
-    fix: 'Open Technical detail for the failing resource, then retry the disconnect. Your data is safe — the database and files are kept.',
+    fix: 'Open Technical detail for the failing resource, then select Retry removal. Your data is safe — the database and files are kept.',
   },
   RDS_AZ_CAPACITY: {
     what: "The cloud provider couldn't create the database — not enough capacity in the available zones.",
     why: 'The account has enough quota, but the specific zone or zones where the database would run have no room for a new instance right now.',
-    fix: 'Wait for the previous attempt to finish rolling back, then run the install link again. If it keeps failing, contact Deployz support.',
+    fix: 'Wait for the previous attempt to finish rolling back, then select Retry deployment. If it keeps failing, contact Deployz support.',
   },
   DATABASE_CREATE_FAILED: {
     what: 'The database could not be created.',
     why: 'The account rejected the database this application requires.',
-    fix: 'Check whether your customer’s account limits databases in this region, then run the install link again.',
+    fix: 'Check whether your customer’s account limits databases in this region, then select Retry deployment.',
   },
   DATABASE_CONNECTION_FAILED: {
     what: 'The application started but could not reach its database.',
@@ -678,7 +678,7 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
   UNSUPPORTED_ARCHITECTURE: {
     what: 'This application cannot be deployed as it is built.',
     why: 'It uses something Deployz does not support.',
-    fix: 'Open the application’s readiness screen for the specific change needed, make it, and publish a new release.',
+    fix: 'Open the application’s Configuration screen for the specific change needed, make it, and publish a new release.',
   },
   UNKNOWN: {
     what: 'The deployment failed.',

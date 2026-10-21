@@ -1765,6 +1765,10 @@ describe('BootstrapStack — installation isolation in a shared account and Regi
     expect(allows('elasticloadbalancing:AddTags', listener, { ...OWN_REQUEST, ...tagKeys, ...OTHER_TAG })).toBe(false);
     const cache = arn('elasticache', 'replicationgroup:other');
     expect(allows('elasticache:AddTagsToResource', cache, { ...OWN_REQUEST, ...OTHER_TAG })).toBe(false);
+    const revision = arn('ecs', 'task-definition/DeployzAppWeb11111111:3');
+    expect(allows('ecs:TagResource', revision, OWN_REQUEST)).toBe(true);
+    expect(allows('ecs:TagResource', revision, { ...OWN_REQUEST, ...OWN_TAG })).toBe(true);
+    expect(allows('ecs:TagResource', revision, { ...OWN_REQUEST, ...OTHER_TAG })).toBe(false);
 
     const executionAllows = executionRoleAllows(template);
     const vpc = arn('ec2', 'vpc/vpc-123');

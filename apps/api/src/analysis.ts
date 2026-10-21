@@ -391,7 +391,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 61 (default health path): without health evidence the health check
 // probes `/` and accepts a redirect; an image ENV that names a SQLite file is
 // an unsupported database. Stored v60 rows ask for a health path.
-export const ANALYSIS_VERSION = 61;
+// Version 62 (start command copy): a missing start command is fixed in the
+// repository; Deployz has no start command setting. Stored v61 rows say to set
+// it in the application details.
+export const ANALYSIS_VERSION = 62;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

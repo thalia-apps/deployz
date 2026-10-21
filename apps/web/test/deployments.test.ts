@@ -98,18 +98,6 @@ describe('actionErrorMessage', () => {
 });
 
 describe('createDeploymentErrorMessage (Paddle migration Phase 7)', () => {
-  it('sends a blocked production deployment to checkout (Phase 8)', () => {
-    expect(
-      createDeploymentErrorMessage(
-        new ApiRequestError('SUBSCRIPTION_REQUIRED', 'A production deployment needs an active Deployz subscription.', {
-          subscriptionStatus: null,
-        }),
-      ),
-    ).toBe(
-      'This is your first customer deployment, so it starts your subscription. Continue to checkout below.',
-    );
-  });
-
   it('explains an existing test deployment conflict', () => {
     expect(
       createDeploymentErrorMessage(

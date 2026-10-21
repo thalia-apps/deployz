@@ -64,7 +64,7 @@ whose Region the vendor fixed before this model existed.
 5. Customer selects a Region (explicit choice required when there is no
    recommendation; the recommended Region pre-selects when present and
    deployable), chooses a size (the link's recommendation preselects and
-   carries a "Vendor recommended" badge; sizes below the minimum are not
+   carries a "Recommended by your software provider" badge; sizes below the minimum are not
    offered), reviews the Region- and size-specific plan and cost
    (`GET /api/public-install/:id/plan?region=…&profile=…`), supplies
    configuration, and confirms the plan's fingerprint. The recommendation is

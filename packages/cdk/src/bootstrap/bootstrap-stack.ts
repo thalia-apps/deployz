@@ -1315,6 +1315,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
       },
     });
 
@@ -1422,6 +1423,7 @@ export class BootstrapStack extends Stack {
       [phase2AcmRequest, widened(phase2AcmRequest)],
       [phase2DomainIngressTag, widened(phase2DomainIngressTag)],
       [phase2CacheCreate, widened(phase2CacheCreate)],
+      [phase4DeployCreate, widened(phase4DeployCreate)],
       [
         phase4DeployObserve,
         new PolicyStatement({

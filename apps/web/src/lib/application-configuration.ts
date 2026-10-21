@@ -60,13 +60,15 @@ const RECOMMENDED: ConfigurationRowResult = { label: 'Recommended', variant: 'wa
 const NEEDS_REVIEW: ConfigurationRowResult = { label: 'Needs review', variant: 'warning' };
 
 // Every deployment gets an S3 bucket regardless of this setting — it is
-// always created and kept if the deployment is uninstalled. The setting only
-// controls whether Deployz passes the bucket name to the app as environment
-// variables, so the help text (and the value words) say "connected", never
-// "used" — "Not used" would wrongly suggest no bucket exists.
+// always created and kept if the deployment is uninstalled, and the compiler
+// always sets STORAGE_BUCKET, S3_BUCKET, AWS_S3_BUCKET and AWS_REGION. The
+// setting only controls whether Deployz also fills the other storage
+// variables the app reads (install-config.ts, compile.ts aliases), so the
+// help text (and the value words) say "connected", never "used" — "Not used"
+// would wrongly suggest no bucket exists.
 const STORAGE_HELP =
-  'Every deployment gets a storage bucket, kept after uninstall. This setting controls whether the bucket name is passed to your app.';
-const STORAGE_CONNECTED_VALUE = 'Connected (bucket name passed to the app)';
+  'Every deployment gets a storage bucket, kept after uninstall. Deployz always gives your app the bucket name in STORAGE_BUCKET, S3_BUCKET and AWS_S3_BUCKET, and the AWS Region in AWS_REGION. This setting controls whether Deployz also fills the other storage variables that your app reads.';
+const STORAGE_CONNECTED_VALUE = 'Connected (storage variables filled)';
 const STORAGE_NOT_CONNECTED_VALUE = 'Bucket created, not connected';
 
 const CATEGORY_TO_ROW_ID: Record<string, string | undefined> = {
@@ -239,7 +241,7 @@ function buildRequirementRow(
 
 /** File storage: every deployment gets an S3 bucket regardless of this
  *  setting (always created, retained on uninstall) — only whether Deployz
- *  passes its name to the app as environment variables is optional. The
+ *  fills the app's other storage variables is optional. The
  *  value words and help text always say so, unlike the other requirement
  *  rows where "Not used" is accurate on its own. */
 function buildStorageRow(requirements: ApplicationReadiness['requirements']): ConfigurationRow {

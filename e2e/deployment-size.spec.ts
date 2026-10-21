@@ -54,7 +54,7 @@ test('the customer installs its chosen size from an invitation with a vendor ove
   const sizeSection = page.locator('section[aria-labelledby="public-size"]');
   await expect(sizeSection).toBeVisible();
   await expect(page.locator('#size-large')).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('label[for="size-large"]')).toContainText('Vendor recommended');
+  await expect(page.locator('label[for="size-large"]')).toContainText('Recommended by your software provider');
   await expect(page.locator('#size-small')).toBeVisible();
 
   await page.locator('section[aria-labelledby="public-region"]').getByRole('combobox').click();
