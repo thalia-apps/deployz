@@ -507,8 +507,9 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   if (tiedDockerfiles) metadata['dockerfileSelectionTied'] = tiedDockerfiles;
   // A standard database name written in a runtime file (a Go `case "DATABASE_URL":`,
   // a compose `environment:` entry) is evidence that the app reads it, even
-  // when the read shape is not one the env-var model parses.
-  metadata['databaseNamesMentioned'] = MANAGED_DATABASE_ENV_VARS.filter((name) =>
+  // when the read shape is not one the env-var model parses. The DB_* names are the ones the
+  // manifest also injects (an enum `case DB_HOST = 'DB_HOST'` read through `env($this->value)`).
+  metadata['databaseNamesMentioned'] = [...MANAGED_DATABASE_ENV_VARS, 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].filter((name) =>
     Object.entries(tree).some(
       ([path, content]) => Boolean(content) && isRuntimeSourcePath(path) && new RegExp(`\\b${name}\\b`).test(content!),
     ),

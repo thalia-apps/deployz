@@ -17,6 +17,7 @@ vendorInputs:
     source:
       kind: generated
       format: hex64
+localState: "LIVEBOOK_HOME=/data (Dockerfile) is where Livebook saves notebooks and its settings. A fresh start writes nothing there until a user saves a notebook."
 notes:
   - Root Dockerfile. BASE_IMAGE and VARIANT have no default, so the first FROM fails without them. The values are the ones in .github/workflows/release.yml (VARIANT=default, BASE_IMAGE from the versions file at the pinned commit). Reviewer to check that the hexpm/elixir tag exists on Docker Hub.
   - LIVEBOOK_SECRET_KEY_BASE must be at least 64 characters (lib/livebook/config.ex:460-471). LIVEBOOK_PASSWORD is the access password named in the task brief. The app also starts with a token when neither is set. Reviewer to check.

@@ -382,7 +382,11 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 59 (AI open items): a Dockerfile that copies nothing from the repository
 // is unbuildable (outline runs a floating base image), and a migration that the AI
 // could not resolve is a change to verify. Stored v58 rows say deployable.
-export const ANALYSIS_VERSION = 59;
+// Version 60 (false vendor questions): a boot script that runs a migrate script
+// file, or an install command next to a migration library, migrates at start; a
+// DB_* name in the code verifies the database binding; a debug tool's storage
+// selector is not file storage. Stored v59 rows ask those questions.
+export const ANALYSIS_VERSION = 60;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

@@ -165,7 +165,12 @@ Repository (GitHub tree, bounded)
   `call_command('migrate')`) sets the migration mode to `startup`. Then no
   pre-deploy command is kept. Only the real start path counts: the image
   CMD or ENTRYPOINT and the scripts it runs (a `./app migrate && ./app`
-  subcommand, a `migrate deploy` wrapper), a Procfile `web:` line, the s6
+  subcommand, a `migrate deploy` wrapper, an interpreter that runs the
+  app's migrate script file such as `node ./db/migrations/pg/migrate.cjs`,
+  or the app's own install or upgrade command, such as
+  `bin/console app:install` or `app-installer init`, when the app also
+  declares a migration library: Doctrine Migrations, Phinx or
+  FluentMigrator), a Procfile `web:` line, the s6
   init scripts behind `/init`, and a Go migrator call (`migrations.Up`,
   `goose.Up`, `AutoMigrate`) in a server start file or an `Init` function it
   calls. A runner must be a call, not a declaration. Browser, CLI,

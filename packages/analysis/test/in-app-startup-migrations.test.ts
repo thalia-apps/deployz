@@ -134,3 +134,32 @@ describe('PostgreSQL option next to a SQLite default', () => {
     expect(assessPostgres(driverOnly).required).toBe(false);
   });
 });
+
+describe('boot script migrations', () => {
+  const entrypoint = (script: string, extra: FileTree = {}): FileTree => ({
+    'Dockerfile': 'FROM php:8.3-fpm\nCOPY . /app\nCOPY docker/entrypoint.sh /entrypoint.sh\nCMD ["/entrypoint.sh"]\n',
+    'docker/entrypoint.sh': `#!/bin/sh\nset -e\n${script}\nexec php-fpm\n`,
+    ...extra,
+  });
+  const DOCTRINE = { 'composer.json': JSON.stringify({ require: { 'doctrine/migrations': '^3.9' } }) };
+
+  it('detects an interpreter that runs the app migrate script file', () => {
+    expect(detectStartupMigrationEvidence(entrypoint('node ./db/migrations/$DB_DIALECT/migrate.cjs ./db/migrations/$DB_DIALECT'))).toEqual(
+      expect.arrayContaining([expect.objectContaining({ pattern: 'migrate script file', fromDockerCommand: true })]),
+    );
+  });
+
+  it.each([['/opt/app/bin/console -n app:install'], ['php vendor/bin/app-installer init --no-interaction']])(
+    'detects the install command %s next to a migration library',
+    (command) => {
+      expect(detectStartupMigrationEvidence(entrypoint(command, DOCTRINE))).toEqual(
+        expect.arrayContaining([expect.objectContaining({ pattern: 'install command with a migration library', fromDockerCommand: true })]),
+      );
+    },
+  );
+
+  it('does not count an install command without a migration library, or a package install', () => {
+    expect(detectStartupMigrationEvidence(entrypoint('/opt/app/bin/console -n app:install'))).toEqual([]);
+    expect(detectStartupMigrationEvidence(entrypoint('composer install --no-dev\napk add --no-cache git', DOCTRINE))).toEqual([]);
+  });
+});

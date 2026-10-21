@@ -2821,7 +2821,18 @@ const STARTUP_MIGRATION_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /\bmigrate\s+deploy\b/, name: 'migrate deploy' },
   // A binary's own migrate-on-boot flag (`./app -migrate`).
   { pattern: /(?:^|[\s"',])--?(?:auto-)?migrate(?:=true)?(?=[\s"',\]]|$)/, name: 'binary migrate flag' },
+  // An interpreter that runs the app's own migrate script (`node ./db/migrations/$DB_DIALECT/migrate.cjs`).
+  { pattern: /\b(?:node|bun|deno|tsx|python3?|php|ruby)\s+(?:[\w$./{}-]*\/)?migrat\w*\.(?:[cm]?[jt]s|py|php|rb)\b/, name: 'migrate script file' },
 ];
+
+/**
+ * The app's own install or upgrade command at start (`bin/console -n kimai:install`,
+ * `shlink-installer init`). It is migration evidence only when the app also
+ * declares a schema migration library, which that command then runs.
+ */
+const STARTUP_INSTALLER_REGEX = /\b(?:console|artisan|cli)\b[^\n]*?\s[\w-]+:(?:install|upgrade|update)\b|\b[\w.-]+-installer\s+(?:init|install|update|upgrade)\b/;
+const MIGRATION_LIBRARY_REGEX = /doctrine\/(?:doctrine-)?migrations|robmorgan\/phinx|\bFluentMigrator\b/;
+const LIBRARY_MANIFEST_REGEX = /(?:^|\/)(?:composer\.json|[^/]+\.csproj)$/;
 
 /**
  * Application code that applies migrations itself when it runs (a migrator
@@ -3124,6 +3135,7 @@ export function hasPreDeployMigration(tree: FileTree): boolean {
  */
 export function detectStartupMigrationEvidence(tree: FileTree): MigrationStartupEvidence[] {
   const evidence: MigrationStartupEvidence[] = [];
+  const migrationLibrary = Object.entries(tree).some(([path, content]) => LIBRARY_MANIFEST_REGEX.test(path) && MIGRATION_LIBRARY_REGEX.test(content ?? ''));
   const consider = (command: string, source: string, fromDockerCommand: boolean): void => {
     if (MIGRATION_DEV_REGEX.test(command)) return;
     for (const { pattern, name } of STARTUP_MIGRATION_PATTERNS) {
@@ -3131,6 +3143,9 @@ export function detectStartupMigrationEvidence(tree: FileTree): MigrationStartup
         evidence.push({ source, pattern: name, fromDockerCommand });
         return;
       }
+    }
+    if (migrationLibrary && STARTUP_INSTALLER_REGEX.test(command)) {
+      evidence.push({ source, pattern: 'install command with a migration library', fromDockerCommand });
     }
   };
 
@@ -4141,8 +4156,9 @@ export interface ProvisionedResources {
 const DB_SELECTOR_NAME_REGEX =
   /^(?!(?:POSTGRES|POSTGRESQL|MYSQL|MARIADB|PG)_)(?:(?:[A-Z0-9]+_)*(?:DB|DATABASE)(?:_(?:CLIENT|TYPE|DRIVER|ENGINE|DIALECT|BACKEND|CONNECTION|ADAPTER|VENDOR|PROVIDER))?|[A-Z0-9_]*_DBENGINE|[A-Z0-9]+_DRIVER)$/;
 // `FILES_TYPE` is plural on purpose: `FILE_TYPE` and `ALLOWED_FILE_TYPES` name MIME types.
+// A debug or profiler tool keeps its own records (`DEBUGBAR_STORAGE_DRIVER`), not the app's files.
 const STORAGE_SELECTOR_NAME_REGEX =
-  /(?:^|_)(?:FILE_)?STORAGE(?:_(?:TYPE|DRIVER|PROVIDER|BACKEND|SERVICE|MODE|LOCATIONS?))?$|(?:^|_)UPLOAD_PROVIDER$|_STORAGE_PROVIDER$|^ACTIVE_STORAGE_SERVICE$|(?:^|_)(?:FILES|UPLOADS?|ATTACHMENTS?)_(?:TYPE|DRIVER|PROVIDER|BACKEND)$|(?:^|_)DATASOURCE_TYPE$/;
+  /^(?!(?:DEBUGBAR|TELESCOPE|CLOCKWORK|PROFILER|DEBUG)_).*?(?:^|_)(?:FILE_)?STORAGE(?:_(?:TYPE|DRIVER|PROVIDER|BACKEND|SERVICE|MODE|LOCATIONS?))?$|(?:^|_)UPLOAD_PROVIDER$|_STORAGE_PROVIDER$|^ACTIVE_STORAGE_SERVICE$|(?:^|_)(?:FILES|UPLOADS?|ATTACHMENTS?)_(?:TYPE|DRIVER|PROVIDER|BACKEND)$|(?:^|_)DATASOURCE_TYPE$/;
 // A database selector name that picks the engine; `REDIS_DB` and `DB_CONNECTION` do not.
 const DB_ENGINE_SELECTOR_NAME_REGEX = /(?:^|_)(?:DB|DATABASE)_(?:CLIENT|TYPE|DRIVER|ENGINE|DIALECT|BACKEND|ADAPTER|VENDOR|PROVIDER)$|DBENGINE$/;
 
