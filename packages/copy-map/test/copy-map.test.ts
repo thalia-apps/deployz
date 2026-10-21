@@ -30,6 +30,7 @@ import {
   eventResultLabel,
   eventTypeLabel,
   failureCodeCopy,
+  knownFailureCode,
   failureRecoverability,
   readinessChangesHeading,
   readinessChecksLabel,
@@ -201,7 +202,6 @@ describe('§61 failure codes', () => {
       'MIGRATION_FAILED',
       'RELAY_DISCONNECTED',
       'ECS_DEPLOYMENT_FAILED',
-      'RDS_UNAVAILABLE',
       'AWS_PERMISSION_DENIED',
       'STACK_CREATE_FAILED',
       'STACK_DELETE_FAILED',
@@ -235,7 +235,6 @@ describe('§61 failure codes', () => {
     expect(FAILURE_CODE_COPY.AWS_SCP_BLOCKED.label).toBe('Cloud policy blocks this');
     expect(FAILURE_CODE_COPY.PORT_MISMATCH.label).toBe('Port conflict');
     expect(FAILURE_CODE_COPY.ECS_DEPLOYMENT_FAILED.label).toBe('Deployment failed');
-    expect(FAILURE_CODE_COPY.RDS_UNAVAILABLE.label).toBe('Database unreachable');
     expect(FAILURE_CODE_COPY.RELAY_DISCONNECTED.label).toBe('Helper disconnected');
   });
 
@@ -337,6 +336,13 @@ describe('§61 failure codes', () => {
 
   it('falls back to UNKNOWN copy for an unrecognized code', () => {
     expect(failureCodeCopy('SOME_UNLISTED_CODE').label).toBe(FAILURE_CODE_COPY.UNKNOWN.label);
+  });
+
+  it('reads a stored code with no copy as UNKNOWN and keeps every known code', () => {
+    expect(knownFailureCode('RDS_UNAVAILABLE')).toBe('UNKNOWN');
+    for (const code of FAILURE_CODES) {
+      expect(knownFailureCode(code)).toBe(code);
+    }
   });
 });
 

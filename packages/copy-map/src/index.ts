@@ -310,7 +310,6 @@ export const FAILURE_CODES = [
   'MIGRATION_FAILED',
   'RELAY_DISCONNECTED',
   'ECS_DEPLOYMENT_FAILED',
-  'RDS_UNAVAILABLE',
   'AWS_PERMISSION_DENIED',
   'STACK_CREATE_FAILED',
   'STACK_DELETE_FAILED',
@@ -364,7 +363,6 @@ export const FAILURE_RECOVERABILITY: Record<FailureCode, FailureRecoverability> 
   MIGRATION_FAILED: 'USER_ACTION',
   RELAY_DISCONNECTED: 'RECONCILE_FIRST',
   ECS_DEPLOYMENT_FAILED: 'USER_ACTION',
-  RDS_UNAVAILABLE: 'RECONCILE_FIRST',
   AWS_PERMISSION_DENIED: 'USER_ACTION',
   STACK_CREATE_FAILED: 'USER_ACTION',
   STACK_DELETE_FAILED: 'USER_ACTION',
@@ -448,11 +446,6 @@ export const FAILURE_CODE_COPY: Record<FailureCode, FailureCopy> = {
   ECS_DEPLOYMENT_FAILED: {
     label: 'Deployment failed',
     description: "The new version couldn't be rolled out.",
-    severity: 'critical',
-  },
-  RDS_UNAVAILABLE: {
-    label: 'Database unreachable',
-    description: "The database isn't reachable right now.",
     severity: 'critical',
   },
   AWS_PERMISSION_DENIED: {
@@ -632,11 +625,6 @@ export const FAILURE_REMEDIATION: Record<FailureCode, FailureRemediation> = {
     why: 'The updated application did not reach a running state, so the rollout was stopped.',
     fix: 'Open Technical detail for the reported error, fix it in a new release, and deploy again.',
   },
-  RDS_UNAVAILABLE: {
-    what: 'The database was not reachable during the deployment.',
-    why: 'The managed database was still starting, or is unavailable in your customer’s account.',
-    fix: 'Wait for the database to finish starting and deploy again. If it keeps failing, ask your customer to check the database in their account.',
-  },
   AWS_PERMISSION_DENIED: {
     what: 'The helper was refused permission for something this deployment needs.',
     why: 'The permissions granted at install time do not cover this action.',
@@ -741,6 +729,14 @@ export const EXPLANATION_FALLBACK = {
   why: 'The cause is still being narrowed down. The technical detail below shows the signals we have.',
   fix: "If the cause isn't clear from the detail below, contact Deployz support.",
 } as const;
+
+/**
+ * The §61 code for a stored failure code. A database value with no copy
+ * (RDS_UNAVAILABLE, which no code produces) reads as UNKNOWN.
+ */
+export function knownFailureCode(code: string): FailureCode {
+  return (FAILURE_CODES as readonly string[]).includes(code) ? (code as FailureCode) : 'UNKNOWN';
+}
 
 /** §65 lookup for a failure code — falls back safely to UNKNOWN copy. */
 export function failureCodeCopy(code: string): FailureCopy {

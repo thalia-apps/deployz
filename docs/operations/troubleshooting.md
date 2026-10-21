@@ -74,8 +74,8 @@ Every failure carries one of 24 stable codes and a recoverability class
 | `UNSUPPORTED_ARCHITECTURE` | TERMINAL | Rejected at analysis |
 | `UNKNOWN` | RECONCILE_FIRST | Re-offers exhausted or an unclassified error; the AI explanation is available here |
 
-`RDS_UNAVAILABLE` stays in the database enum and the copy map, but no code
-produces it. Do not expect to see it.
+`RDS_UNAVAILABLE` stays in the database enum, but no code produces it. It
+has no copy: a stored value shows as `UNKNOWN`.
 
 ## Stuck operations
 

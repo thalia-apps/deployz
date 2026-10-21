@@ -27,7 +27,6 @@ export const FAILURE_CODES = [
   'MIGRATION_FAILED',
   'RELAY_DISCONNECTED',
   'ECS_DEPLOYMENT_FAILED',
-  'RDS_UNAVAILABLE',
   'AWS_PERMISSION_DENIED',
   'STACK_CREATE_FAILED',
   'STACK_DELETE_FAILED',
@@ -113,11 +112,6 @@ export const FAILURE_CODE_COPY: Record<FailureCode, FailureCopy> = {
   ECS_DEPLOYMENT_FAILED: {
     label: 'Deployment failed',
     description: "The new version couldn't be rolled out.",
-    severity: 'critical',
-  },
-  RDS_UNAVAILABLE: {
-    label: 'Database unreachable',
-    description: "The database isn't reachable right now.",
     severity: 'critical',
   },
   AWS_PERMISSION_DENIED: {
@@ -307,7 +301,6 @@ export const FAILURE_RECOVERABILITY: Record<FailureCode, FailureRecoverability> 
   MIGRATION_FAILED: 'USER_ACTION',
   RELAY_DISCONNECTED: 'RECONCILE_FIRST',
   ECS_DEPLOYMENT_FAILED: 'USER_ACTION',
-  RDS_UNAVAILABLE: 'RECONCILE_FIRST',
   AWS_PERMISSION_DENIED: 'USER_ACTION',
   STACK_CREATE_FAILED: 'USER_ACTION',
   STACK_DELETE_FAILED: 'USER_ACTION',

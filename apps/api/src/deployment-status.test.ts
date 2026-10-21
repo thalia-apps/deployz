@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FAILURE_CODES } from '@deployz/copy-map';
+import { FAILURE_CODES, failureCodeCopy } from '@deployz/copy-map';
 import type { CustomerDeploymentStatus, VendorDeploymentStatus } from '@deployz/contracts';
 
 import {
@@ -637,6 +637,17 @@ describe('failure mapping', () => {
       expect(customer.failure?.customerMessage, `code ${code}`).toBeTruthy();
       expect(customer.failure?.customerMessage.length ?? 0, `code ${code}`).toBeGreaterThan(0);
     }
+  });
+
+  it('a stored code with no copy (RDS_UNAVAILABLE) reads as UNKNOWN', () => {
+    const status = derive({
+      deployment: makeDeployment({ state: 'FAILED' }),
+      jobs: [makeJob({ state: 'FAILED', failureCode: 'RDS_UNAVAILABLE' })],
+    });
+    expect(status.failure?.code).toBe('UNKNOWN');
+    expect(toCustomerDeploymentStatus(status).failure?.customerMessage).toBe(
+      failureCodeCopy('UNKNOWN').description,
+    );
   });
 
   it('a FAILED job with no classified code falls back to the generic customer message', () => {
