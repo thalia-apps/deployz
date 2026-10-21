@@ -110,7 +110,8 @@ export async function runFull(input: FullRunInput): Promise<FullRun> {
     const web = await runner.start(webSpec);
     started.push(web);
     const port = Number(webSpec.env['PORT']);
-    const healthPath = manifest.health.path;
+    // A vendor_required path is a placeholder: production deploys only after the vendor enters a path.
+    const healthPath = manifest.health.mode === 'vendor_required' && recipe.healthPath !== undefined ? recipe.healthPath : manifest.health.path;
     // The same rule as the target group: a host-checked app also counts 400 (infrastructure-compiler Matcher).
     const healthyStatuses = manifest.health.hostChecked === true ? [200, 400] : [200];
     const health = await runner.waitHealthy(web, { ports: [port], paths: [healthPath], timeoutMs: WEB_START_TIMEOUT_MS, healthyStatuses });

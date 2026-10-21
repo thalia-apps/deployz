@@ -40,13 +40,18 @@ const REPORTS_DIR = join(HARNESS_ROOT, '.runs', 'reports');
 const RECIPES_DIR = join(HARNESS_ROOT, 'recipes');
 
 /** The vendor inputs of a git recipe; a fixture has none that wire a service. */
-type RecipeInputs = Pick<Recipe, 'vendorInputs'> & Partial<Pick<Recipe, 'outcomePatch'>>;
+type RecipeInputs = Pick<Recipe, 'vendorInputs'> & Partial<Pick<Recipe, 'outcomePatch' | 'localState' | 'setupWizard'>>;
 
 function loadRecipeInputs(id: string): RecipeInputs {
   const path = join(RECIPES_DIR, `${id}.yaml`);
   if (!existsSync(path)) return { vendorInputs: [] };
-  const { vendorInputs, outcomePatch } = recipeSchema.parse(parse(readFileSync(path, 'utf8')));
-  return outcomePatch === undefined ? { vendorInputs } : { vendorInputs, outcomePatch };
+  const { vendorInputs, outcomePatch, localState, setupWizard } = recipeSchema.parse(parse(readFileSync(path, 'utf8')));
+  return {
+    vendorInputs,
+    ...(outcomePatch === undefined ? {} : { outcomePatch }),
+    ...(localState === undefined ? {} : { localState }),
+    ...(setupWizard === undefined ? {} : { setupWizard }),
+  };
 }
 
 export interface ClaimsOptions {

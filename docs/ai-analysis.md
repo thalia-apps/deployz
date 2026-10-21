@@ -165,7 +165,12 @@ Repository (GitHub tree, bounded)
   `call_command('migrate')`) sets the migration mode to `startup`. Then no
   pre-deploy command is kept. Only the real start path counts: the image
   CMD or ENTRYPOINT and the scripts it runs (a `./app migrate && ./app`
-  subcommand, a `migrate deploy` wrapper), a Procfile `web:` line, the s6
+  subcommand, a `migrate deploy` wrapper, an interpreter that runs the
+  app's migrate script file such as `node ./db/migrations/pg/migrate.cjs`,
+  or the app's own install or upgrade command, such as
+  `bin/console app:install` or `app-installer init`, when the app also
+  declares a migration library: Doctrine Migrations, Phinx or
+  FluentMigrator), a Procfile `web:` line, the s6
   init scripts behind `/init`, and a Go migrator call (`migrations.Up`,
   `goose.Up`, `AutoMigrate`) in a server start file or an `Init` function it
   calls. A runner must be a call, not a declaration. Browser, CLI,
@@ -309,7 +314,10 @@ is final.
   - Port: in the production stage `EXPOSE`, `ENV PORT` or `HEALTHCHECK`, or
     the app reads `PORT`. Health path: a cited line registers the route.
     Startup migration: cited on the start path or in the app's boot code or
-    configuration, never in a dependency manifest.
+    configuration, never in a dependency manifest. A migration command that
+    adds arguments to a package script (`npm run alteration deploy`) needs
+    a cited line that shows those arguments; the AI can invent an argument
+    or leave out a required one, and then the migration fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the
