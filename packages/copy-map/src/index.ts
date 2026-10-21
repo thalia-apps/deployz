@@ -558,6 +558,7 @@ export const APP_OWNED_STARTUP_FAILURE_CODES: ReadonlySet<FailureCode> = new Set
 export const CONFIGURATION_FAILURE_CODES: ReadonlySet<FailureCode> = new Set([
   'CONTAINER_START_FAILED',
   'MISSING_SECRET',
+  'UNSUPPORTED_ARCHITECTURE',
 ]);
 
 /** §29 what happened / why / how to fix, per failure code. */

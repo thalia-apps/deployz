@@ -269,6 +269,7 @@ export function isAppOwnedStartupFailure(
 export const CONFIGURATION_FAILURE_CODES = [
   'CONTAINER_START_FAILED',
   'MISSING_SECRET',
+  'UNSUPPORTED_ARCHITECTURE',
 ] as const satisfies readonly FailureCode[];
 
 /** True when a failure code is fixed on the Configuration screen. */
