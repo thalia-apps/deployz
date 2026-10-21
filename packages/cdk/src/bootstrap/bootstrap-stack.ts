@@ -120,6 +120,25 @@ function withoutSid(statement: PolicyStatement): PolicyStatement {
   return PolicyStatement.fromJson(json);
 }
 
+/**
+ * The boundary form of an installation-scoped grant: the same actions on
+ * `resources`, without the conditions that only narrow it further (another
+ * installation's tag, the installation's cluster).
+ */
+function widened(statement: PolicyStatement, resources: string[] = ['*']): PolicyStatement {
+  const { Sid: _sid, Condition: condition, ...json } = statement.toJSON() as Record<string, unknown>;
+  const {
+    StringEqualsIfExists: _otherInstallation,
+    ArnLike: _cluster,
+    ...kept
+  } = (condition ?? {}) as Record<string, unknown>;
+  return PolicyStatement.fromJson({
+    ...json,
+    Resource: resources,
+    ...(Object.keys(kept).length > 0 ? { Condition: kept } : {}),
+  });
+}
+
 /** Phase 2 — CloudFormation stack create/update within the tag boundary. */
 const PHASE_2_CREATE_STACK_ACTIONS = [
   'cloudformation:CreateStack',
@@ -236,15 +255,14 @@ const PHASE_2_RELAY_STATE_ACTIONS = [
  *
  * S3 bucket/object actions do not honour `aws:ResourceTag` (the same
  * finding PROVISION_STORAGE_ACTIONS documents for the execution role), so
- * these cannot be tag-scoped at IAM. Containment is code-side: the purge
- * executor verifies `deployz:installation` via GetBucketTagging before
- * touching any bucket, and refuses — never deletes — anything whose tags
- * are unreadable or mismatched. ListAllMyBuckets is account-level,
+ * these cannot be tag-scoped at IAM. The deletes are scoped by bucket name
+ * to this installation's application stack instead, and the purge executor
+ * also verifies `deployz:installation` via GetBucketTagging before touching
+ * any bucket. ListAllMyBuckets and GetBucketTagging are account-level,
  * read-only discovery for that verification.
  */
+const PHASE_2_PURGE_STORAGE_DISCOVER_ACTIONS = ['s3:ListAllMyBuckets', 's3:GetBucketTagging'] as const;
 const PHASE_2_PURGE_STORAGE_ACTIONS = [
-  's3:ListAllMyBuckets',
-  's3:GetBucketTagging',
   's3:ListBucketVersions',
   's3:DeleteObject',
   's3:DeleteObjectVersion',
@@ -346,28 +364,21 @@ const PHASE_4_DEPLOY_OBSERVE_ACTIONS = [
   'ecs:ListTasks',
   'ecs:DescribeTasks',
   'ecs:DescribeTaskDefinition',
-  // Phase 5 — DESTROY clears a RUNNING standalone task (a scheduled job or
-  // migration mid-run) before deleting the cluster it lives in, so the
-  // cluster's own delete never fails with ClusterContainsTasksException.
-  // Same condition-free shape as the reads above (task ARNs carry no usable
-  // tag condition); folded into this statement rather than a new one to
-  // stay under the managed-policy size quota.
-  'ecs:StopTask',
   // Revision cleanup lists a family's ACTIVE revisions. ListTaskDefinitions
   // is a list action with no resource-level scoping; read-only.
   'ecs:ListTaskDefinitions',
 ] as const;
 
 /**
- * Phase 4 — the deploy-time migration one-off (RunTask). ECS evaluates
- * RunTask against the task definition AND the cluster, plus further
- * untagged resource ARNs in some configurations — the same multi-resource
- * auth shape `DeregisterTaskDefinition` documents — so a tag condition
- * could never reliably match. Condition-free like the Describe* precedent;
- * containment rests on the one-installation-per-region invariant and the
- * execution role's trust policy.
+ * Phase 4 — the deploy-time migration one-off (RunTask), and DESTROY's stop
+ * of a RUNNING standalone task (a scheduled job or migration mid-run) before
+ * it deletes the cluster. ECS evaluates RunTask against the task definition
+ * plus further untagged resource ARNs in some configurations, and task ARNs
+ * carry no usable tag, so a tag condition could never reliably match. Both
+ * actions carry the `ecs:cluster` condition key instead, which limits them to
+ * the cluster of this installation's application stack.
  */
-const PHASE_4_MIGRATION_RUN_ACTIONS = ['ecs:RunTask'] as const;
+const PHASE_4_TASK_RUN_ACTIONS = ['ecs:RunTask', 'ecs:StopTask'] as const;
 
 /**
  * Phase 4 — registering a task-definition copy names a resource that does
@@ -410,6 +421,7 @@ const PROVISION_CREATE_ACTIONS = [
   'logs:CreateLogGroup',
   'logs:TagResource',
   'elasticache:CreateCacheSubnetGroup',
+  'elasticache:CreateReplicationGroup',
   'elasticache:AddTagsToResource',
   'iam:TagRole',
   // The application stack's UnhealthyTargetAlarm gets stack-level deployz
@@ -471,6 +483,11 @@ const PROVISION_MANAGE_ACTIONS = [
   'secretsmanager:GetResourcePolicy',
   'secretsmanager:PutResourcePolicy',
   'elasticache:DeleteCacheSubnetGroup',
+  'elasticache:ModifyReplicationGroup',
+  'elasticache:DeleteReplicationGroup',
+  // Recovery and rollback paths may still meet legacy CacheCluster
+  // resources from stacks created before the replication group.
+  'elasticache:DeleteCacheCluster',
   'iam:DeleteRolePolicy',
   'iam:DetachRolePolicy',
   'iam:DeleteRole',
@@ -537,7 +554,8 @@ const PROVISION_READ_ACTIONS = [
  * Granted without a tag condition rather than with one that could never
  * match, and scoped by bucket name instead: the application bucket has no
  * `BucketName`, so CloudFormation names it after the application stack
- * (`deployz-app-…`). No other bucket in the account is reachable.
+ * (`deployz-app-<short installation id>-…`). No other bucket in the account,
+ * and no other installation's bucket, is reachable.
  */
 const PROVISION_STORAGE_ACTIONS = [
   's3:CreateBucket',
@@ -571,40 +589,48 @@ const PROVISION_STORAGE_ACTIONS = [
  *   returns a random string. `GenerateSecretString` (the database master
  *   password) calls it, so without this the application stack cannot create
  *   its database secret.
- * - `logs:PutRetentionPolicy` and `logs:DeleteLogGroup` take a log-group
- *   ARN but do not honour `aws:ResourceTag`, even on a log group
- *   CloudFormation has already tagged.
- * - `ecs:DeregisterTaskDefinition` likewise: ECS task definitions carry
- *   tags, but the action does not evaluate them.
- * - The `elasticache:*ReplicationGroup` lifecycle actions authorize against
- *   MULTIPLE resource ARNs, not just the replication group. A live install
- *   proved both directions: `CreateReplicationGroup` is also evaluated
- *   against the DEFAULT parameter group (`arn:...:parametergroup:*`), which
- *   carries no request tag and no resource tag, so neither tagged create
- *   statement can ever match it — the create is denied and the whole stack
- *   rolls back. The rollback then wedges on the second trap:
- *   `DeleteReplicationGroup` against a replication group whose creation was
- *   denied — it never received its tag-on-create, so the resource-tag manage
- *   statement cannot match either, and the stack lands in ROLLBACK_FAILED.
- *   `ModifyReplicationGroup` shares Create's auth shape (replication group +
- *   parameter group), so it is moved with them rather than left to fail the
- *   same way on the first cache-touching stack update.
+ * - `ecs:DeregisterTaskDefinition` supports no resource-level permissions:
+ *   ECS task definitions carry tags, but the action does not evaluate them
+ *   and an ARN-scoped grant never matches. Deregistering a revision does not
+ *   stop a task that runs it.
  *
- * These are contained by the role's trust policy instead, which admits only
- * CloudFormation acting for this account.
+ * Both stay on `*`. They are contained by the role's trust policy, which
+ * admits only CloudFormation acting for this account.
  */
 const PROVISION_UNTAGGABLE_ACTIONS = [
   'secretsmanager:GetRandomPassword',
-  'logs:PutRetentionPolicy',
-  'logs:DeleteLogGroup',
   'ecs:DeregisterTaskDefinition',
+] as const;
+
+/**
+ * `logs:PutRetentionPolicy` and `logs:DeleteLogGroup` take a log-group ARN
+ * but do not honour `aws:ResourceTag`, even on a log group CloudFormation
+ * has already tagged. Scoped by log-group name instead: the application
+ * stack sets no `LogGroupName`, so CloudFormation names each log group after
+ * the application stack (`deployz-app-<short installation id>-…`).
+ */
+const PROVISION_LOG_GROUP_ACTIONS = ['logs:PutRetentionPolicy', 'logs:DeleteLogGroup'] as const;
+
+/**
+ * The `elasticache:*ReplicationGroup` lifecycle actions authorize against
+ * MULTIPLE resource ARNs, not just the replication group. A live install
+ * proved that `CreateReplicationGroup` is also evaluated against the
+ * DEFAULT parameter group (`arn:...:parametergroup:*`), which carries no
+ * request tag and no resource tag, so no tagged statement can ever match it
+ * — the create is denied and the stack rolls back, and the rollback then
+ * wedges on `DeleteReplicationGroup` against a group that never received its
+ * tag (ROLLBACK_FAILED).
+ *
+ * IAM allows a request only when every resource in it is allowed, so the
+ * replication group itself stays in the tagged create and manage statements,
+ * and this list grants the same actions on the companion resources only: the
+ * parameter group and the member cache clusters. A request against another
+ * installation's replication group is still denied by its tag.
+ */
+const PROVISION_CACHE_COMPANION_ACTIONS = [
   'elasticache:CreateReplicationGroup',
   'elasticache:ModifyReplicationGroup',
   'elasticache:DeleteReplicationGroup',
-  // Deleting a replication group also deletes its member cache clusters, and
-  // recovery/rollback paths may still meet legacy CacheCluster resources
-  // from stacks created before this fix.
-  'elasticache:DeleteCacheCluster',
 ] as const;
 
 /** The services the application stack needs service-linked roles for. */
@@ -641,9 +667,9 @@ const PROVISION_APPLICATION_PASS_ROLE_SERVICES = [
  * scoped by resource ARN instead: every application-stack queue's
  * CloudFormation-generated name (no `QueueName` is set) is
  * `<application stack name>-<LogicalId>-<suffix>`, and the application stack
- * name always starts with `deployz-app`
- * (`DEFAULT_APPLICATION_STACK_NAME`/`applicationStackNameForInstallation` in
- * `@deployz/contracts`).
+ * name is `deployz-app-<short installation id>`
+ * (`applicationStackNameForInstallation` in `@deployz/contracts`), so the
+ * grant reaches this installation's queues only.
  */
 const PROVISION_SQS_ACTIONS = [
   'sqs:CreateQueue',
@@ -661,8 +687,8 @@ const PROVISION_SQS_ACTIONS = [
  * all — unlike everything else in this file, there is no tag condition to
  * even attempt — so this is scoped by resource ARN: the `default` schedule
  * group CloudFormation uses, and the compiler names every schedule
- * `<application stack name>-<ScheduleId>` (`deployz-app…`, same prefix rule
- * as the queue actions above).
+ * `<application stack name>-<ScheduleId>` (same installation prefix as the
+ * queue actions above).
  */
 const PROVISION_SCHEDULER_ACTIONS = [
   'scheduler:CreateSchedule',
@@ -677,6 +703,8 @@ export class BootstrapStack extends Stack {
   public readonly credentialSecretArn: string;
   public readonly permissionsBoundary: ManagedPolicy;
   public readonly provisionerPolicy: ManagedPolicy;
+  /** The relay's PURGE grants, apart from `provisionerPolicy` for the size quota. */
+  public readonly provisionerPurgePolicy: ManagedPolicy;
   /** CloudFormation execution role for the application stack (`role/deployz/*`). */
   public readonly applicationExecutionRole: Role;
   /** Permissions boundary every application-stack role must carry. */
@@ -823,7 +851,82 @@ export class BootstrapStack extends Stack {
 
     this.credentialSecretArn = Token.asString(credentialArn);
 
-    // ── 3. Execution role — least privilege + permissions boundary ──────
+    // ── 3. Installation scope ───────────────────────────────────────────
+    //
+    // Several deployments can share one AWS account and Region, each with its
+    // own connector. Every grant below is limited to this installation: by
+    // the `deployz:installation` tag where AWS evaluates it, and otherwise by
+    // name. The application stack is `deployz-app-<short installation id>`
+    // (`applicationStackNameForInstallation` in `@deployz/contracts`: the
+    // first group of the installation UUID), and CloudFormation names every
+    // unnamed resource after its stack.
+    const applicationPrefix = `deployz-app-${Fn.select(0, Fn.split('-', this.installationId))}-`;
+
+    // Added to the request-tag statements. A request tag alone would let a
+    // tagging call stamp this installation's tag over another installation's
+    // resource and so take it over; this denies a resource that already
+    // carries a different installation's tag. A new resource has no tag yet.
+    const notAnotherInstallation = {
+      'aws:ResourceTag/deployz:installation': this.installationId,
+    };
+
+    // The cluster of this installation's application stack.
+    const ownCluster = {
+      'ecs:cluster': `arn:aws:ecs:${this.region}:${this.account}:cluster/${applicationPrefix}*`,
+    };
+
+    // ── 3a. CloudFormation execution role for the application stack ─────
+    //
+    // The relay asks CloudFormation to create the application stack;
+    // CloudFormation builds it. Those are two different principals, and only
+    // the first is the relay. Passing this role on `CreateStack` is what
+    // keeps it that way: the relay itself has no `ec2:CreateVpc`, no
+    // `rds:CreateDBInstance` and no `iam:CreateRole`, and should not — it may
+    // only ask CloudFormation to apply a published template that does.
+    //
+    // The path is `/deployz/`, which the permissions boundary's
+    // `iam:PassRole` ceiling (`role/deployz/*`) admits; the provisioner
+    // policy passes this one role only.
+    //
+    // Four things bound the role:
+    //
+    //   1. Who may assume it — only `cloudformation.amazonaws.com`, and only
+    //      on behalf of THIS account. Not the relay, not a user, and not
+    //      CloudFormation acting for anyone else.
+    //   2. The installation tag — creates require the REQUEST tag, modifies
+    //      and deletes require the RESOURCE tag. Both are satisfied by the
+    //      stack-level `Tags` the relay passes on `CreateStack`, which
+    //      CloudFormation propagates onto every resource that supports
+    //      tagging. That is the same tag `verifyInstallation` reads back, so
+    //      a stack that provisions is a stack that verifies.
+    //   3. No wildcards — every action is named. A bare `ec2:*` would make
+    //      the tag conditions decorative, since it would carry actions that
+    //      cannot be tag-conditioned at all.
+    //   4. The application role boundary — every IAM role it creates, or
+    //      grants a policy to, must carry `applicationRoleBoundary` (below).
+    //      Without it the role could create a tagged role with any policy
+    //      and pass it to ECS: account administrator by one step. The
+    //      boundary on THIS role would not help — a boundary does not carry
+    //      over to the roles a principal creates.
+    //
+    // Reads, S3 bucket operations and `iam:CreateServiceLinkedRole` are the
+    // three groups that genuinely cannot carry a tag condition; each is
+    // granted without one, and scoped by whatever AWS does support, rather
+    // than with a condition that could never match. See the action lists.
+    this.applicationExecutionRole = new Role(this, 'ApplicationExecutionRole', {
+      path: '/deployz/',
+      assumedBy: new ServicePrincipal('cloudformation.amazonaws.com', {
+        conditions: {
+          StringEquals: { 'aws:SourceAccount': this.account },
+        },
+      }),
+      description:
+        'CloudFormation execution role for the Deployz application stack. Assumable only by ' +
+        'CloudFormation on behalf of this account; every grant is scoped to the deployz: tag ' +
+        'boundary where AWS supports it.',
+    });
+
+    // ── 3b. Relay role — least privilege + permissions boundary ─────────
     const phase1LogWrite = new PolicyStatement({
       sid: 'RelayWriteLogs',
       effect: Effect.ALLOW,
@@ -866,6 +969,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
       },
     });
 
@@ -881,11 +985,12 @@ export class BootstrapStack extends Stack {
       },
     });
 
+    // Only this connector's own execution role, never another deployment's.
     const phase2PassRole = new PolicyStatement({
       sid: 'ProvisionerPassRole',
       effect: Effect.ALLOW,
       actions: ['iam:PassRole'],
-      resources: ['arn:aws:iam::*:role/deployz/*'],
+      resources: [this.applicationExecutionRole.roleArn],
       conditions: {
         StringEquals: {
           'iam:PassedToService': 'cloudformation.amazonaws.com',
@@ -918,6 +1023,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
       },
     });
 
@@ -986,6 +1092,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
         'ForAllValues:StringEquals': {
           'aws:TagKeys': ['deployz:installation'],
         },
@@ -1044,6 +1151,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
       },
     });
 
@@ -1083,14 +1191,21 @@ export class BootstrapStack extends Stack {
     });
 
     // Phase 2 — PURGE's S3 sweep. Bucket actions cannot honour
-    // aws:ResourceTag, so the statement is condition-free; the purge
-    // executor verifies ownership per bucket via GetBucketTagging and
-    // refuses anything that does not carry this installation's tag.
+    // aws:ResourceTag, so discovery is condition-free and the deletes are
+    // limited to this installation's bucket names; the purge executor also
+    // verifies ownership per bucket via GetBucketTagging and refuses anything
+    // that does not carry this installation's tag.
+    const phase2PurgeStorageDiscover = new PolicyStatement({
+      sid: 'RelayPurgeStorageDiscover',
+      effect: Effect.ALLOW,
+      actions: [...PHASE_2_PURGE_STORAGE_DISCOVER_ACTIONS],
+      resources: ['*'],
+    });
     const phase2PurgeStorage = new PolicyStatement({
       sid: 'RelayPurgeStorage',
       effect: Effect.ALLOW,
       actions: [...PHASE_2_PURGE_STORAGE_ACTIONS],
-      resources: ['*'],
+      resources: [`arn:aws:s3:::${applicationPrefix}*`],
     });
 
     // Phase 9 — PURGE's RDS orphan discovery. Condition-free reads (see the
@@ -1182,7 +1297,8 @@ export class BootstrapStack extends Stack {
     // Phase 4 — deploy/rollback/restart. ListTasks/DescribeTasks/
     // DescribeTaskDefinition carry no usable tag condition (see the const);
     // RegisterTaskDefinition is bounded by the installation request tag the
-    // executor stamps on every copy it registers.
+    // executor stamps on every copy it registers; RunTask and StopTask by
+    // this installation's cluster.
     const phase4DeployObserve = new PolicyStatement({
       sid: 'RelayDeployObserve',
       effect: Effect.ALLOW,
@@ -1202,9 +1318,11 @@ export class BootstrapStack extends Stack {
       },
     });
 
-    // ECS does not support resource-level permissions or tags for
-    // DeregisterTaskDefinition, so an ARN-scoped grant never matches. The
-    // relay code restricts it to this installation's suffixed task families.
+    // ECS does not support resource-level permissions, tags or condition
+    // keys for DeregisterTaskDefinition, so an ARN-scoped grant never
+    // matches and it stays on `*`. The relay code restricts it to this
+    // installation's suffixed task families. Deregistering a revision does
+    // not stop a task that runs it.
     const phase4DeregisterRevisions = new PolicyStatement({
       sid: 'RelayDeregisterRevisions',
       effect: Effect.ALLOW,
@@ -1215,30 +1333,29 @@ export class BootstrapStack extends Stack {
     const phase4MigrationRun = new PolicyStatement({
       sid: 'RelayMigrationRun',
       effect: Effect.ALLOW,
-      actions: [...PHASE_4_MIGRATION_RUN_ACTIONS],
+      actions: [...PHASE_4_TASK_RUN_ACTIONS],
       resources: ['*'],
+      conditions: { ArnLike: ownCluster },
     });
 
     // Phase 4 — PassRole strictly to the application's own task/execution
-    // roles, only when handed to ECS. Deliberately NOT the wildcard-resource
-    // form the plan calls out. Two shapes: role/deployz/* is the contract
-    // (application-stack roles carry the /deployz/ path), and the
-    // deployz-app-* name prefix covers installs created before that path
-    // existed — their roles live at the default path, named after the fixed
-    // application stack name, and a deploy against them died on PassRole
-    // (verified live).
+    // roles, only when handed to ECS. Two shapes: role/deployz/ is the
+    // contract (application-stack roles carry the /deployz/ path), and the
+    // default path covers installs created before that path existed (a
+    // deploy against them died on PassRole, verified live).
     //
-    // Unlike the create/manage statements, this one is NOT scoped by the
-    // installation tag: iam:PassRole does not reliably honour resource-tag
-    // conditions (the same per-action trap DescribeTargetHealth fell into
-    // above), so the isolation here rests on the one-installation-per-region
-    // invariant — a second bootstrap stack cannot coexist (its CDK exports
-    // collide), so there is no sibling installation's role to reach.
+    // iam:PassRole does not reliably honour resource-tag conditions (the
+    // same per-action trap DescribeTargetHealth fell into above), so it is
+    // scoped by role name: CloudFormation names each application role after
+    // the application stack.
     const phase4DeployPassRole = new PolicyStatement({
       sid: 'RelayDeployPassRole',
       effect: Effect.ALLOW,
       actions: ['iam:PassRole'],
-      resources: ['arn:aws:iam::*:role/deployz/*', 'arn:aws:iam::*:role/deployz-app-*'],
+      resources: [
+        `arn:aws:iam::${this.account}:role/deployz/${applicationPrefix}*`,
+        `arn:aws:iam::${this.account}:role/${applicationPrefix}*`,
+      ],
       conditions: {
         StringEquals: {
           // Task/execution roles are passed to ecs-tasks.amazonaws.com (the
@@ -1268,10 +1385,13 @@ export class BootstrapStack extends Stack {
       phase4DeployPassRole,
       phase2CacheManage,
       phase2CacheDescribe,
+      phase2InstallationSecrets,
+    ];
+    const purgeStatements = [
+      phase2PurgeStorageDiscover,
       phase2PurgeStorage,
       phase2PurgeRdsDiscover,
       phase2PurgeSecretsList,
-      phase2InstallationSecrets,
       phase2PurgeAcmDiscover,
       phase2PurgeNetworkDiscover,
       phase2PurgeNetworkDelete,
@@ -1279,20 +1399,59 @@ export class BootstrapStack extends Stack {
 
     // The permissions boundary is the CEILING for the relay role: the union of
     // phase 1 + phase 2. The role can never exceed it, including the
-    // provisioner policy this stack attaches at install (below).
+    // provisioner policies this stack attaches at install (below).
     //
     // The boundary is ONE managed policy and IAM caps a managed policy at
     // 6,144 non-whitespace characters. With the purge sweeps it reached 6,350
     // and CreateStack failed for every new install ("Cannot exceed quota for
     // PolicySize"). Statement ids are documentation, and the provisioner
-    // policy below keeps them; the boundary carries the same statements
-    // without them (~550 characters). bootstrap-stack.test.ts pins both
-    // policies under the quota.
+    // policies below keep them; the boundary carries the same statements
+    // without them (~550 characters). For the same reason the boundary
+    // carries the wider form of the statements that are limited by name, by
+    // cluster or against another installation's tag: the role is allowed only
+    // what its policies AND the boundary allow, so the policies alone carry
+    // that limit. bootstrap-stack.test.ts pins every policy under the quota.
     //
     // The ManagedPolicy descriptions below are stale (the provisioner policy
     // is attached at install, not by the control plane) but kept on purpose:
     // `Description` is a replacement property of AWS::IAM::ManagedPolicy, and
     // a stack update would replace both policies on every existing connector.
+    const boundaryForms = new Map<PolicyStatement, PolicyStatement | undefined>([
+      [phase2CreateStacks, widened(phase2CreateStacks)],
+      [phase2PassRole, widened(phase2PassRole, ['arn:aws:iam::*:role/deployz/*'])],
+      [phase2AcmRequest, widened(phase2AcmRequest)],
+      [phase2DomainIngressTag, widened(phase2DomainIngressTag)],
+      [phase2CacheCreate, widened(phase2CacheCreate)],
+      [
+        phase4DeployObserve,
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            ...PHASE_4_DEPLOY_OBSERVE_ACTIONS,
+            ...PHASE_4_TASK_RUN_ACTIONS,
+            'ecs:DeregisterTaskDefinition',
+          ],
+          resources: ['*'],
+        }),
+      ],
+      [phase4MigrationRun, undefined],
+      [
+        phase4DeployPassRole,
+        widened(phase4DeployPassRole, [
+          'arn:aws:iam::*:role/deployz/*',
+          'arn:aws:iam::*:role/deployz-app-*',
+        ]),
+      ],
+      [
+        phase2PurgeStorageDiscover,
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [...PHASE_2_PURGE_STORAGE_DISCOVER_ACTIONS, ...PHASE_2_PURGE_STORAGE_ACTIONS],
+          resources: ['*'],
+        }),
+      ],
+      [phase2PurgeStorage, undefined],
+    ]);
     this.permissionsBoundary = new ManagedPolicy(this, 'PermissionsBoundary', {
       description:
         'Maximum permissions for the Deployz relay execution role (union of ' +
@@ -1301,28 +1460,26 @@ export class BootstrapStack extends Stack {
         phase1LogWrite,
         phase1SecretAccess,
         phase2RelayState,
-        // The boundary is at the policy-size quota, so it folds the
-        // revision deregistration into the observe statement. The relay
-        // role's own inline grant stays scoped to DeployzApp* families.
-        ...phase2Statements.map((statement) =>
-          statement === phase4DeployObserve
-            ? new PolicyStatement({
-                effect: Effect.ALLOW,
-                actions: [...PHASE_4_DEPLOY_OBSERVE_ACTIONS, 'ecs:DeregisterTaskDefinition'],
-                resources: ['*'],
-              })
-            : statement,
-        ),
+        ...[...phase2Statements, ...purgeStatements].flatMap((statement) => {
+          if (!boundaryForms.has(statement)) return [statement];
+          const form = boundaryForms.get(statement);
+          return form === undefined ? [] : [form];
+        }),
       ].map(withoutSid),
     });
 
-    // Phase 2 provisioner policy — attached to the relay role at install
-    // (below). Its ARN is a stack output.
+    // Phase 2 provisioner policies — attached to the relay role at install
+    // (below). Two policies, because one is over the managed-policy size
+    // quota. The first one's ARN is a stack output.
     this.provisionerPolicy = new ManagedPolicy(this, 'ProvisionerPolicy', {
       description:
         'Post-first-contact provisioner permissions for the relay (phase 2). ' +
         'All within the deployz: tag boundary. Attached by the control plane.',
       statements: phase2Statements,
+    });
+    this.provisionerPurgePolicy = new ManagedPolicy(this, 'ProvisionerPurgePolicy', {
+      description: 'Permissions the Deployz relay uses to delete the retained data of this installation.',
+      statements: purgeStatements,
     });
 
     this.relayRole = new Role(this, 'RelayRole', {
@@ -1348,57 +1505,7 @@ export class BootstrapStack extends Stack {
     // boundary above, which is the union of phase 1 and phase 2 and which
     // the role can never exceed, is what actually caps the grant.
     this.relayRole.addManagedPolicy(this.provisionerPolicy);
-
-    // ── 3b. CloudFormation execution role for the application stack ─────
-    //
-    // The relay asks CloudFormation to create the application stack;
-    // CloudFormation builds it. Those are two different principals, and only
-    // the first is the relay. Passing this role on `CreateStack` is what
-    // keeps it that way: the relay itself has no `ec2:CreateVpc`, no
-    // `rds:CreateDBInstance` and no `iam:CreateRole`, and should not — it may
-    // only ask CloudFormation to apply a published template that does.
-    //
-    // The path is `/deployz/` because the provisioner policy's `iam:PassRole`
-    // is scoped to `arn:aws:iam::*:role/deployz/*`. That grant has been here
-    // from the start with nothing to point at.
-    //
-    // Four things bound the role:
-    //
-    //   1. Who may assume it — only `cloudformation.amazonaws.com`, and only
-    //      on behalf of THIS account. Not the relay, not a user, and not
-    //      CloudFormation acting for anyone else.
-    //   2. The installation tag — creates require the REQUEST tag, modifies
-    //      and deletes require the RESOURCE tag. Both are satisfied by the
-    //      stack-level `Tags` the relay passes on `CreateStack`, which
-    //      CloudFormation propagates onto every resource that supports
-    //      tagging. That is the same tag `verifyInstallation` reads back, so
-    //      a stack that provisions is a stack that verifies.
-    //   3. No wildcards — every action is named. A bare `ec2:*` would make
-    //      the tag conditions decorative, since it would carry actions that
-    //      cannot be tag-conditioned at all.
-    //   4. The application role boundary — every IAM role it creates, or
-    //      grants a policy to, must carry `applicationRoleBoundary` (below).
-    //      Without it the role could create a tagged role with any policy
-    //      and pass it to ECS: account administrator by one step. The
-    //      boundary on THIS role would not help — a boundary does not carry
-    //      over to the roles a principal creates.
-    //
-    // Reads, S3 bucket operations and `iam:CreateServiceLinkedRole` are the
-    // three groups that genuinely cannot carry a tag condition; each is
-    // granted without one, and scoped by whatever AWS does support, rather
-    // than with a condition that could never match. See the action lists.
-    this.applicationExecutionRole = new Role(this, 'ApplicationExecutionRole', {
-      path: '/deployz/',
-      assumedBy: new ServicePrincipal('cloudformation.amazonaws.com', {
-        conditions: {
-          StringEquals: { 'aws:SourceAccount': this.account },
-        },
-      }),
-      description:
-        'CloudFormation execution role for the Deployz application stack. Assumable only by ' +
-        'CloudFormation on behalf of this account; every grant is scoped to the deployz: tag ' +
-        'boundary where AWS supports it.',
-    });
+    this.relayRole.addManagedPolicy(this.provisionerPurgePolicy);
 
     const provisionCreate = new PolicyStatement({
       sid: 'ProvisionApplicationCreate',
@@ -1409,6 +1516,7 @@ export class BootstrapStack extends Stack {
         StringEquals: {
           'aws:RequestTag/deployz:installation': this.installationId,
         },
+        StringEqualsIfExists: notAnotherInstallation,
       },
     });
 
@@ -1465,11 +1573,28 @@ export class BootstrapStack extends Stack {
       resources: ['*'],
     });
 
+    const provisionLogGroups = new PolicyStatement({
+      sid: 'ProvisionApplicationLogGroups',
+      effect: Effect.ALLOW,
+      actions: [...PROVISION_LOG_GROUP_ACTIONS],
+      resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:${applicationPrefix}*`],
+    });
+
+    const provisionCacheCompanions = new PolicyStatement({
+      sid: 'ProvisionApplicationCacheCompanions',
+      effect: Effect.ALLOW,
+      actions: [...PROVISION_CACHE_COMPANION_ACTIONS],
+      resources: [
+        `arn:aws:elasticache:${this.region}:${this.account}:parametergroup:*`,
+        `arn:aws:elasticache:${this.region}:${this.account}:cluster:*`,
+      ],
+    });
+
     const provisionStorage = new PolicyStatement({
       sid: 'ProvisionApplicationStorage',
       effect: Effect.ALLOW,
       actions: [...PROVISION_STORAGE_ACTIONS],
-      resources: ['arn:aws:s3:::deployz-app*'],
+      resources: [`arn:aws:s3:::${applicationPrefix}*`],
     });
 
     // The ceiling of every role the application stack creates: the union
@@ -1477,7 +1602,7 @@ export class BootstrapStack extends Stack {
     // granted, and nothing else — no IAM management, so a role under it
     // cannot create a way out. A role's trust policy cannot be limited by
     // IAM; this ceiling is what limits a role trusted by anyone else.
-    const applicationRoleArns = `arn:aws:iam::${this.account}:role/deployz/*`;
+    const applicationRoleArns = `arn:aws:iam::${this.account}:role/deployz/${applicationPrefix}*`;
     this.applicationRoleBoundary = new ManagedPolicy(this, 'ApplicationRoleBoundary', {
       path: '/deployz/',
       description:
@@ -1498,7 +1623,7 @@ export class BootstrapStack extends Stack {
           sid: 'ApplicationLogs',
           effect: Effect.ALLOW,
           actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
-          resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:*`],
+          resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:${applicationPrefix}*`],
         }),
         new PolicyStatement({
           sid: 'ApplicationSecrets',
@@ -1520,7 +1645,7 @@ export class BootstrapStack extends Stack {
             's3:PutObject*',
             's3:Abort*',
           ],
-          resources: ['arn:aws:s3:::deployz-app*', 'arn:aws:s3:::deployz-app*/*'],
+          resources: [`arn:aws:s3:::${applicationPrefix}*`],
         }),
         new PolicyStatement({
           sid: 'ApplicationQueues',
@@ -1532,13 +1657,14 @@ export class BootstrapStack extends Stack {
             'sqs:ChangeMessageVisibility',
             'sqs:GetQueueAttributes',
           ],
-          resources: [`arn:aws:sqs:${this.region}:${this.account}:deployz-app*`],
+          resources: [`arn:aws:sqs:${this.region}:${this.account}:${applicationPrefix}*`],
         }),
         new PolicyStatement({
           sid: 'ApplicationRunTask',
           effect: Effect.ALLOW,
           actions: ['ecs:RunTask'],
           resources: [`arn:aws:ecs:${this.region}:${this.account}:task-definition/DeployzApp*`],
+          conditions: { ArnLike: ownCluster },
         }),
         new PolicyStatement({
           sid: 'ApplicationPassRole',
@@ -1597,9 +1723,9 @@ export class BootstrapStack extends Stack {
     });
 
     // CloudFormation hands the application's task roles to ECS when it
-    // creates the service. Restricted to the application's own roles and to
-    // the services that legitimately receive them, so the role cannot hand
-    // another role in the account to anything.
+    // creates the service. Restricted to this installation's application
+    // roles and to the services that legitimately receive them, so the role
+    // cannot hand another role in the account to anything.
     const provisionPassRole = new PolicyStatement({
       sid: 'ProvisionApplicationPassRole',
       effect: Effect.ALLOW,
@@ -1619,14 +1745,16 @@ export class BootstrapStack extends Stack {
       sid: 'ProvisionApplicationQueues',
       effect: Effect.ALLOW,
       actions: [...PROVISION_SQS_ACTIONS],
-      resources: [`arn:aws:sqs:${this.region}:${this.account}:deployz-app*`],
+      resources: [`arn:aws:sqs:${this.region}:${this.account}:${applicationPrefix}*`],
     });
 
     const provisionScheduler = new PolicyStatement({
       sid: 'ProvisionApplicationSchedules',
       effect: Effect.ALLOW,
       actions: [...PROVISION_SCHEDULER_ACTIONS],
-      resources: [`arn:aws:scheduler:${this.region}:${this.account}:schedule/default/deployz-app*`],
+      resources: [
+        `arn:aws:scheduler:${this.region}:${this.account}:schedule/default/${applicationPrefix}*`,
+      ],
     });
 
     // A first ECS service, load balancer, RDS instance or cache cluster in
@@ -1657,6 +1785,8 @@ export class BootstrapStack extends Stack {
         provisionRead,
         provisionStorage,
         provisionUntaggable,
+        provisionLogGroups,
+        provisionCacheCompanions,
         provisionRoleCreate,
         provisionRolePolicy,
         provisionRoleAttach,

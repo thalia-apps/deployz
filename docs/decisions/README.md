@@ -1208,3 +1208,37 @@ both favor the vendor.
 What would change it: a vendor abuses the disconnect pause (keep the
 application running and the connector stopped), or Paddle proration churn
 from repeated outages shows in invoices (then add a minimum pause time).
+
+## Connector IAM is limited to its own installation (2026-10-21)
+
+Decision: every write grant of a connector is limited to its own
+installation. Where AWS evaluates the `deployz:installation` tag, the limit is
+the tag. Where it does not, the limit is the resource name
+`deployz-app-<short installation id>-*`, which CloudFormation gives every
+unnamed resource of the application stack. The relay passes only its own
+execution role to CloudFormation. `ecs:RunTask` and `ecs:StopTask` carry the
+`ecs:cluster` condition. Request-tag grants also refuse a resource that
+carries another installation's tag. Only `ecs:DeregisterTaskDefinition` and
+`secretsmanager:GetRandomPassword` stay on `*` among the writes.
+
+Reason: several deployments can share one AWS account and Region, each with
+its own connector. The earlier grants assumed one installation per account
+and Region, so one connector could stop another deployment's tasks, empty its
+buckets, delete its log groups and cache, or pass its roles. The fix is in
+the connector template, so it reaches a customer only when the customer
+updates the connector stack; it was done now, before more connectors are
+installed with the wider template.
+
+Rejected: a separate AWS account per deployment (customer burden, post-MVP)
+and relay-code checks alone (the code already checks tags, but the IAM grant
+is the boundary a security review reads).
+
+Known limit: the relay permissions boundary is at the 6,144-character quota,
+so it keeps the wider form of the name- and cluster-scoped statements; the
+attached provisioner policies carry the limit. An untagged resource that is
+not a Deployz resource can still be tagged by the execution role, which only
+CloudFormation can assume for templates that Deployz compiles.
+
+What would change it: an AWS action gains resource-level support (scope it),
+or a compiler change names a resource outside the stack prefix (that resource
+then needs a tag-scoped grant).

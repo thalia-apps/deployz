@@ -57,6 +57,7 @@ function actionsOf(statements: Statement[]): string[] {
 const relayRoleId = logicalId('RelayRole', 'AWS::IAM::Role');
 const relayRole = resources[relayRoleId]!;
 const provisionerPolicyId = logicalId('ProvisionerPolicy', 'AWS::IAM::ManagedPolicy');
+const provisionerPurgePolicyId = logicalId('ProvisionerPurgePolicy', 'AWS::IAM::ManagedPolicy');
 const boundaryId = logicalId('PermissionsBoundary', 'AWS::IAM::ManagedPolicy');
 const executionRoleId = logicalId('ApplicationExecutionRole', 'AWS::IAM::Role');
 
@@ -80,6 +81,7 @@ describe('bootstrap permissions ↔ deployed template', () => {
     const expected = [
       ...inlinePolicyStatements(relayRoleId),
       ...statementsOf(provisionerPolicyId),
+      ...statementsOf(provisionerPurgePolicyId),
     ];
     expect(CONNECTOR_ROLE.statements).toHaveLength(expected.length);
     expect(modelActions(CONNECTOR_ROLE)).toEqual(actionsOf(expected));
@@ -119,8 +121,29 @@ describe('bootstrap permissions ↔ deployed template', () => {
     const bySid = (sid: string) =>
       [...CONNECTOR_ROLE.statements, ...EXECUTION_ROLE.statements].find((s) => s.sid === sid);
     expect(bySid('RelayPendingCommandState')?.scope).toBe('installation');
-    expect(bySid('ProvisionerPassRole')?.scope).toBe('limited');
+    expect(bySid('ProvisionerPassRole')?.scope).toBe('installation');
     expect(bySid('RelayAccessCredential')?.scope).toBe('installation');
+  });
+
+  it('limits every write to this installation, except the actions AWS cannot limit', () => {
+    const unlimitedWrites = [...CONNECTOR_ROLE.statements, ...EXECUTION_ROLE.statements]
+      .filter((statement) => statement.scope !== 'installation' && !statement.readOnly)
+      .map((statement) => statement.sid);
+    expect(unlimitedWrites).toEqual([
+      'RelayWriteLogs',
+      'RelayDeregisterRevisions',
+      'ProvisionApplicationUntaggable',
+      'ProvisionApplicationCacheCompanions',
+      'ProvisionApplicationServiceLinkedRoles',
+    ]);
+    const bySid = (sid: string) =>
+      [...CONNECTOR_ROLE.statements, ...EXECUTION_ROLE.statements].find((s) => s.sid === sid);
+    expect(bySid('RelayPurgeStorage')?.resources).toEqual([
+      'arn:aws:s3:::deployz-app-${ShortInstallationId}-*',
+    ]);
+    expect(bySid('RelayMigrationRun')?.conditions).toEqual([
+      'ArnLike ecs:cluster = arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/deployz-app-${ShortInstallationId}-*',
+    ]);
   });
 
   it('limits the credential grant to the connector’s own credential secret', () => {
@@ -137,7 +160,10 @@ describe('bootstrap permissions ↔ deployed template', () => {
 
   // The page states these facts in words; each must stay true.
   it('attaches the provisioner policy at install, capped by the permissions boundary', () => {
-    expect(relayRole.Properties.ManagedPolicyArns).toEqual([{ Ref: provisionerPolicyId }]);
+    expect(relayRole.Properties.ManagedPolicyArns).toEqual([
+      { Ref: provisionerPolicyId },
+      { Ref: provisionerPurgePolicyId },
+    ]);
     expect(relayRole.Properties.PermissionsBoundary).toEqual({ Ref: boundaryId });
     expect(CONNECTOR_ROLE.hasPermissionsBoundary).toBe(true);
     const boundary = new Set(actionsOf(statementsOf(boundaryId)));

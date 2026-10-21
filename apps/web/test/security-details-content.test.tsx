@@ -13,6 +13,7 @@ import {
   OWNERSHIP_NOTE,
   REVOKE_ORDER_NOTE,
   SECRET_HANDLING_STATEMENT,
+  TRAFFIC_RECOMMENDATION,
 } from '../src/lib/security-details';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -363,18 +364,20 @@ describe('SecurityDetailsContent permissions from the template', () => {
 });
 
 describe('SecurityDetailsContent data and control', () => {
-  it('shows the five sections with the verified secret, revoke and deletion copy', () => {
+  it('shows the six sections with the verified secret, traffic, revoke and deletion copy', () => {
     const container = render(STATELESS);
     openTab(container, 'Data & control');
     const panel = activePanel(container);
     expect([...panel.querySelectorAll('h2')].map((heading) => heading.textContent)).toEqual([
       'Application data',
+      'Application traffic',
       'Secrets & credentials',
       'Data shared with Deployz',
       'Revoke access',
       'Deletion & retained resources',
     ]);
     expect(panel.textContent).toContain(SECRET_HANDLING_STATEMENT);
+    expect(panel.querySelector('[aria-labelledby="traffic"]')?.textContent).toContain(TRAFFIC_RECOMMENDATION);
     expect(panel.querySelector('[aria-labelledby="revoke"]')?.textContent).toContain(OWNERSHIP_NOTE);
     expect(panel.textContent).toContain(REVOKE_ORDER_NOTE);
     expect(panel.textContent).toContain('Delete retained data');

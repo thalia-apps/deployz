@@ -354,9 +354,11 @@ in place, the customer must authorize and do the update:
 4. Keep every parameter at its existing value, including `RelayCredential`
    and `EnrollmentCode`.
 5. Review the change set before you execute it. Expect `Modify` with
-   `Replacement: False` on the relay role, its default policy and
-   `PermissionsBoundary`. Stop if the change set replaces a resource or
-   changes the credential secret.
+   `Replacement: False` on the IAM roles and policies (for example the relay
+   role, its default policy, `PermissionsBoundary`, `ProvisionerPolicy`, the
+   execution role's policies and `ApplicationRoleBoundary`), and `Add` for a
+   new policy (for example `ProvisionerPurgePolicy`). Stop if the change set
+   replaces a resource or changes the credential secret.
 
 The installation identity and the enrollment do not change. This holds
 only when the update keeps the previous value of every parameter:
