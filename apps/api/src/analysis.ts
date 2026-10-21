@@ -394,13 +394,12 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 62 (start command copy): a missing start command is fixed in the
 // repository; Deployz has no start command setting. Stored v61 rows say to set
 // it in the application details.
-// Version 63 (rules migration question): the rules Analysis asks how a required
-// database migrates when its migration step is a script Deployz cannot run (CODE_CHANGE, outcome 2).
-// Stored v62 rows are READY without the question.
-// Version 64 (start-script processes): a start script that puts two or more
+// Version 63 (safe rules fallback): the rules Analysis asks how a required
+// database migrates when its migration step is a script Deployz cannot run
+// (CODE_CHANGE, outcome 2), and a start script that puts two or more
 // long-running servers in the background is a multi-process image (outcome 2).
-// Stored v63 rows are deployable without the change.
-export const ANALYSIS_VERSION = 64;
+// Stored v62 rows are READY or deployable without these changes.
+export const ANALYSIS_VERSION = 63;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
