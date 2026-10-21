@@ -202,24 +202,25 @@ export async function fetchDiagnostics(id: string): Promise<Diagnostic[]> {
 // ── Startup evidence + retry presentation helpers ───────────────────────────
 
 /** How the vendor hero's retry area should present, from the API's eligibility. */
-export type RetryCtaKind = 'retry' | 'contact-support' | 'wait' | 'none' | 'legacy';
+export type RetryCtaKind = 'retry' | 'contact-support' | 'none' | 'legacy';
 
 /**
  * Map retryEligibility onto the hero's retry affordance. Null (no fetch yet, or
  * no failed job) keeps the existing "Retry deployment" button; the action value
- * then upgrades/replaces it: CONTACT_DEPLOYZ → a quiet support pointer, WAIT →
- * "Check again", RETRY_INSTALL/DEPLOY_AGAIN → the retry button, NONE → nothing.
+ * then upgrades/replaces it: CONTACT_DEPLOYZ → a quiet support pointer,
+ * RETRY_INSTALL/DEPLOY_AGAIN → the retry button, WAIT/NONE → nothing. The API
+ * returns WAIT only for a deployment with a running release, where the day-2
+ * actions are the controls and the heartbeat self-heal runs.
  */
 export function retryCta(eligibility: RetryEligibility | null): RetryCtaKind {
   if (eligibility === null) return 'legacy';
   switch (eligibility.action) {
     case 'CONTACT_DEPLOYZ':
       return 'contact-support';
-    case 'WAIT':
-      return 'wait';
     case 'RETRY_INSTALL':
     case 'DEPLOY_AGAIN':
       return 'retry';
+    case 'WAIT':
     case 'NONE':
       return 'none';
   }

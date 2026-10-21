@@ -1,0 +1,95 @@
+{
+  "id": "new-17",
+  "commit": "27f1d4bcdc537c0182886f7fc22c1fcf0befa6e6",
+  "analyser": "ai@fac42408-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./espial\", \"+RTS\", \"-T\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database: Dockerfile keeps a SQLite database at /app/data/espial.sqlite3. Deployz hosts PostgreSQL and MySQL only."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: Dockerfile keeps a SQLite database at /app/data/espial.sqlite3. Deployz hosts PostgreSQL and MySQL only."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0289278,
+        "promptTokens": 6245,
+        "completionTokens": 212
+      },
+      "latencyMs": 6242
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "sqlite",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6243,
+    "questions": 1,
+    "generatedAt": "2026-10-21T07:52:07.461Z",
+    "failedChecks": 0,
+    "promptVersion": 14
+  }
+}

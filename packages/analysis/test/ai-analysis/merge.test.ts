@@ -89,6 +89,7 @@ describe('mergeAiAnswers: open facts', () => {
     Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
     'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4' } }),
     'src/index.js': "const app = require('express')();\napp.use('/', require('./pages'));\napp.listen(3000);",
+    'src/health_controller.js': "module.exports = (req, res) => res.send('ok');\n",
   };
   const id = buildEvidencePack(tree, analyseRepo(tree)).questions.find((question) => question.kind === 'fact')!.id;
 

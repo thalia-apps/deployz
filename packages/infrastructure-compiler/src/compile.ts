@@ -1066,6 +1066,12 @@ function compileWorkloadService(ctx: EcsContext, workload: IrWorkload, profile: 
 }
 
 /** ALB + listener + target group + alarm + ingress — for public workloads. */
+/** The target-group status codes beyond the default 200: 400 for a Host-checked app, 3xx for the default `/`. */
+function healthMatcher(check: IrWorkload['healthCheck']): { Matcher?: { HttpCode: string } } {
+  if (check?.redirectsAccepted === true) return { Matcher: { HttpCode: check.hostChecked === true ? '200-400' : '200-399' } };
+  return check?.hostChecked === true ? { Matcher: { HttpCode: '200,400' } } : {};
+}
+
 function compileAlb(ctx: EcsContext, workload: IrWorkload): ResolvedResource[] {
   const componentId = 'endpoint';
   const alb = logicalResourceId(componentId, 'load-balancer');
@@ -1111,8 +1117,9 @@ function compileAlb(ctx: EcsContext, workload: IrWorkload): ResolvedResource[] {
       properties: {
         HealthCheckPath: ref('paramHealthCheckPath'),
         // The ALB health check sends the task IP as Host. An app that checks the Host header answers it 400
-        // while it serves its own domain, so for that app 400 also proves the process is up.
-        ...(workload.healthCheck?.hostChecked === true ? { Matcher: { HttpCode: '200,400' } } : {}),
+        // while it serves its own domain, so for that app 400 also proves the process is up. The default `/`
+        // of an app without health evidence may redirect to a login or setup page, which also proves it.
+        ...healthMatcher(workload.healthCheck),
         Port: ref('paramContainerPort'),
         Protocol: 'HTTP',
         Tags: tags(componentId),

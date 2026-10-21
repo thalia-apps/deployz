@@ -1329,6 +1329,8 @@ export const GITHUB_FIXTURE_FILE_TREES: Readonly<Record<string, FileTree>> = {
       'app.listen(process.env.PORT || 3000);',
       '',
     ].join('\n'),
+    // A health handler that no route registers: analysis cannot resolve its path, so the vendor is asked.
+    'apps/api/src/health-controller.js': 'module.exports = (req, res) => res.json({ ok: true });\n',
   },
   // Express-api's exact READY shape (Dockerfile + HEALTHCHECK + /health +
   // Postgres + migration script) plus one genuine required env var: the code

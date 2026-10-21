@@ -695,12 +695,21 @@ export async function confirmPublicInstall(
 // organization (a cross-org id 404s, exactly like every other owned loader).
 // A link carries no secret, so the events record ids only.
 
-/** The existing live (not revoked) link for an application, if any. */
+/**
+ * The existing live (not revoked) reusable link for an application, if any.
+ * A targeted invitation (customer_id set) is not the application's link.
+ */
 async function findLiveLink(db: RuntimeDb, applicationId: string): Promise<PublicInstallLinkRow | null> {
   const rows = await db
     .select()
     .from(schema.publicInstallLinks)
-    .where(and(eq(schema.publicInstallLinks.applicationId, applicationId), isNull(schema.publicInstallLinks.revokedAt)))
+    .where(
+      and(
+        eq(schema.publicInstallLinks.applicationId, applicationId),
+        isNull(schema.publicInstallLinks.revokedAt),
+        isNull(schema.publicInstallLinks.customerId),
+      ),
+    )
     .limit(1);
   return rows[0] ?? null;
 }
@@ -957,7 +966,11 @@ export async function createPublicInstallLink(  db: RuntimeDb,
   }
 }
 
-/** GET /api/applications/:id/public-install-links — newest first, derived status. */
+/**
+ * GET /api/applications/:id/public-install-links — the application's reusable
+ * links, newest first, derived status. Targeted invitations are listed per
+ * customer (listCustomerInvitations), never here.
+ */
 export async function listPublicInstallLinks(db: RuntimeDb, organizationId: string, applicationId: string) {
   const rows = await db
     .select()
@@ -966,6 +979,7 @@ export async function listPublicInstallLinks(db: RuntimeDb, organizationId: stri
       and(
         eq(schema.publicInstallLinks.organizationId, organizationId),
         eq(schema.publicInstallLinks.applicationId, applicationId),
+        isNull(schema.publicInstallLinks.customerId),
       ),
     )
     .orderBy(desc(schema.publicInstallLinks.createdAt));

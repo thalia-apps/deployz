@@ -18,7 +18,7 @@ import { apiUrl } from '@/lib/api-url';
 export type RelayStatus = 'CONNECTED' | 'DISCONNECTED' | 'UNKNOWN';
 export type HealthStatus = 'UNKNOWN' | 'HEALTHY' | 'DEGRADED' | 'UNHEALTHY';
 export type DeploymentType = 'TEST' | 'PRODUCTION';
-export type DeploymentBillingState = 'NOT_STARTED' | 'ACTIVE' | 'STOPPED';
+export type DeploymentBillingState = 'NOT_STARTED' | 'ACTIVE' | 'PAUSED' | 'STOPPED';
 /** A required component the verifier found no AWS resource for. */
 export type ComponentState = HealthStatus | 'NOT_PROVISIONED';
 
@@ -66,6 +66,8 @@ export interface FleetDeployment {
   components: HealthComponents | null;
   /** The public install link id — never the relay's installation id. */
   installLinkId: string;
+  /** When the install link stops starting new installs; null = no limit. */
+  installLinkExpiresAt: string | null;
   desiredState: Record<string, unknown>;
   observedState: Record<string, unknown> | null;
   infraVersion: string;

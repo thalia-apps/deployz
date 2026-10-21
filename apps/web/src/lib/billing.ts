@@ -1,7 +1,7 @@
 // §48 billing display — data access for the billing page. Wired to the real
 // `GET /api/billing/summary` endpoint: {base, deploymentPrice, deployments:
 // [{name (customer name), applicationName}], productionDeployments: {active,
-// included, billable}, total}. No fixture fallback — a failure here is a real
+// paused, included, billable}, total}. No fixture fallback — a failure here is a real
 // failure, not a loading state. §65: all copy is jargon-free.
 
 import { cookies } from 'next/headers';
@@ -23,6 +23,8 @@ export interface BillingDeploymentLine {
 /** Live production deployments, the included allowance, and what is billed. */
 export interface ProductionDeploymentCounts {
   active: number;
+  /** Live once, but failed or disconnected now: not billed until it serves again. */
+  paused: number;
   included: number;
   /** max(active − included, 0) — the quantity actually billed. */
   billable: number;

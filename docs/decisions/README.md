@@ -45,6 +45,8 @@ Three decisions with substantial detail have their own files:
 | 2026-10-20 | The Analysis gives one deployability outcome; only a required capability gap is not compatible | Active |
 | 2026-10-20 | The AI Analysis answers only the open items of the rules Analysis, with closed answers and one call; the reviewer is post-MVP | Proposed (release gate not passed) |
 | 2026-10-21 | Every IAM role the application stack creates carries the connector's application role boundary | Active |
+| 2026-10-21 | Without health evidence the health check probes `/` and accepts 200-399 | Active |
+| 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -907,6 +909,35 @@ not read the flag, so the INSTALL payload leaves `health.hostChecked` out.
 What would change it: a real-AWS run shows a Host-checking app that answers
 400 while it is broken.
 
+## Without health evidence the health check probes `/` (2026-10-21)
+
+Decision: when Analysis finds no health route, no container HEALTHCHECK and
+no health handler file, the health check probes `/`. The manifest sets
+`health.redirectsAccepted`, and the ALB target group matcher is `200-399`
+(`200-400` for a Host-checking app). The vendor is not asked. When the
+repository has a health handler file whose route Analysis did not resolve
+(`HealthController`, `HealthAction`, `health_check.ex`), the vendor is still
+asked: that app has a health route, and its `/` can be a 404 (an API-only
+app). A path that the vendor enters must answer 200.
+
+Reason: the vendor question was the most common false problem of the
+run-and-check exam. A web app with a page at `/` answers 200, or redirects to
+a login or setup page. A redirect also proves that the process serves HTTP;
+Kubernetes HTTP probes count 200-399 as success for the same reason. A
+crashed app or an app that serves nothing at `/` (404, 5xx) still fails, and
+the deployment rolls back.
+
+Rejected: `/` with the default `200` matcher (most apps without a health
+route redirect `/` to a login page, so they never became healthy), and
+starting the image before the first deployment to try paths (it needs a safe
+place to run customer code; post-MVP).
+
+Compatibility: the relay does not read the flag, so the INSTALL payload
+leaves `health.redirectsAccepted` out, as it does `health.hostChecked`.
+
+What would change it: a real-AWS run shows an app without a health route
+whose `/` redirects while the app is broken.
+
 ## AI-first application Analysis (2026-10-19)
 
 **Superseded 2026-10-20** by "The AI Analysis answers only the open items".
@@ -1138,6 +1169,45 @@ to the application's own data.
 What would change it: a compiler role needs an action outside the boundary
 (widen the boundary, as a new connector version), or a customer asks for
 proof that no role trusts another account (then the Guard Hook).
+
+## Billing pauses while a deployment does not serve the customer (2026-10-21)
+
+Decision: a production deployment is billed only while it serves the
+customer. The billing state machine has a `PAUSED` state. The 15-minute
+billing safety job moves an ACTIVE deployment to PAUSED when its `state` is
+`FAILED` or its `relayStatus` is `DISCONNECTED`. Billing resumes at the next
+verified READY stage, or on the next safety-job pass when the connector is
+connected and the deployment is `HEALTHY` or `UPDATE_AVAILABLE`. Removal
+still stops billing permanently. TEST deployments and never-live
+deployments are never billed. Each pause and resume is an `event_logs`
+entry, and the Paddle quantity follows through the normal absolute
+reconciliation.
+
+Reason: the earlier rule (only LIVE and REMOVED moved billing, and no health
+signal could) charged vendors for deployments that ran nothing for their
+customers. The product owner decided that failed or disconnected
+deployments must not be billed. A persisted state, not a value derived at
+reconcile time, keeps each pause and resume auditable per deployment and
+lets the billing page show active, paused and billed counts. Using the
+persisted `relayStatus` (written only after 15 minutes without a check-in)
+and the existing 15-minute pass means a short heartbeat gap never changes
+the Paddle quantity, with no new scheduler.
+
+Rejected: pausing on runtime health (`healthStatus` UNHEALTHY or DEGRADED).
+It changes on every relay poll and would churn the Paddle quantity, and the
+deployment can still serve part of its traffic. Pausing on a failed update:
+the previous release still serves, so the deployment returns to `HEALTHY` or
+`UPDATE_AVAILABLE` and stays billed.
+
+Accepted cost: a disconnected connector pauses billing even when the
+application still runs in the customer account, because Deployz cannot
+verify it. A pause can lag the outage by up to 15 minutes after the
+disconnect threshold, and a resume by the safety job by up to 15 minutes;
+both favor the vendor.
+
+What would change it: a vendor abuses the disconnect pause (keep the
+application running and the connector stopped), or Paddle proration churn
+from repeated outages shows in invoices (then add a minimum pause time).
 
 ## Connector IAM is limited to its own installation (2026-10-21)
 

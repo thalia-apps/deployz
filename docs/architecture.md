@@ -218,7 +218,9 @@ ALB (one HTTP listener, a target group, an unhealthy-target alarm, and a
 300-second health-check grace period, so an app that migrates at boot is not
 stopped before it listens; the target group counts HTTP 200 as healthy, and
 also 400 when Analysis finds that the app checks the Host header, because the
-ALB health check sends the task IP as Host — `health.hostChecked`); each
+ALB health check sends the task IP as Host — `health.hostChecked`; for an
+app without health evidence the check probes `/` and counts 200-399 —
+`health.redirectsAccepted`); each
 declared worker runs its own private service — one task, its own log group
 and security group, no ALB target, no HTTP health check. Every workload
 gets a task definition with the same frozen image and its own frozen
@@ -406,6 +408,37 @@ currently completed by the web app; see
   vendor build-time secrets are passed to CodeBuild as plaintext environment
   overrides visible to anyone with `codebuild:BatchGetBuilds` in the Deployz
   account.
+
+### When a setting change applies
+
+Each application setting reaches deployments at a different time. A
+deployment's size, port, health path and resources are frozen in its
+manifest and spec when it is created; the relay receives them only on
+install.
+
+| Setting | New deployments | Next release deployment | Running deployments |
+| --- | --- | --- | --- |
+| Runtime environment variable | Yes | Yes | Yes, within minutes (CONFIG_UPDATE fan-out) |
+| Build environment variable | Yes, from the next build | Yes, when the deployment deploys a release built after the change | No |
+| Size (default and minimum) | Yes, for links and deployments created later | No | No |
+| Container port, health check path | Yes | No | No |
+| Database, cache, file storage | Yes | No | No |
+| Migration command | Yes | Only after the vendor saves the command: a corrected command, or "No separate migration" to skip it | No |
+
+Notes:
+
+- A build value reaches Docker only as `--build-arg NAME`. The Dockerfile
+  must declare `ARG NAME`, or Docker does not receive the value.
+- An existing deployment that was created without a migration step cannot
+  get one. A saved command for it is refused with
+  `MIGRATION_WORKLOAD_MISSING` (409).
+- "Reset to detected" removes the vendor-override marker. New deployments
+  then use the detected value, and existing deployments go back to the
+  command they were created with.
+- A migration runs again on each DEPLOY_RELEASE job until a job with the same
+  command and image digest has `SUCCEEDED`. Retry update creates a new job,
+  so a retried failed update can run the migration again. The command must
+  be safe to run more than once.
 
 ## Trust and ownership boundaries
 

@@ -6,7 +6,12 @@ import { ANALYST_MAX_TOTAL_TOKENS, ANALYST_SYSTEM, fromWire, runAnalyst } from '
 import { buildEvidencePack } from '../../src/ai-analysis/evidence-pack.js';
 import { blocker, cite, fact, fakeGateway, MONGO_OR_POSTGRES, toWire } from './helpers.js';
 
-const tree = { ...MONGO_OR_POSTGRES, 'src/index.js': "const app = require('express')();\napp.listen(process.env.PORT || 3000);" };
+// A health handler whose route the rules do not resolve keeps the health path open.
+const tree = {
+  ...MONGO_OR_POSTGRES,
+  'src/index.js': "const app = require('express')();\napp.listen(process.env.PORT || 3000);",
+  'src/health_controller.js': "module.exports = (req, res) => res.send('ok');\n",
+};
 const pack = buildEvidencePack(tree, analyseRepo(tree));
 
 describe('the analyst questions', () => {

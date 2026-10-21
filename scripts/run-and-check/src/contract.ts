@@ -140,6 +140,25 @@ export const recipeSchema = z
       })
       .strict()
       .optional(),
+    /**
+     * Reviewed: the health path the vendor enters when the Analysis asks for
+     * one (`vendor_required`). The full run uses it only then; the manifest
+     * path is a placeholder that production never deploys.
+     */
+    healthPath: z.string().startsWith('/').optional(),
+    /**
+     * Reviewed: the durable data the application keeps on local disk only
+     * after use (notebooks, uploads, a SQLite file in a VOLUME), which a
+     * fresh start does not write. The truth for the local-state claim, and a
+     * healthy run is then outcome 2.
+     */
+    localState: z.string().min(1).optional(),
+    /**
+     * Reviewed: the application takes its database connection in a first-run
+     * web setup wizard, which the observation does not complete. A start
+     * without a SQL connection does not show that it needs no database.
+     */
+    setupWizard: z.string().min(1).optional(),
     /** Reviewer notes: why each override or input exists. */
     notes: z.array(z.string()).default([]),
   })

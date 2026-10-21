@@ -4,9 +4,11 @@ source:
   kind: git
   repository: shlinkio/shlink
   commit: d012afd16a5d9a4d001c921d9bf9f411e9ffdc13
+healthPath: /rest/health
 notes:
   - No overrides and no vendor inputs. Root Dockerfile installs the PHP dependencies with composer from the source; the entrypoint runs the installer and migrations at start. No variable is required to start (config/autoload/entity-manager.global.php, module/Core/src/Config/EnvVars.php).
   - shlink selects its database with DB_DRIVER (config/autoload/entity-manager.global.php, SQLite by default); a vendor who uses the managed PostgreSQL sets DB_DRIVER=postgres (Wave 5).
+  - "healthPath: module/Rest/config/access-logs.config.php names HealthAction::ROUTE_PATH; the REST routes are under /rest, so the health route is /rest/health. GET / answers 404 (the full run of ai@080dad04-open-items)."
 vendorInputs:
   - name: DB_DRIVER
     source:

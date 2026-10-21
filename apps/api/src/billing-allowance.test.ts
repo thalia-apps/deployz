@@ -110,8 +110,8 @@ describe('updateIncludedProductionDeployments', () => {
     const change = await updateIncludedProductionDeployments(db, ORG, 2);
     expect(change).toEqual({
       activeProductionDeployments: 5,
-      previous: { active: 5, included: 0, billable: 5 },
-      current: { active: 5, included: 2, billable: 3 },
+      previous: { active: 5, paused: 0, included: 0, billable: 5 },
+      current: { active: 5, paused: 0, included: 2, billable: 3 },
       changed: true,
     });
     expect(await allowance()).toBe(2);

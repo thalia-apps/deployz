@@ -114,8 +114,8 @@ outcome, columns: the actual outcome):
 
 | Outcome | Predicted (gate state) | Actual (runs) |
 | --- | --- | --- |
-| 1 deployable with Deployz | `DEPLOYABLE` | Both full runs are healthy. The recipe's vendor inputs are Deployz settings. |
-| 2 deployable with changes | `DEPLOYABLE_WITH_CHANGES` | The image does not build for a Dockerfile cause (a repository change), or the recipe has a reviewed `outcomePatch`. |
+| 1 deployable with Deployz | `DEPLOYABLE` | Both full runs are healthy, and the recipe has no `localState`. The recipe's vendor inputs are Deployz settings. |
+| 2 deployable with changes | `DEPLOYABLE_WITH_CHANGES` | The image does not build for a Dockerfile cause (a repository change), the recipe has a reviewed `outcomePatch`, or the full runs are healthy and the recipe has a reviewed `localState`. |
 | 3 not deployable | `NOT_DEPLOYABLE` | No full run is healthy, the image builds, and the recipe has no `outcomePatch`. |
 
 The predicted outcome is the readiness report's `outcome`. An Analysis file
@@ -162,6 +162,28 @@ application deployable with Deployz when it is not deployable as it is:
 environment values that the vendor sets (for example the variable that
 selects PostgreSQL instead of an embedded store) and the reason. It is the
 truth for outcome 2. Add a patch only after a person reviews it.
+
+Three more optional reviewed fields record a truth that one start of the
+application cannot show. Only the claim check and the full run read them;
+the Analysis never reads a recipe. Add each only after a person reviews it,
+with the evidence in the field text or the notes:
+
+- `healthPath`: the path the vendor enters when the Analysis asks for a
+  health path (`vendor_required`). The full run probes it only then. The
+  manifest path of a `vendor_required` health check is a placeholder that
+  production never deploys. Example: repo-204 (Shlink) serves
+  `/rest/health`; `/` answers 404.
+- `localState`: the durable data that the application keeps on local disk
+  only after use, so a fresh start writes none of it. The `storage.local`
+  claim is then decided by the field, and a healthy full run is outcome 2.
+  Examples: repo-050 (Livebook saves notebooks in `LIVEBOOK_HOME=/data`) and
+  new-21 (Kanboard keeps its SQLite database and attachments in the `data/`
+  VOLUME, which `docker diff` does not show).
+- `setupWizard`: the application takes its database connection in a
+  first-run web wizard that the observation does not complete. A start
+  without a SQL connection then does not contradict a managed database
+  claim (`NOT_CHECKABLE`). Examples: new-11 (Oqtane serves its install
+  wizard) and new-24 (nopCommerce redirects every path to its install page).
 
 ### Known-answer fixtures
 

@@ -78,8 +78,17 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchDeploymentPreflight, type PreflightResult } from '@/lib/preflight';
 import { errorMessage } from '@/lib/api-client';
+import { formatDate } from '@/lib/customers';
 import { requirementDriftLine } from '@/lib/install-plan';
-import { canRetryFirstInstall, deriveHero, operationInFlight, statusPollSettled, type HeroModel } from '@/lib/deployment-hero';
+import {
+  canRetryFirstInstall,
+  deploymentEverRan,
+  deriveHero,
+  operationInFlight,
+  retryNeedsNewInstallLink,
+  statusPollSettled,
+  type HeroModel,
+} from '@/lib/deployment-hero';
 import {
   DESTROY_PENDING_STALE_AFTER_MS,
   DeploymentActionError,
@@ -111,7 +120,6 @@ import {
   RELAY_STUCK_GUIDANCE,
   actionSupported,
   actionsUnavailableReason,
-  everInstalled,
   purgeProgress,
   relayWaitingStuck,
   retainedUntilDeletedSentence,
@@ -947,7 +955,7 @@ function DeploymentActions({
   // failed to ever come up must still be removable, and a lost relay routes
   // through the force-complete escape hatch.
   const everRan =
-    everInstalled(detail.state, detail.currentReleaseId) &&
+    deploymentEverRan(detail.state, detail.currentReleaseId, retryEligibility) &&
     !INSTALL_STAGES.has(detail.deploymentStatus.stage);
   // A pending DESTROY owns the deployment: every other mutating action
   // targets a stack that is about to disappear underneath it. A running
@@ -1015,9 +1023,6 @@ function DeploymentActions({
         ) : null}
         {retryCtaKind === 'contact-support' ? (
           <span className="text-sm text-muted-foreground">Contact Deployz support</span>
-        ) : null}
-        {retryCtaKind === 'wait' ? (
-          <span className="text-sm text-muted-foreground">Check again</span>
         ) : null}
         {hero.kind === 'removal-failed' ? (
           <Button
@@ -1153,6 +1158,7 @@ function DeploymentActions({
         open={open === 'retryInstall'}
         deploymentId={detail.id}
         applicationName={detail.applicationName}
+        needsNewInstallLink={retryNeedsNewInstallLink(detail.relayStatus, detail.installationId)}
         onDone={() => {
           setOpen(null);
           onChanged();
@@ -1500,32 +1506,39 @@ function RetryInstallDialog({
   open,
   deploymentId,
   applicationName,
+  needsNewInstallLink,
   onDone,
   onCancel,
 }: {
   open: boolean;
   deploymentId: string;
   applicationName: string;
+  /** The connector is disconnected or not registered: lead with the new link. */
+  needsNewInstallLink: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
   const [action, setAction] = useState<'retry' | 'reconnect' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [relayDisconnected, setRelayDisconnected] = useState(false);
+  const [relayRefused, setRelayRefused] = useState(false);
+  const relayDisconnected = needsNewInstallLink || relayRefused;
 
   async function onConfirm(): Promise<void> {
     setAction('retry');
     setError(null);
-    setRelayDisconnected(false);
+    setRelayRefused(false);
     try {
       await retryInstall(deploymentId);
       toast.success('Retry requested');
       onDone();
     } catch (caught) {
-      // A bound-but-disconnected relay never picks the retry job up — the
-      // fix is re-enrollment, so point at the reconnect path instead.
-      if (caught instanceof DeploymentActionError && caught.code === 'RELAY_DISCONNECTED') {
-        setRelayDisconnected(true);
+      // A disconnected or unregistered relay never picks the retry job up —
+      // the fix is re-enrollment, so point at the reconnect path instead.
+      if (
+        caught instanceof DeploymentActionError &&
+        (caught.code === 'RELAY_DISCONNECTED' || caught.code === 'RELAY_NOT_CONNECTED')
+      ) {
+        setRelayRefused(true);
       } else {
         setError(actionErrorMessage(caught, "Couldn't start the retry. Try again."));
       }
@@ -1559,7 +1572,8 @@ function RetryInstallDialog({
         {relayDisconnected ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted-foreground">
-              The Deployz connector is disconnected — issue a new install link first.
+              The Deployz connector is disconnected. Issue a new install link, then send it to the
+              customer to connect again.
             </p>
             <Button
               size="sm"
@@ -1578,7 +1592,7 @@ function RetryInstallDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={action !== null}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            disabled={action === 'reconnect'}
+            disabled={action === 'reconnect' || relayDisconnected}
             loading={action === 'retry'}
             loadingText="Starting installation…"
             onClick={(event) => {
@@ -2123,6 +2137,9 @@ function InstallLinkCard({ detail }: { detail: FleetDeploymentDetail }) {
   // staleness window — guidance, never a failure.
   const stuck =
     detail.state === 'WAITING_FOR_RELAY' && relayWaitingStuck(detail.installStartedAt);
+  // An expired link cannot start an install; a new install link renews it.
+  const expiresAt = detail.installLinkExpiresAt;
+  const expired = expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
 
   async function copy(): Promise<void> {
     try {
@@ -2175,9 +2192,18 @@ function InstallLinkCard({ detail }: { detail: FleetDeploymentDetail }) {
               Issue new install link
             </Button>
           </div>
+          {expiresAt ? (
+            <p className="text-sm text-muted-foreground" data-testid="install-link-expiry">
+              {expired
+                ? `This link expired on ${formatDate(expiresAt)}. Issue a new install link to make it work again.`
+                : `This link expires on ${formatDate(expiresAt)}.`}
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
-            A new link invalidates the old one. If the connector is already installed, the customer
-            updates the existing connector stack with the new values on the link page.
+            A new install link keeps the same address, but it changes the connection code and
+            credential. A setup started with the old values stops working. If the connector is
+            already installed, the customer updates the existing connector stack with the new
+            values on the link page.
           </p>
           {stuck ? (
             <div className="flex flex-col gap-1">

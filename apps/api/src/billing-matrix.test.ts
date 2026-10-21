@@ -14,8 +14,8 @@ import { mapSubscriptionStatus } from './billing-webhooks.js';
 const NOW = new Date('2026-09-08T00:00:00.000Z');
 
 const TYPES: DeploymentType[] = ['TEST', 'PRODUCTION'];
-const STATES: DeploymentBillingState[] = ['NOT_STARTED', 'ACTIVE', 'STOPPED'];
-const EVENTS: BillingEvent[] = ['LIVE', 'REMOVED'];
+const STATES: DeploymentBillingState[] = ['NOT_STARTED', 'ACTIVE', 'PAUSED', 'STOPPED'];
+const EVENTS: BillingEvent[] = ['LIVE', 'NOT_SERVING', 'REMOVED'];
 
 /** Every (type, state, event) cell and the ONLY patch it may produce. */
 const TRANSITIONS = TYPES.flatMap((deploymentType) =>
@@ -25,14 +25,21 @@ const TRANSITIONS = TYPES.flatMap((deploymentType) =>
       if (deploymentType === 'TEST') expected = null; // never billable, whatever happens
       else if (billingState === 'STOPPED') expected = null; // terminal
       else if (event === 'LIVE')
-        expected = billingState === 'NOT_STARTED' ? { billingState: 'ACTIVE', billingStartedAt: NOW } : null;
+        expected =
+          billingState === 'NOT_STARTED'
+            ? { billingState: 'ACTIVE', billingStartedAt: NOW }
+            : billingState === 'PAUSED'
+              ? { billingState: 'ACTIVE' } // resume; billingStartedAt is write-once
+              : null;
+      else if (event === 'NOT_SERVING')
+        expected = billingState === 'ACTIVE' ? { billingState: 'PAUSED' } : null; // never-live stays unbilled
       else expected = { billingState: 'STOPPED', billingStoppedAt: NOW };
       return { deploymentType, billingState, event, expected };
     }),
   ),
 );
 
-describe('billing transition matrix — all 12 cells', () => {
+describe('billing transition matrix — all 24 cells', () => {
   it('covers every cell exactly once', () => {
     expect(TRANSITIONS).toHaveLength(TYPES.length * STATES.length * EVENTS.length);
   });
@@ -51,7 +58,7 @@ describe('billing transition matrix — all 12 cells', () => {
   });
 });
 
-describe('billable predicate — all 6 cells', () => {
+describe('billable predicate — all 8 cells', () => {
   it.each(
     TYPES.flatMap((deploymentType) =>
       STATES.map((billingState) => ({

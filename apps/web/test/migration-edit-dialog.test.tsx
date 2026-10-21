@@ -77,7 +77,16 @@ function saveButton(): HTMLButtonElement | undefined {
 
 describe('migration EditDialog', () => {
   it('explains that existing deployments use the edit on their next release deployment', () => {
-    expect(document.body.textContent).toContain('Each existing deployment uses it on its next release deployment');
+    expect(document.body.textContent).toContain('An existing deployment uses it on its next release deployment');
+  });
+
+  it('says a command cannot be added later and must be safe to run more than once', () => {
+    expect(document.body.textContent).toContain('created without a migration step');
+    expect(document.body.textContent).toContain('safe to run more than once');
+  });
+
+  it('shows no reset when the vendor never set the migration command', () => {
+    expect(document.querySelector('[data-testid="edit-reset-migrationCommand"]')).toBeNull();
   });
 
   it('needs a command or "No separate migration" before it saves', async () => {
@@ -137,6 +146,23 @@ describe('migration EditDialog', () => {
     expect(document.querySelector('#edit-no-migration')?.getAttribute('aria-checked')).toBe('true');
     expect(document.querySelector<HTMLInputElement>('#edit-field-migrationCommand')?.disabled).toBe(true);
     expect(saveButton()?.disabled).toBe(false);
+  });
+
+  it('resets an overridden command to detected without turning migrations off', async () => {
+    const overridden = {
+      ...application,
+      migrationCommand: 'node scripts/migrate.js',
+      detectedMetadata: { vendorOverrides: ['migrationCommand'] },
+    };
+    await act(async () => root.unmount());
+    root = createRoot(document.body.appendChild(document.createElement('div')));
+    await renderDialog(overridden, readiness);
+    const reset = document.querySelector<HTMLButtonElement>('[data-testid="edit-reset-migrationCommand"]');
+    expect(reset).not.toBeNull();
+    await act(async () => {
+      reset?.click();
+    });
+    expect(mocks.updateApplication).toHaveBeenCalledWith('app-1', { resetMigrationCommand: true });
   });
 
   it('reopens with the switch off when the migration command was never set by the vendor', () => {

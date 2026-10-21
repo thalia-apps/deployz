@@ -25,6 +25,7 @@ import {
   updateApplication,
 } from '@/lib/applications';
 import {
+  detectedFieldValue,
   requirementSummaryKeyFor,
   type ApplicationReadiness,
   type DeploymentRequirementDriftSummary,
@@ -134,7 +135,8 @@ export function EditDialog({
     setPendingAction('reset');
     setError(null);
     try {
-      const input: UpdateApplicationInput = { [currentField]: null };
+      // A null migration command means "No separate migration", so reset uses its own flag.
+      const input: UpdateApplicationInput = isMigration ? { resetMigrationCommand: true } : { [currentField]: null };
       await updateApplication(application.id, input);
       await onSaved();
       onClose();
@@ -148,23 +150,24 @@ export function EditDialog({
   const requirementKey = requirementSummaryKeyFor(currentField);
   const requirement = requirementKey ? readiness.requirements?.[requirementKey] : undefined;
   const needsReview = requirementKey !== null && requirement === undefined;
-  const isOverridden = requirement ? requirement.overridden : false;
-  const detectedValue = requirement
-    ? requirement.detected
-      ? 'Required'
-      : 'Not required'
-    : 'Needs review';
+  const vendorOverrides = application.detectedMetadata?.['vendorOverrides'];
+  const isOverridden = requirement
+    ? requirement.overridden
+    : requirementKey === null && Array.isArray(vendorOverrides) && vendorOverrides.includes(currentField);
+  const detectedValue = requirementKey === null
+    ? detectedFieldValue(currentField, readiness.detected)
+    : requirement
+      ? requirement.detected
+        ? 'Required'
+        : 'Not required'
+      : 'Needs review';
 
   return (
     <Dialog open={currentField !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-testid={`edit-dialog-${currentField}`}>
         <DialogHeader>
           <DialogTitle>{config.label}</DialogTitle>
-          <DialogDescription>
-            {isMigration
-              ? 'New deployments use this choice. Each existing deployment uses it on its next release deployment and keeps running as it is until then.'
-              : 'Changes affect future deployments. Existing deployments are not modified.'}
-          </DialogDescription>
+          <DialogDescription>{config.applies}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -207,6 +210,13 @@ export function EditDialog({
           <p className="text-sm text-muted-foreground">
             {needsReview ? detectedValue : `Detected: ${detectedValue || '—'}`}
           </p>
+          {isMigration ? (
+            <p className="text-sm text-muted-foreground">
+              You cannot add a command to a deployment that was created without a migration step. When you retry a
+              failed update, the migration can run again, so the command must be safe to run more than once. Reset to
+              detected sends existing deployments back to the command they were created with.
+            </p>
+          ) : null}
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
@@ -250,14 +260,43 @@ const FIELD_CONFIG: Record<
     label: string;
     type: 'text' | 'number' | 'boolean';
     booleanLabel?: string;
+    /** When a saved change reaches new and existing deployments. */
+    applies: string;
   }
 > = {
-  containerPort: { label: 'Container port', type: 'number' },
-  healthPath: { label: 'Health check path', type: 'text' },
-  migrationCommand: { label: 'Migration command', type: 'text' },
-  databaseRequired: { label: 'Database', type: 'boolean', booleanLabel: 'Database required' },
-  storageRequired: { label: 'File storage', type: 'boolean', booleanLabel: 'File storage required' },
-  redisRequired: { label: 'Cache / queue', type: 'boolean', booleanLabel: 'Redis required' },
+  containerPort: {
+    label: 'Container port',
+    type: 'number',
+    applies: 'New deployments use this value. Existing deployments keep the value they were created with.',
+  },
+  healthPath: {
+    label: 'Health check path',
+    type: 'text',
+    applies: 'New deployments use this value. Existing deployments keep the value they were created with.',
+  },
+  migrationCommand: {
+    label: 'Migration command',
+    type: 'text',
+    applies: 'New deployments use this choice. An existing deployment uses it on its next release deployment and keeps running as it is until then.',
+  },
+  databaseRequired: {
+    label: 'Database',
+    type: 'boolean',
+    booleanLabel: 'Database required',
+    applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+  },
+  storageRequired: {
+    label: 'File storage',
+    type: 'boolean',
+    booleanLabel: 'File storage required',
+    applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+  },
+  redisRequired: {
+    label: 'Cache / queue',
+    type: 'boolean',
+    booleanLabel: 'Redis required',
+    applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+  },
 };
 
 function getInitialValue(

@@ -90,7 +90,8 @@ describe('database engine in readiness evidence and copy', () => {
 });
 
 describe('health-check is resolved by the vendor health path', () => {
-  const report = buildReadinessReport(analyseRepo({ Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "x.js"]\n' }));
+  // A health handler whose route analysis does not resolve keeps the question open.
+  const report = buildReadinessReport(analyseRepo({ Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "x.js"]\n', 'src/health_controller.js': '' }));
 
   it('moves the finding to the passed checks when healthPathDecided', () => {
     expect(report.findings.map((f) => f.id)).toContain('health-check');

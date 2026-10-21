@@ -1,0 +1,4317 @@
+{
+  "id": "new-20",
+  "commit": "d98baec311438e0818988c130eefa8e813a34c22",
+  "analyser": "ai@13f692f4-open-items",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/startup.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "PRIVATE_AWS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "PUBLIC_AWS_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ABLY_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ADDITIONAL_CSP_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ADDITIONAL_CSP_URLS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_BACKUP_DELETE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_BACKUP_DELETE",
+            ".env.docker declares ALLOW_BACKUP_DELETE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_DATA_PURGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_DATA_PURGE",
+            ".env.docker declares ALLOW_DATA_PURGE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_IFRAMING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_IFRAMING",
+            ".env.docker declares ALLOW_IFRAMING",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_USER_IMPERSONATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_USER_IMPERSONATION",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALL_BACKUP_KEEP_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALL_BACKUP_KEEP_DAYS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALL_ROUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_THROTTLE_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares API_THROTTLE_PER_MINUTE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_TOKEN_EXPIRATION_YEARS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares API_TOKEN_EXPIRATION_YEARS",
+            ".env.docker declares API_TOKEN_EXPIRATION_YEARS",
+            "read in config/passport.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ALLOW_INSECURE_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_ALLOW_INSECURE_HOSTS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_CIPHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_CIPHER",
+            ".env.docker declares APP_CIPHER",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DEBUG",
+            ".env.docker declares APP_DEBUG",
+            ".env.tests declares APP_DEBUG",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_ENV",
+            ".env.docker declares APP_ENV",
+            ".env.tests declares APP_ENV",
+            "read in config/app.php",
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_FORCE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_FORCE_TLS",
+            ".env.docker declares APP_FORCE_TLS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APP_KEY",
+            ".env.docker declares APP_KEY",
+            ".env.tests declares APP_KEY",
+            "read in config/app.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_LOCALE",
+            ".env.docker declares APP_LOCALE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_LOCKED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_LOCKED",
+            ".env.docker declares APP_LOCKED",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.docker declares APP_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APP_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_TIMEZONE",
+            ".env.docker declares APP_TIMEZONE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_TRUSTED_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_TRUSTED_HEADERS",
+            "read in config/trustedproxy.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_TRUSTED_PROXIES",
+            ".env.docker declares APP_TRUSTED_PROXIES",
+            "read in config/trustedproxy.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_URL",
+            ".env.docker declares APP_URL",
+            ".env.tests declares APP_URL",
+            "read in config/app.php",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.docker declares APP_VERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ARGON_MEMORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ARGON_MEMORY",
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ARGON_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ARGON_THREADS",
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ARGON_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ARGON_TIME",
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_ACCESS_KEY_ID",
+            ".env.docker declares AWS_ACCESS_KEY_ID",
+            "read in config/cache.php",
+            "read in config/queue.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_DEFAULT_REGION",
+            ".env.docker declares AWS_DEFAULT_REGION",
+            "read in config/cache.php",
+            "read in config/queue.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_SECRET_ACCESS_KEY",
+            ".env.docker declares AWS_SECRET_ACCESS_KEY",
+            "read in config/cache.php",
+            "read in config/queue.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/cache.php",
+            "read in config/queue.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKUP_ENV",
+            ".env.docker declares BACKUP_ENV",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_FILESYSTEM_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKUP_FILESYSTEM_DRIVER",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_FILESYSTEM_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_PURGE_OLDEST_AT_MEGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKUP_PURGE_OLDEST_AT_MEGS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKUP_TIME_LIMIT",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BCRYPT_ROUNDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BCRYPT_ROUNDS",
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_BROWSER_LOGS_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_BROWSER_LOG_LEVELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_COMPOSER_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_CURRENT_DIRECTORY_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_NPM_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_PHP_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOST_VENDOR_BIN_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/boost.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BROADCAST_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BS_TABLE_DEEPLINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BS_TABLE_DEEPLINK",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BS_TABLE_STORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BS_TABLE_STORAGE",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CACHE_DRIVER",
+            ".env.docker declares CACHE_DRIVER",
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CACHE_PREFIX",
+            ".env.docker declares CACHE_PREFIX",
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLOR_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares COOKIE_DOMAIN",
+            ".env.docker declares COOKIE_DOMAIN",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares COOKIE_NAME",
+            ".env.docker declares COOKIE_NAME",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CORS_ALLOWED_ORIGINS",
+            ".env.docker declares CORS_ALLOWED_ORIGINS",
+            "read in config/cors.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSV_ESCAPE_FORMULAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CSV_ESCAPE_FORMULAS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DAILY_BACKUP_KEEP_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DAILY_BACKUP_KEEP_DAYS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CHARSET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_CHARSET",
+            ".env.docker declares DB_CHARSET",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_COLLATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_COLLATION",
+            ".env.docker declares DB_COLLATION",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "engine selector: default \"mysql\" is not the managed PostgreSQL engine — set \"pgsql\" to use the managed PostgreSQL database",
+            ".env.example declares DB_CONNECTION",
+            ".env.docker declares DB_CONNECTION",
+            ".env.tests declares DB_CONNECTION",
+            "read in config/database.php",
+            "read in config/backup.php",
+            "read in config/queue.php",
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DATABASE",
+            ".env.docker declares DB_DATABASE",
+            ".env.tests declares DB_DATABASE",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.tests declares DB_DEFAULT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_DUMP_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DUMP_PATH",
+            ".env.docker declares DB_DUMP_PATH",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_DUMP_SINGLE_TRANSACTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DUMP_SINGLE_TRANSACTION",
+            ".env.docker declares DB_DUMP_SINGLE_TRANSACTION",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_DUMP_SKIP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DUMP_SKIP_SSL",
+            ".env.docker declares DB_DUMP_SKIP_SSL",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_HOST",
+            ".env.docker declares DB_HOST",
+            ".env.tests declares DB_HOST",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DB_PASSWORD",
+            ".env.docker declares DB_PASSWORD",
+            ".env.tests declares DB_PASSWORD",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_PORT",
+            ".env.docker declares DB_PORT",
+            ".env.tests declares DB_PORT",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_PREFIX",
+            ".env.docker declares DB_PREFIX",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SANITIZE_BY_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SANITIZE_BY_DEFAULT",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SOCKET",
+            ".env.docker declares DB_SOCKET",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL",
+            ".env.docker declares DB_SSL",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_CA_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_CA_PATH",
+            ".env.docker declares DB_SSL_CA_PATH",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_CERT_PATH",
+            ".env.docker declares DB_SSL_CERT_PATH",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_CIPHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_CIPHER",
+            ".env.docker declares DB_SSL_CIPHER",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_IS_PAAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_IS_PAAS",
+            ".env.docker declares DB_SSL_IS_PAAS",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_KEY_PATH",
+            ".env.docker declares DB_SSL_KEY_PATH",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_VERIFY_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_SSL_VERIFY_SERVER",
+            ".env.docker declares DB_SSL_VERIFY_SERVER",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_USERNAME",
+            ".env.docker declares DB_USERNAME",
+            ".env.tests declares DB_USERNAME",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUGBAR_ADD_AJAX_TIMING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_AJAX_HANDLER_AUTO_SHOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_AJAX_HANDLER_ENABLE_TAB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_CAPTURE_AJAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_CLOCKWORK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_EVENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_EXCEPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_GATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_HTTP_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_INERTIA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_JOBS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_LARAVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_LIVEWIRE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_LOGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_MAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_MEMORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_MYCOLLECTOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_PENNANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_PHPINFO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_ROUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_SESSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_SYMFONY_REQUEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECTORS_VIEWS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_COLLECT_JOBS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_DEBUG_BACKTRACE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_DEFER_DATASETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_EDITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_ERROR_HANDLER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_ERROR_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_INCLUDE_VENDORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_INJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_LOCAL_SITES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPEN_STORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_AUTH_SHOW_GUARDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_AUTH_SHOW_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_CACHE_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_CACHE_VALUES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_BACKTRACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_DURATION_BACKGROUND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_EXPLAIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_HARD_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_MEMORY_USAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_ONLY_SLOW_QUERIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_SLOW_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_SOFT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_DB_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_EVENTS_DATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_EVENTS_LISTENERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_GATE_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_HTTP_CLIENT_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_LOGS_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MAIL_SHOW_BODY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MAIL_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MEMORY_PRECISION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MEMORY_RESET_PEAK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MEMORY_WITH_BASELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MESSAGES_CAPTURE_DUMPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MESSAGES_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_MESSAGES_TRACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_ROUTE_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_SYMFONY_REQUEST_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_TIME_MEMORY_USAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_VIEWS_DATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_VIEWS_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_VIEWS_INERTIA_PAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_VIEWS_TIMELINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_OPTIONS_WITH_PARAMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_REMOTE_SITES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_ROUTE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_ROUTE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_STORAGE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_STORAGE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_STORAGE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_STORAGE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_STORAGE_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUGBAR_USE_DIST_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMODB_CACHE_TABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMODB_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_CSP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_CSP",
+            ".env.docker declares ENABLE_CSP",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_HSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_HSTS",
+            ".env.docker declares ENABLE_HSTS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENCRYPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENCRYPT",
+            ".env.docker declares ENCRYPT",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXPIRE_ON_CLOSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EXPIRE_ON_CLOSE",
+            ".env.docker declares EXPIRE_ON_CLOSE",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALLBACK_APP_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILESYSTEM_CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_MAPS_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_MAPS_API",
+            ".env.docker declares GOOGLE_MAPS_API",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HASHING_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HASHING_DRIVER",
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HEADLESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_EDITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_LOCAL_SITES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/debugbar.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_LIB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_LIB",
+            ".env.docker declares IMAGE_LIB",
+            "read in config/image.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_MEMORY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMPORT_MEMORY_LIMIT",
+            "read in config/importer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_SLICE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/importer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMPORT_TIME_LIMIT",
+            "read in config/importer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INCLUDE_AUTHED_USER_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITE_PASSWORD_LINK_EXPIRES",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INVITE_PASSWORD_LINK_EXPIRES",
+            ".env.docker declares INVITE_PASSWORD_LINK_EXPIRES",
+            "read in config/auth.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAPTLS_CACERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_MEM_LIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_MEM_LIM",
+            ".env.docker declares LDAP_MEM_LIM",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_TIME_LIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LDAP_TIME_LIM",
+            ".env.docker declares LDAP_TIME_LIM",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIVEWIRE_URL_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LIVEWIRE_URL_PREFIX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LOGIN_AUTOCOMPLETE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_AUTOCOMPLETE",
+            "read in config/auth.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_LOCKOUT_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_LOCKOUT_DURATION",
+            ".env.docker declares LOGIN_LOCKOUT_DURATION",
+            ".env.tests declares LOGIN_LOCKOUT_DURATION",
+            "read in config/auth.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOGIN_MAX_ATTEMPTS",
+            ".env.docker declares LOGIN_MAX_ATTEMPTS",
+            ".env.tests declares LOGIN_MAX_ATTEMPTS",
+            "read in config/auth.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_CHANNEL",
+            ".env.docker declares LOG_CHANNEL",
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_DEPRECATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_DEPRECATIONS",
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_MAX_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LOG_MAX_DAYS",
+            ".env.docker declares LOG_MAX_DAYS",
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SLACK_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_STDERR_FORMATTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_AUTO_EMBED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail-auto-embed.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_AUTO_EMBED_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_AUTO_EMBED_METHOD",
+            ".env.docker declares MAIL_AUTO_EMBED_METHOD",
+            "read in config/mail-auto-embed.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_BACKUP_NOTIFICATION_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_BACKUP_NOTIFICATION_ADDRESS",
+            ".env.docker declares MAIL_BACKUP_NOTIFICATION_ADDRESS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_BACKUP_NOTIFICATION_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_BACKUP_NOTIFICATION_DRIVER",
+            ".env.docker declares MAIL_BACKUP_NOTIFICATION_DRIVER",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_ADDR",
+            ".env.docker declares MAIL_FROM_ADDR",
+            ".env.tests declares MAIL_FROM_ADDR",
+            "read in config/backup.php",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_NAME",
+            ".env.docker declares MAIL_FROM_NAME",
+            ".env.tests declares MAIL_FROM_NAME",
+            "read in config/backup.php",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_HOST",
+            ".env.docker declares MAIL_HOST",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_LOG_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_MAILER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_MAILER",
+            ".env.docker declares MAIL_MAILER",
+            ".env.tests declares MAIL_MAILER",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MAIL_PASSWORD",
+            ".env.docker declares MAIL_PASSWORD",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_PORT",
+            ".env.docker declares MAIL_PORT",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_REPLYTO_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_REPLYTO_ADDR",
+            ".env.docker declares MAIL_REPLYTO_ADDR",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_REPLYTO_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_REPLYTO_NAME",
+            ".env.docker declares MAIL_REPLYTO_NAME",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SENDMAIL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_TLS_VERIFY_PEER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_TLS_VERIFY_PEER",
+            ".env.docker declares MAIL_TLS_VERIFY_PEER",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_USERNAME",
+            ".env.docker declares MAIL_USERNAME",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MANDRILL_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MAX_RESULTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAX_RESULTS",
+            ".env.docker declares MAX_RESULTS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_UNPAGINATED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAX_UNPAGINATED",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMCACHED_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEMCACHED_HOST",
+            ".env.docker declares MEMCACHED_HOST",
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMCACHED_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMCACHED_PERSISTENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMCACHED_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEMCACHED_PORT",
+            ".env.docker declares MEMCACHED_PORT",
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMCACHED_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_GRAPH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MICROSOFT_GRAPH_CLIENT_ID",
+            ".env.docker declares MICROSOFT_GRAPH_CLIENT_ID",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_GRAPH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MICROSOFT_GRAPH_CLIENT_SECRET",
+            ".env.docker declares MICROSOFT_GRAPH_CLIENT_SECRET",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_GRAPH_SAVE_TO_SENT_ITEMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MICROSOFT_GRAPH_SAVE_TO_SENT_ITEMS",
+            ".env.docker declares MICROSOFT_GRAPH_SAVE_TO_SENT_ITEMS",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MICROSOFT_GRAPH_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MICROSOFT_GRAPH_TENANT_ID",
+            ".env.docker declares MICROSOFT_GRAPH_TENANT_ID",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MONTHLY_BACKUP_KEEP_MONTHS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MONTHLY_BACKUP_KEEP_MONTHS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MYSQL_ROOT_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.docker declares MYSQL_ROOT_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_API_ALGORITHMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_AUDIENCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_ISSUERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_JWKS_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_LEEWAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_API_USERNAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/oidc.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OTP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/google2fa.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTP_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/google2fa.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTP_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/google2fa.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTP_THROW_EXCEPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/google2fa.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAPERTRAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAPERTRAIL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_COOKIE_NAME",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PASSPORT_COOKIE_NAME",
+            "read in config/passport.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_CONFIRM_TIMEOUT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PASSWORD_CONFIRM_TIMEOUT",
+            "read in config/auth.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_RESET_MAX_ATTEMPTS_PER_MIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PASSWORD_RESET_MAX_ATTEMPTS_PER_MIN",
+            "read in config/auth.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PRIVATE_AWS_ACCESS_KEY_ID",
+            ".env.docker declares PRIVATE_AWS_ACCESS_KEY_ID",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_BUCKET",
+            ".env.docker declares PRIVATE_AWS_BUCKET",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_BUCKET_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_BUCKET_ROOT",
+            ".env.docker declares PRIVATE_AWS_BUCKET_ROOT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_DEFAULT_REGION",
+            ".env.docker declares PRIVATE_AWS_DEFAULT_REGION",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_ENDPOINT",
+            ".env.docker declares PRIVATE_AWS_ENDPOINT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_PATH_STYLE",
+            ".env.docker declares PRIVATE_AWS_PATH_STYLE",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PRIVATE_AWS_SECRET_ACCESS_KEY",
+            ".env.docker declares PRIVATE_AWS_SECRET_ACCESS_KEY",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_AWS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_AWS_URL",
+            ".env.docker declares PRIVATE_AWS_URL",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_FILESYSTEM_DISK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PRIVATE_FILESYSTEM_DISK",
+            ".env.docker declares PRIVATE_FILESYSTEM_DISK",
+            "read in config/backup.php",
+            "read in config/filesystems.php",
+            "read in config/livewire.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PUBLIC_AWS_ACCESS_KEY_ID",
+            ".env.docker declares PUBLIC_AWS_ACCESS_KEY_ID",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_BUCKET",
+            ".env.docker declares PUBLIC_AWS_BUCKET",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_BUCKET_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_BUCKET_ROOT",
+            ".env.docker declares PUBLIC_AWS_BUCKET_ROOT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_DEFAULT_REGION",
+            ".env.docker declares PUBLIC_AWS_DEFAULT_REGION",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_ENDPOINT",
+            ".env.docker declares PUBLIC_AWS_ENDPOINT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_PATH_STYLE",
+            ".env.docker declares PUBLIC_AWS_PATH_STYLE",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PUBLIC_AWS_SECRET_ACCESS_KEY",
+            ".env.docker declares PUBLIC_AWS_SECRET_ACCESS_KEY",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_AWS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_AWS_URL",
+            ".env.docker declares PUBLIC_AWS_URL",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_FILESYSTEM_DISK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_FILESYSTEM_DISK",
+            ".env.docker declares PUBLIC_FILESYSTEM_DISK",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_S3_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUBLIC_S3_PROXY",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "PUSHER_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares QUEUE_CONNECTION",
+            ".env.docker declares QUEUE_CONNECTION",
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_FAILED_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACKSPACE_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACKSPACE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACKSPACE_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACKSPACE_URL_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RACKSPACE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_HOST",
+            ".env.docker declares REDIS_HOST",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REDIS_PASSWORD",
+            ".env.docker declares REDIS_PASSWORD",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_PORT",
+            ".env.docker declares REDIS_PORT",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REFERRER_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REFERRER_POLICY",
+            ".env.docker declares REFERRER_POLICY",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPORT_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REPORT_TIME_LIMIT",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REQUIRE_SAML",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REQUIRE_SAML",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESET_PASSWORD_LINK_EXPIRES",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RESET_PASSWORD_LINK_EXPIRES",
+            ".env.docker declares RESET_PASSWORD_LINK_EXPIRES",
+            "read in config/auth.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROLLBAR_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROLLBAR_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_KEY_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_KEY_SIZE",
+            "read in config/app.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SCIM_STANDARDS_COMPLIANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCIM_STANDARDS_COMPLIANCE",
+            "read in config/scim.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCIM_TRACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCIM_TRACE",
+            "read in config/scim.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECURE_COOKIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SECURE_COOKIES",
+            ".env.docker declares SECURE_COOKIES",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_COOKIE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_DRIVER",
+            ".env.docker declares SESSION_DRIVER",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_LIFETIME",
+            ".env.docker declares SESSION_LIFETIME",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUBMIT_FORMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_ADAPTERS_LOG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_ADAPTER_ALLOW_INTERNAL_TARGETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SYNC_ADAPTER_ALLOW_INTERNAL_TARGETS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TABLE_PAGE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TABS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_BATCH_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_CACHE_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_CLIENT_REQUEST_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_COMMAND_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_DUMP_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_DUMP_WATCHER_ALWAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_EVENT_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_EXCEPTION_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_GATE_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_JOB_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_LOG_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_MAIL_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_MODEL_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_NOTIFICATION_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_QUERY_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_QUEUE_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_REDIS_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_REQUEST_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_RESPONSE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_SCHEDULE_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELESCOPE_VIEW_WATCHER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/telescope.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_ALLOW_PRIVATE_IPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TWO_FACTOR_MAX_ATTEMPTS_PER_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TWO_FACTOR_MAX_ATTEMPTS_PER_MIN",
+            "read in config/auth.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIEWPORT_HEIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIEWPORT_WIDTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .screenshotter/src/screenshotter.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WARN_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_ALLOW_INTERNAL_TARGETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEBHOOK_ALLOW_INTERNAL_TARGETS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEEKLY_BACKUP_KEEP_WEEKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEEKLY_BACKUP_KEEP_WEEKS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "YEARLY_BACKUP_KEEP_YEARS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares YEARLY_BACKUP_KEEP_YEARS",
+            "read in config/backup.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: STRIPE_KEY, STRIPE_SECRET. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04972176,
+        "promptTokens": 11706,
+        "completionTokens": 170
+      },
+      "latencyMs": 4846
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": "/health",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4847,
+    "questions": 1,
+    "generatedAt": "2026-10-21T04:46:14.037Z",
+    "failedChecks": 0,
+    "promptVersion": 14
+  }
+}

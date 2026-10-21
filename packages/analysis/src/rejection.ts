@@ -24,6 +24,8 @@ import {
   LANGUAGE_SOURCE_REGEX,
   listDockerfileCandidates,
   listProductionComposeFiles,
+  productionStageText,
+  selectedDockerfile,
   WORKER_SERVICE_NAME_REGEX,
 } from './detectors.js';
 import type { RedisRequirement } from './redis.js';
@@ -649,6 +651,17 @@ export function checkSqlite(tree: FileTree): RejectionFinding {
         };
       }
     }
+  }
+  // The image sets the path of its SQLite file (`ENV SQLITE_DATABASE=/app/data/app.sqlite3`) and the app has no
+  // PostgreSQL driver; with one, the engine selector decides (Directus `DB_CLIENT`).
+  const dockerfile = selectedDockerfile(tree);
+  const sqliteFile = dockerfile && !configurable && !detectPostgresql(tree).detected ?/^\s*ENV\s[^\n]*?(\/[\w./-]+\.sqlite3?)\b/im.exec(productionStageText(dockerfile.content))?.[1] : undefined;
+  if (dockerfile && sqliteFile) {
+    return {
+      detected: true,
+      dependency: 'sqlite',
+      reason: `Unsupported database: ${dockerfile.path} keeps a SQLite database at ${sqliteFile}. Deployz hosts PostgreSQL and MySQL only.`,
+    };
   }
   return { detected: false, dependency: 'none', reason: 'No SQLite database detected' };
 }

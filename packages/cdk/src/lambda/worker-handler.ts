@@ -206,7 +206,7 @@ export async function handler(event: WorkerEvent): Promise<BatchResponse | void>
       // scheduled invoke, and the next tick retries it anyway.
       const billing = await sweepBilling(db, createPaddle()).catch((error: unknown) => {
         console.error('sweepBilling failed', error);
-        return { promoted: 0, unstuck: 0, reconciled: 0 };
+        return { promoted: 0, servingChanged: 0, unstuck: 0, reconciled: 0 };
       });
       // Counts only — taken before the expiry sweep so expired rows show.
       // A failed inventory must never fail the scheduled invoke.
@@ -232,6 +232,7 @@ export async function handler(event: WorkerEvent): Promise<BatchResponse | void>
           relaysDisconnected,
           sweptBuilds,
           billingPromoted: billing.promoted,
+          billingServingChanged: billing.servingChanged,
           billingEventsUnstuck: billing.unstuck,
           billingReconciled: billing.reconciled,
           sweptExpiredSecrets,

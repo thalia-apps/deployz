@@ -78,7 +78,11 @@ Some apps read their database connection through a name that analysis cannot
 see (for example `GF_DATABASE_URL` from an ini override, `MM_SQLSETTINGS_DATASOURCE`,
 or a name that a config library builds). When Deployz provisions a managed
 database and no standard or detected name has evidence of a read, the
-manifest has `database.connectionUnverified`. The readiness gate then reports
+manifest has `database.connectionUnverified`. A standard name (`DATABASE_*`,
+or a `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` part that
+Deployz also sets) written in a runtime file is that evidence, also when the
+read shape is one that analysis does not parse (an enum
+`case DB_HOST = 'DB_HOST'` read through `env($this->value)`). The readiness gate then reports
 `database-connection-unverified` and the state is **Needs configuration**.
 No deployment starts, because the app would connect to nothing or to an
 embedded default.
@@ -207,7 +211,10 @@ frozen manifest.
   through a config table (`env('datasource.type', 'DATASOURCE_TYPE')`) or
   named by a Go string constant, with no default found, is required too: the
   choice is undecided. When the code shows no S3 value, the source line asks
-  for a value that stores files outside the container.
+  for a value that stores files outside the container. The storage selector
+  of a debug or profiler tool (`DEBUGBAR_`, `TELESCOPE_`, `CLOCKWORK_`,
+  `PROFILER_`, `DEBUG_` names) keeps the tool's own records, not the app's
+  files, and is never a storage selector.
 - **S3 switched on by presence.** When the app builds its S3 client only if
   several variables are all set (`A && B && C ? new S3(…)`), each of them that
   Deployz does not bind or derive is required: otherwise the files go to the

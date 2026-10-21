@@ -85,4 +85,15 @@ describe('database guard: a standard name written in runtime source', () => {
     const analysis = analyseRepo(tree);
     expect(analysis.metadata['databaseNamesMentioned']).toContain('DATABASE_URL');
   });
+
+  it('does not ask when an env enum names the DB_* parts that Deployz injects', () => {
+    const manifest = manifestFor(
+      appTree({
+        'src/db.js': PG_PREFIX + 'const pool = new Pool(config.get("database"));\n',
+        'src/env-vars.js': "export const EnvVars = { DB_HOST: 'DB_HOST', DB_NAME: 'DB_NAME', DB_USER: 'DB_USER', DB_PASSWORD: 'DB_PASSWORD' };\n",
+      }),
+    );
+    expect(manifest.database.envBindings).toContainEqual({ name: 'DB_HOST', kind: 'host' });
+    expect(manifest.database).not.toHaveProperty('connectionUnverified');
+  });
 });

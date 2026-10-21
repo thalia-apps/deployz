@@ -5,6 +5,7 @@ import type { DeploymentState } from './deployment-vocabulary';
 import { everInstalled, purgeProgress } from './deployment-vocabulary';
 import { isAppOwnedStartupFailure, STARTUP_FAILURE_TITLE } from './diagnostic-vocabulary';
 import type { DeploymentJob, FleetDeploymentDetail } from './deployments';
+import type { RetryEligibility } from './diagnostics';
 import { formatReleaseVersion } from './release-version';
 
 // The vendor detail page's hero: ONE state-aware headline answering "is it
@@ -97,6 +98,30 @@ export function operationInFlight(jobs: DeploymentJob[]): DeploymentJob | null {
  */
 export function statusPollSettled(detail: Pick<FleetDeploymentDetail, 'jobs' | 'deploymentStatus'>): boolean {
   return isTerminalStage(detail.deploymentStatus.stage) && operationInFlight(detail.jobs) === null;
+}
+
+/**
+ * Whether the deployment has an installed application for the day-2 actions
+ * to act on. Usually the release pointer says so (everInstalled); an install
+ * that succeeded but never started a release (a first-start failure, or an
+ * application that never verified) has no pointer, and the API's DEPLOY_AGAIN
+ * eligibility is then the signal — Retry deployment would be refused there.
+ */
+export function deploymentEverRan(
+  state: DeploymentState,
+  currentReleaseId: string | null,
+  eligibility: RetryEligibility | null,
+): boolean {
+  return everInstalled(state, currentReleaseId) || eligibility?.action === 'DEPLOY_AGAIN';
+}
+
+/**
+ * Whether Retry deployment must lead with a new install link: the connector
+ * is disconnected or not registered, so the API refuses the retry until the
+ * customer reconnects it.
+ */
+export function retryNeedsNewInstallLink(relayStatus: string, installationId: string | null): boolean {
+  return relayStatus === 'DISCONNECTED' || !installationId;
 }
 
 /**
