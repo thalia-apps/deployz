@@ -391,7 +391,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 61 (default health path): without health evidence the health check
 // probes `/` and accepts a redirect; an image ENV that names a SQLite file is
 // an unsupported database. Stored v60 rows ask for a health path.
-export const ANALYSIS_VERSION = 61;
+// Version 62 (rules migration question): the rules Analysis asks how a required
+// database migrates when the migration is unknown (CODE_CHANGE, outcome 2).
+// Stored v61 rows are READY without the question.
+export const ANALYSIS_VERSION = 62;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -1158,6 +1161,10 @@ function detectedMigrationCommand(
   if (resolved) return resolved;
   if (aiResolved.includes('migrationCommands') && Array.isArray(migrationCommands) && typeof migrationCommands[0] === 'string') {
     return qualifyMigrationCommand(tree, migrationCommands[0], '');
+  }
+  const question = analysis.metadata['migrationQuestion'] as { candidate?: unknown; reason?: unknown } | undefined;
+  if (typeof question?.candidate === 'string' && typeof question.reason === 'string') {
+    return { candidate: question.candidate, reason: question.reason };
   }
   return undefined;
 }

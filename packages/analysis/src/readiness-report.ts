@@ -426,9 +426,9 @@ function fixClassOf(finding: ReadinessFinding, metadata: Record<string, unknown>
   const key = finding.id.startsWith('async-question-') ? 'async-question' : finding.id;
   const fixClass = FIX_CLASSES[key] ?? 'CODE_CHANGE';
   if (fixClass === 'CAPABILITY_GAP' && !capabilityRequired(finding, metadata)) return 'CODE_CHANGE';
-  // A migration the AI Analysis left unknown or could not verify is a change to verify in the
+  // A migration the Analysis left unknown or the AI could not verify is a change to verify in the
   // repository, not a setting: an unknown migration can stop the start (Logto's database alterations).
-  if (finding.id === 'migration-command-needs-input' && metadata['aiMigrationQuestion'] !== undefined) return 'CODE_CHANGE';
+  if (finding.id === 'migration-command-needs-input' && (metadata['aiMigrationQuestion'] !== undefined || metadata['migrationQuestion'] !== undefined)) return 'CODE_CHANGE';
   return fixClass;
 }
 

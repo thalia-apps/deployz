@@ -196,6 +196,7 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
       case 'migration': {
         const { mode, command } = value as MigrationValue;
         meta['migrationMode'] = mode;
+        delete meta['migrationQuestion'];
         if (mode === 'startup') meta['migrationStartupEvidence'] = answer.evidence.map((item) => ({ path: item.path, line: item.line, fromDockerCommand: false }));
         if (mode === 'none') aiResolved.push('noMigration');
         if (command !== null) {
