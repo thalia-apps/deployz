@@ -96,7 +96,7 @@ import {
   type ResourceKind,
   type VendorStackEvent,
 } from '@deployz/contracts';
-import { FAILURE_REMEDIATION, failureRecoverability, type FailureCode } from '@deployz/copy-map';
+import { FAILURE_REMEDIATION, failureRecoverability, knownFailureCode, type FailureCode } from '@deployz/copy-map';
 // Deep import so the Lambda bundle never touches @deployz/db's package root:
 // the root re-exports client.ts, whose PGlite dev fallback is external in the
 // Lambda bundle and crashes cold start with Runtime.ImportModuleError.
@@ -7156,7 +7156,7 @@ export async function buildServer({
     // reported. These three fields used to be string literals, identical for
     // every failure, and the fix line told the vendor to read an event log
     // that was never written and had no screen.
-    const failureCode = failedJob?.failureCode ?? 'UNKNOWN';
+    const failureCode = knownFailureCode(failedJob?.failureCode ?? 'UNKNOWN');
     const remediation = FAILURE_REMEDIATION[failureCode as FailureCode] ?? FAILURE_REMEDIATION.UNKNOWN;
     // What the relay said, verbatim. Stored on the job all along and never
     // surfaced, which left "Technical detail" empty on every failure.

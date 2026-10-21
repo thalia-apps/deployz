@@ -4,6 +4,7 @@ import {
   customerStackStatusLabel,
   failureCodeCopy,
   failureRecoverability,
+  knownFailureCode,
   type FailureCode,
 } from '@deployz/copy-map';
 import {
@@ -29,6 +30,7 @@ import {
   type RelayStatus,
   type RuntimeHealthLayers,
   type VendorDeploymentStatus,
+  type FailureCode as StoredFailureCode,
 } from '@deployz/contracts';
 
 import type { ConnectorUpdateOffer } from './connector-update.js';
@@ -229,7 +231,7 @@ export interface DerivationJob {
   id: string;
   type: JobType;
   state: JobState;
-  failureCode: FailureCode | null;
+  failureCode: StoredFailureCode | null;
   result: Record<string, unknown> | null;
   payload?: unknown;
   lastProgressAt: Date | null;
@@ -414,7 +416,6 @@ const FAILURE_COMPONENT: Record<FailureCode, string | null> = {
   MIGRATION_FAILED: 'database',
   RELAY_DISCONNECTED: null,
   ECS_DEPLOYMENT_FAILED: 'runtime',
-  RDS_UNAVAILABLE: 'database',
   AWS_PERMISSION_DENIED: null,
   STACK_CREATE_FAILED: null,
   STACK_DELETE_FAILED: null,
@@ -439,18 +440,19 @@ interface FailureEntry {
   vendorMessage: string;
 }
 
-function failureEntryFor(code: FailureCode | null): FailureEntry {
+function failureEntryFor(stored: StoredFailureCode | null): FailureEntry {
   // A job can fail with no classified code at all (the relay sent something
   // failureCodeSchema does not recognise, or nothing). That is not the same
   // as the taxonomy's own UNKNOWN value, which still has real copy — this is
   // the last-resort generic message for when there is no code to look up.
-  if (code === null) {
+  if (stored === null) {
     return {
       component: null,
       customerMessage: 'Deployment needs attention.',
       vendorMessage: 'The deployment failed without a classified cause.',
     };
   }
+  const code = knownFailureCode(stored);
   return {
     component: FAILURE_COMPONENT[code],
     customerMessage: failureCodeCopy(code).description,
@@ -771,7 +773,7 @@ function extractStackStatus(result: Record<string, unknown> | null | undefined):
 
 function buildFailure(job: DerivationJob | undefined, entry: FailureEntry): DerivedFailure {
   return {
-    code: job?.failureCode ?? null,
+    code: job?.failureCode ? knownFailureCode(job.failureCode) : null,
     component: entry.component,
     // First 8 hex chars of the failed job's id — a uuid's leading segment is
     // exactly 8 hex characters, so no dash-stripping is needed. Falls back
