@@ -240,7 +240,7 @@ describe('InstallPage public resolution', () => {
 
     expect(doc.body.textContent).toContain('This application cannot be installed');
     expect(doc.body.textContent).toContain(
-      'This application is not currently available for installation. Contact the publisher.',
+      'This application is not currently available for installation. Contact your software provider.',
     );
   });
 
@@ -253,7 +253,7 @@ describe('InstallPage public resolution', () => {
 
     expect(doc.body.textContent).toContain('This application cannot be installed');
     expect(doc.body.textContent).toContain(
-      'This installation link has been revoked. Contact the publisher for a new link.',
+      'This installation link has been revoked. Contact your software provider for a new link.',
     );
   });
 
@@ -695,8 +695,8 @@ describe('PublicInstallFlow', () => {
 
     const small = document.querySelector('label[for="size-small"]')!;
     const medium = document.querySelector('label[for="size-medium"]')!;
-    expect(medium.textContent).toContain('Vendor recommended');
-    expect(small.textContent).not.toContain('Vendor recommended');
+    expect(medium.textContent).toContain('Recommended by your software provider');
+    expect(small.textContent).not.toContain('Recommended by your software provider');
     expect(small.textContent).toContain('1 vCPU \u00b7 2 GiB per service');
     expect(medium.textContent).toContain('2 vCPU \u00b7 4 GiB per service');
     expect(medium.textContent).toContain('Database db.medium');
@@ -797,7 +797,7 @@ describe('PublicInstallFlow', () => {
     });
 
     expect(document.body.textContent).toContain(
-      'The publisher must fix their Deployz subscription before this application can be installed. Contact the publisher.',
+      'Your software provider must fix their Deployz subscription before this application can be installed. Contact your software provider.',
     );
 
     confirmMocks.confirmPublicInstall.mockResolvedValue({

@@ -20,27 +20,30 @@ export const DENIED_LOG_READ_ACTIONS = [
  * entry against the resource types in the deployed template.
  */
 export const CONNECTOR_STACK_RESOURCES = [
-  'Connector function (AWS Lambda) and its EventBridge schedule, which runs it every minute',
-  'Connector role, with a permissions boundary and the provisioner policy',
+  'Connector function (AWS Lambda) and its EventBridge schedule, which runs it every minute, with the Lambda permission that lets the schedule start it',
+  'Connector role, with a permissions boundary and two provisioner policies',
   'CloudFormation execution role for your application stack',
   'Permissions boundary for the IAM roles in your application stack',
   "Secrets Manager secret that holds the connector's Deployz credential",
-  "Helper functions that create the installation ID and set the connector log's 1-week retention",
+  "Helper functions and their roles: one creates the installation ID (through the CDK Provider framework), and one sets the 1-week retention of the connector's logs",
   'At run time, the connector writes SSM parameters under /deployz/<installation ID>/ to track unfinished commands',
 ] as const;
 
 /**
  * §16/§45 "data sent to Deployz" — what the relay reports on its polls:
  * operational metadata plus the AWS diagnostic messages it forwards
- * (packages/relay/src/stack-events.ts, deploy.ts, http-probe.ts, poll.ts).
+ * (packages/relay/src/stack-events.ts, deploy.ts, http-probe.ts, poll.ts),
+ * and the configuration values Deployz stores (apps/api/src/config.ts,
+ * install-config.ts).
  */
 export const DATA_SENT_TO_DEPLOYZ = [
   'Installation ID, AWS account ID and AWS Region',
-  'Connector version and the release and image version that runs',
+  'Connector version and the release and container image version that runs',
   'Deployment state, infrastructure status, health state and timestamps',
   'Resource identifiers',
   'AWS error messages: stack events, stopped-task reasons and exit codes',
   'Health-check status code and response time (not the response body)',
+  'Configuration values for your application. Deployz stores plain values as they are entered and stores secrets encrypted.',
 ] as const;
 
 /**
@@ -79,6 +82,7 @@ export const REVOKE_STEPS = [
   'Delete the Deployz connector stack in your AWS account. This deletes the connector function, its schedule and its roles.',
   'The connector stops. Deployz has no inbound path into your account, so it cannot reconnect.',
   'Deployz shows the connector as disconnected when it stops receiving check-ins.',
+  "Deleting the stack does not delete the connector's CloudWatch log groups or the SSM parameters under /deployz/<installation ID>/ that track unfinished commands. You can delete them yourself.",
 ] as const;
 
 /**
@@ -112,9 +116,9 @@ export const SECRET_HANDLING_STATEMENT =
 /** §45 "how deletion works" — mirrors §63's distinctions. */
 export const DELETION_STEPS = [
   'Your software provider starts "Remove deployment" from the Deployz dashboard.',
-  'The connector removes the application and most of its networking. It removes only resources tagged for this deployment.',
-  'Removal keeps your database (deletion protection on, AWS automated backups continue), its credentials, the storage bucket, the network parts the database uses, the HTTPS certificates, and the connector. These retained resources can continue to cost money.',
-  '"Delete retained data" is a separate, explicitly confirmed step your software provider runs while the connector is online. It deletes the database without a final snapshot, the bucket, application secrets, certificates, and the remaining network.',
+  'The connector removes the application, most of its networking, the HTTPS (443) listener, and the HTTPS certificates of the default address and of any custom domain. It removes only resources tagged for this deployment.',
+  'Removal keeps your database (deletion protection on, AWS automated backups continue), its credentials, the storage bucket, the network parts the database uses, any HTTPS certificate that removal could not delete, and the connector. These retained resources can continue to cost money.',
+  '"Delete retained data" is a separate, explicitly confirmed step your software provider runs while the connector is online. It deletes the database without a final snapshot and with its automated backups, any leftover cache, the bucket, application secrets, any leftover certificates, the task-definition revisions, and the remaining network.',
   'The connector stack is yours to delete at any time. Keep it until retained data is deleted, because deletion runs through it.',
   'Deployz keeps its operational metadata for the deployment (IDs, states, timestamps) for your records and billing history.',
 ] as const;

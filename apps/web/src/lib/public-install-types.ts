@@ -62,20 +62,20 @@ export interface PublicInstallResolve {
 export function publicInstallErrorMessage(code: string): string {
   switch (code) {
     case 'PUBLIC_INSTALL_LINK_REVOKED':
-      return 'This installation link has been revoked. Contact the publisher for a new link.';
+      return 'This installation link has been revoked. Contact your software provider for a new link.';
     case 'PUBLIC_INSTALL_LINK_EXPIRED':
-      return 'This installation link has expired. Contact the publisher for a new link.';
+      return 'This installation link has expired. Contact your software provider for a new link.';
     case 'PUBLIC_INSTALL_LINK_USED':
-      return 'This installation link has already been used. Contact the publisher if you need another installation.';
+      return 'This installation link has already been used. Contact your software provider if you need another installation.';
     case 'PUBLIC_INSTALL_LINK_DISABLED':
-      return 'This application is not currently available for installation. Contact the publisher.';
+      return 'This application is not currently available for installation. Contact your software provider.';
     case 'RELEASE_NOT_PUBLISHED':
-      return 'This application has no published release yet. Contact the publisher.';
+      return 'This application has no published release yet. Contact your software provider.';
     case 'REGION_NOT_SUPPORTED':
       return 'That region is not available for this application. Select a different region.';
     case 'MANIFEST_NEEDS_CONFIGURATION':
     case 'MANIFEST_NOT_COMPATIBLE':
-      return 'This application cannot be installed in its current state. Contact the publisher.';
+      return 'This application cannot be installed in its current state. Contact your software provider.';
     case 'PUBLIC_INSTALL_CONFIG_INVALID':
       return 'Some configuration values are missing or not valid. Check the fields and try again.';
     case 'PLAN_CHANGED':
@@ -86,10 +86,10 @@ export function publicInstallErrorMessage(code: string): string {
     case 'UNKNOWN_PROFILE':
       return 'That size is not available for this application. Select a different size.';
     case 'SUBSCRIPTION_REQUIRED':
-      return 'The publisher must fix their Deployz subscription before this application can be installed. Contact the publisher.';
+      return 'Your software provider must fix their Deployz subscription before this application can be installed. Contact your software provider.';
     case 'VALIDATION_ERROR':
       return 'The submitted information is not valid. Check the fields and try again.';
     default:
-      return 'Installation could not start. Try again or contact the publisher.';
+      return 'Installation could not start. Try again or contact your software provider.';
   }
 }

@@ -574,7 +574,7 @@ export function buildReadinessReport(
       technicalEvidence:
         'The Dockerfile has no CMD or ENTRYPOINT instruction and no "start" script was found in any package.json.',
       suggestedOutcome:
-        'Add a CMD or ENTRYPOINT instruction to the Dockerfile (or a "start" script), or set the start command in the application details.',
+        'Add a CMD or ENTRYPOINT instruction to the Dockerfile, or a "start" script to package.json, in the repository.',
       confidence: 'confirmed',
     });
   }

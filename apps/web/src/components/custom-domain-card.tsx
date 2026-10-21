@@ -391,7 +391,7 @@ function DomainStatusBody({
           <p className="text-sm text-muted-foreground">
             {canManage
               ? 'Remove this domain, then add it again to start over.'
-              : 'Ask the application owner to remove this domain and add it again.'}
+              : 'Ask your software provider to remove this domain and add it again.'}
           </p>
           {canManage ? (
             <div>

@@ -10,7 +10,6 @@ import type { CustomDomainStatus } from './domains';
 // deployment health only).
 
 import { apiRequest, ApiRequestError, errorMessage, readSignal } from '@/lib/api-client';
-import type { SubscriptionStatus } from '@/lib/organization-vocabulary';
 import { apiUrl } from '@/lib/api-url';
 
 // ── Wire shapes ────────────────────────────────────────────────────────────
@@ -649,47 +648,15 @@ export function readinessFindingMessages(details: unknown): string[] {
 
 /**
  * The message for a failed create-deployment attempt (Paddle migration
- * Phase 7 — free evaluation entitlements). `SUBSCRIPTION_REQUIRED` and
- * `TEST_DEPLOYMENT_EXISTS` get vendor-facing copy this phase owns; every
- * other error keeps the server's own message (already jargon-free, §65).
- * Phase 8: the subscription message introduces the checkout card the
- * creation screen shows next to it.
+ * Phase 7 — free evaluation entitlements). `TEST_DEPLOYMENT_EXISTS` gets
+ * vendor-facing copy this phase owns; every other error keeps the server's
+ * own message (already jargon-free, §65).
  */
 export function createDeploymentErrorMessage(caught: unknown): string {
-  if (caught instanceof ApiRequestError) {
-    if (caught.code === 'SUBSCRIPTION_REQUIRED') {
-      // Phase 13: the next step depends on WHY there is no active
-      // subscription — buying again is only right when there is nothing to
-      // fix. The creation screen shows the matching action below this line.
-      switch (blockedSubscriptionStatus(caught)) {
-        case 'PAST_DUE':
-          return 'Your last payment did not go through. Update your payment details to add this customer deployment.';
-        case 'PAUSED':
-          return 'Your subscription is paused. Resume it to add this customer deployment.';
-        case 'CANCELED':
-          return 'Your subscription has ended. Start a new one to add this customer deployment.';
-        default:
-          return 'This is your first customer deployment, so it starts your subscription. Continue to checkout below.';
-      }
-    }
-    if (caught.code === 'TEST_DEPLOYMENT_EXISTS') {
-      return 'This application already has a test deployment.';
-    }
+  if (caught instanceof ApiRequestError && caught.code === 'TEST_DEPLOYMENT_EXISTS') {
+    return 'This application already has a test deployment.';
   }
   return errorMessage(caught);
-}
-
-/**
- * The subscription status a `SUBSCRIPTION_REQUIRED` 402 carries in its
- * details (Phase 7 puts it there) — `null` for evaluation, and null for any
- * other error, so callers can branch without re-checking the code.
- */
-export function blockedSubscriptionStatus(caught: unknown): SubscriptionStatus | null {
-  if (!(caught instanceof ApiRequestError) || caught.code !== 'SUBSCRIPTION_REQUIRED') return null;
-  const status = (caught.details as { subscriptionStatus?: unknown } | null)?.subscriptionStatus;
-  return status === 'PAST_DUE' || status === 'PAUSED' || status === 'CANCELED' || status === 'ACTIVE'
-    ? status
-    : null;
 }
 
 /**

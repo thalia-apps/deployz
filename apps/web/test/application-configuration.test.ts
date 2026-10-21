@@ -214,7 +214,7 @@ describe('Vocabulary', () => {
     const storage = rows.find((row) => row.id === 'storage')!;
     expect(storage.value).toBe('Bucket created, not connected');
     expect(storage.help).toBe(
-      'Every deployment gets a storage bucket, kept after uninstall. This setting controls whether the bucket name is passed to your app.',
+      'Every deployment gets a storage bucket, kept after uninstall. Deployz always gives your app the bucket name in STORAGE_BUCKET, S3_BUCKET and AWS_S3_BUCKET, and the AWS Region in AWS_REGION. This setting controls whether Deployz also fills the other storage variables that your app reads.',
     );
 
     const connected = deriveConfigurationRows(
@@ -222,7 +222,7 @@ describe('Vocabulary', () => {
       readinessFixture({ requirements: requirementsFixture({ storage: { detected: true, effective: true, overridden: false } }) }),
     );
     const connectedStorage = connected.find((row) => row.id === 'storage')!;
-    expect(connectedStorage.value).toBe('Connected (bucket name passed to the app)');
+    expect(connectedStorage.value).toBe('Connected (storage variables filled)');
     expect(connectedStorage.help).toBe(storage.help);
   });
 });
@@ -309,7 +309,7 @@ describe('Overridden detail line', () => {
       readinessFixture({ requirements: requirementsFixture({ storage: { detected: false, effective: true, overridden: true } }) }),
     );
     const storage = rows.find((r) => r.id === 'storage')!;
-    expect(storage.value).toBe('Connected (bucket name passed to the app)');
+    expect(storage.value).toBe('Connected (storage variables filled)');
     expect(storage.detail).toBe('Set by you · detected: Bucket created, not connected');
     expect(storage.help).not.toBeNull();
   });

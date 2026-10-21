@@ -465,8 +465,9 @@ Notes:
   `deployz-app-<short installation id>` (the first group of the installation
   id), so buckets, log groups, queues, schedules, roles and the ECS cluster
   all start with `deployz-app-<short id>-`. The request-tag grants (stack
-  create and update, certificate request, listener tag, cache create, and
-  the execution role's creates) also refuse a resource that already carries
+  create and update, certificate request, listener tag, cache create, the
+  relay's task-definition register and tag, and the execution role's
+  creates) also refuse a resource that already carries
   another installation's tag, so a tagging call cannot take over another
   deployment's resource.
 - The relay's IAM: a permissions boundary (the ceiling) and two attached

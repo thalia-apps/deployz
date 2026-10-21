@@ -64,10 +64,10 @@ describe('CustomDomainCard terminal error', () => {
     },
   );
 
-  it('points a viewer who cannot manage the domain to the application owner', async () => {
+  it('points a viewer who cannot manage the domain to the software provider', async () => {
     const el = await renderCard('error', 'CERTIFICATE_FAILED', false);
     expect(buttonLabels(el)).toEqual([]);
-    expect(el.textContent).toContain('Ask the application owner to remove this domain and add it again.');
+    expect(el.textContent).toContain('Ask your software provider to remove this domain and add it again.');
   });
 
   it('still lets a progressing domain be checked', async () => {
