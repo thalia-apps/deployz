@@ -3754,6 +3754,9 @@ export async function buildServer({
     containerPort: z.number().int().nullish(),
     healthPath: z.string().nullish(),
     migrationCommand: z.string().nullish(),
+    // Reset to detected: the detected command, no vendor-override marker.
+    // (A null migrationCommand is the vendor's "No separate migration".)
+    resetMigrationCommand: z.literal(true).optional(),
     databaseRequired: z.boolean().nullish(),
     storageRequired: z.boolean().nullish(),
     redisRequired: z.boolean().nullish(),
@@ -3997,6 +4000,9 @@ export async function buildServer({
         if (minimumSizeProfile !== existing.minimumSizeProfile) set.minimumSizeProfile = minimumSizeProfile;
       }
       const detectedRequirements = readApplicationAnalysis(existing.detectedMetadata);
+      if (body.resetMigrationCommand) {
+        set.migrationCommand = detectedRequirements?.migrations.command ?? null;
+      }
       if (body.databaseRequired !== undefined) {
         set.databaseRequired = body.databaseRequired ?? detectedRequirements?.database.required ?? false;
       }
@@ -4040,8 +4046,8 @@ export async function buildServer({
       );
       // Any other field explicitly set to null relinquishes vendor ownership so
       // the next analysis re-detects it (see analysis.ts deriveContractFieldUpdates).
-      const released = CONTRACT_FIELDS.filter(
-        (field) => field !== 'migrationCommand' && body[field] === null,
+      const released = CONTRACT_FIELDS.filter((field) =>
+        field === 'migrationCommand' ? body.resetMigrationCommand === true : body[field] === null,
       );
       if (claimed.length > 0 || released.length > 0 || manifestOnlyChanged) {
         if (claimed.length > 0 || released.length > 0) {
@@ -4069,6 +4075,7 @@ export async function buildServer({
         existing.analysisStatus === 'COMPLETE' &&
         (claimed.includes('containerPort') ||
           claimed.includes('migrationCommand') ||
+          released.includes('migrationCommand') ||
           claimed.includes('healthPath') ||
           released.includes('healthPath') ||
           manifestOnlyChanged)
