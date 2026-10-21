@@ -5333,10 +5333,10 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(dep!.previousInstallationId).toBeNull();
   });
 
-  it('install retry of a failed install whose connector registered keeps the stack and offers an update, then re-enrolls the same installation with recovery', async () => {
+  it('install retry of an install whose connector registered keeps the stack and offers an update, then re-enrolls the same installation with recovery', async () => {
     const stackName = 'deployz-bootstrap-widget-suite-keep-0';
     const { deployment, installLinkId } = await seedWaiting({
-      state: 'FAILED',
+      state: 'INSTALLING',
       installationId: 'inst-keep',
       bootstrapStackName: stackName,
       enrollmentUsedAt: new Date(),
