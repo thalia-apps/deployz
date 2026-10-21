@@ -382,6 +382,12 @@ function checkMigration(ctx: CheckContext, id: string, value: MigrationValue, an
     .filter((part) => part.length >= 3 && MIGRATION.test(part));
   const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((part) => line.includes(part));
   const check = simple(id, ctx, answer, supports);
+  // Arguments added to a package script (`npm run alteration deploy`) must be shown by a cited line:
+  // an invented or incomplete argument fails the migration, and the deployment stops before the app starts.
+  const added = command === null ? undefined : /^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?[\w:.@/-]+\s+(?:--\s+)?(\S.*)$/.exec(command.trim())?.[1];
+  if (added !== undefined && !answer.evidence.some((item) => normalize(citedLine(ctx.pack, item) ?? '').includes(normalize(added)))) {
+    return result(id, [...check.reasons, `no cited line shows the script arguments "${added}"`]);
+  }
   if (mode !== 'startup') return check;
   // A migration at start is on the start path or in the app's own boot code or configuration,
   // never in a dependency manifest, a dev script, a test or a README.

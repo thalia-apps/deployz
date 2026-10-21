@@ -314,7 +314,10 @@ is final.
   - Port: in the production stage `EXPOSE`, `ENV PORT` or `HEALTHCHECK`, or
     the app reads `PORT`. Health path: a cited line registers the route.
     Startup migration: cited on the start path or in the app's boot code or
-    configuration, never in a dependency manifest.
+    configuration, never in a dependency manifest. A migration command that
+    adds arguments to a package script (`npm run alteration deploy`) needs
+    a cited line that shows those arguments; the AI can invent an argument
+    or leave out a required one, and then the migration fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the

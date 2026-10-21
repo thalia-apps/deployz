@@ -385,7 +385,9 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 60 (false vendor questions): a boot script that runs a migrate script
 // file, or an install command next to a migration library, migrates at start; a
 // DB_* name in the code verifies the database binding; a debug tool's storage
-// selector is not file storage. Stored v59 rows ask those questions.
+// selector is not file storage; an AI migration command that adds arguments
+// to a package script needs a cited line that shows them. Stored v59 rows ask
+// those questions.
 export const ANALYSIS_VERSION = 60;
 
 export interface AnalysisRunnerDeps {
