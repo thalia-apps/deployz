@@ -3121,6 +3121,14 @@ export function selectMigrationScript(tree: FileTree): [key: string, command: st
   return safe.find(([, command]) => DEPLOY_MIGRATION_COMMAND_REGEX.test(command)) ?? safe[0];
 }
 
+/**
+ * A package script for a database schema step (`migrate`, `alteration`) that is no deploy-safe
+ * migration command: the app migrates by a step that nothing runs (Logto: `alteration: logto db alt`).
+ */
+export function unusableMigrationScript(tree: FileTree): [key: string, command: string] | undefined {
+  return collectScripts(tree).find(([key, command]) => command.trim() !== '' && /migrat|alteration/i.test(key) && !UNSAFE_MIGRATION_KEY_REGEX.test(key));
+}
+
 /** A safe migration script exists for the deployed app — the mode='pre_deploy' signal. */
 export function hasPreDeployMigration(tree: FileTree): boolean {
   return selectMigrationScript(tree) !== undefined;

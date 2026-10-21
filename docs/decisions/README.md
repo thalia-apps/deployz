@@ -47,6 +47,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-21 | Every IAM role the application stack creates carries the connector's application role boundary | Active |
 | 2026-10-21 | Without health evidence the health check probes `/` and accepts 200-399 | Active |
 | 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
+| 2026-10-21 | The rules Analysis asks about an unusable migration script, and a start script with two background servers is a multi-process image | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1242,3 +1243,28 @@ CloudFormation can assume for templates that Deployz compiles.
 What would change it: an AWS action gains resource-level support (scope it),
 or a compiler change names a resource outside the stack prefix (that resource
 then needs a tag-scoped grant).
+
+## The rules fallback is as safe as the AI path (2026-10-21)
+
+Decision: production uses the rules result when the AI Analysis fails, so
+the rules give no READY that the AI path does not give.
+
+- Migration: when a required database has an unknown migration mode and a
+  package script names a database step that Deployz cannot run (a
+  `migrat…` or `alteration` key that is not a create, dev or build step),
+  the rules ask `migration-command-needs-input` with fix class CODE_CHANGE
+  (outcome 2). Logto (new-14) was READY and refuses to start until
+  `npm run alteration deploy` runs. A question for every unknown migration
+  was rejected: it made 28 more repositories outcome 2, and most of them
+  are healthy because they migrate when they start.
+- Multi-process image: a start script on the CMD/ENTRYPOINT chain that puts
+  two or more long-running servers in the background (`&`) is a
+  multi-process image, like s6-overlay or supervisord. A web-server front
+  end and a migration step do not count. Homarr (new-15) starts nginx,
+  Redis and Next.js from `run.sh`. In the full run nginx on the image port
+  answers 502, and the run is not healthy.
+
+Each rule changes one repository of the 58 recipes and 10 fixtures.
+
+What would change it: a full exam shows a false problem from either rule,
+or Deployz runs several processes of one image as one service.

@@ -106,6 +106,29 @@ describe('the migration "Needs input" question', () => {
     expect(classOf(buildReadinessReport(analysis, { migrationNeedsInput: needsInput }))).toBe('SETTING');
   });
 
+  it('a required database whose migration step is a script Deployz cannot run is a question in the rules Analysis too (Logto)', () => {
+    const dockerfile = ['FROM node:22', 'COPY . .', 'RUN npm ci', 'CMD ["npm", "start"]'];
+    const logto = analyseRepo(tree(dockerfile, { dependencies: { pg: '8' }, scripts: { start: 'node index.js', alteration: 'logto db alt' } }), { database: 'postgres' });
+    expect(logto.metadata['migrationMode']).toBe('unknown');
+    expect(logto.metadata['migrationQuestion']).toEqual({ candidate: '', reason: expect.stringContaining('"alteration" (logto db alt)') });
+    expect(analyseRepo(tree(dockerfile, { dependencies: { pg: '8' } }), { database: 'postgres' }).metadata['migrationQuestion']).toBeUndefined();
+    const report = buildReadinessReport(logto, { migrationNeedsInput: logto.metadata['migrationQuestion'] as { candidate: string; reason: string } });
+    expect(report.findings.find((entry) => entry.id === 'migration-command-needs-input')?.fixClass).toBe('CODE_CHANGE');
+    expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+
+  it('a known migration command or a startup migration asks no question', () => {
+    const known = analyseRepo(tree(FULL_INSTALL, { dependencies: { pg: '8' }, scripts: { start: 'node index.js', 'db:migrate': 'node-pg-migrate up' } }), { database: 'postgres' });
+    expect(known.metadata['migrationMode']).toBe('pre_deploy');
+    expect(known.metadata['migrationQuestion']).toBeUndefined();
+    const startup = analyseRepo(
+      tree([...FULL_INSTALL.slice(0, -1), 'CMD ["sh", "-c", "npx prisma migrate deploy && node index.js"]'], { dependencies: { pg: '8' }, scripts: { start: 'node index.js', 'migrate:dev': 'prisma migrate dev' } }),
+      { database: 'postgres' },
+    );
+    expect(startup.metadata['migrationMode']).toBe('startup');
+    expect(startup.metadata['migrationQuestion']).toBeUndefined();
+  });
+
   it('blocks provisioning until the vendor owns the migration setting', () => {
     const open = normalizeDeploymentManifest({ metadata: { ...analysis.metadata, migrationNeedsInput: needsInput } }, {});
     expect(open.migration.needsCommand).toBe(true);

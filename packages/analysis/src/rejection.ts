@@ -9,6 +9,7 @@
 import type { ComposeService, FileTree } from './detectors.js';
 import {
   TREE_PATHS,
+  CMD_CHAIN_MAX_DEPTH,
   collectDependencyNames,
   composeApplicationServices,
   composeServices,
@@ -16,6 +17,7 @@ import {
   detectUnbuildableDockerfile,
   detectPostgresql,
   DIALECT_AGNOSTIC_DRIVERS,
+  extractCmdScriptPaths,
   findDependencyEvidence,
   installsPhpExtension,
   isProductionComposeFile,
@@ -1306,6 +1308,33 @@ export function checkMultiProcessImage(tree: FileTree): RejectionFinding {
         };
       }
     }
+  }
+  // A start script that puts two or more long-running servers in the background
+  // (`redis-server &`, `node server.js &`) is a supervisor of its own. A migration it waits for is no server.
+  const visited = new Set<string>();
+  const dockerDir = selected?.includes('/') ? selected.slice(0, selected.lastIndexOf('/')) : '';
+  let frontier = extractCmdScriptPaths(lines.filter((line) => /^\s*(?:ENTRYPOINT|CMD)\b/i.test(line)).join(' '), tree, dockerDir, visited);
+  const servers = new Set<string>();
+  const scripts = new Set<string>();
+  for (let depth = 0; depth < CMD_CHAIN_MAX_DEPTH && frontier.length > 0; depth += 1) {
+    const next: string[] = [];
+    for (const path of frontier.filter((entry) => entry.endsWith('.sh'))) {
+      const content = (tree[path] ?? '').replace(/^\s*#.*$/gm, '');
+      for (const [, command] of content.matchAll(/^\s*([^\s&|;#][^&|;#\n]*?)\s*&\s*$/gm)) {
+        if (command === undefined || WEB_FRONT_END.test(command) || /migrat/i.test(command)) continue;
+        servers.add(command.replace(/^(?:\w+=\S*\s+)+/, '').split(/\s+/).slice(0, 2).join(' '));
+        scripts.add(path);
+      }
+      next.push(...extractCmdScriptPaths(content, tree, dockerDir, visited));
+    }
+    frontier = next;
+  }
+  if (servers.size >= 2) {
+    return {
+      detected: true,
+      dependency: 'multi-process-image',
+      reason: `Unsupported container setup: the start script ${[...scripts].join(', ')} runs ${servers.size} long-running servers in the background (${[...servers].slice(0, 4).join(', ')}) in one container. Deployz runs one web process and declared workers as separate services.`,
+    };
   }
   return { detected: false, dependency: 'none', reason: 'The image does not run several supervised processes' };
 }

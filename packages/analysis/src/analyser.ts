@@ -40,6 +40,7 @@ import {
   detectDockerfileMissingCopySources,
   dockerfileSelectionTied,
   pathInRuntimeImage,
+  unusableMigrationScript,
 } from './detectors.js';
 
 import type { RejectionFinding } from './rejection.js';
@@ -450,6 +451,15 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
       .map(([path]) => pathInRuntimeImage(tree, path))
       .find((path) => path !== null);
     if (manage) metadata['suggestedMigrationCommand'] = `python ${manage} migrate --noinput`;
+    // A required database whose migration step is a script Deployz cannot run is a vendor question,
+    // never READY: the app can refuse to start until the step runs (Logto: undeployed alterations).
+    const step = postgresMeta?.required === true || mysql.required ? unusableMigrationScript(tree) : undefined;
+    if (step) {
+      metadata['migrationQuestion'] = {
+        candidate: '',
+        reason: `The package script "${step[0]}" (${step[1]}) changes the database, but nothing runs it when the application starts and it is no deploy-safe migration command.`,
+      };
+    }
   }
 
   // §11.4 — the full unsupported-reason list the manifest gate turns into

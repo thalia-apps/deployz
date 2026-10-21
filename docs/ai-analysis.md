@@ -349,6 +349,18 @@ is final.
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.
+  The rules result asks the same migration question when the migration
+  mode of a required database is unknown and a package script names a
+  database step that Deployz cannot run (a `migrat…` or `alteration` key
+  that is not a create, dev or build step; Logto: `alteration: logto db
+  alt`). It stores `migrationQuestion` and asks
+  `migration-command-needs-input` with no candidate, fix class CODE_CHANGE
+  (outcome 2). A known migration command and a startup migration ask
+  nothing. An unknown migration with no such script stays the recommended
+  `database-migrations` finding: on the 58 recipes and 10 fixtures, the question for every
+  unknown migration made 28 more repositories outcome 2, and most of them
+  are healthy because they migrate when they start. When the AI resolves
+  the migration, the merge removes the rules question.
 - **Spend log:** the gateway logs one line per call (model, latency, tokens,
   attempts). `aiEngine` keeps the usage and the latency of the call (null
   without a call), the number of questions, the failed checks, each answer
@@ -418,7 +430,12 @@ SQLite, Elasticsearch/OpenSearch, Cassandra, Neo4j, ClickHouse, embedded
 JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
-service and declared workers), `unsupported-persistent-volume`,
+service and declared workers; also a multi-process image: s6-overlay or
+supervisord with two or more services, or a start script on the
+CMD/ENTRYPOINT chain that puts two or more long-running servers in the
+background with `&`, such as Homarr's `redis-server &` and
+`node server.js &`; an nginx, apache, httpd or caddy front end and a
+migration step do not count), `unsupported-persistent-volume`,
 `unsupported-gpu`, `local-file-storage`,
 `unsupported-no-dockerfile`, `build-context-git-metadata`
 (blocking only as a `CAPABILITY_GAP`, see above); `container-setup`, `port-unresolved`, `start-command-missing`,
