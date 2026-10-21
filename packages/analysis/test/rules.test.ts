@@ -40,6 +40,8 @@ const noHealthTree: FileTree = {
   'Dockerfile': 'FROM node:20-alpine\nEXPOSE 3000\nCMD ["node", "dist/index.js"]\n',
   'src/index.ts':
     "import express from 'express';\nconst app = express();\napp.get('/', (_req, res) => res.send('ok'));\napp.listen(3000);\n",
+  // A health handler whose route analysis does not resolve: Deployz cannot use the default `/`.
+  'src/health_controller.ts': '',
 };
 
 /** No migration command — with the readiness-report refactor this is now a
@@ -180,6 +182,7 @@ const multiAttentionTree: FileTree = {
   }),
   'src/index.ts':
     "import express from 'express';\nconst app = express();\napp.get('/', (_req, res) => res.send('ok'));\napp.listen(3000);\n",
+  'src/health_controller.ts': '',
 };
 
 /** Extract stable issue codes from a result. */

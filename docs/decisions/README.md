@@ -45,6 +45,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-20 | The Analysis gives one deployability outcome; only a required capability gap is not compatible | Active |
 | 2026-10-20 | The AI Analysis answers only the open items of the rules Analysis, with closed answers and one call; the reviewer is post-MVP | Proposed (release gate not passed) |
 | 2026-10-21 | Every IAM role the application stack creates carries the connector's application role boundary | Active |
+| 2026-10-21 | Without health evidence the health check probes `/` and accepts 200-399 | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -906,6 +907,35 @@ not read the flag, so the INSTALL payload leaves `health.hostChecked` out.
 
 What would change it: a real-AWS run shows a Host-checking app that answers
 400 while it is broken.
+
+## Without health evidence the health check probes `/` (2026-10-21)
+
+Decision: when Analysis finds no health route, no container HEALTHCHECK and
+no health handler file, the health check probes `/`. The manifest sets
+`health.redirectsAccepted`, and the ALB target group matcher is `200-399`
+(`200-400` for a Host-checking app). The vendor is not asked. When the
+repository has a health handler file whose route Analysis did not resolve
+(`HealthController`, `HealthAction`, `health_check.ex`), the vendor is still
+asked: that app has a health route, and its `/` can be a 404 (an API-only
+app). A path that the vendor enters must answer 200.
+
+Reason: the vendor question was the most common false problem of the
+run-and-check exam. A web app with a page at `/` answers 200, or redirects to
+a login or setup page. A redirect also proves that the process serves HTTP;
+Kubernetes HTTP probes count 200-399 as success for the same reason. A
+crashed app or an app that serves nothing at `/` (404, 5xx) still fails, and
+the deployment rolls back.
+
+Rejected: `/` with the default `200` matcher (most apps without a health
+route redirect `/` to a login page, so they never became healthy), and
+starting the image before the first deployment to try paths (it needs a safe
+place to run customer code; post-MVP).
+
+Compatibility: the relay does not read the flag, so the INSTALL payload
+leaves `health.redirectsAccepted` out, as it does `health.hostChecked`.
+
+What would change it: a real-AWS run shows an app without a health route
+whose `/` redirects while the app is broken.
 
 ## AI-first application Analysis (2026-10-19)
 

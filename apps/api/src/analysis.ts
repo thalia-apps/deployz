@@ -388,7 +388,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // selector is not file storage; an AI migration command that adds arguments
 // to a package script needs a cited line that shows them. Stored v59 rows ask
 // those questions.
-export const ANALYSIS_VERSION = 60;
+// Version 61 (default health path): without health evidence the health check
+// probes `/` and accepts a redirect; an image ENV that names a SQLite file is
+// an unsupported database. Stored v60 rows ask for a health path.
+export const ANALYSIS_VERSION = 61;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

@@ -130,6 +130,8 @@ export const workloadSchema = z
         mode: z.enum(['explicit', 'root', 'vendor_required']).optional(),
         /** The app rejects a Host header it does not know (Django ALLOWED_HOSTS): the ALB health check, which sends the task IP, gets 400. */
         hostChecked: z.boolean().optional(),
+        /** The default `/` without health evidence: a redirect (a login or setup page) also proves the server is up. */
+        redirectsAccepted: z.boolean().optional(),
       })
       .strict()
       .nullable(),

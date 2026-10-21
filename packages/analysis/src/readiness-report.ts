@@ -602,7 +602,8 @@ export function buildReadinessReport(
     });
   }
 
-  if (metadata['hasHealthEndpoint'] !== true) {
+  // The default `/` (redirects accepted) is the health signal of an app without a health route.
+  if (metadata['hasHealthEndpoint'] !== true && metadata['healthRedirectsAccepted'] !== true) {
     findings.push({
       id: 'health-check',
       category: 'health',

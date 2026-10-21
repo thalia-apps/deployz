@@ -37,6 +37,8 @@ const noHealthTree: FileTree = {
   'Dockerfile': 'FROM node:20-alpine\nEXPOSE 3000\nCMD ["node", "dist/index.js"]\n',
   'src/index.ts':
     "import express from 'express';\nconst app = express();\napp.get('/', (_req, res) => res.send('ok'));\napp.listen(3000);\n",
+  // A health handler whose route analysis does not resolve: Deployz cannot use the default `/`.
+  'src/health_controller.ts': '',
 };
 
 /** PostgreSQL detected, but no migration command — a bare driver only (no

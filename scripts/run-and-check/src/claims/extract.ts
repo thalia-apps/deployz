@@ -46,6 +46,14 @@ export function vendorRequiredVariables(manifest: DeploymentManifest): string[] 
 /** The `from` of a Dockerfile claim when the gate itself says the image cannot build. */
 /** The app checks the Host header: its target group also accepts 400 (infrastructure-compiler `Matcher`). */
 export const HOST_CHECKED_HEALTH = 'health.path (host checked)';
+/** Appended to the `from` of the default `/`: its target group also accepts a redirect. */
+export const REDIRECTS_ACCEPTED = ' (redirects accepted)';
+
+/** The status codes the target group accepts (infrastructure-compiler `healthMatcher`). */
+export function healthyStatuses(health: { hostChecked?: boolean | undefined; redirectsAccepted?: boolean | undefined }): number[] {
+  const statuses = health.redirectsAccepted === true ? Array.from({ length: 200 }, (_, index) => 200 + index) : [200];
+  return health.hostChecked === true ? [...statuses, 400] : statuses;
+}
 
 export const PREDICTED_UNBUILDABLE = 'application.dockerfilePath (gate: unbuildable)';
 
@@ -119,7 +127,7 @@ export function extractClaims(file: AnalysisResultFile): Claim[] {
       subject: null,
       // A `vendor_required` path is a neutral placeholder, not a claim.
       value: manifest.health.mode === 'vendor_required' ? null : manifest.health.path,
-      from: manifest.health.hostChecked === true ? HOST_CHECKED_HEALTH : 'health.path',
+      from: `${manifest.health.hostChecked === true ? HOST_CHECKED_HEALTH : 'health.path'}${manifest.health.redirectsAccepted === true ? REDIRECTS_ACCEPTED : ''}`,
     },
     { type: 'database.engine', subject: null, value: databaseEngine(manifest), from: 'database.postgres' },
     { type: 'redis.required', subject: null, value: manifest.redis.required, from: 'redis.required' },

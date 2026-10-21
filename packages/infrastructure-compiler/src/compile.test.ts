@@ -219,6 +219,14 @@ describe('host-checked health check', () => {
     checked.workloads[0] = { ...checked.workloads[0]!, healthCheck: { path: '/health', mode: 'explicit', hostChecked: true } };
     expect(targetGroup(checked).properties['Matcher']).toEqual({ HttpCode: '200,400' });
   });
+
+  it('accepts a redirect on the default root path', () => {
+    const root = makeIr({ postgres: false, redis: false });
+    root.workloads[0] = { ...root.workloads[0]!, healthCheck: { path: '/', mode: 'root', redirectsAccepted: true } };
+    expect(targetGroup(root).properties['Matcher']).toEqual({ HttpCode: '200-399' });
+    root.workloads[0] = { ...root.workloads[0]!, healthCheck: { path: '/', mode: 'root', redirectsAccepted: true, hostChecked: true } };
+    expect(targetGroup(root).properties['Matcher']).toEqual({ HttpCode: '200-400' });
+  });
 });
 
 describe('stateful safety', () => {
