@@ -302,9 +302,9 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
 
     const row = await loadApplication(db, application.id);
     expect(row.analysisStatus).toBe('COMPLETE');
-    // The nested Dockerfile satisfies container setup. There is no health
-    // endpoint or HEALTHCHECK anywhere in this fixture: the default `/` checks it.
-    expect(row.compatibilityStatus).toBe('READY');
+    // The nested Dockerfile satisfies container setup, but the health handler
+    // (apps/api/src/health-controller.js) has no route that analysis resolves.
+    expect(row.compatibilityStatus).toBe('NEEDS_ATTENTION');
 
     const metadata = row.detectedMetadata as {
       dockerfilePath?: string;
@@ -314,12 +314,15 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
     expect(metadata.dockerfilePath).toBe('apps/api/Dockerfile');
     expect(metadata.aiAnalysis?.unresolved).toContain('monorepo-target');
     expect(metadata.aiAnalysis?.warnings).toContain('AI analysis unavailable');
-    expect(metadata.readiness.findings.map((f) => f.id)).not.toContain('health-check');
+    expect(metadata.readiness.state).toBe('ALMOST_READY');
+    expect(metadata.readiness.findings).toEqual([
+      expect.objectContaining({ id: 'health-check', severity: 'required', blocking: false }),
+    ]);
 
     // §11.1 end-to-end: analysis → manifest → manifest readiness. The MVP is
     // ONE selected app; the manifest gate must point at the nested app with a
-    // repo-root build context. This fixture has NO health evidence at all, so
-    // the health check probes `/` and also accepts a redirect.
+    // repo-root build context. The health handler has no resolved route, so
+    // the gate asks the vendor for a health path instead of probing `/`.
     const manifest = normalizeDeploymentManifest(analysis, {});
     expect(manifest.application.root).toBe('apps/api');
     expect(manifest.application.dockerfilePath).toBe('apps/api/Dockerfile');
@@ -327,9 +330,10 @@ describe('analysis — runApplicationAnalysis (fixture mode, end-to-end)', () =>
     expect(manifest.web.command).toContain('src/index.js');
     expect(manifest.web.port).toBe(3000);
     expect(manifest.unsupported).toEqual([]);
-    expect(manifest.health).toEqual({ path: '/', mode: 'root', redirectsAccepted: true });
+    expect(manifest.health.mode).toBe('vendor_required');
     const gate = evaluateManifestReadiness(manifest);
-    expect(gate.findings.some((f) => f.id === 'health-path-required')).toBe(false);
+    expect(gate.state).toBe('NEEDS_CONFIGURATION');
+    expect(gate.findings.some((f) => f.id === 'health-path-required')).toBe(true);
     // The same flow accepts the vendor-corrected overrides verbatim — the
     // PATCH surface feeds this exact normalizer at deployment creation.
     const overridden = normalizeDeploymentManifest(analysis, {
