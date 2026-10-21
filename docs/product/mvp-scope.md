@@ -190,7 +190,8 @@ Rejected at analysis time, with evidence, never silently adapted:
 - Redis Cluster, Redis Stack modules, TLS Redis.
 - Compose application services beyond the web service and declared
   workers (extra long-running application services), an image that runs
-  several supervised processes (s6-overlay, supervisord), Kubernetes,
+  several supervised processes (s6-overlay, supervisord, or a start script
+  that puts two or more long-running servers in the background), Kubernetes,
   Serverless/SAM, the
   repository's own Terraform/Pulumi/CloudFormation, Azure, GCP.
 - Persistent volumes or local disk state (including a data directory or a

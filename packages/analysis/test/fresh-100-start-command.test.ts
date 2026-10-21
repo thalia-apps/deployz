@@ -109,6 +109,28 @@ describe('an image that runs several supervised processes is not supported', () 
     expect(gate(tree).multiProcess).toBeUndefined();
   });
 
+  it('rejects a start script that puts two long-running servers in the background (Homarr)', () => {
+    const run = [
+      'node ./db/migrations/$DB_DIALECT/migrate.cjs ./db/migrations/$DB_DIALECT &',
+      'wait "$MIGRATION_PID"',
+      "nginx -g 'daemon off;' &",
+      'redis-server /app/redis.conf &',
+      'node apps/nextjs/server.js &',
+      'while true; do',
+      '    wait $NEXTJS_PID',
+      '    node apps/nextjs/server.js &',
+      'done',
+    ].join('\n');
+    const tree = withPaths({ ...APP, Dockerfile: 'FROM alpine:3.20\nCOPY scripts/run.sh ./run.sh\nEXPOSE 7575\nCMD ["sh", "run.sh"]\n', 'scripts/run.sh': run });
+    expect(gate(tree).multiProcess?.reason).toContain('2 long-running servers in the background (redis-server /app/redis.conf, node apps/nextjs/server.js)');
+  });
+
+  it('accepts a start script with one background server, or nginx in front of the app', () => {
+    const dockerfile = 'FROM node:22\nCOPY start.sh ./start.sh\nEXPOSE 3000\nCMD ["sh", "start.sh"]\n';
+    expect(gate(withPaths({ ...APP, Dockerfile: dockerfile, 'start.sh': 'crond &\nexec node index.js\n' })).multiProcess).toBeUndefined();
+    expect(gate(withPaths({ ...APP, Dockerfile: dockerfile, 'start.sh': 'nginx &\nnode index.js &\nwait\n' })).multiProcess).toBeUndefined();
+  });
+
   it('rejects a supervisor that runs api, cron, web and worker', () => {
     const tree = withPaths({
       ...APP,

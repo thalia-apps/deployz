@@ -392,9 +392,12 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // probes `/` and accepts a redirect; an image ENV that names a SQLite file is
 // an unsupported database. Stored v60 rows ask for a health path.
 // Version 62 (rules migration question): the rules Analysis asks how a required
-// database migrates when the migration is unknown (CODE_CHANGE, outcome 2).
+// database migrates when its migration step is a script Deployz cannot run (CODE_CHANGE, outcome 2).
 // Stored v61 rows are READY without the question.
-export const ANALYSIS_VERSION = 62;
+// Version 63 (start-script processes): a start script that puts two or more
+// long-running servers in the background is a multi-process image (outcome 2).
+// Stored v62 rows are deployable without the change.
+export const ANALYSIS_VERSION = 63;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
