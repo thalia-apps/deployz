@@ -764,8 +764,8 @@ type ConfigUpdateMessage = Extract<QueueMessage, { type: 'CONFIG_UPDATE' }>;
  * queue). The durable payload carries newly-entered secret VALUES only long
  * enough for the relay to claim them — `GET /api/relay/commands` serves the
  * payload once and scrubs the values from the stored row in the same
- * request (see `redactClaimedPayload` in server.ts). The control-plane DB
- * never keeps plaintext secret values.
+ * request (see `redactClaimedPayload` in server.ts). Until that claim, the
+ * job row in the control-plane DB holds the plaintext values.
  */
 export async function fanOutConfigUpdate(
   db: RuntimeDb,

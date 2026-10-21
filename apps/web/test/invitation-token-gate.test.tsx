@@ -174,7 +174,7 @@ describe('InvitationTokenGate', () => {
 
     expect(document.body.textContent).toContain('This application cannot be installed');
     expect(document.body.textContent).toContain(
-      'This installation link has already been used. Contact the publisher if you need another installation.',
+      'This installation link has already been used. Contact your software provider if you need another installation.',
     );
   });
 

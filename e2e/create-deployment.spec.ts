@@ -108,14 +108,14 @@ test('a MANIFEST_NOT_COMPATIBLE rejection at customer confirm shows the server r
   // role="alert" and would otherwise make this locator ambiguous.
   const alert = page.locator('form [role="alert"]');
   await expect(alert).toContainText(
-    'This application cannot be installed in its current state. Contact the publisher.',
+    'This application cannot be installed in its current state. Contact your software provider.',
   );
 
   // Retry with the same customer: the API rejects again (the manifest is
   // still NOT_COMPATIBLE), but the customer row should not be duplicated.
   await submit.click();
   await expect(alert).toContainText(
-    'This application cannot be installed in its current state. Contact the publisher.',
+    'This application cannot be installed in its current state. Contact your software provider.',
   );
 
   const customersResponse = await page.request.get(`${API_URL}/api/customers`);

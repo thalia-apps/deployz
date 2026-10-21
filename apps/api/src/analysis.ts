@@ -391,13 +391,16 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 61 (default health path): without health evidence the health check
 // probes `/` and accepts a redirect; an image ENV that names a SQLite file is
 // an unsupported database. Stored v60 rows ask for a health path.
-// Version 62 (rules migration question): the rules Analysis asks how a required
+// Version 62 (start command copy): a missing start command is fixed in the
+// repository; Deployz has no start command setting. Stored v61 rows say to set
+// it in the application details.
+// Version 63 (rules migration question): the rules Analysis asks how a required
 // database migrates when its migration step is a script Deployz cannot run (CODE_CHANGE, outcome 2).
-// Stored v61 rows are READY without the question.
-// Version 63 (start-script processes): a start script that puts two or more
+// Stored v62 rows are READY without the question.
+// Version 64 (start-script processes): a start script that puts two or more
 // long-running servers in the background is a multi-process image (outcome 2).
-// Stored v62 rows are deployable without the change.
-export const ANALYSIS_VERSION = 63;
+// Stored v63 rows are deployable without the change.
+export const ANALYSIS_VERSION = 64;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

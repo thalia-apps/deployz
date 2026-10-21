@@ -56,7 +56,7 @@ export async function createBillingPortalLinks(
     throw new ApiError(
       409,
       'NO_SUBSCRIPTION',
-      'There is no subscription to manage yet. Billing starts with your first customer deployment.',
+      'There is no subscription to manage yet. Start a subscription on the Invite customer page.',
     );
   }
 

@@ -100,6 +100,9 @@ function attentionStatus(deployment: FleetDeployment): DeploymentDisplayStatus {
   if (deployment.deploymentStatus?.failure) {
     return { group: 'attention', label: 'Update failed', badge: 'destructive' };
   }
+  // Nothing writes state DISCONNECTED today (the liveness sweep sets
+  // relayStatus). Kept like the API's defensive branch in
+  // deriveDeploymentStatus, because the value stays in the state enum.
   if (deployment.state === 'DISCONNECTED') {
     return { group: 'attention', label: 'Needs attention · Disconnected', badge: 'destructive' };
   }
