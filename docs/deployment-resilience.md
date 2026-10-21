@@ -167,8 +167,11 @@ watchdog, and the stack-event progress route's settlement backstop):
 The customer-facing retry (`POST /api/install/:id/retry`,
 `POST /api/deploy-links/:id/retry`) re-arms a first install with a fresh
 enrollment code and credential. It is refused after any successful install and
-outside NOT_INSTALLED, WAITING_FOR_RELAY, INSTALLING and FAILED (for example
-while a DESTROY runs); a retry during INSTALLING is allowed on purpose.
+outside NOT_INSTALLED, WAITING_FOR_RELAY and INSTALLING (for example while a
+DESTROY runs); a retry during INSTALLING is allowed on purpose. A FAILED
+install is the vendor's to retry (retry-install, or a relay reset when the
+connector is disconnected), so the customer pages show no retry for it and
+the route refuses it.
 When a previous attempt reached the customer account (a connector registered,
 or an earlier retry already kept its stack) the retry keeps the same bootstrap
 stack name. The API returns `quickCreateUrl: null` and `existingStackUpdate`,
@@ -695,6 +698,16 @@ forwarded.
   `DEPLOYZ_ACTION` (our side of the boundary — support, not retry loops),
   `TERMINAL` (retrying cannot help as-is). The diagnostics endpoint serves
   it; the diagnostic card leads with it.
+- Retry eligibility (`apps/api/src/retry-eligibility.ts`) turns the class
+  into the vendor's action. `WAIT` is returned only where something recovers
+  without the vendor: a live state, or a FAILED deployment with a release
+  for the heartbeat self-heal to restore. A failed first install has no
+  release and nothing reconciles it, so every code except `DEPLOYZ_ACTION`
+  gets Retry deployment. An install that succeeded but never ran a release
+  gets deploy again. When the connector is disconnected or not registered,
+  Retry deployment leads with Issue new install link (relay reset). The
+  guard `apps/web/test/failure-recovery-guard.test.ts` checks that every
+  state × failure code has a control or a real automatic recovery.
 - There is deliberately no generic retry-everything loop. Transient AWS
   errors are absorbed inside the relay's wait loops (unreadable-poll
   budget, bounded backoff); ambiguous outcomes go through reconciliation;
@@ -767,7 +780,7 @@ ElastiCache replication-group delete — identified from the failed stack's
 own resource list, never by name); recreate; re-verify. Retained S3 buckets
 are deliberately left (inert, empty, blocked by IAM tag-condition
 semantics). The decision record is `docs/decisions/failed-install-recovery.md`.
-A customer retry of a failed first install reaches the same pass: it keeps
+A customer retry of a first install in progress reaches the same pass: it keeps
 the connector stack, and the re-enrolled connector's INSTALL carries
 `recovery.neverInstalled`. A second connector could not run it, because its IAM
 is scoped to its own installation tag. Recovery is the only recreation path. A normal install creates a stack

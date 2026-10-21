@@ -6,6 +6,7 @@ const CONNECTED: RetryEligibilityInput = {
   state: 'FAILED',
   relayStatus: 'CONNECTED',
   installSucceeded: false,
+  hasRelease: false,
   failureCode: 'UNKNOWN',
 };
 
@@ -54,25 +55,30 @@ describe('retryEligibilityFor', () => {
     });
   });
 
-  it('tells a reconcile-first failure to wait rather than retry', () => {
-    expect(retryEligibilityFor({ ...CONNECTED, failureCode: 'RDS_UNAVAILABLE' })).toEqual({
-      action: 'WAIT',
-      retryable: false,
-      whoMustAct: null,
-    });
-    expect(retryEligibilityFor({ ...CONNECTED, failureCode: 'UNKNOWN' })).toEqual({
-      action: 'WAIT',
-      retryable: false,
-      whoMustAct: null,
-    });
-  });
-
-  it('keeps the relay-disconnected failure non-retryable, with or without the relay flag', () => {
-    const expected = { action: 'WAIT', retryable: false, whoMustAct: null };
-    expect(retryEligibilityFor({ ...CONNECTED, failureCode: 'RELAY_DISCONNECTED' })).toEqual(expected);
+  it('offers the retry for a reconcile-first failure of a first install: nothing reconciles it', () => {
+    for (const failureCode of ['RDS_UNAVAILABLE', 'UNKNOWN', 'RELAY_DISCONNECTED']) {
+      expect(retryEligibilityFor({ ...CONNECTED, failureCode })).toEqual({
+        action: 'RETRY_INSTALL',
+        retryable: true,
+        whoMustAct: null,
+      });
+    }
     expect(
       retryEligibilityFor({ ...CONNECTED, failureCode: 'RELAY_DISCONNECTED', relayStatus: 'DISCONNECTED' }),
-    ).toEqual(expected);
+    ).toEqual({ action: 'RETRY_INSTALL', retryable: false, whoMustAct: null });
+  });
+
+  it('tells a reconcile-first failure to wait only where the heartbeat self-heal can run', () => {
+    const wait = { action: 'WAIT', retryable: false, whoMustAct: null };
+    const installed = { ...CONNECTED, installSucceeded: true, failureCode: 'RDS_UNAVAILABLE' };
+    expect(retryEligibilityFor({ ...installed, state: 'HEALTHY', hasRelease: true })).toEqual(wait);
+    expect(retryEligibilityFor({ ...installed, state: 'FAILED', hasRelease: true })).toEqual(wait);
+    // An install that never ran a release has nothing for the self-heal to restore.
+    expect(retryEligibilityFor({ ...installed, state: 'FAILED', hasRelease: false })).toEqual({
+      action: 'DEPLOY_AGAIN',
+      retryable: true,
+      whoMustAct: null,
+    });
   });
 
   it('clamps any retry action to non-retryable while the relay is disconnected', () => {
@@ -86,6 +92,7 @@ describe('retryEligibilityFor', () => {
       state: 'FAILED',
       relayStatus: 'CONNECTED',
       installSucceeded: true,
+      hasRelease: true,
       failureCode: 'ECS_DEPLOYMENT_FAILED',
     };
     expect(retryEligibilityFor(day2)).toEqual({

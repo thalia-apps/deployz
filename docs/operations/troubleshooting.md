@@ -44,7 +44,7 @@ Every failure carries one of 24 stable codes and a recoverability class
 
 | Class | Meaning | Action |
 | --- | --- | --- |
-| `RECONCILE_FIRST` | May repair itself (relay returning, watchdog re-offer, transient AWS condition) | Wait one or two relay polls (one minute each; five minutes on a connector published before PR #531); retry only if it persists |
+| `RECONCILE_FIRST` | Can be temporary (relay returning, watchdog re-offer, transient AWS condition) | On a deployment with a running release, wait one or two relay polls (one minute each; five minutes on a connector published before PR #531), then deploy again if it persists. A failed first install does not recover by itself: use Retry deployment (Issue new install link when the connector is disconnected) |
 | `USER_ACTION` | The vendor or customer must change something (permissions, quota, app configuration) | Fix the cause, then deploy again or retry the install |
 | `DEPLOYZ_ACTION` | The fault is on Deployz's side (template, image, relay state) | Do not loop on retry; investigate the control plane or template |
 | `TERMINAL` | Retrying cannot help as-is | Change the requirement (unsupported architecture, unsupported Region) |
@@ -179,7 +179,7 @@ republish the bootstrap template and have the customer create a new stack.
 
 **Enrollment fails with `RELAY_CREDENTIAL_MISMATCH`.** The bootstrap stack
 was created from a template that does not carry the `RelayCredential`
-parameter, or from an install link that was rotated afterwards. Rotate the
+parameter, or from an install link that was re-issued afterwards. Select Issue new
 install link and create the stack again.
 
 **The failed update shows the previous version still running.** Correct:

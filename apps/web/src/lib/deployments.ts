@@ -66,6 +66,8 @@ export interface FleetDeployment {
   components: HealthComponents | null;
   /** The public install link id — never the relay's installation id. */
   installLinkId: string;
+  /** When the install link stops starting new installs; null = no limit. */
+  installLinkExpiresAt: string | null;
   desiredState: Record<string, unknown>;
   observedState: Record<string, unknown> | null;
   infraVersion: string;

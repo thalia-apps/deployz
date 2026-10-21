@@ -50,6 +50,7 @@ function detail(overrides: Partial<FleetDeploymentDetail> = {}): FleetDeployment
     healthStatus: 'HEALTHY' as HealthStatus,
     components: null,
     installLinkId: 'link-1',
+    installLinkExpiresAt: null,
     desiredState: {},
     observedState: null,
     infraVersion: '1',
