@@ -59,6 +59,21 @@ export const DATA_NOT_SENT_TO_DEPLOYZ = [
 export const RAW_LOGS_GUARANTEE =
   'Deployz does not automatically copy your raw application logs outside your AWS account.';
 
+/**
+ * How application traffic reaches the customer's load balancer
+ * (docs/networking-and-https.md "Origin TLS and the Cloudflare hop"): the
+ * default `d-*` record is proxied through Deployz's Cloudflare zone
+ * (apps/api/src/cloudflare-records.ts); a custom domain is the customer's
+ * own DNS record to the load balancer.
+ */
+export const TRAFFIC_ROUTING = [
+  "Traffic to your application's default deployz.dev address goes through the Deployz Cloudflare network. HTTPS ends at Cloudflare. Cloudflare then sends the traffic over a new HTTPS connection to the load balancer in your AWS account.",
+  'Traffic to a custom domain goes directly to the load balancer in your AWS account. It does not go through Deployz.',
+] as const;
+
+export const TRAFFIC_RECOMMENDATION =
+  'If you do not want your application traffic to go through Deployz, ask your software provider to add a custom domain, and use only that address. The default address stays available.';
+
 /** §45 "how to revoke Deployz". */
 export const REVOKE_STEPS = [
   'Delete the Deployz connector stack in your AWS account. This deletes the connector function, its schedule and its roles.',

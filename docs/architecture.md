@@ -423,38 +423,72 @@ currently completed by the web app; see
   cannot read customer logs, describe customer AWS, or update relay code in
   place: a relay fix reaches a customer only after the bootstrap template is
   republished and the customer's stack is recreated.
-- The relay's IAM is a permissions boundary scoped to the
-  `deployz:installation` tag, with documented condition-free exceptions for
-  actions AWS cannot tag-condition (reads, S3 bucket actions,
-  `GetRandomPassword`, log retention, task-definition deregistration,
-  ElastiCache replication-group lifecycle, `ecs:RunTask`,
-  `ecs:ListTaskDefinitions`). The relay role's
-  `ecs:DeregisterTaskDefinition` is granted on `*` (the boundary does the
-  same) because ECS supports no resource-level scoping for it; the relay code
-  restricts it to the installation's own suffixed task families. The bootstrap
-  stack attaches the provisioner policy at install; nothing is attached
-  later. The relay reads and writes its own credential secret by that
-  secret's ARN only. It reads and writes other secret values only on secrets
-  that carry its `deployz:installation` tag (the application's
-  configuration); it can list secrets and read their metadata without a
-  condition. The relay has no log-reading permissions. Relay-created resources (listener, certificate)
+- One AWS account and Region can hold several deployments, each with its
+  own connector. Every write grant of a connector is limited to its own
+  installation, so it cannot change another deployment's resources. Where
+  AWS evaluates the tag, the limit is the `deployz:installation` tag.
+  Otherwise the limit is the resource name: CloudFormation names every
+  unnamed application resource after the application stack
+  `deployz-app-<short installation id>` (the first group of the installation
+  id), so buckets, log groups, queues, schedules, roles and the ECS cluster
+  all start with `deployz-app-<short id>-`. The request-tag grants (stack
+  create and update, certificate request, listener tag, cache create, and
+  the execution role's creates) also refuse a resource that already carries
+  another installation's tag, so a tagging call cannot take over another
+  deployment's resource.
+- The relay's IAM: a permissions boundary (the ceiling) and two attached
+  provisioner policies (`ProvisionerPolicy` and `ProvisionerPurgePolicy`,
+  two because one policy is over the 6,144-character quota). The boundary is
+  at that quota, so it carries the wider form of the name-scoped and
+  cluster-scoped statements; the provisioner policies carry the
+  installation limit, and the role gets only what both allow. The relay
+  passes only its own CloudFormation execution role to CloudFormation, and
+  only `role/deployz/deployz-app-<short id>-*` (and the pre-path
+  `role/deployz-app-<short id>-*`) to ECS. `ecs:RunTask` and `ecs:StopTask`
+  are limited by the `ecs:cluster` condition to the installation's cluster.
+  The PURGE S3 deletes are limited to `deployz-app-<short id>-*` buckets, and
+  the purge code also checks each bucket's tag. Condition-free exceptions:
+  reads and discovery (Describe/List, bucket tags), and
+  `ecs:DeregisterTaskDefinition`, which ECS supports on `*` only; the relay
+  code restricts it to the installation's own suffixed task families, and a
+  deregistered revision does not stop a running task. The bootstrap stack
+  attaches the provisioner policies at install; nothing is attached later.
+  The relay reads and writes its own credential secret by that secret's ARN
+  only. It reads and writes other secret values only on secrets that carry
+  its `deployz:installation` tag (the application's configuration); it can
+  list secrets and read their metadata without a condition. The relay has no
+  log-reading permissions. Relay-created resources (listener, certificate)
   must carry the installation tag or the relay cannot modify them later.
 - The CloudFormation execution role has no permissions boundary of its own;
   a boundary does not carry over to the roles it creates. Instead, it can
   create a role, put an inline policy on it or attach a policy to it only
-  under `role/deployz/`, only for its installation tag, and only when the role
-  carries the connector's application role boundary
-  (`ApplicationRoleBoundary`). The boundary grants image pull, log writes,
-  the installation's tagged secrets, `deployz-app*` buckets and queues,
-  `ecs:RunTask` on `DeployzApp*` task definitions and `iam:PassRole` of
-  `role/deployz/*` to ECS tasks — no IAM management. `iam:AttachRolePolicy`
-  is limited to `AmazonECSTaskExecutionRolePolicy`; `iam:PassRole` is limited
-  to `role/deployz/*`; S3 bucket actions are limited to `deployz-app*`
-  buckets. The relay passes the boundary ARN as the template parameter
-  `paramRoleBoundaryArn` and refuses, before `CreateStack`, a template that
-  does not declare it (an artifact compiled before the boundary). IAM cannot
-  limit a role's trust policy, so a created role can still trust another
-  account; the boundary is what limits it.
+  as `role/deployz/deployz-app-<short id>-*`, only for its installation tag,
+  and only when the role carries the connector's application role boundary
+  (`ApplicationRoleBoundary`). The boundary grants image pull, log writes to
+  the installation's log groups, the installation's tagged secrets, buckets
+  and queues, `ecs:RunTask` only in the installation's cluster, and
+  `iam:PassRole` of the installation's roles to ECS tasks — no IAM
+  management. `iam:AttachRolePolicy` is limited to
+  `AmazonECSTaskExecutionRolePolicy`. S3 bucket actions, log-group retention
+  and deletion, queues and schedules are limited to names that start with
+  `deployz-app-<short id>-`. The ElastiCache replication-group actions need
+  the replication group's tag; the default parameter group and the member
+  cache nodes, which the same calls also touch, are granted without a tag.
+  `secretsmanager:GetRandomPassword` (no resource) and
+  `ecs:DeregisterTaskDefinition` stay on `*`. The relay passes the boundary
+  ARN as the template parameter `paramRoleBoundaryArn` and refuses, before
+  `CreateStack`, a template that does not declare it (an artifact compiled
+  before the boundary). IAM cannot limit a role's trust policy, so a created
+  role can still trust another account; the boundary is what limits it.
+- Traffic to the default `d-*` address passes through Deployz's Cloudflare
+  zone, where TLS ends; a custom domain sends traffic straight to the
+  customer's load balancer
+  ([`networking-and-https.md`](networking-and-https.md#origin-tls-and-the-cloudflare-hop)).
+  The Security page recommends a custom domain to a customer who does not
+  want traffic to pass through Deployz.
+- A connector installed before the installation-scoped IAM keeps its wider
+  grants until the customer updates the connector stack
+  ([`operations/control-plane.md`](operations/control-plane.md)).
 - Relay authentication: a per-link credential minted by the API (hash
   stored; plaintext until first registration), presented as a bearer token;
   the enrollment code is single-use (burned by a conditional update, so two

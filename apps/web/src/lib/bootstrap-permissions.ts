@@ -72,12 +72,13 @@ const STATEMENT_LABELS: Record<string, string> = {
   ProvisionerCacheCreate: 'Create the cache',
   ProvisionerCacheManage: 'Modify and delete the cache',
   ProvisionerCacheDescribe: 'Read cache configuration',
-  RelayDeployObserve: 'Observe and stop application tasks',
+  RelayDeployObserve: 'Observe application tasks',
   RelayDeployRegister: 'Register new task definitions',
   RelayDeregisterRevisions: 'Remove old application task-definition revisions after a successful update',
-  RelayMigrationRun: 'Run one-off tasks, such as database migrations',
+  RelayMigrationRun: 'Run and stop one-off tasks, such as database migrations',
   RelayDeployPassRole: 'Give application roles to ECS',
-  RelayPurgeStorage: 'Find and empty storage buckets when retained data is deleted',
+  RelayPurgeStorageDiscover: 'Find storage buckets when retained data is deleted',
+  RelayPurgeStorage: 'Empty and delete storage buckets when retained data is deleted',
   RelayPurgeRdsDiscover: 'Find retained databases',
   RelayPurgeSecretsList: 'Find retained secrets',
   RelayInstallationSecrets: 'Read, update and delete application secrets',
@@ -89,7 +90,9 @@ const STATEMENT_LABELS: Record<string, string> = {
   ProvisionApplicationManage: 'Modify and delete application resources',
   ProvisionApplicationRead: 'Read resource configuration',
   ProvisionApplicationStorage: 'Create and configure storage buckets',
-  ProvisionApplicationUntaggable: 'Actions that AWS cannot limit by tag',
+  ProvisionApplicationUntaggable: 'Actions that AWS cannot limit by tag or name',
+  ProvisionApplicationLogGroups: 'Set log retention and delete application log groups',
+  ProvisionApplicationCacheCompanions: 'Use the cache parameter group and cache nodes',
   ProvisionApplicationRoleCreate: 'Create application roles',
   ProvisionApplicationRolePolicy: 'Give application roles their own permissions',
   ProvisionApplicationRoleAttach: 'Attach the ECS task-execution policy to application roles',
@@ -118,6 +121,8 @@ const INSTALLATION_TAG_KEYS = [
   'aws:ResourceTag/deployz:installation',
 ];
 const INSTALLATION_ID = '${InstallationId}';
+/** The first group of the installation id, which names the application stack's resources. */
+const SHORT_INSTALLATION_ID = '${ShortInstallationId}';
 
 /** CDK appends an 8-character hash to logical ids; drop it for display. */
 function displayId(logicalId: string): string {
@@ -142,6 +147,13 @@ function render(value: unknown): string {
       const [, whenTrue, whenFalse] = record['Fn::If'] as [string, unknown, unknown];
       return `${render(whenTrue)} or ${render(whenFalse)}`;
     }
+    if (Array.isArray(record['Fn::Select'])) {
+      const [index, list] = record['Fn::Select'] as [number, unknown];
+      const split = (list as Record<string, unknown> | null)?.['Fn::Split'] as [string, unknown] | undefined;
+      if (index === 0 && split?.[0] === '-' && render(split[1]) === INSTALLATION_ID) {
+        return SHORT_INSTALLATION_ID;
+      }
+    }
   }
   return JSON.stringify(value);
 }
@@ -152,6 +164,7 @@ function refersToStackResource(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
   if (typeof record.Ref === 'string') return record.Ref in resources;
+  if (Array.isArray(record['Fn::GetAtt'])) return String(record['Fn::GetAtt'][0]) in resources;
   return Object.values(record).some(refersToStackResource);
 }
 
@@ -176,9 +189,12 @@ function toStatement(statement: TemplateStatement): PermissionStatement {
     }
   }
 
+  const namesInstallation = (text: string) =>
+    text.includes(INSTALLATION_ID) || text.includes(SHORT_INSTALLATION_ID);
   const scopedToInstallation =
     conditionKeys.some((key) => INSTALLATION_TAG_KEYS.includes(key)) ||
-    statementResources.some((resource) => resource.includes(INSTALLATION_ID)) ||
+    conditions.some(namesInstallation) ||
+    statementResources.some(namesInstallation) ||
     toList(statement.Resource).every(refersToStackResource);
   const scope: PermissionScope = scopedToInstallation
     ? 'installation'

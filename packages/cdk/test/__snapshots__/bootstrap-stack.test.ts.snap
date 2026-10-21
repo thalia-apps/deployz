@@ -167,7 +167,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":log-group:*",
+                    ":log-group:deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -202,10 +219,31 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "s3:Abort*",
               ],
               "Effect": "Allow",
-              "Resource": [
-                "arn:aws:s3:::deployz-app*",
-                "arn:aws:s3:::deployz-app*/*",
-              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
+                  ],
+                ],
+              },
               "Sid": "ApplicationStorage",
             },
             {
@@ -229,7 +267,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":deployz-app*",
+                    ":deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -237,6 +292,43 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
             },
             {
               "Action": "ecs:RunTask",
+              "Condition": {
+                "ArnLike": {
+                  "ecs:cluster": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:ecs:",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ":",
+                        {
+                          "Ref": "AWS::AccountId",
+                        },
+                        ":cluster/deployz-app-",
+                        {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::Split": [
+                                "-",
+                                {
+                                  "Fn::GetAtt": [
+                                    "InstallationId",
+                                    "InstallationId",
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                        "-*",
+                      ],
+                    ],
+                  },
+                },
+              },
               "Effect": "Allow",
               "Resource": {
                 "Fn::Join": [
@@ -272,7 +364,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":role/deployz/*",
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -942,8 +1051,9 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "ecs:ListTasks",
                 "ecs:DescribeTasks",
                 "ecs:DescribeTaskDefinition",
-                "ecs:StopTask",
                 "ecs:ListTaskDefinitions",
+                "ecs:RunTask",
+                "ecs:StopTask",
                 "ecs:DeregisterTaskDefinition",
               ],
               "Effect": "Allow",
@@ -964,11 +1074,6 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                   },
                 },
               },
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": "ecs:RunTask",
               "Effect": "Allow",
               "Resource": "*",
             },
@@ -1020,6 +1125,25 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
             },
             {
               "Action": [
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
                 "s3:ListAllMyBuckets",
                 "s3:GetBucketTagging",
                 "s3:ListBucketVersions",
@@ -1043,25 +1167,6 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "secretsmanager:ListSecrets",
                 "secretsmanager:DescribeSecret",
               ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:PutSecretValue",
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "aws:ResourceTag/deployz:installation": {
-                    "Fn::GetAtt": [
-                      "InstallationId",
-                      "InstallationId",
-                    ],
-                  },
-                },
-              },
               "Effect": "Allow",
               "Resource": "*",
             },
@@ -1193,23 +1298,125 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "s3:PutLifecycleConfiguration",
               ],
               "Effect": "Allow",
-              "Resource": "arn:aws:s3:::deployz-app*",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
+                  ],
+                ],
+              },
               "Sid": "ProvisionApplicationStorage",
             },
             {
               "Action": [
                 "secretsmanager:GetRandomPassword",
-                "logs:PutRetentionPolicy",
-                "logs:DeleteLogGroup",
                 "ecs:DeregisterTaskDefinition",
-                "elasticache:CreateReplicationGroup",
-                "elasticache:ModifyReplicationGroup",
-                "elasticache:DeleteReplicationGroup",
-                "elasticache:DeleteCacheCluster",
               ],
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "ProvisionApplicationUntaggable",
+            },
+            {
+              "Action": [
+                "logs:PutRetentionPolicy",
+                "logs:DeleteLogGroup",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:logs:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":log-group:deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
+                  ],
+                ],
+              },
+              "Sid": "ProvisionApplicationLogGroups",
+            },
+            {
+              "Action": [
+                "elasticache:CreateReplicationGroup",
+                "elasticache:ModifyReplicationGroup",
+                "elasticache:DeleteReplicationGroup",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:elasticache:",
+                      {
+                        "Ref": "AWS::Region",
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":parametergroup:*",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:elasticache:",
+                      {
+                        "Ref": "AWS::Region",
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":cluster:*",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "ProvisionApplicationCacheCompanions",
             },
             {
               "Action": "iam:CreateRole",
@@ -1235,7 +1442,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":role/deployz/*",
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1265,7 +1489,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":role/deployz/*",
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1298,7 +1539,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":role/deployz/*",
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1324,7 +1582,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":role/deployz/*",
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1370,7 +1645,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":deployz-app*",
+                    ":deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1396,7 +1688,24 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     {
                       "Ref": "AWS::AccountId",
                     },
-                    ":schedule/default/deployz-app*",
+                    ":schedule/default/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
                   ],
                 ],
               },
@@ -1444,6 +1753,7 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "logs:CreateLogGroup",
                 "logs:TagResource",
                 "elasticache:CreateCacheSubnetGroup",
+                "elasticache:CreateReplicationGroup",
                 "elasticache:AddTagsToResource",
                 "iam:TagRole",
                 "cloudwatch:PutMetricAlarm",
@@ -1452,6 +1762,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
               "Condition": {
                 "StringEquals": {
                   "aws:RequestTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
                     "Fn::GetAtt": [
                       "InstallationId",
                       "InstallationId",
@@ -1489,6 +1807,7 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "logs:CreateLogGroup",
                 "logs:TagResource",
                 "elasticache:CreateCacheSubnetGroup",
+                "elasticache:CreateReplicationGroup",
                 "elasticache:AddTagsToResource",
                 "iam:TagRole",
                 "cloudwatch:PutMetricAlarm",
@@ -1554,6 +1873,9 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "secretsmanager:GetResourcePolicy",
                 "secretsmanager:PutResourcePolicy",
                 "elasticache:DeleteCacheSubnetGroup",
+                "elasticache:ModifyReplicationGroup",
+                "elasticache:DeleteReplicationGroup",
+                "elasticache:DeleteCacheCluster",
                 "iam:DeleteRolePolicy",
                 "iam:DetachRolePolicy",
                 "iam:DeleteRole",
@@ -1608,6 +1930,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     ],
                   },
                 },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
               },
               "Effect": "Allow",
               "Resource": "*",
@@ -1644,7 +1974,12 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 },
               },
               "Effect": "Allow",
-              "Resource": "arn:aws:iam::*:role/deployz/*",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ApplicationExecutionRoleB4697B7D",
+                  "Arn",
+                ],
+              },
               "Sid": "ProvisionerPassRole",
             },
             {
@@ -1678,6 +2013,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
               "Condition": {
                 "StringEquals": {
                   "aws:RequestTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
                     "Fn::GetAtt": [
                       "InstallationId",
                       "InstallationId",
@@ -1761,6 +2104,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     ],
                   },
                 },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
               },
               "Effect": "Allow",
               "Resource": "*",
@@ -1781,6 +2132,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                     ],
                   },
                 },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
               },
               "Effect": "Allow",
               "Resource": "*",
@@ -1791,7 +2150,6 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "ecs:ListTasks",
                 "ecs:DescribeTasks",
                 "ecs:DescribeTaskDefinition",
-                "ecs:StopTask",
                 "ecs:ListTaskDefinitions",
               ],
               "Effect": "Allow",
@@ -1818,7 +2176,47 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
               "Sid": "RelayDeployRegister",
             },
             {
-              "Action": "ecs:RunTask",
+              "Action": [
+                "ecs:RunTask",
+                "ecs:StopTask",
+              ],
+              "Condition": {
+                "ArnLike": {
+                  "ecs:cluster": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:ecs:",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ":",
+                        {
+                          "Ref": "AWS::AccountId",
+                        },
+                        ":cluster/deployz-app-",
+                        {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::Split": [
+                                "-",
+                                {
+                                  "Fn::GetAtt": [
+                                    "InstallationId",
+                                    "InstallationId",
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                        "-*",
+                      ],
+                    ],
+                  },
+                },
+              },
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "RelayMigrationRun",
@@ -1835,8 +2233,64 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
               },
               "Effect": "Allow",
               "Resource": [
-                "arn:aws:iam::*:role/deployz/*",
-                "arn:aws:iam::*:role/deployz-app-*",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":role/deployz/deployz-app-",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "-",
+                              {
+                                "Fn::GetAtt": [
+                                  "InstallationId",
+                                  "InstallationId",
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "-*",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":role/deployz-app-",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "-",
+                              {
+                                "Fn::GetAtt": [
+                                  "InstallationId",
+                                  "InstallationId",
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "-*",
+                    ],
+                  ],
+                },
               ],
               "Sid": "RelayDeployPassRole",
             },
@@ -1874,15 +2328,78 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
             },
             {
               "Action": [
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId",
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "RelayInstallationSecrets",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::ManagedPolicy",
+    },
+    "ProvisionerPurgePolicyC455CF5B": {
+      "Properties": {
+        "Description": "Permissions the Deployz relay uses to delete the retained data of this installation.",
+        "Path": "/",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
                 "s3:ListAllMyBuckets",
                 "s3:GetBucketTagging",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "RelayPurgeStorageDiscover",
+            },
+            {
+              "Action": [
                 "s3:ListBucketVersions",
                 "s3:DeleteObject",
                 "s3:DeleteObjectVersion",
                 "s3:DeleteBucket",
               ],
               "Effect": "Allow",
-              "Resource": "*",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId",
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    "-*",
+                  ],
+                ],
+              },
               "Sid": "RelayPurgeStorage",
             },
             {
@@ -1902,26 +2419,6 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "RelayPurgeSecretsList",
-            },
-            {
-              "Action": [
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:PutSecretValue",
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "aws:ResourceTag/deployz:installation": {
-                    "Fn::GetAtt": [
-                      "InstallationId",
-                      "InstallationId",
-                    ],
-                  },
-                },
-              },
-              "Effect": "Allow",
-              "Resource": "*",
-              "Sid": "RelayInstallationSecrets",
             },
             {
               "Action": [
@@ -2295,6 +2792,9 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
         "ManagedPolicyArns": [
           {
             "Ref": "ProvisionerPolicyCCE83F9D",
+          },
+          {
+            "Ref": "ProvisionerPurgePolicyC455CF5B",
           },
         ],
         "PermissionsBoundary": {

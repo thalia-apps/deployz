@@ -38,6 +38,8 @@ import {
   REVOKE_ORDER_NOTE,
   REVOKE_STEPS,
   SECRET_HANDLING_STATEMENT,
+  TRAFFIC_RECOMMENDATION,
+  TRAFFIC_ROUTING,
 } from '@/lib/security-details';
 
 type TabValue = 'overview' | 'permissions' | 'data';
@@ -54,12 +56,14 @@ const HIGHLIGHTS = [
 
 /** Why a statement that is not limited to this installation is still contained. */
 const EXCEPTION_NOTES: Record<string, string> = {
-  ProvisionApplicationPassRole:
-    'Only roles under /deployz/, and only to the services that run your application.',
-  RelayPurgeStorage:
-    "S3 does not support tag conditions on these actions. The connector checks each bucket's deployz:installation tag before it deletes anything.",
-  ProvisionApplicationStorage:
-    'S3 does not support tag conditions on these actions. Only buckets whose names start with deployz-app.',
+  RelayWriteLogs:
+    'AWS Lambda uses these actions to write the connector activity log. They add log entries. They cannot read or delete logs.',
+  RelayDeregisterRevisions:
+    'ECS does not support resource limits on this action. The connector removes only revisions of its own task definitions. A removed revision does not stop a task that uses it.',
+  ProvisionApplicationUntaggable:
+    'A random password is not an AWS resource, and ECS does not support resource limits on task-definition removal. Only CloudFormation can use this role.',
+  ProvisionApplicationCacheCompanions:
+    "A cache request also uses the default parameter group and the cache nodes. The cache itself must have this installation's tag.",
 };
 
 const listClass = 'flex list-disc flex-col gap-1.5 pl-5 text-sm text-muted-foreground';
@@ -74,6 +78,9 @@ function roleGrants(role: PermissionRole, action: string): boolean {
 
 function scopeText(statement: PermissionStatement): string {
   if (statement.scope === 'installation') {
+    if (statement.conditions.some((condition) => condition.includes('ecs:cluster'))) {
+      return "Only in this installation's ECS cluster.";
+    }
     if (statement.conditions.some((condition) => condition.includes('aws:RequestTag/'))) {
       return "Only when the request carries this installation's tag.";
     }
@@ -250,9 +257,11 @@ function PermissionsTab({ plan }: { plan: DeploymentPlan | null }) {
       <h2 className="sr-only">AWS permissions</h2>
       <p className="text-sm text-muted-foreground">
         The connector holds broad permissions, so it can install, update and remove your application
-        without manual setup. Where AWS supports it, actions are limited to resources tagged{' '}
-        <code className={codeClass}>deployz:installation</code> for this installation. Every action
-        below is read from the connector template you deploy.
+        without manual setup. Each change is limited to this installation: to resources tagged{' '}
+        <code className={codeClass}>deployz:installation</code> for this installation, or to
+        resources whose names start with this installation&apos;s application stack name. Other
+        deployments in the same AWS account and Region are not in this scope. Every action below is
+        read from the connector template you deploy.
       </p>
 
       <Accordion type="multiple" className="rounded-xl border px-4">
@@ -365,8 +374,9 @@ function PermissionsTab({ plan }: { plan: DeploymentPlan | null }) {
           <AccordionTrigger>Read-only permissions and exceptions</AccordionTrigger>
           <AccordionContent className={sectionClass}>
             <p>
-              These actions are not limited to this installation by a tag. Some AWS actions do not
-              support tag limits; others are limited by resource name or a condition instead.
+              These actions are not limited to this installation. Most of them only read. AWS does
+              not support tag or name limits on the other actions; the note on each action tells
+              how it is controlled.
             </p>
             <div className="flex flex-col gap-2">
               <h4 className="text-sm font-semibold text-foreground">Read-only actions</h4>
@@ -404,6 +414,18 @@ function DataTab() {
           ))}
         </ul>
         <p className="text-sm text-muted-foreground">{RAW_LOGS_GUARANTEE}</p>
+      </section>
+
+      <section aria-labelledby="traffic" className="flex flex-col gap-2">
+        <h2 id="traffic" className="text-base font-semibold">
+          Application traffic
+        </h2>
+        <ul className={listClass}>
+          {TRAFFIC_ROUTING.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+        <p className="text-sm text-muted-foreground">{TRAFFIC_RECOMMENDATION}</p>
       </section>
 
       <section aria-labelledby="secrets" className="flex flex-col gap-2">

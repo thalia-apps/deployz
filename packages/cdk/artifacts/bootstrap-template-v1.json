@@ -500,6 +500,46 @@
       },
       "Condition": "NoRelayCredential"
     },
+    "ApplicationExecutionRoleB4697B7D": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceAccount": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Description": "CloudFormation execution role for the Deployz application stack. Assumable only by CloudFormation on behalf of this account; every grant is scoped to the deployz: tag boundary where AWS supports it.",
+        "Path": "/deployz/",
+        "Tags": [
+          {
+            "Key": "deployz:component",
+            "Value": "bootstrap"
+          },
+          {
+            "Key": "deployz:managed",
+            "Value": "true"
+          },
+          {
+            "Key": "deployz:scope",
+            "Value": "customer"
+          }
+        ]
+      }
+    },
     "PermissionsBoundary2D0B48CC": {
       "Type": "AWS::IAM::ManagedPolicy",
       "Properties": {
@@ -760,8 +800,9 @@
                 "ecs:ListTasks",
                 "ecs:DescribeTasks",
                 "ecs:DescribeTaskDefinition",
-                "ecs:StopTask",
                 "ecs:ListTaskDefinitions",
+                "ecs:RunTask",
+                "ecs:StopTask",
                 "ecs:DeregisterTaskDefinition"
               ],
               "Effect": "Allow",
@@ -782,11 +823,6 @@
                   }
                 }
               },
-              "Effect": "Allow",
-              "Resource": "*"
-            },
-            {
-              "Action": "ecs:RunTask",
               "Effect": "Allow",
               "Resource": "*"
             },
@@ -838,6 +874,25 @@
             },
             {
               "Action": [
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
+                }
+              },
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
                 "s3:ListAllMyBuckets",
                 "s3:GetBucketTagging",
                 "s3:ListBucketVersions",
@@ -861,25 +916,6 @@
                 "secretsmanager:ListSecrets",
                 "secretsmanager:DescribeSecret"
               ],
-              "Effect": "Allow",
-              "Resource": "*"
-            },
-            {
-              "Action": [
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:PutSecretValue"
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "aws:ResourceTag/deployz:installation": {
-                    "Fn::GetAtt": [
-                      "InstallationId",
-                      "InstallationId"
-                    ]
-                  }
-                }
-              },
               "Effect": "Allow",
               "Resource": "*"
             },
@@ -957,6 +993,14 @@
                       "InstallationId"
                     ]
                   }
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
                 }
               },
               "Effect": "Allow",
@@ -994,7 +1038,12 @@
                 }
               },
               "Effect": "Allow",
-              "Resource": "arn:aws:iam::*:role/deployz/*",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ApplicationExecutionRoleB4697B7D",
+                  "Arn"
+                ]
+              },
               "Sid": "ProvisionerPassRole"
             },
             {
@@ -1028,6 +1077,14 @@
               "Condition": {
                 "StringEquals": {
                   "aws:RequestTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
                     "Fn::GetAtt": [
                       "InstallationId",
                       "InstallationId"
@@ -1106,6 +1163,14 @@
                     ]
                   }
                 },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
+                },
                 "ForAllValues:StringEquals": {
                   "aws:TagKeys": [
                     "deployz:installation"
@@ -1130,6 +1195,14 @@
                       "InstallationId"
                     ]
                   }
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
                 }
               },
               "Effect": "Allow",
@@ -1141,7 +1214,6 @@
                 "ecs:ListTasks",
                 "ecs:DescribeTasks",
                 "ecs:DescribeTaskDefinition",
-                "ecs:StopTask",
                 "ecs:ListTaskDefinitions"
               ],
               "Effect": "Allow",
@@ -1168,7 +1240,47 @@
               "Sid": "RelayDeployRegister"
             },
             {
-              "Action": "ecs:RunTask",
+              "Action": [
+                "ecs:RunTask",
+                "ecs:StopTask"
+              ],
+              "Condition": {
+                "ArnLike": {
+                  "ecs:cluster": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:ecs:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":cluster/deployz-app-",
+                        {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::Split": [
+                                "-",
+                                {
+                                  "Fn::GetAtt": [
+                                    "InstallationId",
+                                    "InstallationId"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "-*"
+                      ]
+                    ]
+                  }
+                }
+              },
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "RelayMigrationRun"
@@ -1185,8 +1297,64 @@
               },
               "Effect": "Allow",
               "Resource": [
-                "arn:aws:iam::*:role/deployz/*",
-                "arn:aws:iam::*:role/deployz-app-*"
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/deployz/deployz-app-",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "-",
+                              {
+                                "Fn::GetAtt": [
+                                  "InstallationId",
+                                  "InstallationId"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "-*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/deployz-app-",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "-",
+                              {
+                                "Fn::GetAtt": [
+                                  "InstallationId",
+                                  "InstallationId"
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "-*"
+                    ]
+                  ]
+                }
               ],
               "Sid": "RelayDeployPassRole"
             },
@@ -1224,15 +1392,78 @@
             },
             {
               "Action": [
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
+                }
+              },
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "RelayInstallationSecrets"
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      }
+    },
+    "ProvisionerPurgePolicyC455CF5B": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "Description": "Permissions the Deployz relay uses to delete the retained data of this installation.",
+        "Path": "/",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
                 "s3:ListAllMyBuckets",
-                "s3:GetBucketTagging",
+                "s3:GetBucketTagging"
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "RelayPurgeStorageDiscover"
+            },
+            {
+              "Action": [
                 "s3:ListBucketVersions",
                 "s3:DeleteObject",
                 "s3:DeleteObjectVersion",
                 "s3:DeleteBucket"
               ],
               "Effect": "Allow",
-              "Resource": "*",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
+                  ]
+                ]
+              },
               "Sid": "RelayPurgeStorage"
             },
             {
@@ -1252,26 +1483,6 @@
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "RelayPurgeSecretsList"
-            },
-            {
-              "Action": [
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:PutSecretValue"
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "aws:ResourceTag/deployz:installation": {
-                    "Fn::GetAtt": [
-                      "InstallationId",
-                      "InstallationId"
-                    ]
-                  }
-                }
-              },
-              "Effect": "Allow",
-              "Resource": "*",
-              "Sid": "RelayInstallationSecrets"
             },
             {
               "Action": [
@@ -1347,6 +1558,9 @@
         "ManagedPolicyArns": [
           {
             "Ref": "ProvisionerPolicyCCE83F9D"
+          },
+          {
+            "Ref": "ProvisionerPurgePolicyC455CF5B"
           }
         ],
         "PermissionsBoundary": {
@@ -1486,46 +1700,6 @@
         ]
       }
     },
-    "ApplicationExecutionRoleB4697B7D": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Condition": {
-                "StringEquals": {
-                  "aws:SourceAccount": {
-                    "Ref": "AWS::AccountId"
-                  }
-                }
-              },
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "cloudformation.amazonaws.com"
-              }
-            }
-          ],
-          "Version": "2012-10-17"
-        },
-        "Description": "CloudFormation execution role for the Deployz application stack. Assumable only by CloudFormation on behalf of this account; every grant is scoped to the deployz: tag boundary where AWS supports it.",
-        "Path": "/deployz/",
-        "Tags": [
-          {
-            "Key": "deployz:component",
-            "Value": "bootstrap"
-          },
-          {
-            "Key": "deployz:managed",
-            "Value": "true"
-          },
-          {
-            "Key": "deployz:scope",
-            "Value": "customer"
-          }
-        ]
-      }
-    },
     "ApplicationRoleBoundary47DD3325": {
       "Type": "AWS::IAM::ManagedPolicy",
       "Properties": {
@@ -1562,7 +1736,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":log-group:*"
+                    ":log-group:deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -1597,10 +1788,31 @@
                 "s3:Abort*"
               ],
               "Effect": "Allow",
-              "Resource": [
-                "arn:aws:s3:::deployz-app*",
-                "arn:aws:s3:::deployz-app*/*"
-              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
+                  ]
+                ]
+              },
               "Sid": "ApplicationStorage"
             },
             {
@@ -1624,7 +1836,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":deployz-app*"
+                    ":deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -1632,6 +1861,43 @@
             },
             {
               "Action": "ecs:RunTask",
+              "Condition": {
+                "ArnLike": {
+                  "ecs:cluster": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:ecs:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":cluster/deployz-app-",
+                        {
+                          "Fn::Select": [
+                            0,
+                            {
+                              "Fn::Split": [
+                                "-",
+                                {
+                                  "Fn::GetAtt": [
+                                    "InstallationId",
+                                    "InstallationId"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "-*"
+                      ]
+                    ]
+                  }
+                }
+              },
               "Effect": "Allow",
               "Resource": {
                 "Fn::Join": [
@@ -1667,7 +1933,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":role/deployz/*"
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -1709,6 +1992,7 @@
                 "logs:CreateLogGroup",
                 "logs:TagResource",
                 "elasticache:CreateCacheSubnetGroup",
+                "elasticache:CreateReplicationGroup",
                 "elasticache:AddTagsToResource",
                 "iam:TagRole",
                 "cloudwatch:PutMetricAlarm",
@@ -1717,6 +2001,14 @@
               "Condition": {
                 "StringEquals": {
                   "aws:RequestTag/deployz:installation": {
+                    "Fn::GetAtt": [
+                      "InstallationId",
+                      "InstallationId"
+                    ]
+                  }
+                },
+                "StringEqualsIfExists": {
+                  "aws:ResourceTag/deployz:installation": {
                     "Fn::GetAtt": [
                       "InstallationId",
                       "InstallationId"
@@ -1754,6 +2046,7 @@
                 "logs:CreateLogGroup",
                 "logs:TagResource",
                 "elasticache:CreateCacheSubnetGroup",
+                "elasticache:CreateReplicationGroup",
                 "elasticache:AddTagsToResource",
                 "iam:TagRole",
                 "cloudwatch:PutMetricAlarm",
@@ -1819,6 +2112,9 @@
                 "secretsmanager:GetResourcePolicy",
                 "secretsmanager:PutResourcePolicy",
                 "elasticache:DeleteCacheSubnetGroup",
+                "elasticache:ModifyReplicationGroup",
+                "elasticache:DeleteReplicationGroup",
+                "elasticache:DeleteCacheCluster",
                 "iam:DeleteRolePolicy",
                 "iam:DetachRolePolicy",
                 "iam:DeleteRole",
@@ -1926,23 +2222,125 @@
                 "s3:PutLifecycleConfiguration"
               ],
               "Effect": "Allow",
-              "Resource": "arn:aws:s3:::deployz-app*",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
+                  ]
+                ]
+              },
               "Sid": "ProvisionApplicationStorage"
             },
             {
               "Action": [
                 "secretsmanager:GetRandomPassword",
-                "logs:PutRetentionPolicy",
-                "logs:DeleteLogGroup",
-                "ecs:DeregisterTaskDefinition",
-                "elasticache:CreateReplicationGroup",
-                "elasticache:ModifyReplicationGroup",
-                "elasticache:DeleteReplicationGroup",
-                "elasticache:DeleteCacheCluster"
+                "ecs:DeregisterTaskDefinition"
               ],
               "Effect": "Allow",
               "Resource": "*",
               "Sid": "ProvisionApplicationUntaggable"
+            },
+            {
+              "Action": [
+                "logs:PutRetentionPolicy",
+                "logs:DeleteLogGroup"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:logs:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":log-group:deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
+                  ]
+                ]
+              },
+              "Sid": "ProvisionApplicationLogGroups"
+            },
+            {
+              "Action": [
+                "elasticache:CreateReplicationGroup",
+                "elasticache:ModifyReplicationGroup",
+                "elasticache:DeleteReplicationGroup"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:elasticache:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":parametergroup:*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:elasticache:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":cluster:*"
+                    ]
+                  ]
+                }
+              ],
+              "Sid": "ProvisionApplicationCacheCompanions"
             },
             {
               "Action": "iam:CreateRole",
@@ -1968,7 +2366,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":role/deployz/*"
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -1998,7 +2413,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":role/deployz/*"
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -2031,7 +2463,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":role/deployz/*"
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -2057,7 +2506,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":role/deployz/*"
+                    ":role/deployz/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -2103,7 +2569,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":deployz-app*"
+                    ":deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -2129,7 +2612,24 @@
                     {
                       "Ref": "AWS::AccountId"
                     },
-                    ":schedule/default/deployz-app*"
+                    ":schedule/default/deployz-app-",
+                    {
+                      "Fn::Select": [
+                        0,
+                        {
+                          "Fn::Split": [
+                            "-",
+                            {
+                              "Fn::GetAtt": [
+                                "InstallationId",
+                                "InstallationId"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "-*"
                   ]
                 ]
               },
@@ -2153,7 +2653,7 @@
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
           },
-          "S3Key": "a5ae5a60cf8fb7155916c867346cb14900bbe5fefc28bc85055d4764a6336754.zip"
+          "S3Key": "eecb6729d35f5ec8d618676ff19b79108688892b65f736919039d28d115a55fc.zip"
         },
         "Environment": {
           "Variables": {

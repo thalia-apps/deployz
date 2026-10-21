@@ -585,11 +585,11 @@ describe('BootstrapStack', () => {
 
     const run = statements.find((s) => collectActions([s]).includes('ecs:RunTask'));
     expect(run).toBeDefined();
-    // RunTask is evaluated against the cluster AND the task definition AND
-    // further untagged resource ARNs in some configurations — the same
-    // multi-resource auth shape ecs:DeregisterTaskDefinition documents — so
-    // no tag condition could reliably match (condition-free by design).
-    expect(run?.['Condition']).toBeUndefined();
+    // RunTask is evaluated against the task definition AND further untagged
+    // resource ARNs in some configurations, so no tag condition could
+    // reliably match. The ecs:cluster condition limits it to this
+    // installation's cluster instead.
+    expect(Object.keys(run?.['Condition'] as Record<string, unknown>)).toEqual(['ArnLike']);
 
     // The permissions boundary (the ceiling) covers it too.
     const boundary = collectActions(stack.permissionsBoundary.document.toJSON()['Statement']);
@@ -617,9 +617,9 @@ describe('BootstrapStack', () => {
 
   it('grants the relay the Phase 9 purge discovery reads and tag-scoped retained-credential deletion', () => {
     const { stack } = synth();
-    const statements = stack.provisionerPolicy.document.toJSON()[
-      'Statement'
-    ] as Array<Record<string, unknown>>;
+    const statements = [stack.provisionerPolicy, stack.provisionerPurgePolicy].flatMap(
+      (policy) => policy.document.toJSON()['Statement'] as Array<Record<string, unknown>>,
+    );
     const findBySid = (sid: string) => statements.find((s) => s['Sid'] === sid);
     const actionsOf = (sid: string) => collectActions([findBySid(sid)]);
 
@@ -938,28 +938,36 @@ describe('BootstrapStack — application provisioning', () => {
     }
   });
 
-  it('grants the execution role replication-group lifecycle actions condition-free', () => {
+  it('grants the execution role replication-group lifecycle actions on its own tagged cache only', () => {
     const { template } = synth();
     const statements = inlinePolicyStatements(template, executionRole(template).logicalId);
+    const grantingWithout = (action: string, condition?: string) =>
+      statements.filter(
+        (s) =>
+          collectActions([s]).includes(action) &&
+          (condition === undefined
+            ? s['Condition'] === undefined
+            : (s['Condition'] as Record<string, unknown> | undefined)?.[condition] !== undefined),
+      );
 
-    // Live-proven multi-resource auth traps (see PROVISION_UNTAGGABLE_ACTIONS):
+    // Live-proven multi-resource auth trap (see PROVISION_CACHE_COMPANION_ACTIONS):
     // CreateReplicationGroup is also evaluated against the untagged default
-    // parameter group, and rollback's DeleteReplicationGroup runs against a
-    // replication group that never received its tag-on-create. A tag
-    // condition on either wedges the stack — these must sit in the
-    // condition-free statement, and must no longer ride in the tagged
-    // create/manage buckets. DeleteCacheCluster rides along condition-free
-    // too, kept for stacks created before the ReplicationGroup switch.
+    // parameter group. The replication group itself stays tag-scoped; only
+    // the parameter group and the member cache nodes are granted without a
+    // tag condition.
+    const companions = statements.find((s) => s['Sid'] === 'ProvisionApplicationCacheCompanions');
+    expect(JSON.stringify(companions?.['Resource'])).toContain(':parametergroup:*');
+    expect(JSON.stringify(companions?.['Resource'])).toContain(':cluster:*');
+    expect(JSON.stringify(companions?.['Resource'])).not.toContain(':replicationgroup:');
     for (const action of [
       'elasticache:CreateReplicationGroup',
       'elasticache:ModifyReplicationGroup',
       'elasticache:DeleteReplicationGroup',
-      'elasticache:DeleteCacheCluster',
     ]) {
-      const granting = statements.filter((s) => collectActions([s]).includes(action));
-      expect(granting).toHaveLength(1);
-      expect(granting[0]?.['Condition']).toBeUndefined();
+      expect(collectActions([companions])).toContain(action);
+      expect(grantingWithout(action, 'StringEquals').length, action).toBeGreaterThan(0);
     }
+    expect(grantingWithout('elasticache:DeleteCacheCluster')).toHaveLength(0);
   });
 
   it('never grants the execution role a service wildcard', () => {
@@ -1070,7 +1078,7 @@ describe('BootstrapStack — application provisioning', () => {
     ]) {
       expect(collectActions([sqs!])).toContain(action);
     }
-    expect(JSON.stringify(sqs?.['Resource'])).toContain(':deployz-app*');
+    expect(JSON.stringify(sqs?.['Resource'])).toContain(':deployz-app-",{"Fn::Select":[0,{"Fn::Split":["-"');
     expect(sqs?.['Condition']).toBeUndefined();
 
     const scheduler = statements.find((s) => collectActions([s]).includes('scheduler:CreateSchedule'));
@@ -1083,7 +1091,7 @@ describe('BootstrapStack — application provisioning', () => {
     ]) {
       expect(collectActions([scheduler!])).toContain(action);
     }
-    expect(JSON.stringify(scheduler?.['Resource'])).toContain('schedule/default/deployz-app*');
+    expect(JSON.stringify(scheduler?.['Resource'])).toContain('schedule/default/deployz-app-",{"Fn::Select"');
     expect(scheduler?.['Condition']).toBeUndefined();
   });
 
@@ -1146,7 +1154,7 @@ describe('BootstrapStack — application provisioning', () => {
         const statement = statementGranting(template, action);
         const conditions = statement['Condition'] as Record<string, Record<string, unknown>>;
         expect(conditions['StringEquals']?.['iam:PermissionsBoundary'], action).toEqual(boundaryRef(stack));
-        expect(JSON.stringify(statement['Resource']), action).toContain(':role/deployz/*');
+        expect(JSON.stringify(statement['Resource']), action).toContain(':role/deployz/deployz-app-",{"Fn::Select"');
       }
     });
 
@@ -1161,13 +1169,15 @@ describe('BootstrapStack — application provisioning', () => {
     it('passes only the application roles', () => {
       const { template } = synth();
       expect(JSON.stringify(statementGranting(template, 'iam:PassRole')['Resource'])).toContain(
-        ':role/deployz/*',
+        ':role/deployz/deployz-app-",{"Fn::Select"',
       );
     });
 
     it('reaches only the application buckets', () => {
       const { template } = synth();
-      expect(statementGranting(template, 's3:PutBucketPolicy')['Resource']).toBe('arn:aws:s3:::deployz-app*');
+      expect(JSON.stringify(statementGranting(template, 's3:PutBucketPolicy')['Resource'])).toContain(
+        'arn:aws:s3:::deployz-app-",{"Fn::Select"',
+      );
     });
 
     it('caps application roles without any IAM management, under the size quota', () => {
@@ -1369,6 +1379,16 @@ function generatedSecretArn(logicalId: string, env: Omit<IntrinsicEnv, 'hasRelay
   return `arn:${env.partition}:secretsmanager:${env.region}:${env.account}:secret:${logicalId}-AbCdEfGhIjKl-AbCdEf`;
 }
 
+/**
+ * The ARN CloudFormation gives the connector's execution role: path
+ * `/deployz/`, a generated name at IAM's 64-character maximum (the bootstrap
+ * stack name is long), unique to the installation.
+ */
+function executionRoleArn(env: Omit<IntrinsicEnv, 'hasRelayCredential'>, installationId: string): string {
+  const name = `deployz-bootstrap-app-${installationId.slice(0, 8)}-ApplicationExecutionRole-AbCdEf`.padEnd(64, 'x');
+  return `arn:${env.partition}:iam::${env.account}:role/deployz/${name}`;
+}
+
 /** Resolve the intrinsics the relay's IAM policies use; any other intrinsic fails the test. */
 function resolveIntrinsics(node: unknown, env: IntrinsicEnv): unknown {
   if (Array.isArray(node)) return node.map((item) => resolveIntrinsics(item, env));
@@ -1392,15 +1412,29 @@ function resolveIntrinsics(node: unknown, env: IntrinsicEnv): unknown {
       RelayCredentialFromParam: generatedSecretArn('RelayCredentialFromParam', env),
       RelayCredentialGenerated: generatedSecretArn('RelayCredentialGenerated', env),
     };
+    if (String(value).startsWith('ApplicationRoleBoundary')) {
+      return `arn:${env.partition}:iam::${env.account}:policy/deployz/deployz-bootstrap-ApplicationRoleBoundary-AbCdEf`;
+    }
     if (!(String(value) in refs)) throw new Error(`Unknown Ref ${String(value)}`);
     return refs[String(value)];
   }
   if (entries.length === 1 && key === 'Fn::GetAtt') {
     const [logicalId, attribute] = value as [string, string];
+    if (logicalId.startsWith('ApplicationExecutionRole') && attribute === 'Arn') {
+      return executionRoleArn(env, env.installationId);
+    }
     if (logicalId !== 'InstallationId' || attribute !== 'InstallationId') {
       throw new Error(`Unknown Fn::GetAtt ${logicalId}.${attribute}`);
     }
     return env.installationId;
+  }
+  if (entries.length === 1 && key === 'Fn::Select') {
+    const [index, list] = value as [number, unknown];
+    return (resolveIntrinsics(list, env) as unknown[])[index];
+  }
+  if (entries.length === 1 && key === 'Fn::Split') {
+    const [separator, source] = value as [string, unknown];
+    return String(resolveIntrinsics(source, env)).split(separator);
   }
   if (entries.length === 1 && key === 'Fn::Join') {
     const [separator, parts] = value as [string, unknown[]];
@@ -1445,13 +1479,15 @@ function conditionsHold(condition: Statement['Condition'], context: Record<strin
     for (const [key, expected] of Object.entries(keys)) {
       const actual = context[key];
       if (actual === undefined) {
-        if (operator.startsWith('ForAllValues:')) continue;
+        if (operator.startsWith('ForAllValues:') || operator.endsWith('IfExists')) continue;
         return false;
       }
-      if (operator === 'StringEquals') {
+      if (operator === 'StringEquals' || operator === 'StringEqualsIfExists') {
         if (!asList(expected).includes(actual)) return false;
-      } else if (operator === 'StringLike') {
+      } else if (operator === 'StringLike' || operator === 'ArnLike') {
         if (!asList(expected).some((pattern) => globMatches(pattern, actual, false))) return false;
+      } else if (operator === 'ForAllValues:StringEquals') {
+        if (!actual.split(',').every((value) => asList(expected).includes(value))) return false;
       } else {
         throw new Error(`Unsupported condition operator ${operator} on ${key}`);
       }
@@ -1630,4 +1666,159 @@ describe('BootstrapStack — the relay credential grant scope', () => {
       }
     },
   );
+});
+
+describe('BootstrapStack — installation isolation in a shared account and Region', () => {
+  const env = { hasRelayCredential: true, ...TEST_ENV };
+  const OTHER_ID = '22222222-2222-4222-8222-222222222222';
+  const own = (name: string) => `deployz-app-11111111-${name}`;
+  const other = (name: string) => `deployz-app-22222222-${name}`;
+  const OWN_TAG = { 'aws:ResourceTag/deployz:installation': TEST_ENV.installationId };
+  const OTHER_TAG = { 'aws:ResourceTag/deployz:installation': OTHER_ID };
+  const OWN_REQUEST = { 'aws:RequestTag/deployz:installation': TEST_ENV.installationId };
+  const arn = (service: string, resource: string) => `arn:aws:${service}:eu-west-1:123456789012:${resource}`;
+  const cluster = (name: string) => ({ 'ecs:cluster': arn('ecs', `cluster/${name}`) });
+
+  function documentStatements(template: Template, ids: string[]): Statement[] {
+    const resources = allResources(template);
+    return ids.flatMap(
+      (id) =>
+        (resolveIntrinsics(resources[id]?.Properties?.['PolicyDocument'], env) as { Statement: Statement[] })
+          .Statement,
+    );
+  }
+
+  function allowsUnder(statements: Statement[]) {
+    return (action: string, resource: string, context: Record<string, string> = {}) =>
+      statements.some((s) => statementAllows(s, action, resource, context));
+  }
+
+  function executionRoleAllows(template: Template) {
+    const resources = allResources(template);
+    const roleId = Object.keys(resources).find(
+      (id) => resources[id]?.Type === 'AWS::IAM::Role' && resources[id]?.Properties?.['Path'] === '/deployz/',
+    )!;
+    const ids = Object.keys(resources).filter(
+      (id) =>
+        resources[id]?.Type === 'AWS::IAM::Policy' &&
+        ((resources[id]?.Properties?.['Roles'] as Array<{ Ref?: string }>) ?? []).some((r) => r.Ref === roleId),
+    );
+    return allowsUnder(documentStatements(template, ids));
+  }
+
+  function applicationBoundaryAllows(template: Template) {
+    const id = Object.keys(allResources(template)).find((key) => key.startsWith('ApplicationRoleBoundary'))!;
+    return allowsUnder(documentStatements(template, [id]));
+  }
+
+  it('lets the relay pass only its own execution role to CloudFormation', () => {
+    const { template } = synth();
+    const { allows } = relayPolicies(template, env);
+    const toCloudFormation = { 'iam:PassedToService': 'cloudformation.amazonaws.com' };
+    expect(allows('iam:PassRole', executionRoleArn(TEST_ENV, TEST_ENV.installationId), toCloudFormation)).toBe(true);
+    expect(allows('iam:PassRole', executionRoleArn(TEST_ENV, OTHER_ID), toCloudFormation)).toBe(false);
+  });
+
+  it('lets the relay pass only its own application roles to ECS', () => {
+    const { template } = synth();
+    const { allows } = relayPolicies(template, env);
+    const toEcsTasks = { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' };
+    for (const path of ['role/deployz/', 'role/']) {
+      expect(allows('iam:PassRole', `arn:aws:iam::123456789012:${path}${own('TaskRole-AbC')}`, toEcsTasks)).toBe(true);
+      expect(allows('iam:PassRole', `arn:aws:iam::123456789012:${path}${other('TaskRole-AbC')}`, toEcsTasks)).toBe(false);
+    }
+  });
+
+  it('lets the relay run and stop tasks only in its own cluster', () => {
+    const { template } = synth();
+    const { allows } = relayPolicies(template, env);
+    const taskDefinition = arn('ecs', 'task-definition/DeployzAppWeb11111111:3');
+    const task = arn('ecs', 'task/x/abc');
+    expect(allows('ecs:RunTask', taskDefinition, cluster(own('ClusterEB0386A7-AbC')))).toBe(true);
+    expect(allows('ecs:StopTask', task, cluster(own('ClusterEB0386A7-AbC')))).toBe(true);
+    expect(allows('ecs:RunTask', taskDefinition, cluster(other('ClusterEB0386A7-AbC')))).toBe(false);
+    expect(allows('ecs:StopTask', task, cluster(other('ClusterEB0386A7-AbC')))).toBe(false);
+  });
+
+  it('lets the relay empty and delete only its own buckets', () => {
+    const { template } = synth();
+    const { allows } = relayPolicies(template, env);
+    for (const action of ['s3:ListBucketVersions', 's3:DeleteObjectVersion', 's3:DeleteBucket']) {
+      expect(allows(action, `arn:aws:s3:::${own('appstorage995579da-abc')}`), action).toBe(true);
+      expect(allows(action, `arn:aws:s3:::${other('appstorage995579da-abc')}`), action).toBe(false);
+      expect(allows(action, 'arn:aws:s3:::customer-data'), action).toBe(false);
+    }
+    expect(allows('s3:DeleteObject', `arn:aws:s3:::${own('appstorage995579da-abc')}/key`)).toBe(true);
+    expect(allows('s3:GetBucketTagging', 'arn:aws:s3:::customer-data')).toBe(true);
+  });
+
+  it('never lets a request tag take over a resource of another installation', () => {
+    const { template } = synth();
+    const { allows } = relayPolicies(template, env);
+    const stack = arn('cloudformation', 'stack/deployz-app-22222222/abc');
+    expect(allows('cloudformation:UpdateStack', stack, { ...OWN_REQUEST, ...OTHER_TAG })).toBe(false);
+    expect(allows('cloudformation:UpdateStack', stack, { ...OWN_REQUEST, ...OWN_TAG })).toBe(true);
+    expect(allows('cloudformation:CreateStack', stack, OWN_REQUEST)).toBe(true);
+    const listener = arn('elasticloadbalancing', 'listener/app/x/y/z');
+    const tagKeys = { 'aws:TagKeys': 'deployz:installation' };
+    expect(allows('elasticloadbalancing:AddTags', listener, { ...OWN_REQUEST, ...tagKeys })).toBe(true);
+    expect(allows('elasticloadbalancing:AddTags', listener, { ...OWN_REQUEST, ...tagKeys, ...OTHER_TAG })).toBe(false);
+    const cache = arn('elasticache', 'replicationgroup:other');
+    expect(allows('elasticache:AddTagsToResource', cache, { ...OWN_REQUEST, ...OTHER_TAG })).toBe(false);
+
+    const executionAllows = executionRoleAllows(template);
+    const vpc = arn('ec2', 'vpc/vpc-123');
+    expect(executionAllows('ec2:CreateTags', vpc, { ...OWN_REQUEST, ...OTHER_TAG })).toBe(false);
+    expect(executionAllows('ec2:CreateTags', vpc, OWN_REQUEST)).toBe(true);
+  });
+
+  it('limits the name-scoped grants of the execution role to its own application stack', () => {
+    const { template } = synth();
+    const allows = executionRoleAllows(template);
+    const cases: Array<[string, (name: string) => string]> = [
+      ['logs:DeleteLogGroup', (name) => arn('logs', `log-group:${name}`)],
+      ['logs:PutRetentionPolicy', (name) => arn('logs', `log-group:${name}`)],
+      ['s3:DeleteBucket', (name) => `arn:aws:s3:::${name.toLowerCase()}`],
+      ['sqs:DeleteQueue', (name) => arn('sqs', name)],
+      ['scheduler:DeleteSchedule', (name) => arn('scheduler', `schedule/default/${name}`)],
+    ];
+    for (const [action, resource] of cases) {
+      expect(allows(action, resource(own('App-AbC'))), action).toBe(true);
+      expect(allows(action, resource(other('App-AbC'))), action).toBe(false);
+    }
+    const role = (name: string) => `arn:aws:iam::123456789012:role/deployz/${name}`;
+    const toEcsTasks = { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' };
+    expect(allows('iam:PassRole', role(own('TaskRole-AbC')), toEcsTasks)).toBe(true);
+    expect(allows('iam:PassRole', role(other('TaskRole-AbC')), toEcsTasks)).toBe(false);
+  });
+
+  it('limits the cache lifecycle of the execution role to its own tagged replication group', () => {
+    const { template } = synth();
+    const allows = executionRoleAllows(template);
+    const group = arn('elasticache', 'replicationgroup:dep-ap-1abc');
+    const parameterGroup = arn('elasticache', 'parametergroup:default.valkey8');
+    expect(allows('elasticache:CreateReplicationGroup', group, OWN_REQUEST)).toBe(true);
+    expect(allows('elasticache:CreateReplicationGroup', parameterGroup)).toBe(true);
+    expect(allows('elasticache:DeleteReplicationGroup', group, OWN_TAG)).toBe(true);
+    expect(allows('elasticache:DeleteReplicationGroup', group, OTHER_TAG)).toBe(false);
+    expect(allows('elasticache:ModifyReplicationGroup', group, OTHER_TAG)).toBe(false);
+    expect(allows('elasticache:DeleteCacheCluster', arn('elasticache', 'cluster:x'), OTHER_TAG)).toBe(false);
+  });
+
+  it('limits every application role to the resources of its own installation', () => {
+    const { template } = synth();
+    const allows = applicationBoundaryAllows(template);
+    expect(allows('s3:PutObject', `arn:aws:s3:::${own('appstorage-abc')}/key`)).toBe(true);
+    expect(allows('s3:PutObject', `arn:aws:s3:::${other('appstorage-abc')}/key`)).toBe(false);
+    expect(allows('sqs:SendMessage', arn('sqs', own('Jobs-AbC')))).toBe(true);
+    expect(allows('sqs:SendMessage', arn('sqs', other('Jobs-AbC')))).toBe(false);
+    expect(allows('logs:PutLogEvents', arn('logs', `log-group:${own('WebLogGroup-AbC')}:log-stream:x`))).toBe(true);
+    expect(allows('logs:PutLogEvents', arn('logs', `log-group:${other('WebLogGroup-AbC')}:log-stream:x`))).toBe(false);
+    const family = arn('ecs', 'task-definition/DeployzAppJob11111111');
+    expect(allows('ecs:RunTask', family, cluster(own('ClusterEB0386A7-AbC')))).toBe(true);
+    expect(allows('ecs:RunTask', family, cluster(other('ClusterEB0386A7-AbC')))).toBe(false);
+    const toEcsTasks = { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' };
+    expect(allows('iam:PassRole', `arn:aws:iam::123456789012:role/deployz/${own('TaskRole-AbC')}`, toEcsTasks)).toBe(true);
+    expect(allows('iam:PassRole', `arn:aws:iam::123456789012:role/deployz/${other('TaskRole-AbC')}`, toEcsTasks)).toBe(false);
+  });
 });
