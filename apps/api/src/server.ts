@@ -265,7 +265,7 @@ import {
   type OrganizationDeps,
 } from './organizations.js';
 import { recordEvent, type DeploymentEventType } from './events.js';
-import { revokeInstallLink, rotateInstallLink } from './install-link-lifecycle.js';
+import { installLinkExpiryFrom } from './install-link-lifecycle.js';
 import { createFixtureDomainCheckDeps, createRealDomainCheckDeps, type DomainCheckDeps } from './domain-check.js';
 import {
   createDefaultHttpsFixtureProvider,
@@ -814,7 +814,7 @@ function existingStackUpdateFor(input: {
   };
 }
 
-// A customer retry of a failed first install keeps the connector stack when a
+// A customer retry of a first install keeps the connector stack when a
 // previous attempt reached the customer's account (a connector registered, or
 // an earlier retry already chose to keep it). The old attempt's failed stack
 // and its retained database can be recovered only through that same connector
@@ -1258,12 +1258,13 @@ async function retryAwareIdempotencyKey(
  * install, including mid-flight (a customer may abandon a stack and start
  * over). It must not run on a deployment that is being removed or is in a
  * day-2 state: the reset would fight the DESTROY/deploy job still running.
+ * A FAILED install is the vendor's to retry (Retry deployment), so the
+ * customer page offers no retry for it and this route refuses it.
  */
 const PUBLIC_RETRYABLE_STATES: ReadonlySet<string> = new Set([
   'NOT_INSTALLED',
   'WAITING_FOR_RELAY',
   'INSTALLING',
-  'FAILED',
 ]);
 
 function assertPublicRetryAllowed(deployment: { state: string }): void {
@@ -2879,39 +2880,6 @@ export async function buildServer({
   // history, so it must not double as the identifier that authenticates a
   // relay. The enrollment code it returns is single-use and is what the
   // customer's bootstrap stack carries.
-  /**
-   * Vendor install-link lifecycle controls: view/revoke/replace the customer
-   * invitation without touching the running deployment.
-   */
-  app.post(
-    '/api/deployments/:id/install-link/revoke',
-    { preHandler: requireAuth },
-    async (request) => {
-      const { id } = request.params as { id: string };
-      const organizationId = requireSessionOrganizationId(request);
-      const deployment = await loadOwnedDeployment(db, id, organizationId);
-      return await revokeInstallLink(db, deployment, request.user!.id);
-    },
-  );
-
-  app.post(
-    '/api/deployments/:id/install-link/rotate',
-    { preHandler: requireAuth },
-    async (request) => {
-      const { id } = request.params as { id: string };
-      const organizationId = requireSessionOrganizationId(request);
-      const deployment = await loadOwnedDeployment(db, id, organizationId);
-      const result = await rotateInstallLink(db, deployment, request.user!.id);
-      if ('refused' in result) {
-        throw new ApiError(
-          409,
-          'INSTALL_ALREADY_STARTED',
-          'This deployment has already been installed, so the link cannot be replaced.',
-        );
-      }
-      return result;
-    },
-  );
 
   /**
    * Invitation lifecycle gate for the public install routes: a revoked or
@@ -6590,6 +6558,9 @@ export async function buildServer({
         .set({
           enrollmentCode,
           enrollmentUsedAt: null,
+          // The link starts a new install again, so it gets a full validity
+          // window from now; the creation-time expiry may already be past.
+          installLinkExpiresAt: installLinkExpiryFrom(new Date()),
           installationId: null,
           // Phase 5 §9.6: the identifiers this reset replaces stay recorded so
           // a later purge can still find the PREVIOUS stack's retained
@@ -7221,6 +7192,7 @@ export async function buildServer({
           state: deployment.state,
           relayStatus: deployment.relayStatus,
           installSucceeded: await hasSucceededInstall(db, id),
+          hasRelease: deployment.currentReleaseId !== null,
           failureCode,
         })
       : null;

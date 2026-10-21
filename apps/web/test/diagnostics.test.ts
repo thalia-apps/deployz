@@ -131,7 +131,7 @@ describe('retryCta', () => {
     expect(retryCta({ action: 'CONTACT_DEPLOYZ', retryable: false, whoMustAct: 'DEPLOYZ' })).toBe(
       'contact-support',
     );
-    expect(retryCta({ action: 'WAIT', retryable: false, whoMustAct: null })).toBe('wait');
+    expect(retryCta({ action: 'WAIT', retryable: false, whoMustAct: null })).toBe('none');
     expect(retryCta({ action: 'NONE', retryable: false, whoMustAct: null })).toBe('none');
   });
 });

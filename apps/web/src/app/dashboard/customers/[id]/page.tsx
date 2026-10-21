@@ -4,11 +4,22 @@ import { ArrowLeft, Copy, Pencil, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import { copyInstallLink } from '@/components/copy-install-link';
 import { StatusBadge } from '@/components/status-badge';
 import { EditCustomerDialog } from '@/components/edit-customer-dialog';
 import { InvitationDialog } from '@/components/invitation-form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +34,10 @@ import {
   type CustomerDeployment,
   type CustomerInvitation,
 } from '@/lib/customers';
+import { errorMessage } from '@/lib/api-client';
 import { fetchDeploymentsForCustomer } from '@/lib/deployments';
 import { relativeTime } from '@/lib/diagnostics';
+import { revokePublicInstallLink } from '@/lib/public-install-links';
 import { regionOptionLabel } from '@/lib/regions';
 
 // One customer, compact: who they are, whether they have deployed, and the
@@ -246,7 +259,7 @@ export default function CustomerDetailPage() {
         </CardContent>
       </Card>
 
-      <InvitationsCard invitations={invitations} />
+      <InvitationsCard invitations={invitations} onChanged={onInvitationCreated} />
 
       <EditCustomerDialog
         customer={customer}
@@ -266,9 +279,30 @@ export default function CustomerDetailPage() {
 
 function InvitationsCard({
   invitations,
+  onChanged,
 }: {
   invitations: CustomerInvitation[] | null;
+  onChanged: () => void;
 }) {
+  const [revoking, setRevoking] = useState<CustomerInvitation | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRevoke(invitation: CustomerInvitation): Promise<void> {
+    setPending(true);
+    setError(null);
+    try {
+      await revokePublicInstallLink(invitation.id);
+      toast.success('Invitation revoked.');
+      setRevoking(null);
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -300,12 +334,61 @@ function InvitationsCard({
                   <span className="text-xs text-muted-foreground">
                     Expires {invitation.expiresAt ? formatDate(invitation.expiresAt) : '—'}
                   </span>
+                  {invitation.status === 'active' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setError(null);
+                        setRevoking(invitation);
+                      }}
+                    >
+                      Revoke
+                    </Button>
+                  ) : null}
                 </div>
               </li>
             ))}
           </ul>
         )}
       </CardContent>
+
+      <AlertDialog
+        open={revoking !== null}
+        onOpenChange={(open) => {
+          if (!open && !pending) setRevoking(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke this invitation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The invitation link stops working. The customer cannot start an installation from it.
+              No AWS resources are destroyed. You can send a new invitation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              loading={pending}
+              loadingText="Revoking invitation…"
+              onClick={(event) => {
+                // Keep the dialog open until the request settles.
+                event.preventDefault();
+                if (revoking) void handleRevoke(revoking);
+              }}
+            >
+              Revoke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

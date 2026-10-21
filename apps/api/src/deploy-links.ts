@@ -24,6 +24,7 @@ import { env } from './env.js';
 import { ApiError, NotFoundError } from './errors.js';
 import { recordEvent } from './events.js';
 import type { PendingSecretStore, SecretCipher } from './pending-secrets.js';
+import { installLinkExpiryFrom } from './install-link-lifecycle.js';
 import { newestDeployableRelease, releaseRequiredError } from './install-parameters.js';
 import { requirePreflightReady, runApplicationPreflight } from './preflight.js';
 import { hashRelayToken, mintEnrollmentCode, mintRelayCredential, verifyRelayToken } from './relay-store.js';
@@ -283,7 +284,7 @@ export async function createDeploymentRecord(
       // Invitation lifecycle: every newly issued link is time-limited (30
       // days). Links created before this column existed keep NULL = no limit,
       // so in-flight installations are untouched.
-      installLinkExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      installLinkExpiresAt: installLinkExpiryFrom(new Date()),
       // DZ-AUDIT-013: server-established relay credential stored alongside
       // its hash. Delivered through the Quick Create URL and NULLed after
       // the relay's first successful registration.

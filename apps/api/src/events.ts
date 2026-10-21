@@ -106,12 +106,9 @@ export type DeploymentEventType =
   | 'public_install_link.disabled'
   | 'public_install_link.revoked'
   | 'public_install_link.regenerated'
-  // install-link family — the per-deployment customer invitation lifecycle
-  // (apps/api/src/install-link-lifecycle.ts). `opened` is recorded by the
-  // public GET route; revoke/rotate are vendor actions.
+  // install-link family — the per-deployment customer invitation, recorded
+  // by the public GET route.
   | 'install_link.opened'
-  | 'install_link.revoked'
-  | 'install_link.rotated'
   // invitation family — targeted installation invitations (MVP Readiness 2,
   // Phase 6; written by apps/api/src/public-install.ts). One event per step of
   // the invitation lifecycle: created by the vendor; opened, region chosen,

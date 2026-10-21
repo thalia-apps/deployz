@@ -385,7 +385,7 @@ export const FAILURE_RECOVERABILITY: Record<FailureCode, FailureRecoverability> 
 
 /** §65 one-liner per recoverability class, shown on the diagnostic card. */
 export const RECOVERABILITY_COPY: Record<FailureRecoverability, string> = {
-  RECONCILE_FIRST: 'This can recover on its own — Deployz keeps checking. Retry only if it persists.',
+  RECONCILE_FIRST: 'This can be temporary. Retry when the cause clears. If it continues, contact Deployz support.',
   USER_ACTION: 'Needs a change before a retry can succeed — see the fix above.',
   DEPLOYZ_ACTION: 'This needs a fix on the Deployz side — contact support rather than retrying.',
   TERMINAL: 'Retrying will not help until the underlying requirement changes.',

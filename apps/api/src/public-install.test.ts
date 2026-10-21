@@ -841,6 +841,28 @@ describe('public install links', () => {
     });
   });
 
+  it("a customer invitation is never listed or reported as the application's link", async () => {
+    const application = await insertApplication(db, org.organizationId);
+    await insertReadyRelease(db, application.id);
+    const linkId = await createdLinkId(application.id);
+    const [customer] = await db
+      .insert(schema.customers)
+      .values({ organizationId: org.organizationId, name: 'Invited Customer', email: 'invited@example.com' })
+      .returning();
+    await db.insert(schema.publicInstallLinks).values({
+      organizationId: org.organizationId,
+      applicationId: application.id,
+      customerId: customer!.id,
+      tokenHash: 'invitation-token-hash',
+      enabled: true,
+    });
+
+    const listed = await listLinks(application.id);
+    expect((listed.json() as { links: { id: string }[] }).links.map((link) => link.id)).toEqual([linkId]);
+    const second = await createLink(application.id);
+    expect(second.json()).toMatchObject({ error: { code: 'PUBLIC_INSTALL_LINK_EXISTS', details: { id: linkId } } });
+  });
+
   it('disable and enable round-trip through the public resolve endpoint', async () => {
     const application = await insertApplication(db, org.organizationId);
     await insertReadyRelease(db, application.id);

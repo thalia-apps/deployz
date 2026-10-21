@@ -5272,6 +5272,13 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(untouched!.installationId).toBe('inst-removing');
   });
 
+  it('POST /api/install/:installLinkId/retry refuses a failed install: the vendor owns that retry', async () => {
+    const failed = await seedWaiting({ state: 'FAILED', installationId: 'inst-failed' });
+    const response = await postJson(app, `/api/install/${failed.installLinkId}/retry`, {});
+    expect(response.statusCode, response.body).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: 'INSTALL_NOT_RETRYABLE' } });
+  });
+
   it('POST /api/install/:installLinkId/retry 404s for an unknown link', async () => {
     const response = await postJson(app, `/api/install/${crypto.randomUUID()}/retry`, {});
     expect(response.statusCode).toBe(404);
@@ -5474,6 +5481,26 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(dep!.attemptNumber).toBe(1);
     expect(dep!.installationId).toBeNull();
     expect(dep!.enrollmentCode).not.toBe(deployment.enrollmentCode);
+  });
+
+  it('relay/reset renews an expired install link so the customer can open it again', async () => {
+    const application = await insertApplication(db, org.organizationId, { name: 'Expired Link App' });
+    await insertDeployableRelease(db, application.id);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'FAILED',
+      installationId: 'inst-expired-link',
+      enrollmentUsedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+      installLinkExpiresAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const reset = await postJson(app, `/api/deployments/${deployment.id}/relay/reset`, {}, { cookie: org.cookie });
+    expect(reset.statusCode, reset.body).toBe(200);
+
+    const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
+    expect(dep!.installLinkExpiresAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 24 * 60 * 60 * 1000);
+    const page = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}` });
+    expect(page.statusCode, page.body).toBe(200);
   });
 
   it('relay/reset of an installed deployment offers an update of the existing connector stack, never a Quick Create', async () => {
