@@ -70,6 +70,19 @@ describe('runAiAnalysis', () => {
     expect(without.failedChecks).toBe(2);
   });
 
+  it('a variable that an evidence file reads with no default is required, also when every answer is unknown', async () => {
+    const tree = elixirPostgres();
+    const unknown = fakeGateway(toWire([], [fact('q1', null), fact('q2', null)]));
+    const { merge } = await runAiAnalysis({ ...inputOf(tree, unknown), evidenceFiles: ELIXIR_SOURCES });
+    const model = merge.analysis.metadata['envVarModel'] as Array<Record<string, unknown>>;
+    expect(model).toContainEqual(expect.objectContaining({ key: 'MAILER_HOST', required: true, classification: 'customer_required', source: ['read in config/runtime.exs'] }));
+    // A database URL that the app requires becomes a binding, as the rules make it for a name they read.
+    expect(model).toContainEqual(expect.objectContaining({ key: 'DB_URL', classification: 'deployz_managed' }));
+    expect(merge.analysis.metadata['infrastructureBindings']).toContainEqual(expect.objectContaining({ applicationVariable: 'DB_URL', semantic: 'url' }));
+    // DB_HOST has a default (System.get_env), so it is not required.
+    expect(model.some((entry) => entry['key'] === 'DB_HOST')).toBe(false);
+  });
+
   it('rejects when the gateway throws, the answer fails the schema, or a call uses more tokens than its budget', async () => {
     await expect(runAiAnalysis(inputOf(MONGO_OR_POSTGRES, throwing(new Error('gateway down'))))).rejects.toThrow('gateway down');
     await expect(runAiAnalysis(inputOf(MONGO_OR_POSTGRES, fakeGateway({ port: 'three thousand' })))).rejects.toThrow();

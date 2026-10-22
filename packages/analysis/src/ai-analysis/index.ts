@@ -84,7 +84,7 @@ export async function runAiAnalysis(
   const database = (meta['postgres'] as { required?: unknown } | undefined)?.required === true ? 'postgres' : (meta['mysql'] as { required?: unknown } | undefined)?.required === true ? 'mysql' : 'none';
   const dockerfile = typeof meta['dockerfilePath'] === 'string' ? meta['dockerfilePath'] : null;
   const checks = checkAnswers({ pack, tree: evidenceTree, dockerfile, database }, answers.blockers, answers.facts);
-  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks });
+  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks, evidenceFiles: input.evidenceFiles });
   return {
     merge,
     report: {

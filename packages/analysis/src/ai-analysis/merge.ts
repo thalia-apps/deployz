@@ -14,10 +14,12 @@
  * Every other rules value is final.
  */
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
-import type { FileTree } from '../detectors.js';
+import { postgresSemantic } from '../bindings.js';
+import { isSecretName, type FileTree } from '../detectors.js';
+import { isGeneratableSecretName } from '../env-classification.js';
 import type { AnalystOutput, SupportedEngine } from './analyst.js';
 import { databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
-import type { EvidencePack } from './evidence-pack.js';
+import { isProductionFile, type EvidencePack } from './evidence-pack.js';
 import { LOCAL_FILESYSTEM_FINDING } from './open-items.js';
 
 export type AnswerDecision = 'ai' | 'rules';
@@ -49,6 +51,8 @@ export interface MergeInput {
   readonly pack: EvidencePack;
   readonly answers: AnalystOutput;
   readonly checks: readonly AnswerCheck[];
+  /** The fetched evidence files (`evidenceFileRequests`) that the rules tree does not hold. */
+  readonly evidenceFiles?: FileTree | undefined;
 }
 
 export interface MergeResult {
@@ -75,6 +79,53 @@ function deployzSets(pack: EvidencePack, engine: SupportedEngine, setting: strin
   const contract = pack.bindingContract;
   const names = engine === 'redis' ? contract.whenRedis : engine === 's3' ? contract.whenStorage : contract.whenDatabase;
   return [...contract.always, ...contract.forThisRepository, ...names].includes(setting);
+}
+
+/**
+ * A read with no default that stops the start when the variable is not set:
+ * Elixir `System.fetch_env!("X")`, Rust `env::var("X").expect(…)` or
+ * `.unwrap()`, C# `GetEnvironmentVariable("X") ?? throw`.
+ */
+const REQUIRED_READ =
+  /System\.fetch_env!\(\s*"([A-Z][A-Z0-9_]*)"|env::var\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\.(?:expect|unwrap)\(|GetEnvironmentVariable\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\?\?\s*throw/g;
+
+/**
+ * The required variables that the evidence files read and the rules did not
+ * see (they never read these files): without them the app stops at start, so
+ * a resolved fact must not make it READY. A database part becomes a binding,
+ * as the rules make it for a name they read in code.
+ */
+function addEvidenceRequirements(meta: Meta, evidenceFiles: FileTree, pack: EvidencePack): void {
+  const model = Array.isArray(meta['envVarModel']) ? (meta['envVarModel'] as Record<string, unknown>[]) : [];
+  const bindings = Array.isArray(meta['infrastructureBindings']) ? (meta['infrastructureBindings'] as Record<string, unknown>[]) : [];
+  const database = (meta['postgres'] as { required?: unknown } | undefined)?.required === true || (meta['mysql'] as { required?: unknown } | undefined)?.required === true;
+  const contract = pack.bindingContract;
+  const known = new Set<unknown>([
+    ...contract.always,
+    ...contract.forThisRepository,
+    ...(database ? contract.whenDatabase : []),
+    ...model.map((entry) => entry['key']),
+    ...bindings.map((binding) => binding['applicationVariable']),
+  ]);
+  const added: Record<string, unknown>[] = [];
+  const addedBindings: Record<string, unknown>[] = [];
+  for (const path of Object.keys(evidenceFiles).filter(isProductionFile).sort()) {
+    for (const match of (evidenceFiles[path] ?? '').matchAll(REQUIRED_READ)) {
+      const name = match[1] ?? match[2] ?? match[3]!;
+      if (known.has(name)) continue;
+      known.add(name);
+      const semantic = database ? postgresSemantic(name) : null;
+      if (semantic !== null) {
+        added.push({ key: name, secret: false, source: [`read in ${path}`], purpose: 'infrastructure_binding', required: false, confidence: 'high', classification: 'deployz_managed' });
+        addedBindings.push({ resource: 'postgres', semantic, applicationVariable: name, source: 'ai', confidence: 'high' });
+      } else {
+        const classification = isGeneratableSecretName(name) ? 'deployz_generated' : 'customer_required';
+        added.push({ key: name, secret: isSecretName(name), source: [`read in ${path}`], required: true, confidence: 'high', classification });
+      }
+    }
+  }
+  if (added.length > 0) meta['envVarModel'] = [...model, ...added];
+  if (addedBindings.length > 0) meta['infrastructureBindings'] = [...bindings, ...addedBindings];
 }
 
 export function mergeAiAnswers(input: MergeInput): MergeResult {
@@ -216,6 +267,8 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
       }
     }
   }
+
+  addEvidenceRequirements(meta, input.evidenceFiles ?? {}, pack);
 
   return { analysis: { findings, rejections: base.rejections, metadata: meta }, aiResolved, migration, settings, answers: merged };
 }
