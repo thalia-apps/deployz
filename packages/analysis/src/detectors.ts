@@ -4637,10 +4637,12 @@ function scanConfigFileEnvReads(path: string, content: string): { key: string; n
   } else if (/application[^/]*\.(?:properties|ya?ml)$/i.test(path)) {
     for (const m of content.matchAll(/\$\{([A-Z][A-Z0-9_]*)(:[^}]*)?\}/g)) add(m[1]!, m[2] !== undefined);
     // Spring relaxed binding: a `spring.datasource` property is also read from SPRING_DATASOURCE_*.
+    // Not when the file pins an embedded driver: a PostgreSQL URL there fails the H2 driver (HAPI FHIR).
     const configuresDatasource = /\.properties$/i.test(path)
       ? /^\s*spring\.datasource\./m.test(content)
       : /^spring:[ \t]*\r?\n(?:[ \t]+\S[^\r\n]*\r?\n|[ \t]*\r?\n)*?[ \t]+datasource:/m.test(content);
-    if (configuresDatasource) {
+    const embeddedDriver = /^\s*(?:spring\.datasource\.)?driver(?:-class-name|ClassName)\s*[:=]\s*["']?org\.(?:h2|hsqldb|apache\.derby)\./m.test(content);
+    if (configuresDatasource && !embeddedDriver) {
       for (const key of ['SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD']) add(key, true);
     }
   } else {

@@ -68,6 +68,17 @@ describe('env reads in C#, Java, PHP, Rust and Elixir', () => {
     expect(byKey.has('DEV_API_TOKEN')).toBe(false);
   });
 
+  it('Spring: a datasource that pins an embedded driver gets no SPRING_DATASOURCE_* binding names', () => {
+    const embedded = modelByKey({
+      'src/main/resources/application.yaml': 'spring:\n  datasource:\n    url: jdbc:h2:mem:test_mem\n    driver-class-name: org.h2.Driver\n',
+    });
+    const postgres = modelByKey({
+      'src/main/resources/application.yaml': 'spring:\n  datasource:\n    url: jdbc:postgresql://localhost/app\n',
+    });
+    expect(embedded.has('SPRING_DATASOURCE_URL')).toBe(false);
+    expect(postgres.has('SPRING_DATASOURCE_URL')).toBe(true);
+  });
+
   it('PHP: getenv, $_ENV, $_SERVER and env() are optional unless a throw guards them; server names are not variables', () => {
     const byKey = modelByKey({
       'app/constants.php': [

@@ -94,7 +94,10 @@ A variable that Deployz provides is never the vendor's: a database name
 (`DATABASE_*`, `DB_*`, `DATABASE_PASS`, a URL or JDBC URL alias) becomes a
 managed binding. Docker-link names (`POSTGRES_ENV_POSTGRES_DB`) and
 OpenShift v2 names (`OPENSHIFT_*`) are never bound: an app can switch to
-that platform's mode when it finds one.
+that platform's mode when it finds one. A Spring `spring.datasource` gets
+the relaxed-binding names `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`,
+except when the same file pins an embedded driver (H2, HSQLDB, Derby): a
+PostgreSQL URL would fail that driver at start.
 
 ## Map a variable to a managed value
 
