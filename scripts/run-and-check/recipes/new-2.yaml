@@ -8,6 +8,9 @@ build:
   buildArgs:
     BASE: apache
 databaseEngine: mysql
+outcomePatch:
+  environment: {}
+  reason: "The Analysis asks for the port. The vendor enters 8001: build argument BASE=apache serves Apache on 8001 (.docker/000-default.conf, EXPOSE 8001), and the observation shows '/' answers 302 on 8001. The full run has no port, so no probe answers. The image declares VOLUME /opt/kimai/var (Dockerfile:267) for its data: local state, a change."
 notes:
   - "Pinned 2026-10-16: HEAD of the default branch main, committed 2026-10-13T18:54:34Z. Same profile as planned: PHP Symfony, MySQL. It was never in the earlier label benchmark (removed 2026-10-18)."
   - "Source build confirmed: root Dockerfile copies the source from the build context and runs composer install; the last stage (prod) is the default target. No Dockerfile path or context override."
