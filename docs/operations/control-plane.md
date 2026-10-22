@@ -449,7 +449,17 @@ ECR repository `deployz-images`, tagged `<applicationId>-<version>`, and
 pins the digest on the release. Docker Hub pulls are anonymous unless
 `DOCKERHUB_SECRET_NAME` is set; rate-limit failures are retried three times
 (60 s, 180 s, 480 s) and classified `build_registry_rate_limited`. Builds
-that stay `BUILDING` for 30 minutes are settled by the worker's sweep.
+that stay `BUILDING` for 30 minutes are settled by the worker's sweep,
+with or without a build id. No bare git-SHA tag is pushed. The release
+route accepts only a version of `[A-Za-z0-9_][A-Za-z0-9_.-]{0,100}` and a
+7-40 character hex `gitSha`, resolves a short sha to the full commit sha
+through the GitHub commit API, and returns `409 RELEASE_BUILD_IN_PROGRESS`
+while another release of the application is `BUILDING`. The worker checks
+the same values, rejects Dockerfile paths and build contexts that are
+absolute, contain `..` or a backslash, and fails a release whose repository
+tarball is over 256 MB. The CodeBuild project allows five builds at once.
+Build variable names `DOCKERHUB_*`, `LD_*`, `PATH`, `HOME`, `ENV`, `BASH_ENV`,
+`DOCKER_CONFIG`, `DOCKER_HOST` and the pipeline's own names are reserved.
 Failed builds keep their CodeBuild log; the API serves the last 3000 lines,
 redacted, to the owning organisation. There is no ECR lifecycle policy, so
 image storage grows until images are removed by hand; a release whose image

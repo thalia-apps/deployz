@@ -6,6 +6,7 @@ import { Bucket, type IBucket } from 'aws-cdk-lib/aws-s3';
 import { BuildPipeline } from '../src/pipeline/build-pipeline.js';
 import {
   fetchRepoArchive,
+  MAX_SOURCE_TARBALL_BYTES,
   needsStreaming,
   STREAMING_THRESHOLD_BYTES,
   type FetchFn,
@@ -46,6 +47,11 @@ describe('BuildPipeline', () => {
   it('creates a CodeBuild project', () => {
     const { template } = synth();
     template.resourceCountIs('AWS::CodeBuild::Project', 1);
+  });
+
+  it('limits how many builds run at once', () => {
+    const { template } = synth();
+    template.hasResourceProperties('AWS::CodeBuild::Project', { ConcurrentBuildLimit: 5 });
   });
 
   it('CodeBuild project uses privileged mode for Docker builds', () => {
@@ -130,11 +136,13 @@ describe('BuildPipeline', () => {
     // Context is derived from the Dockerfile's directory, but an explicit
     // BUILD_CONTEXT passed by startBuild (e.g. for `docker/`-convention
     // repos) overrides the dirname fallback.
-    expect(sourceJson).toContain('BUILD_CONTEXT=${BUILD_CONTEXT:-$(dirname');
+    expect(sourceJson).toContain('BUILD_CONTEXT=\\\\\\"${BUILD_CONTEXT:-$(dirname');
     // The build passes that context to docker, never a bare `.`.
-    expect(sourceJson).toContain('-t $ECR_REPOSITORY_URI:$IMAGE_TAG');
+    expect(sourceJson).toContain('-t \\\\\\"$ECR_REPOSITORY_URI:$IMAGE_TAG\\\\\\"');
     expect(sourceJson).toContain('$BUILD_CONTEXT');
     expect(sourceJson).not.toContain('$ECR_REPOSITORY_URI:$IMAGE_TAG .');
+    // No bare git-SHA tag: the release tag and the digest are the identity.
+    expect(sourceJson).not.toContain('GIT_SHA');
     // A detected application stage rides as BUILD_TARGET; unset builds the last stage.
     expect(sourceJson).toContain('--target $BUILD_TARGET');
   });
@@ -532,6 +540,48 @@ describe('source-fetch', () => {
       await expect(
         fetchRepoArchive(FAKE_TOKEN, REPO_NAME, mockFetch, mockS3, makeOptions()),
       ).rejects.toThrow(/Failed to fetch repo tarball/);
+    });
+
+    it('refuses a tarball whose declared length is over the cap', async () => {
+      const mockFetch: FetchFn = async () => ({
+        status: 200,
+        headers: { get: (name: string) => (name === 'content-length' ? String(MAX_SOURCE_TARBALL_BYTES + 1) : null) },
+        arrayBuffer: () => Promise.reject(new Error('must not read the body')),
+        text: () => Promise.resolve(''),
+      });
+      const mockS3 = createMockS3();
+
+      await expect(
+        fetchRepoArchive(FAKE_TOKEN, REPO_NAME, mockFetch, mockS3, makeOptions()),
+      ).rejects.toThrow(/is larger than/);
+      expect(mockS3._uploads).toHaveLength(0);
+    });
+
+    it('stops reading a streamed tarball that grows past the cap', async () => {
+      let cancelled = false;
+      const chunk = new Uint8Array(64 * 1024 * 1024);
+      const mockFetch: FetchFn = async () => ({
+        status: 200,
+        headers: { get: () => null },
+        arrayBuffer: () => Promise.reject(new Error('must not buffer the body')),
+        text: () => Promise.resolve(''),
+        body: {
+          getReader: () => ({
+            read: () => Promise.resolve({ done: false, value: chunk }),
+            cancel: () => {
+              cancelled = true;
+              return Promise.resolve();
+            },
+          }),
+        },
+      });
+      const mockS3 = createMockS3();
+
+      await expect(
+        fetchRepoArchive(FAKE_TOKEN, REPO_NAME, mockFetch, mockS3, makeOptions()),
+      ).rejects.toThrow(/is larger than/);
+      expect(cancelled).toBe(true);
+      expect(mockS3._uploads).toHaveLength(0);
     });
 
     it('throws when the redirect has no Location header', async () => {

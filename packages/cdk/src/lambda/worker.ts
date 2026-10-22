@@ -29,7 +29,13 @@ import {
 } from '@deployz/api/jobs';
 import type { PaddleBilling } from '@deployz/api/paddle';
 import type { QueueMessage } from '@deployz/api/queue';
-import { buildStageVendorKeys, environmentSettingsSchema, releaseImageTag } from '@deployz/contracts';
+import {
+  RELEASE_VERSION_PATTERN,
+  buildStageVendorKeys,
+  environmentSettingsSchema,
+  isRepoRelativePath,
+  releaseImageTag,
+} from '@deployz/contracts';
 import { JOB_TIMEOUTS_MS, RELAY_STALE_AFTER_MS, deploymentStateAfterFailedJob } from '@deployz/contracts';
 import type { JevFailureShadowRunner } from '@deployz/api/jev-shadow';
 import type { RuntimeDb } from '@deployz/db';
@@ -201,6 +207,7 @@ export type RepositoryFetch = (
   json(): Promise<unknown>;
   arrayBuffer(): Promise<ArrayBuffer>;
   text(): Promise<string>;
+  body?: { getReader(): { read(): Promise<{ done: boolean; value?: Uint8Array }>; cancel(): Promise<void> } } | null;
 }>;
 
 /**
@@ -241,13 +248,31 @@ const RESERVED_BUILD_VARIABLE_NAMES = new Set<string>([
   'BUILD_CONTEXT',
   'BUILD_TARGET',
   'DEPLOYZ_BUILD_ARG_NAMES',
+  'ECR_REPOSITORY_URI',
+  'IMAGE_TAG',
+  'IMAGE_DIGEST',
+  'PATH',
+  'HOME',
+  'SHELL',
+  'ENV',
+  'BASH_ENV',
+  'DOCKER_CONFIG',
+  'DOCKER_HOST',
+  'LD_PRELOAD',
+  'LD_LIBRARY_PATH',
 ]);
 
 function isReservedBuildVariableName(name: string): boolean {
   return (
-    RESERVED_BUILD_VARIABLE_NAMES.has(name) || name.startsWith('CODEBUILD_') || name.startsWith('AWS_')
+    RESERVED_BUILD_VARIABLE_NAMES.has(name) ||
+    name.startsWith('CODEBUILD_') ||
+    name.startsWith('AWS_') ||
+    name.startsWith('DOCKERHUB_') ||
+    name.startsWith('LD_')
   );
 }
+
+const RELEASE_GIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/;
 
 /**
  * The vendor-configured build-stage keys for this application
@@ -318,6 +343,14 @@ async function buildRelease(deps: WorkerDeps, releaseId: string): Promise<void> 
   }
 
   try {
+    // These strings reach the CodeBuild environment and the Docker command
+    // line; the route checks them too, but a row can arrive from any path.
+    if (!RELEASE_VERSION_PATTERN.test(release.version)) {
+      throw new Error('The release version is not valid for a build');
+    }
+    if (!RELEASE_GIT_SHA_PATTERN.test(release.gitSha)) {
+      throw new Error('The release does not name a commit sha');
+    }
     const { token } = await mintInstallationToken(
       installationId,
       requireEnv('GITHUB_APP_ID'),
@@ -361,6 +394,9 @@ async function buildRelease(deps: WorkerDeps, releaseId: string): Promise<void> 
       overrideBuildContext ??
       (overrideDockerfile === undefined && typeof detectedBuildContext === 'string' ? detectedBuildContext : undefined) ??
       resolveBuildContext(dockerfilePath);
+    if (!isRepoRelativePath(dockerfilePath) || (buildContext !== undefined && !isRepoRelativePath(buildContext))) {
+      throw new Error('The Dockerfile path and the build context must be paths inside the repository');
+    }
 
     const environmentVariables: { name: string; value: string }[] = [
       { name: 'SOURCE_S3_URI', value: `s3://${bucket}/${archive.s3Key}` },
@@ -1014,6 +1050,22 @@ const STUCK_BUILD_TIMEOUT_MS = 30 * 60 * 1000;
 export async function sweepStuckBuilds(deps: WorkerDeps, now: Date = new Date()): Promise<number> {
   const { db } = deps;
   const cutoff = new Date(now.getTime() - STUCK_BUILD_TIMEOUT_MS);
+
+  // A worker that died before it started CodeBuild (for example out of
+  // memory on a huge repository) leaves a BUILDING release with no build id.
+  const neverStarted = await db
+    .select({ id: schema.releases.id })
+    .from(schema.releases)
+    .where(
+      and(
+        eq(schema.releases.releaseStatus, 'BUILDING'),
+        isNull(schema.releases.currentBuildId),
+        lt(schema.releases.updatedAt, cutoff),
+      ),
+    );
+  for (const release of neverStarted) {
+    await failRelease(db, release.id, 'The build did not start. Try the release again.', 'build_timeout');
+  }
   const stuck = await db
     .select()
     .from(schema.releases)
@@ -1024,14 +1076,14 @@ export async function sweepStuckBuilds(deps: WorkerDeps, now: Date = new Date())
         lt(schema.releases.updatedAt, cutoff),
       ),
     );
-  if (stuck.length === 0) return 0;
+  if (stuck.length === 0) return neverStarted.length;
 
   const builds = await deps.batchGetBuilds(
     stuck.map((release) => release.currentBuildId as string),
   );
   const buildsById = new Map(builds.map((build) => [normalizeBuildId(build.id), build]));
 
-  let swept = 0;
+  let swept = neverStarted.length;
   for (const release of stuck) {
     const build = buildsById.get(normalizeBuildId(release.currentBuildId as string));
     if (!build) {

@@ -66,6 +66,8 @@ import {
   isSupportedRegion,
   ownershipClassificationsFromSpec,
   regionSchema,
+  RELEASE_VERSION_PATTERN,
+  repoRelativePathSchema,
   relayCapabilitiesSchema,
   relayCommandProgressSchema,
   releaseEvidenceSchema,
@@ -3732,9 +3734,9 @@ export async function buildServer({
     defaultSizeProfile: infrastructureSizeTierSchema.optional(),
     minimumSizeProfile: infrastructureSizeTierSchema.optional(),
     // Phase 2 manifest overrides — stored on detected_metadata.manifestOverrides.
-    appRoot: z.string().nullish(),
-    dockerfilePath: z.string().nullish(),
-    buildContext: z.string().nullish(),
+    appRoot: repoRelativePathSchema.nullish(),
+    dockerfilePath: repoRelativePathSchema.nullish(),
+    buildContext: repoRelativePathSchema.nullish(),
     buildCommand: z.string().nullish(),
     startCommand: z.string().nullish(),
   });
@@ -3809,8 +3811,10 @@ export async function buildServer({
     .strict();
 
   const createReleaseBodySchema = z.object({
-    version: z.string().min(1),
-    gitSha: z.string().min(1),
+    version: z
+      .string()
+      .regex(RELEASE_VERSION_PATTERN, 'Use letters, digits, ".", "_" and "-" only, up to 101 characters'),
+    gitSha: z.string().regex(/^[0-9a-f]{7,40}$/, 'gitSha must be 7-40 lowercase hexadecimal characters'),
   });
 
   const deployBodySchema = z.object({
@@ -5322,12 +5326,43 @@ export async function buildServer({
       );
     }
 
+    // One build at a time per application: a loop of release requests must
+    // not queue unlimited 60-minute privileged builds.
+    const building = await db
+      .select({ id: schema.releases.id })
+      .from(schema.releases)
+      .where(and(eq(schema.releases.applicationId, id), eq(schema.releases.releaseStatus, 'BUILDING')))
+      .limit(1);
+    if (building.length > 0) {
+      throw new ApiError(
+        409,
+        'RELEASE_BUILD_IN_PROGRESS',
+        'Another release of this application is still building. Wait until it finishes.',
+      );
+    }
+
+    // The release records the commit that was built, never a short prefix:
+    // a short sha is resolved to the full 40-character sha now.
+    const gitSha =
+      body.gitSha.length === 40
+        ? body.gitSha
+        : (githubFixtureMode ?? env.githubFixtureMode)
+          ? getFixtureCommit(body.gitSha).sha
+          : (
+              await getCommit(
+                parseRepoFullName(application.repoFullName),
+                body.gitSha,
+                await resolveCommitInstallationToken(application, organizationId),
+                githubFetch,
+              )
+            ).sha;
+
     const row = await createReleaseRecord(db, {
       organizationId,
       userId: request.user?.id ?? null,
       applicationId: id,
       version: body.version,
-      gitSha: body.gitSha,
+      gitSha,
     });
 
     return reply.code(201).send(row);

@@ -53,6 +53,8 @@ export interface BuildPipelineProps {
    * exists in the region the project runs in.
    */
   readonly dockerHubSecretName?: string;
+  /** Most builds that run at once (default: 5). */
+  readonly concurrentBuildLimit?: number;
 }
 
 /**
@@ -162,6 +164,8 @@ export class BuildPipeline extends Construct {
         } as Record<string, BuildEnvironmentVariable>,
       },
       timeout: Duration.minutes(props.timeoutMinutes ?? 30),
+      // Bounds the cost of a burst of release requests.
+      concurrentBuildLimit: props.concurrentBuildLimit ?? 5,
       buildSpec: BuildSpec.fromObject({
         version: '0.2',
         // Exported so the build's CodeBuild state-change event carries the
@@ -184,7 +188,7 @@ export class BuildPipeline extends Construct {
               'cd /tmp/src',
               ...dockerHubLoginCommands,
               'echo "Logging in to Amazon ECR..."',
-              'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI',
+              'aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPOSITORY_URI"',
               // §21: image tags must be immutable identifiers — `latest` is
               // the anti-pattern §21 explicitly calls out, and the ECR
               // repository above is IMAGE_TAG_MUTABILITY=IMMUTABLE, so a
@@ -196,7 +200,7 @@ export class BuildPipeline extends Construct {
               // "project-name:build-uuid") which is guaranteed unique per
               // build, sanitized for use as a Docker tag.
               'export CODEBUILD_TAG=$(echo "$CODEBUILD_BUILD_ID" | tr ":" "-")',
-              'export IMAGE_TAG=${RELEASE_VERSION:-$CODEBUILD_TAG}',
+              'export IMAGE_TAG="${RELEASE_VERSION:-$CODEBUILD_TAG}"',
               // Fail fast rather than silently falling back to a mutable tag
               // if neither source produced a usable value.
               'if [ -z "$IMAGE_TAG" ]; then echo "ERROR: no usable image tag - RELEASE_VERSION and CODEBUILD_BUILD_ID are both unset" >&2; exit 1; fi',
@@ -207,7 +211,7 @@ export class BuildPipeline extends Construct {
               'cd /tmp/src',
               // Analysis records where the Dockerfile actually is; a
               // repository is free to keep it out of the root.
-              'export DOCKERFILE_PATH=${DOCKERFILE_PATH:-Dockerfile}',
+              'export DOCKERFILE_PATH="${DOCKERFILE_PATH:-Dockerfile}"',
               // The build context is the Dockerfile's own directory, not the
               // repo root. A Dockerfile kept in a subdirectory (e.g.
               // `backend/Dockerfile`) is written relative to that directory —
@@ -219,13 +223,15 @@ export class BuildPipeline extends Construct {
               // wins over the fallback: the `docker/` convention (e.g.
               // `docker build -f docker/Dockerfile .`) builds from the repo
               // root, not from `docker/`.
-              'export BUILD_CONTEXT=${BUILD_CONTEXT:-$(dirname "$DOCKERFILE_PATH")}',
+              'export BUILD_CONTEXT="${BUILD_CONTEXT:-$(dirname "$DOCKERFILE_PATH")}"',
               // Vendor-configured build-stage variables (worker.ts's
               // loadBuildVariables) ride as their own PLAINTEXT CodeBuild
               // environment variables, named by DEPLOYZ_BUILD_ARG_NAMES —
               // never inlined as values here, so a value never reaches the
               // build log or this buildspec. docker build reads each one
               // straight out of the process environment via --build-arg NAME.
+              // The names are identifiers (environment-setup.ts) and the only
+              // expansion left unquoted, because it must split into arguments.
               'export DOCKER_BUILD_ARGS=""',
               'for build_arg_name in $DEPLOYZ_BUILD_ARG_NAMES; do DOCKER_BUILD_ARGS="$DOCKER_BUILD_ARGS --build-arg $build_arg_name"; done',
               // The application stage of a Dockerfile that ends with a tooling
@@ -244,8 +250,8 @@ export class BuildPipeline extends Construct {
               // failing in place — see BUILD_OUTCOME_FILE.
               [
                 `rm -f ${BUILD_OUTCOME_FILE}`,
-                `for retry_delay in ${IMAGE_BUILD_RETRY_DELAYS_SECONDS.join(' ')} last; do docker build -f "$DOCKERFILE_PATH" $DOCKER_BUILD_ARGS -t $ECR_REPOSITORY_URI:$IMAGE_TAG "$BUILD_CONTEXT" 2>&1 | tee /tmp/docker-build.log`,
-                `if docker image inspect $ECR_REPOSITORY_URI:$IMAGE_TAG > /dev/null 2>&1; then echo ok > ${BUILD_OUTCOME_FILE}; break; fi`,
+                `for retry_delay in ${IMAGE_BUILD_RETRY_DELAYS_SECONDS.join(' ')} last; do docker build -f "$DOCKERFILE_PATH" $DOCKER_BUILD_ARGS -t "$ECR_REPOSITORY_URI:$IMAGE_TAG" "$BUILD_CONTEXT" 2>&1 | tee /tmp/docker-build.log`,
+                `if docker image inspect "$ECR_REPOSITORY_URI:$IMAGE_TAG" > /dev/null 2>&1; then echo ok > ${BUILD_OUTCOME_FILE}; break; fi`,
                 `if ! grep -Eqi '${DOCKER_HUB_RATE_LIMIT_PATTERN}' /tmp/docker-build.log; then echo failed > ${BUILD_OUTCOME_FILE}; break; fi`,
                 `echo rate_limited > ${BUILD_OUTCOME_FILE}`,
                 'if [ "$retry_delay" = last ]; then break; fi',
@@ -257,10 +263,6 @@ export class BuildPipeline extends Construct {
               // — the failing command's own text — names the right cause.
               `if [ "$(cat ${BUILD_OUTCOME_FILE} 2>/dev/null)" = rate_limited ]; then echo "Docker Hub rate limit (HTTP 429) blocked the base image download" >&2; exit 1; fi`,
               `if [ "$(cat ${BUILD_OUTCOME_FILE} 2>/dev/null)" != ok ]; then echo "The image build did not produce an image" >&2; exit 1; fi`,
-              // Tag with the git SHA for traceability. GIT_SHA is passed via
-              // startBuild environmentVariablesOverride.
-              'echo "Tagging with GIT_SHA: ${GIT_SHA:-unknown}"',
-              'docker tag $ECR_REPOSITORY_URI:$IMAGE_TAG $ECR_REPOSITORY_URI:${GIT_SHA:-unknown}',
             ],
             // Docker Hub is not needed once the image is built. `finally`
             // runs whether the phase passed or failed, and `|| true` keeps a
@@ -273,20 +275,13 @@ export class BuildPipeline extends Construct {
           post_build: {
             commands: [
               'echo "Pushing Docker image to ECR..."',
-              'docker push $ECR_REPOSITORY_URI:$IMAGE_TAG',
-              // The repository's tags are IMMUTABLE, and the SHA tag already
-              // exists whenever the same commit is released again (a real
-              // re-release of v0.1.0's commit as v0.1.1 failed on exactly
-              // this). The SHA tag is traceability, not the release identity
-              // — the version tag above and the digest below are — so a
-              // push refused for an existing tag must not fail the build.
-              'docker push $ECR_REPOSITORY_URI:${GIT_SHA:-unknown} || echo "SHA tag already exists (immutable repository) — keeping the existing tag"',
+              'docker push "$ECR_REPOSITORY_URI:$IMAGE_TAG"',
               // Extract the immutable sha256 digest. The format string uses
               // double-brace escaping: `{{...}}` is the Go template syntax
               // for docker inspect; CodeBuild does NOT interpret `{{ }}`.
               // The shell receives the literal `{{index .RepoDigests 0}}`.
               'echo "Recording image digest..."',
-              'export IMAGE_DIGEST=$(docker inspect --format="{{index .RepoDigests 0}}" $ECR_REPOSITORY_URI:$IMAGE_TAG)',
+              'export IMAGE_DIGEST=$(docker inspect --format="{{index .RepoDigests 0}}" "$ECR_REPOSITORY_URI:$IMAGE_TAG")',
               'echo "IMAGE_DIGEST=$IMAGE_DIGEST"',
             ],
           },
