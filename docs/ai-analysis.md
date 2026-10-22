@@ -295,7 +295,7 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 14): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 15): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
@@ -322,8 +322,17 @@ is final.
     starts. Nothing else, never a description.
   - Port: in the production stage `EXPOSE`, `ENV PORT` or `HEALTHCHECK`, or
     the app reads `PORT`. Health path: a cited line registers the route.
-    Startup migration: cited on the start path or in the app's boot code or
-    configuration, never in a dependency manifest. A migration command that
+    Startup migration: a cited line on the start path or in the app's boot
+    code or configuration shows it. A dependency manifest is only context,
+    except Flyway or Liquibase in a Spring Boot build (`pom.xml`,
+    `build.gradle`) when no production setting turns it off: Spring Boot
+    runs them at start. A dev script, a test or a document never shows it.
+    A migration command is supported by a cited line that names it, or by a
+    line of the script file it runs (`python3 manage.py migrate` cites
+    `manage.py`, `/app/migrate.sh` cites `rel/overlays/migrate.sh`). Mode
+    `none` with a required database never passes: the prompt asks for
+    `unknown` when something other than the app creates the schema (a
+    database init script). A migration command that
     adds arguments to a package script (`npm run alteration deploy`) needs
     a cited line that shows those arguments; the AI can invent an argument
     or leave out a required one, and then the migration fails.
@@ -334,12 +343,12 @@ is final.
   the database state come from the same rules. When Deployz does not set
   the variable itself (it is not in the binding contract), the vendor must
   set it: it becomes a required variable, and its source names the value
-  (outcome 2, deployable with changes). The open facts are all or nothing:
-  they fill the open values only when every open fact of the repository
-  passes. One fact left open (for example an unknown migration) keeps all
-  the rules values, because it can hide a start failure behind the facts
-  that were resolved (exam: new-23 became READY and did not start). A
-  migration answer that is unknown or fails its own check stays an open
+  (outcome 2, deployable with changes). Each open fact that passes its
+  check fills its value on its own. An open fact that stays unresolved
+  keeps its rules finding, so a resolved fact cannot hide it. (Before
+  prompt v15 the open facts were all or nothing, because an unknown
+  migration was not a question then: new-23 became READY and did not
+  start.) A migration answer that is unknown or fails its own check stays an open
   vendor question (`migration-command-needs-input`, with the AI command as
   the candidate, or none): an unknown migration of a required database is
   never READY, because it can stop the start (Logto refuses to start until

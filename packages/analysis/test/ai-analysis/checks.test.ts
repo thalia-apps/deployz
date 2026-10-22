@@ -180,6 +180,37 @@ describe('checkFact', () => {
     expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'none', command: null }))).reasons).toEqual(['mode none with a database needs a vendor decision']);
   });
 
+  it('migration: a manifest is context; it shows a startup migration only for Flyway or Liquibase in a Spring Boot build', () => {
+    const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
+    const startup = JSON.stringify({ mode: 'startup', command: null });
+    const pom = '<parent><artifactId>spring-boot-starter-parent</artifactId></parent>\n<artifactId>liquibase-core</artifactId>';
+    const withPack = (extra: FileTree) => {
+      const base = contextOf({ ...tree, 'pom.xml': pom, 'src/boot.js': 'await db.migrate.latest();', ...extra });
+      const files = [
+        { path: 'pom.xml', start: 1, lines: pom.split('\n') },
+        { path: 'src/boot.js', start: 1, lines: ['await db.migrate.latest();'] },
+      ];
+      return { ...base, pack: { ...base.pack, startPath: [...base.pack.startPath, ...files] }, database: 'postgres' as const };
+    };
+    const liquibase = cite('pom.xml', 2, 'liquibase-core');
+    expect(checkFact(withPack({}), migration, fact('q8', startup, { evidence: liquibase })).ok).toBe(true);
+    expect(checkFact(withPack({}), migration, fact('q8', startup, { evidence: [...liquibase, ...cite('src/boot.js', 1, 'db.migrate.latest()')] })).ok).toBe(true);
+    expect(checkFact(withPack({ 'src/main/resources/application.yml': 'spring:\n  liquibase:\n    enabled: false\n' }), migration, fact('q8', startup, { evidence: liquibase })).reasons).toEqual([
+      "no cited line on the image start path or in the app's boot code runs the migration",
+    ]);
+    const express = cite('package.json', 1, 'express');
+    expect(checkFact(withPack({ 'package.json': 'express\nknex' }), migration, fact('q8', startup, { evidence: express })).ok).toBe(false);
+  });
+
+  it('migration: a command is supported by a cited line of the script file it runs', () => {
+    const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
+    const base = contextOf({ ...tree, 'manage.py': 'execute_from_command_line(sys.argv)' });
+    const db = { ...base, pack: { ...base.pack, startPath: [...base.pack.startPath, { path: 'manage.py', start: 1, lines: ['execute_from_command_line(sys.argv)'] }] }, database: 'postgres' as const };
+    const evidence = cite('manage.py', 1, 'execute_from_command_line');
+    expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'pre_deploy', command: 'python3 manage.py migrate' }), { evidence })).ok).toBe(true);
+    expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'pre_deploy', command: 'python3 manage.py collectstatic' }), { evidence })).ok).toBe(false);
+  });
+
   it('migration: arguments added to a package script must be shown by a cited line', () => {
     const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
     const scripts = contextOf(tree);

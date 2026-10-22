@@ -399,7 +399,11 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // (CODE_CHANGE, outcome 2), and a start script that puts two or more
 // long-running servers in the background is a multi-process image (outcome 2).
 // Stored v62 rows are READY or deployable without these changes.
-export const ANALYSIS_VERSION = 63;
+// Version 64 (AI checks, prompt v15): each AI fact that passes its check
+// applies on its own; a migration command may cite the script it runs; a
+// startup migration may cite Flyway or Liquibase in a Spring Boot build.
+// Stored v63 rows ask the vendor for those facts.
+export const ANALYSIS_VERSION = 64;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

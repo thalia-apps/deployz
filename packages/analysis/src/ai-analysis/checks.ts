@@ -34,7 +34,7 @@ export interface CheckContext {
   readonly database: 'postgres' | 'mysql' | 'none';
 }
 
-type Supports = (line: string) => boolean;
+type Supports = (line: string, path: string) => boolean;
 
 const normalize = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
@@ -81,7 +81,7 @@ export function checkEvidence(pack: EvidencePack, evidence: readonly Evidence[],
   if (evidence.length === 0) return reasons;
   const supported = evidence.some((item) => {
     const line = citedLine(pack, item);
-    return line !== null && supports(line);
+    return line !== null && supports(line, item.path);
   });
   if (!supported) reasons.push(`no cited line supports the claim (${evidence.map((item) => `${item.path}:${item.line}`).join(', ')})`);
   return reasons;
@@ -105,7 +105,7 @@ export function distinctiveToken(command: string): string {
 }
 
 /** The line names the token, or the file name of a path token (`/usr/local/bin/entrypoint.sh` → `entrypoint.sh`). */
-const mentions = (token: string): Supports => {
+const mentions = (token: string): ((line: string) => boolean) => {
   const base = token.split('/').pop() ?? token;
   return (line) => line.includes(token) || (base.length >= 3 && line.includes(base));
 };
@@ -380,7 +380,11 @@ function checkMigration(ctx: CheckContext, id: string, value: MigrationValue, an
     .filter((part) => part.startsWith('-'))
     .map((part) => part.replace(/^-+/, '').replace(/=.*$/, ''))
     .filter((part) => part.length >= 3 && MIGRATION.test(part));
-  const supports = token === null ? (line: string) => MIGRATION.test(line) : (line: string) => mentions(token)(line) || migrationWords.some((part) => line.includes(part));
+  // A cited line of the script file that the command runs (`python3 manage.py migrate` cites manage.py).
+  const script = token?.split('/').pop();
+  const runsScript = (path: string) => script !== undefined && script.includes('.') && MIGRATION.test(command ?? '') && path.split('/').pop() === script;
+  const supports: Supports =
+    token === null ? (line) => MIGRATION.test(line) : (line, path) => mentions(token)(line) || migrationWords.some((part) => line.includes(part)) || runsScript(path);
   const check = simple(id, ctx, answer, supports);
   // Arguments added to a package script (`npm run alteration deploy`) must be shown by a cited line:
   // an invented or incomplete argument fails the migration, and the deployment stops before the app starts.
@@ -389,13 +393,28 @@ function checkMigration(ctx: CheckContext, id: string, value: MigrationValue, an
     return result(id, [...check.reasons, `no cited line shows the script arguments "${added}"`]);
   }
   if (mode !== 'startup') return check;
-  // A migration at start is on the start path or in the app's own boot code or configuration,
-  // never in a dependency manifest, a dev script, a test or a README.
+  // A migration at start is shown on the start path or in the app's own boot code or configuration,
+  // never in a dev script, a test or a README. A dependency manifest is context: it shows the migration
+  // only for Spring Boot with Flyway or Liquibase, which migrate at start by themselves.
   const allowed = new Set([...startPathFiles(ctx), ...productionSources(ctx.tree)]);
-  const offPath = answer.evidence
-    .filter((item) => !allowed.has(item.path))
+  const reasons = answer.evidence
+    .filter((item) => !allowed.has(item.path) && !MANIFEST.test(item.path))
     .map((item) => `${item.path} is not on the image start path or in the app's boot code`);
-  return offPath.length === 0 ? check : result(id, [...check.reasons, ...offPath]);
+  const shown = answer.evidence.some((item) => {
+    const line = citedLine(ctx.pack, item);
+    return line !== null && supports(line, item.path) && (allowed.has(item.path) || springBootMigrates(ctx.tree, item.path, line));
+  });
+  if (check.ok && !shown) reasons.push("no cited line on the image start path or in the app's boot code runs the migration");
+  return reasons.length === 0 ? check : result(id, [...check.reasons, ...reasons]);
+}
+
+const MIGRATION_OFF = /(?:flyway|liquibase)\.enabled\s*[=:]\s*["']?false|(?:flyway|liquibase):[ \t]*\r?\n(?:[ \t]+[^\n]*\n){0,5}?[ \t]+enabled:[ \t]*["']?false/i;
+
+/** A Spring Boot build that declares Flyway or Liquibase on the cited line, and no production setting that turns it off. */
+function springBootMigrates(tree: FileTree, path: string, line: string): boolean {
+  if (!/(?:^|\/)(?:pom\.xml|build\.gradle(?:\.kts)?)$/.test(path) || !/flyway|liquibase/i.test(line)) return false;
+  if (!/spring-boot|org\.springframework\.boot/.test(tree[path] ?? '')) return false;
+  return !productionSources(tree).some((source) => MIGRATION_OFF.test(tree[source] ?? ''));
 }
 
 /** A fact answer's value in its typed shape, or null when it does not parse. */
