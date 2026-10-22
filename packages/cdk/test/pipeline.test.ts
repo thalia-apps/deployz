@@ -41,6 +41,7 @@ describe('BuildPipeline', () => {
     template.resourceCountIs('AWS::ECR::Repository', 1);
     template.hasResourceProperties('AWS::ECR::Repository', {
       ImageTagMutability: 'IMMUTABLE',
+      ImageScanningConfiguration: { ScanOnPush: true },
     });
   });
 

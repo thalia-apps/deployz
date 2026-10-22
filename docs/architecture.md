@@ -20,9 +20,9 @@ rationale lives in [`decisions/README.md`](decisions/README.md).
 | Worker Lambda (SQS consumer + 15-minute schedule) | `packages/cdk/src/lambda/worker.ts` | Analysis and release-build jobs, CONFIG_UPDATE fan-out (the API runs it inline without a queue), CodeBuild result handling, the reconcile watchdog and the other sweeps |
 | RDS PostgreSQL 16 (`db.t4g.micro`, isolated subnets) | `packages/db` (drizzle) | All control-plane state |
 | SQS job queue + dead-letter queue | `apps/api/src/queue.ts` | API → worker messages |
-| CodeBuild project + ECR repository `deployz-images` | `packages/cdk/src/pipeline/build-pipeline.ts` | Release builds; immutable tags, digest-pinned deploys |
-| Source bucket (private, 30-day expiry) | | Repository tarballs staged for CodeBuild |
-| Template bucket (public read) + regional `deployz-templates-<region>` buckets | `packages/cdk/scripts/publish-bootstrap.mjs`; the API (`apps/api/src/compiler-artifact.ts`) | The bootstrap templates; and the compiled application artifacts the API publishes at deployment creation under `compiler-v2/<templateHash>.json` |
+| CodeBuild project + ECR repository `deployz-images` | `packages/cdk/src/pipeline/build-pipeline.ts` | Release builds; immutable tags, digest-pinned deploys, scan on push |
+| Source bucket (private, versioned, 30-day expiry) | | Repository tarballs staged for CodeBuild |
+| Template bucket (public read, versioned) + regional `deployz-templates-<region>` buckets | `packages/cdk/scripts/publish-bootstrap.mjs`; the API (`apps/api/src/compiler-artifact.ts`) | The bootstrap templates; and the compiled application artifacts the API publishes at deployment creation under `compiler-v2/<templateHash>.json` |
 | KMS key `alias/deployz-config-secrets` | | Config-secret and pending-secret encryption |
 | Cloudflare zone `deployz.dev` (external) | `apps/api/src/cloudflare-records.ts` | Default-HTTPS DNS records |
 | Web app on Lightsail (`app.deployz.dev`) | `apps/web` | Vendor dashboard, public install pages, Team Admin |

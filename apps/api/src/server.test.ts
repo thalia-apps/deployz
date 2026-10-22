@@ -7063,6 +7063,25 @@ describe('server — readiness reconciliation with the application details', () 
     });
   });
 
+  it('PATCH refuses a migration or start command the relay would reject', async () => {
+    const application = await insertApplication(db, org.organizationId, {});
+
+    for (const payload of [
+      { migrationCommand: 'x'.repeat(4097) },
+      { migrationCommand: 'npm run migrate\0' },
+      { migrationCommand: '   ' },
+      { startCommand: 'x'.repeat(4097) },
+    ]) {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/applications/${application.id}`,
+        headers: { cookie: org.cookie },
+        payload,
+      });
+      expect(response.statusCode).toBe(400);
+    }
+  });
+
   it('PATCH of an unrelated field leaves the verdict alone', async () => {
     const application = await insertApplication(db, org.organizationId, {
       analysisStatus: 'COMPLETE',

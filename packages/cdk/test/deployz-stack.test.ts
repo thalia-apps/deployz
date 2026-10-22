@@ -169,6 +169,21 @@ describe('DeployzStack', () => {
     template.resourceCountIs('AWS::ECR::Repository', 1);
   });
 
+  it('versions the template and build-source buckets and throttles the HTTP API', () => {
+    const app = new App();
+    const stack = new DeployzStack(app, 'DeployzTest');
+    const template = Template.fromStack(stack);
+
+    template.resourcePropertiesCountIs(
+      'AWS::S3::Bucket',
+      { VersioningConfiguration: { Status: 'Enabled' } },
+      2,
+    );
+    template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+      DefaultRouteSettings: { ThrottlingBurstLimit: 200, ThrottlingRateLimit: 100 },
+    });
+  });
+
   // Documenso's monorepo image build exceeds the default SMALL (3 GB)
   // builder and could brush the default 30-minute timeout.
   it('sizes the build pipeline for larger monorepo images', () => {

@@ -769,6 +769,20 @@ export interface InstallExecutorDeps {
   readonly stoppedTaskEvidence?: (stackName: string) => Promise<FailureEvidence | null>;
 }
 
+/**
+ * The relay only knows the control-plane URL, not the template bucket, so it
+ * accepts any https S3 bucket host. Pinning the exact bucket is a post-MVP
+ * item.
+ */
+function isTemplateBucketUrl(templateUrl: string): boolean {
+  try {
+    const url = new URL(templateUrl);
+    return url.protocol === 'https:' && /^[a-z0-9][a-z0-9.-]*\.s3(\.[a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** What `install` is asked for — `InstallOptions` minus the client seam. */
 export type InstallRequest = Omit<InstallOptions, 'installer'>;
 
@@ -858,6 +872,14 @@ async function settleInstall(
       error:
         'Install payload is missing templateUrl — the control plane did not send the ' +
         'compiled application template, refusing to provision',
+      output: {},
+    };
+  }
+  if (!isTemplateBucketUrl(templateUrl)) {
+    return {
+      deferred: false,
+      success: false,
+      error: 'Install templateUrl is not an https S3 URL — refusing to provision',
       output: {},
     };
   }
@@ -1222,7 +1244,11 @@ export function createInstallExecutor(deps: InstallExecutorDeps): CommandExecuto
       };
     }
 
-    const stackName = readVerifyOptionsFromPayload(command.payload).stackName ?? relayApplicationStackName();
+    const payloadStackName = readVerifyOptionsFromPayload(command.payload).stackName;
+    if (payloadStackName !== undefined && payloadStackName !== relayApplicationStackName()) {
+      return failure(command, 'Install payload names a stack that is not this installation\'s stack — not provisioning');
+    }
+    const stackName = relayApplicationStackName();
     const startedAt = (deps.now ?? (() => new Date().toISOString()))();
 
     if (authority === null) {

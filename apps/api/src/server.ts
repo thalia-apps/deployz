@@ -3786,11 +3786,20 @@ export async function buildServer({
   // client clear a currently-set value by sending `null`. For the boolean
   // requirement fields `null` means "reset to the detected value" (the columns
   // are NOT NULL, so the handler writes the detected value, never null).
+  // The relay rejects a migration command that is blank, over 4096
+  // characters or holds NUL (packages/relay/src/deploy.ts); refuse it here
+  // so a bad value does not fail the vendor's deploy late.
+  const repositoryCommandSchema = z
+    .string()
+    .refine((value) => value.trim().length > 0 && value.length <= 4096 && !value.includes('\0'), {
+      message: 'Command must be 1-4096 characters and contain no NUL character',
+    });
+
   const patchApplicationBodySchema = z.object({
     name: z.string().min(1).optional(),
     containerPort: z.number().int().nullish(),
     healthPath: z.string().nullish(),
-    migrationCommand: z.string().nullish(),
+    migrationCommand: repositoryCommandSchema.nullish(),
     // Reset to detected: the detected command, no vendor-override marker.
     // (A null migrationCommand is the vendor's "No separate migration".)
     resetMigrationCommand: z.literal(true).optional(),
@@ -3805,7 +3814,7 @@ export async function buildServer({
     dockerfilePath: repoRelativePathSchema.nullish(),
     buildContext: repoRelativePathSchema.nullish(),
     buildCommand: z.string().nullish(),
-    startCommand: z.string().nullish(),
+    startCommand: repositoryCommandSchema.nullish(),
   });
 
   const createCustomerBodySchema = z.object({

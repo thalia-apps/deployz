@@ -112,6 +112,7 @@ export class BuildPipeline extends Construct {
     this.repository = new Repository(this, 'Repository', {
       repositoryName: repoName,
       imageTagMutability: TagMutability.IMMUTABLE,
+      imageScanOnPush: true,
       removalPolicy: props.removalPolicy ?? RemovalPolicy.RETAIN,
     });
 

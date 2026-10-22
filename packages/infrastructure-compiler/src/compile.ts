@@ -1097,7 +1097,10 @@ function compileAlb(ctx: EcsContext, workload: IrWorkload): ResolvedResource[] {
       componentId, componentKind: 'endpoint', capability: CAPABILITY_KEYS.ALB, resourceRole: 'load-balancer',
       cfnType: 'AWS::ElasticLoadBalancingV2::LoadBalancer', verificationCheck: 'ingress',
       properties: {
-        LoadBalancerAttributes: [{ Key: 'deletion_protection.enabled', Value: 'false' }],
+        LoadBalancerAttributes: [
+          { Key: 'deletion_protection.enabled', Value: 'false' },
+          { Key: 'routing.http.drop_invalid_header_fields.enabled', Value: 'true' },
+        ],
         Scheme: 'internet-facing',
         SecurityGroups: [getAtt(albSg, 'GroupId')],
         Subnets: [ref(ctx.ids.publicSubnets[0]), ref(ctx.ids.publicSubnets[1])],

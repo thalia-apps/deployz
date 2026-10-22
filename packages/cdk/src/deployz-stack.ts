@@ -29,7 +29,7 @@ import {
   ObjectOwnership,
   type IBucket,
 } from 'aws-cdk-lib/aws-s3';
-import { DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnStage, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
@@ -137,7 +137,8 @@ export class DeployzStack extends Stack {
     const sourceBucket = new Bucket(this, 'BuildSourceBucket', {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
-      lifecycleRules: [{ expiration: Duration.days(30) }],
+      versioned: true,
+      lifecycleRules: [{ expiration: Duration.days(30), noncurrentVersionExpiration: Duration.days(7) }],
     });
     // Set once the Docker Hub credential exists in THIS stack's region (see
     // docs/docker-hub-credentials.md). Deliberately opt-in: CodeBuild
@@ -180,6 +181,7 @@ export class DeployzStack extends Stack {
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,
       accessControl: BucketAccessControl.PRIVATE,
       enforceSSL: true,
+      versioned: true,
     });
 
     // ── Config-secret KMS key ────────────────────────────────────────────
@@ -397,6 +399,10 @@ export class DeployzStack extends Stack {
       defaultIntegration: new HttpLambdaIntegration('ApiIntegration', apiLambda.function),
       ...(apiDomain ? { defaultDomainMapping: { domainName: apiDomain } } : {}),
     });
+    (httpApi.defaultStage?.node.defaultChild as CfnStage).defaultRouteSettings = {
+      throttlingBurstLimit: 200,
+      throttlingRateLimit: 100,
+    };
 
     // A finished build is the only way a release learns its image digest —
     // CodeBuild reports completion here, and the worker writes the digest to

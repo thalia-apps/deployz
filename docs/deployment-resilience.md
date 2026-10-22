@@ -243,6 +243,11 @@ install / database ready
   on an existing deployment" below): the relay puts it only into the
   application container of a new revision of the named family, then runs
   that exact revision ARN. RunTask never carries a command override.
+- **Install and domain payload checks.** The relay refuses an INSTALL whose
+  `templateUrl` is not an `https` S3 bucket URL, and one whose `stackName`
+  is not the installation's own `deployz-app-<id>` stack. It deletes a
+  certificate only when the certificate carries this installation's tag.
+  Pinning the exact template bucket host is a post-MVP item.
 
 - **Analysis freezes only a safe command.** `selectMigrationScript`
   (`packages/analysis`) accepts only a script of the deployed app's own
