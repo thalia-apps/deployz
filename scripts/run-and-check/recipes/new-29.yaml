@@ -10,6 +10,9 @@ vendorInputs:
 smoke:
   method: GET
   path: /user/deployz-smoke
+outcomePatch:
+  environment: {}
+  reason: "The Dockerfile ENTRYPOINT is atuin-server with no CMD (Dockerfile:48), so the binary prints its usage and exits (full run log). Repository change: CMD [\"start\"]. The vendor also answers the database variable question with ATUIN_DB_URI (settings.rs db_uri)."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-16T23:45:56Z. Rust Cargo workspace; the Dockerfile builds only the atuin-server binary (an axum HTTP server)."
   - "Root Dockerfile builds from source with cargo-chef (cargo build --release --bin atuin-server) and runs it from a debian slim image. No build override."

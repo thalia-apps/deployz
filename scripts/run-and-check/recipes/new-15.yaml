@@ -11,6 +11,9 @@ vendorInputs:
     source: { kind: fixed, value: postgresql }
   - name: SECRET_ENCRYPTION_KEY
     source: { kind: generated, format: hex64 }
+outcomePatch:
+  environment: { REDIS_IS_EXTERNAL: "true" }
+  reason: "Deployz sets PORT to the container port 7575. nginx listens on 7575 (nginx.conf:8) and proxies to 127.0.0.1:3000, but the Next.js server that scripts/run.sh:103 starts reads PORT, so it also binds 7575 and stops with EADDRINUSE (full run log). Repository change: start it with PORT=3000 on scripts/run.sh:103. REDIS_IS_EXTERNAL=true (scripts/run.sh:90) uses the Deployz Valkey instead of the second background server."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch dev, committed 2026-10-17T15:16:22Z. Turborepo monorepo. The root Dockerfile builds one app, @homarr/nextjs, with turbo run build --filter (Dockerfile:28-31)."
   - "Source build confirmed: root Dockerfile with a builder stage and an alpine runner stage that also installs nginx and redis (Dockerfile:33-37). No build override. EXPOSE 7575 (Dockerfile:61)."

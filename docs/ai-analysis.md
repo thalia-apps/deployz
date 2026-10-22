@@ -396,7 +396,13 @@ is final.
     the service. The live exam confirms it: the AI says `required` for the
     local state of healthy apps (new-18, new-7) and of apps whose reviewed
     change makes them deployable (new-21, repo-050, new-8). A CAPABILITY_GAP
-    there would be a wrong "not deployable".
+    there would be a wrong "not deployable". The 12 apps of the c3ad6a17
+    exam that the Analysis called outcome 2 and that failed both full runs
+    are also outcome 2: a Deployz setting or a reviewed repository change
+    removes each failure (recipe `outcomePatch`, or the `healthPath` answer
+    for new-6; docs/testing/compatibility.md).
+    None needs a capability that Deployz does not have, so no rule moves
+    them to outcome 3.
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.
