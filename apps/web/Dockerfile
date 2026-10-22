@@ -13,7 +13,7 @@
 #     --build-arg NEXT_PUBLIC_COOKIE_PREFIX= \
 #     -t deployz-web .
 
-FROM --platform=linux/amd64 node:22-alpine AS base
+FROM --platform=linux/amd64 node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NEXT_TELEMETRY_DISABLED=1

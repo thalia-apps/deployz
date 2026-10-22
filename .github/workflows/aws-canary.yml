@@ -76,7 +76,7 @@ jobs:
       DEPLOYZ_CANARY_VENDOR_PASSWORD: ${{ secrets.DEPLOYZ_CANARY_VENDOR_PASSWORD }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Resolved once, in one place, so every later step (including the
       # cleanup/audit steps that must run even when the canary step itself
@@ -135,10 +135,10 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -207,7 +207,7 @@ jobs:
           fi
 
       - name: Upload evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: canary-results-${{ steps.params.outputs.scenario }}${{ steps.params.outputs.scenario == 'profile' && format('-{0}', steps.params.outputs.profile) || '' }}-${{ github.run_id }}

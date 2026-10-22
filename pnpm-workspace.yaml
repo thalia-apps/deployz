@@ -6,3 +6,13 @@ packages:
 # transform backend) needs its postinstall to place the platform binary.
 onlyBuiltDependencies:
   - esbuild
+
+# Patched transitive versions that the parent packages' ranges do not reach
+# (pnpm audit --prod). next pins postcss 8.4.31 exactly.
+overrides:
+  proxy-addr: ^2.0.8
+  ip-address: ^10.7.1
+  undici@7: ^7.29.1
+  undici@8: ^8.10.2
+  next>postcss: ^8.5.31
+  qs: ^6.16.0

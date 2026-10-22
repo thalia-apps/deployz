@@ -17,17 +17,18 @@ export const SCRUB_ENV_VARS = [
 ];
 
 /**
- * Returns a copy of `sourceEnv` with every var in SCRUB_ENV_VARS removed,
- * plus the list of vars that were actually present and removed.
+ * Returns a copy of `sourceEnv` with every var in SCRUB_ENV_VARS set to an
+ * empty string, plus the list of vars that held a value. The empty string is
+ * deliberate: the API's dotenv load fills only unset names, so an unset name
+ * would be filled from a parent checkout's .env. Every reader treats "" as
+ * not configured.
  */
 export function scrubEnv(sourceEnv) {
   const env = { ...sourceEnv };
   const scrubbed = [];
   for (const key of SCRUB_ENV_VARS) {
-    if (env[key] !== undefined) {
-      delete env[key];
-      scrubbed.push(key);
-    }
+    if (env[key]) scrubbed.push(key);
+    env[key] = '';
   }
   return { env, scrubbed };
 }
