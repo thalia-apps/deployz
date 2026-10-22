@@ -234,9 +234,9 @@ describe('JVM / Go / .NET env reads (COMP-017)', () => {
       ].join('\n'),
     };
     const byKey = modelByKey(tree);
-    expect(byKey.get('DATABASE_URL')).toMatchObject({ required: true });
+    expect(byKey.get('ConnectionStrings__DATABASE_URL')).toMatchObject({ required: true });
     expect(byKey.get('SECRET_SECTION')).toMatchObject({ required: true });
-    expect(byKey.get('OPTIONAL_CONNECTION')).toMatchObject({ required: false });
+    expect(byKey.get('ConnectionStrings__OPTIONAL_CONNECTION')).toMatchObject({ required: false });
   });
 });
 

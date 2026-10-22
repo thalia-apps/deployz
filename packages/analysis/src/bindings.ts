@@ -239,6 +239,7 @@ const EXACT_USER_NAMES = new Set([
 const EXACT_PASSWORD_NAMES = new Set([
   'PGPASSWORD',
   'DATABASE_PASSWORD',
+  'DATABASE_PASS',
   'POSTGRES_PASSWORD',
   'MYSQL_PASSWORD',
   'DBPASSWORD',
@@ -250,10 +251,14 @@ const EXACT_PASSWORD_NAMES = new Set([
 // `SENTRY_DSN` ends in `_DSN` but is an error tracker's address, never the database.
 const ERROR_TRACKER_NAME_REGEX = /(?:^|_)(?:SENTRY|GLITCHTIP|BUGSNAG|ROLLBAR|HONEYBADGER)(?:_|$)/;
 
+// A Docker link (`POSTGRES_ENV_POSTGRES_DB`) or OpenShift v2 (`OPENSHIFT_POSTGRESQL_DB_HOST`)
+// sets these names; an app that finds one can switch to that platform's mode (alf.io).
+const PLATFORM_LINK_NAME_REGEX = /^OPENSHIFT_|_ENV_(?:POSTGRES|MYSQL)_/;
+
 /** The postgres semantic a variable name carries, when the name is a known convention. */
 export function postgresSemantic(name: string): BindingSemantic | null {
   const upper = name.toUpperCase();
-  if (ERROR_TRACKER_NAME_REGEX.test(upper)) return null;
+  if (ERROR_TRACKER_NAME_REGEX.test(upper) || PLATFORM_LINK_NAME_REGEX.test(upper)) return null;
   if (EXACT_URL_NAMES.has(upper) || URL_SUFFIX_REGEX.test(upper)) return 'url';
   if (JDBC_URL_REGEX.test(upper)) return 'jdbc_url';
   if (EXACT_HOST_NAMES.has(upper) || HOST_SUFFIX_REGEX.test(upper)) return 'host';

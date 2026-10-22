@@ -72,6 +72,30 @@ file only, low confidence) are marked **Uncertain**. Build-time suggestions
 come from well-known name prefixes (`NEXT_PUBLIC_`, `VITE_`,
 `REACT_APP_`, …). The vendor confirms them.
 
+### Code reads
+
+The analysis reads only production code: tests (also .NET `App.Tests`
+projects and Rust `benches/`, `build.rs`, `#[cfg(test)]` modules),
+examples, scripts and tools do not count, and neither do development
+configs (`config/dev.exs`, `config/test.exs`, Spring `application-dev`/`-test`/`-local`).
+A read is **required** only when the code stops without the value. When it
+is not clear, the variable is optional (a wrong "required" is a needless
+vendor question).
+
+| Language | Required | Optional |
+|---|---|---|
+| C# | `Environment.GetEnvironmentVariable("X") ?? throw` or `…("X")!`; `configuration["A:B"] ?? throw` (variable `A__B`); `GetConnectionString("X") ?? throw` (variable `ConnectionStrings__X`); `GetRequiredSection` | `?? default`, `GetValue<T>("A:B")`, a key with a non-empty value in `appsettings.json` / `appsettings.Production.json` |
+| Java, Kotlin | `@Value("${X}")`; `${X}` in `application.properties`/`.yml` for a secret or the app's own URL | `@Value("${X:default}")`, `System.getenv("X")` (also inside `Objects.requireNonNull`: a platform branch often holds it) |
+| PHP | `getenv`, `$_ENV`, `$_SERVER` behind `?: throw` / `?? throw`; Symfony `%env(X)%` for a secret or the app's own URL | every other read, Laravel `env('X')`, `%env(default:…:X)%`, an `env(X):` parameter. CGI names (`HTTP_*`, `REQUEST_*`, …) are not variables |
+| Rust | `env::var("X")` with `.expect(…)`, `.unwrap()` or `?` | `unwrap_or…`, `ok()`, `var_os`; `env!` is build time |
+| Elixir | `System.fetch_env!("X")`, an app's own `fetch_env!("X", …)` wrapper, `System.get_env("X") \|\| raise`, in `config/*.exs` outside a `case`/`if`/`cond` branch (`if config_env() == :prod` counts as unconditional) | `System.get_env`, any read in `lib/` or inside a branch |
+
+A variable that Deployz provides is never the vendor's: a database name
+(`DATABASE_*`, `DB_*`, `DATABASE_PASS`, a URL or JDBC URL alias) becomes a
+managed binding. Docker-link names (`POSTGRES_ENV_POSTGRES_DB`) and
+OpenShift v2 names (`OPENSHIFT_*`) are never bound: an app can switch to
+that platform's mode when it finds one.
+
 ## Map a variable to a managed value
 
 Some apps read their database connection through a name that analysis cannot

@@ -196,9 +196,10 @@ function findFileContent(tree: FileTree, pathRegex: RegExp): string | null {
 // Paths that never run inside the deployed container: tests and fixtures,
 // build/release scripts, documentation generators, tool configuration. A
 // disk write or an environment read there says nothing about the app at
-// runtime (Stage A COMP-003, COMP-016).
+// runtime (Stage A COMP-003, COMP-016). .NET names its test projects
+// `App.Tests` / `App.UnitTests`; Rust keeps benchmarks in `benches/`.
 const NON_RUNTIME_SEGMENT_REGEX =
-  /(?:^|\/)(?:__tests__|__mocks__|__fixtures__|(?:[\w.-]*[-_])?tests?|testdata|specs?|(?:[\w.-]*[-_])?e2e|cypress|evaluations?|fixtures?|stories|scripts?|tools?|bin|docs?|extra|\.?examples?|\.?storybook|playwright|benchmarks?|\.github|\.husky|\.devcontainer|\.vscode)(?:\/|$)/i;
+  /(?:^|\/)(?:__tests__|__mocks__|__fixtures__|(?:[\w.-]*[-_])?tests?|testdata|specs?|(?:[\w.-]*[-_])?e2e|cypress|evaluations?|fixtures?|stories|scripts?|tools?|bin|docs?|extra|\.?examples?|\.?storybook|playwright|benchmarks?|benches|(?:[\w-]+\.)+(?:\w*tests?|benchmarks?)(?:\.[\w.-]+)?|\.github|\.husky|\.devcontainer|\.vscode)(?:\/|$)/i;
 const NON_RUNTIME_FILE_REGEX =
   /(?:\.(?:test|spec|stories|e2e|cy)\.[cm]?[jt]sx?$|(?:^|\/)(?:[\w.-]+\.config\.[cm]?[jt]s|\.(?:eslintrc|prettierrc|babelrc)(?:\.[cm]?js)?|conftest\.py|test_[\w-]+\.py|[\w-]+_test\.(?:py|go|rb))$)/i;
 
@@ -1654,10 +1655,12 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   for (const [path, content] of Object.entries(tree)) {
     if (!LANGUAGE_SOURCE_REGEX.test(path) || !content || !isRuntimeSourcePath(path)) continue;
 
-    // Class-level @RequestMapping("/api/v1") prefixes a controller's methods.
+    // Phoenix routes are read below, inside their `scope`.
+    if (/\.exs?$/.test(path)) continue;
+    // Class-level @RequestMapping("/api/v1") or (value = "/api") prefixes a controller's methods.
     const javaPrefixes: string[] = [];
     if (/\.(?:java|kt)$/.test(path)) {
-      for (const m of content.matchAll(/@RequestMapping\(\s*["'](\/[^"']+)["']/g)) {
+      for (const m of content.matchAll(/@RequestMapping\(\s*(?:(?:value|path)\s*=\s*)?\{?\s*["'](\/[^"']+)["']/g)) {
         if (m[1] && !HEALTH_PATH_SEGMENT_REGEX.test(m[1])) javaPrefixes.push(m[1]);
       }
     }
@@ -1702,11 +1705,11 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   // ── Phoenix (Elixir): routes are declared inside `scope "/api/v1" do` ────
   for (const [path, content] of Object.entries(tree)) {
     if (!/\.(?:ex|exs)$/.test(path) || !content || !isRuntimeSourcePath(path)) continue;
-    const scopes = [...content.matchAll(/scope\s+["'](\/[^"']*)["']/g)].map((m) => m[1] ?? '');
+    const lines = content.split('\n');
     for (const match of content.matchAll(/\b(?:get|post)\s+["'](\/[^"']*)["']/g)) {
       const raw = match[1]!;
       if (!HEALTH_PATH_SEGMENT_REGEX.test(raw)) continue;
-      const routePath = scopes.length > 0 ? `${scopes[0]!.replace(/\/+$/, '')}${raw}` : raw;
+      const routePath = `${phoenixScopePrefix(lines, content.slice(0, match.index).split('\n').length - 1)}${raw}`;
       addCandidate({ path: routePath, priority: HEALTH_PATH_PRIORITY.ROUTE_REGISTRATION, source: 'source', label: `health route (${path})`, file: path });
     }
   }
@@ -3622,6 +3625,14 @@ function isPlaceholderValue(value: string): boolean {
 
 const JAVA_SOURCE_REGEX = /\.(?:java|kt|kts|scala)$/;
 const DOTNET_SOURCE_REGEX = /\.cs$/;
+const PHP_SOURCE_REGEX = /\.php$/;
+const RUST_SOURCE_REGEX = /\.rs$/;
+const ELIXIR_SOURCE_REGEX = /\.exs?$/;
+/** A Rust build script or test module file: it never runs in the deployed app. */
+const RUST_NON_RUNTIME_FILE_REGEX = /(?:^|\/)(?:build|tests?)\.rs$/;
+const APP_SETTINGS_FILE_REGEX = /(?:^|\/)appsettings(?:\.Production)?\.json$/;
+/** Configuration for development or tests only: Elixir `config/dev.exs`, a Spring `dev`/`test` profile. */
+const DEV_CONFIG_FILE_REGEX = /(?:^|\/)config\/(?:dev|test)\.exs$|(?:^|\/)application-(?:dev|development|local|test)\.(?:properties|ya?ml)$/i;
 const ENV_KEY_LITERAL = /[A-Z][A-Z0-9_]*/;
 
 /** A key literal `[A-Z][A-Z0-9_]*`, or null when the placeholder is not env-shaped. */
@@ -3890,16 +3901,139 @@ function scanGoEnvReads(content: string): { key: string; needsValue: boolean }[]
   return found;
 }
 
-/** .NET `GetConnectionString`/`GetRequiredSection`, required only behind a `?? throw`. */
+/**
+ * .NET reads, required only behind a `?? throw` (or a null-forgiving `!` on an
+ * environment read): `GetRequiredSection`, `GetConnectionString("X")` (the
+ * environment sets it as `ConnectionStrings__X`), `Environment.GetEnvironmentVariable("X")`,
+ * and the root configuration's `configuration["Section:Key"]` / `GetValue<T>("Section:Key")`
+ * (the environment sets them as `Section__Key`). A configuration key that is
+ * not env-shaped (`"datadir"`) or a section's own key names no variable.
+ */
 function scanDotnetEnvReads(content: string): { key: string; needsValue: boolean }[] {
   const found: { key: string; needsValue: boolean }[] = [];
-  const readRegex = /(GetRequiredSection|GetConnectionString)\(\s*"([A-Z][A-Z0-9_]*)"\s*\)/g;
+  const readRegex =
+    /(GetRequiredSection|GetConnectionString)\(\s*"(\w+)"\s*\)|Environment\.GetEnvironmentVariable\(\s*"([A-Za-z_]\w*)"\s*\)(!(?!=))?|\b(?:_?[Cc]onfiguration|[Cc]onfig)(?:\[\s*"([\w:]+)"\s*\]|\.GetValue<[\w?]+>\(\s*"([\w:]+)"\s*[,)])/g;
   let match: RegExpExecArray | null;
   while ((match = readRegex.exec(content)) !== null) {
-    const method = match[1]!;
     const tail = content.slice(match.index + match[0].length, match.index + match[0].length + 120);
-    const throwGuarded = /\?\?\s*(?:throw\b|new\b)/.test(tail);
-    found.push({ key: match[2]!, needsValue: method === 'GetRequiredSection' || throwGuarded });
+    const throwGuarded = /^\s*\?\?\s*(?:throw\b|new\b)/.test(tail);
+    const [, method, sectionOrConnection, environmentKey, nullForgiving, indexedKey, valueKey] = match;
+    if (method !== undefined) {
+      if (method === 'GetConnectionString') found.push({ key: `ConnectionStrings__${sectionOrConnection!}`, needsValue: throwGuarded });
+      else if (/^[A-Z][A-Z0-9_]*$/.test(sectionOrConnection!)) found.push({ key: sectionOrConnection!, needsValue: true });
+    } else if (environmentKey !== undefined) {
+      found.push({ key: environmentKey, needsValue: throwGuarded || nullForgiving !== undefined });
+    } else {
+      const configKey = (indexedKey ?? valueKey)!;
+      if (!configKey.includes(':') && !/^[A-Z][A-Z0-9_]*$/.test(configKey)) continue;
+      found.push({ key: configKey.replace(/:/g, '__'), needsValue: indexedKey !== undefined && throwGuarded });
+    }
+  }
+  return found;
+}
+
+/**
+ * The non-empty values of `appsettings.json` / `appsettings.Production.json`,
+ * by the variable that overrides them (`ConnectionStrings__Default`): a .NET
+ * read of such a key has a default.
+ */
+function appSettingsDefaults(tree: FileTree): Set<string> {
+  const keys = new Set<string>();
+  const visit = (value: unknown, prefix: string): void => {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [name, child] of Object.entries(value)) visit(child, prefix ? `${prefix}__${name}` : name);
+    } else if (prefix && value !== null && value !== '') {
+      keys.add(prefix);
+    }
+  };
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !APP_SETTINGS_FILE_REGEX.test(path) || !isRuntimeSourcePath(path)) continue;
+    try {
+      visit(JSON.parse(content.trimStart().replace(/^\s*\/\/.*$/gm, '')), '');
+    } catch {
+      // A file that is not plain JSON gives no defaults.
+    }
+  }
+  return keys;
+}
+
+/**
+ * Rust `env::var("X")` (also through `dotenvy::var` or a crate's own `env`
+ * module): required when the read ends in `.expect(…)`, `.unwrap()` or `?`;
+ * `unwrap_or`, `ok()`, `is_ok()` and `var_os` tolerate absence. `env!` is a
+ * build-time read, and a `#[cfg(test)]` module is not production code.
+ */
+function scanRustEnvReads(content: string): { key: string; needsValue: boolean }[] {
+  const production = content.split(/#\[cfg\(test\)\]/)[0] ?? '';
+  return [...production.matchAll(/\b(?:env|dotenvy?)::var(_os)?\(\s*"([A-Z][A-Z0-9_]*)"\s*\)(\s*(?:\.(?:expect|unwrap)\(|\?))?/g)].map((m) => ({
+    key: m[2]!,
+    needsValue: m[1] === undefined && m[3] !== undefined,
+  }));
+}
+
+/**
+ * Elixir: `System.fetch_env!("X")` (or an app's own `fetch_env!` wrapper) and
+ * `System.get_env("X") || raise …` stop the start without the variable, but
+ * only in a `config/*.exs` file and outside a branch: a `case`, `if`, `cond`,
+ * `unless` or `with` (other than `if config_env() == :prod`) runs the read
+ * only for some settings, and a function in `lib/` only when it is called.
+ * Any other read tolerates absence.
+ */
+function scanElixirEnvReads(path: string, content: string): { key: string; needsValue: boolean }[] {
+  const found: { key: string; needsValue: boolean }[] = [];
+  const config = /(?:^|\/)config\/[^/]+\.exs$/.test(path);
+  const lines = content.split('\n');
+  for (const m of content.matchAll(/(?:\bSystem\.(get_env|fetch_env)|\bfetch_env!)\(\s*"([A-Z][A-Z0-9_]*)"\s*(\))?(\s*\|\|\s*raise\b)?/g)) {
+    const linePrefix = content.slice(content.lastIndexOf('\n', m.index) + 1, m.index);
+    if (linePrefix.includes('#')) continue;
+    const stops = m[1] === undefined || (m[1] === 'get_env' && m[3] !== undefined && m[4] !== undefined);
+    const lineIndex = content.slice(0, m.index).split('\n').length - 1;
+    found.push({ key: m[2]!, needsValue: stops && config && !/\b(?:if|unless)\b|->/.test(linePrefix) && !insideElixirBranch(lines, lineIndex) });
+  }
+  return found;
+}
+
+/** The path of the Phoenix `scope "/x"` blocks that enclose a line, by indentation (`/api` for `scope "/api"` › `scope []`). */
+function phoenixScopePrefix(lines: readonly string[], index: number): string {
+  let prefix = '';
+  let indent = lines[index]!.search(/\S/);
+  for (let i = index - 1; i >= 0 && indent > 0; i--) {
+    const own = lines[i]!.search(/\S/);
+    if (own < 0 || own >= indent) continue;
+    indent = own;
+    const scope = /^\s*scope\s+["'](\/[^"']*)["']/.exec(lines[i]!)?.[1];
+    if (scope !== undefined) prefix = `${scope.replace(/\/+$/, '')}${prefix}`;
+  }
+  return prefix;
+}
+
+/** Whether a line sits, by indentation, inside a `case`/`if`/`cond`/`unless`/`with` branch other than `if config_env() == :prod`. */
+function insideElixirBranch(lines: readonly string[], index: number): boolean {
+  let indent = lines[index]!.search(/\S/);
+  for (let i = index - 1; i >= 0 && indent > 0; i--) {
+    const own = lines[i]!.search(/\S/);
+    if (own < 0 || own >= indent) continue;
+    indent = own;
+    if (/^\s*(?:case|cond|unless|with)\b|^\s*if\b(?!\s+config_env\(\)\s*(?:==\s*:prod\b|in\s*\[))|->\s*$/.test(lines[i]!)) return true;
+  }
+  return false;
+}
+
+/** CGI and server names PHP's `$_SERVER` and `getenv` also return: the web server sets them, not the vendor. */
+const PHP_SERVER_NAME_REGEX = /^(?:HTTPS?|HTTP_\w+|REQUEST_\w+|SERVER_\w+|REMOTE_\w+|SCRIPT_\w+|PHP_\w+|DOCUMENT_\w+|PATH_\w+|QUERY_STRING|CONTENT_\w+|GATEWAY_\w+|ORIG_\w+|REDIRECT_\w+|UNIQUE_ID)$/;
+
+/**
+ * PHP `getenv('X')`, `$_ENV['X']`, `$_SERVER['X']` and Laravel `env('X')`: an
+ * unset variable reads as false or null, so a read is required only behind a
+ * `?: throw` / `?? throw`.
+ */
+function scanPhpEnvReads(content: string): { key: string; needsValue: boolean }[] {
+  const found: { key: string; needsValue: boolean }[] = [];
+  for (const m of content.matchAll(/(?:\bgetenv\(\s*|\$_(?:ENV|SERVER)\[\s*|(?<![\w>:$\\])env\(\s*)['"]([A-Z][A-Z0-9_]*)['"]\s*([,)\]])/g)) {
+    if (PHP_SERVER_NAME_REGEX.test(m[1]!)) continue;
+    if (/^\s*(?:\/\/|\*|#)/.test(content.slice(content.lastIndexOf('\n', m.index) + 1, m.index))) continue;
+    const tail = content.slice(m.index + m[0].length, m.index + m[0].length + 80);
+    found.push({ key: m[1]!, needsValue: m[2] !== ',' && /^\s*\)?\s*(?:\?:|\?\?)\s*throw\b/.test(tail) });
   }
   return found;
 }
@@ -4515,6 +4649,10 @@ function scanConfigFileEnvReads(path: string, content: string): { key: string; n
     const storageServices = /(?:^|\/)config\/storage\.ya?ml$/i.test(path);
     for (const m of content.matchAll(/\bENV\[\s*["']([A-Z][A-Z0-9_]*)["']\s*\]\s*(\|\|)?/g)) add(m[1]!, storageServices || m[2] !== undefined);
     for (const m of content.matchAll(/\bENV\.fetch\(\s*["']([A-Z][A-Z0-9_]*)["']\s*(,|\)\s*\{)?/g)) add(m[1]!, m[2] !== undefined);
+    // Symfony `%env(X)%`, `%env(int:X)%`: a `default:` processor or an `env(X):` parameter is the default.
+    for (const m of content.matchAll(/%env\(((?:[\w-]+:)*)([A-Z][A-Z0-9_]*)\)%/g)) {
+      add(m[2]!, m[1]!.split(':').includes('default') || new RegExp(`^\\s*['"]?env\\(${m[2]!}\\)['"]?\\s*:`, 'm').test(content));
+    }
     // `$(NAME)` / `${NAME:default}` substitution in a YAML config; the engine selector has no other source
     for (const m of content.matchAll(/\$[({]([A-Z][A-Z0-9_]*)(:[^)}\n]*)?[)}]/g)) {
       const key = m[1]!;
@@ -4606,7 +4744,7 @@ export function detectEnvVarModel(
   }
 
   for (const [path, content] of Object.entries(tree)) {
-    if (!content || !isRuntimeSourcePath(path) || isSiblingApp(path)) continue;
+    if (!content || !isRuntimeSourcePath(path) || isSiblingApp(path) || DEV_CONFIG_FILE_REGEX.test(path)) continue;
     if (JS_SOURCE.test(path)) {
       // `process.env.X` / `process.env['X']` everywhere; `env.X` / `env['X']`
       // too when the module reads through a local env object (DEPLOY-005).
@@ -4845,8 +4983,15 @@ export function detectEnvVarModel(
       for (const entry of scanConfigFileEnvReads(path, content)) {
         recordRead(entry.key, entry.needsValue, path, true);
       }
+    } else if (PHP_SOURCE_REGEX.test(path)) {
+      for (const entry of scanPhpEnvReads(content)) recordRead(entry.key, entry.needsValue, path);
+    } else if (RUST_SOURCE_REGEX.test(path) && !RUST_NON_RUNTIME_FILE_REGEX.test(path)) {
+      for (const entry of scanRustEnvReads(content)) recordRead(entry.key, entry.needsValue, path);
+    } else if (ELIXIR_SOURCE_REGEX.test(path)) {
+      for (const entry of scanElixirEnvReads(path, content)) recordRead(entry.key, entry.needsValue, path);
     }
   }
+  const dotnetDefaults = appSettingsDefaults(tree);
 
   // Selectors with a bad default are reads too (a Ruby `ENV['DB'] || 'sqlite'`
   // or a PHP `env('DB_CONNECTION', 'sqlite')` is not caught above).
@@ -4887,7 +5032,7 @@ export function detectEnvVarModel(
       (read !== undefined && readNeedsValue(key, read, optionalIntegration) && !schemaOptionalKeys.has(key)) ||
       (read !== undefined && bootRequiredKeys.has(key)) ||
       buildArg !== undefined;
-    const hasDefault = declared?.realValue === true;
+    const hasDefault = declared?.realValue === true || dotnetDefaults.has(key);
     const source: string[] = [];
     if (buildArg) source.push(buildArg);
 
