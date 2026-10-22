@@ -6,7 +6,7 @@
  * Repository content is untrusted data.
  */
 import type { AnalysisResult } from '../analyser.js';
-import { listDockerfileCandidates, type FileTree } from '../detectors.js';
+import { listDockerfileCandidates, TREE_PATHS, type FileTree } from '../detectors.js';
 import { MANAGED_DATABASE_ENV_VARS, MANAGED_STORAGE_ENV_VARS } from '../env-classification.js';
 import { redactSecrets } from '../redact.js';
 import { collectOpenItems, type BlockerItem, type OpenItem } from './open-items.js';
@@ -159,7 +159,8 @@ const FACT_SEARCH: Record<string, RegExp> = {
   port: /\bPORT\b|\.listen\(|\blisten\b|server\.port|--port\b|\bbind\b.*:\d{2,5}|ASPNETCORE_URLS|EXPOSE/,
   startCommand: /"(?:start|serve|prod|production|start:prod)"\s*:|^\s*web:|\bexec\b/,
   healthPath: /health|ready|alive|\bping\b|\/status\b|Map(?:Get|HealthChecks)|@(?:Get|RequestMapping)\(|\.get\(\s*["']\/["']|urlpatterns|\broutes?\b/i,
-  migration: /migrat|db:prepare|db\s+push|alembic|flyway|liquibase|ecto\.migrate|syncdb|schema:update/i,
+  migration: /migrat|db:prepare|db\s+push|alembic|flyway|liquibase|ecto\.migrate|syncdb|schema:update|ensure\w*(?:schema|tables?)\b|CREATE TABLE|\.Install\w*\(/i,
+  databaseVariable: /(?<![a-z0-9])(?:db|database|postgres|pg|sql|dsn|datasource|connection)/i,
 };
 
 /** A line that reads the environment: the switches a blocker or a fact most often turns on. */
@@ -183,8 +184,12 @@ const RANKS: Record<string, Rank> = {
   startCommand: last((path) => (START_FILE.test(path) ? 0 : 1)),
   // A browser-side router is not a server route.
   healthPath: last((path, line) => (BROWSER_FILE.test(path) ? 3 : HEALTH_ROUTE.test(line) ? 0 : /health|route|router|urls|controller/i.test(path) ? 1 : 2)),
-  migration: last((path) => (START_FILE.test(path) ? 0 : 1)),
+  // A call that runs the migrations is decisive; an import, a comment or a declaration only names them.
+  migration: last((path, line) => (NAMES_ONLY.test(line) ? 3 : START_FILE.test(path) ? 0 : MIGRATION_CALL.test(line) ? 1 : 2)),
+  databaseVariable: last((_path, line) => (READS_ENV.test(line) ? 0 : 2)),
 };
+const MIGRATION_CALL = /(?:\w*migrat\w*|\w*upgrade\w*|ensure\w*(?:schema|tables?)|\w*install\w*)(?:\.\w+)?\s*\(|CREATE TABLE/i;
+const NAMES_ONLY = /^\s*(?:using|import|from|require|alias|use|package|namespace|\/\/|#|\*|\/\*|<!--)/;
 /** Windows of one file in one question, so one long file does not use the whole budget. */
 const MAX_WINDOWS_PER_FILE = 3;
 
@@ -268,6 +273,46 @@ function questionWindows(tree: FileTree, item: OpenItem, startPath: ReadonlySet<
   const budget = MAX_QUESTION_CHARS - scripts.reduce((sum, file) => sum + size(file), 0);
   const skip = new Set([...startPath, ...scripts.map((file) => file.path)]);
   return [...scripts, ...hitWindows(tree, FACT_SEARCH[item.fact]!, RANKS[item.fact]!, procfiles, skip, budget)];
+}
+
+/** Repository files the AI may read that the rules tree does not hold, per Analysis. */
+export const MAX_EVIDENCE_FILES = 40;
+const MAX_EVIDENCE_FILES_PER_QUESTION = 20;
+/** Source files of every runtime the image can start (the rules tree reads only some of them). */
+const EVIDENCE_SOURCE = /\.(?:cs|java|kt|scala|ex|exs|php|rs|ts|js|mjs|cjs|py|rb|go)$/i;
+/** The files where an app boots: its main file, its startup class, its runtime configuration. */
+const BOOT_FILE =
+  /(?:^|\/)(?:Program\.cs|\w*Startup\.cs|\w*Application\.(?:java|kt)|Main\.(?:java|kt)|main\.(?:rs|go|py|ts|js)|(?:settings|config)\.rs|application\.ex|release(?:_?tasks)?\.ex|(?:runtime|prod|config)\.exs|index\.php|bootstrap\.php|Kernel\.php|appsettings(?:\.Production)?\.json|(?:server|app)\.\w+)$/i;
+/** File names that hold what each question asks about. */
+const EVIDENCE_NAME: Record<string, RegExp> = {
+  migration: /migrat\w*(?:manager|runner|service|startup|task|extensions?|helper|or)\.\w+$|(?:database|db)(?:manager|context|initiali[sz]er|setup|migrator|migrations?)\.\w+$|release_?tasks\.\w+$|install(?:er|ation)?(?:manager|service)?\.\w+$|schema\.\w+$|worker\.\w+$/i,
+  healthPath: /(?:health|status|ping|controller|routes?|router|endpoints?)[^/]*$/i,
+  blocker: /(?:config|settings|configuration|storage|filesystem|paths?|options|database|db|data|env)[^/]*$/i,
+  databaseVariable: /(?:config|settings|configuration|options|database|db|repo|env)[^/]*$/i,
+};
+
+/**
+ * The repository files the evidence windows need beyond the rules tree: boot
+ * code and the files named after each open question, in the languages the rules
+ * fetch does not read (C#, Java, Kotlin, Elixir, PHP, Rust) or that the file cap
+ * left out. Only production files; empty without the full path list or an open
+ * item. The caller fetches them for the AI pack only: the rules never see them.
+ */
+export function evidenceFileRequests(tree: FileTree, analysis: AnalysisResult): string[] {
+  const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
+  const items = collectOpenItems(tree, analysis);
+  if (paths === undefined || items.length === 0) return [];
+  const missing = paths.filter((path) => !Object.prototype.hasOwnProperty.call(tree, path) && isProductionFile(path) && !BROWSER_FILE.test(path));
+  const byDepth = (a: string, b: string) => a.split('/').length - b.split('/').length || a.localeCompare(b);
+  const requested = new Set<string>();
+  for (const item of items) {
+    const name = item.kind === 'blocker' ? EVIDENCE_NAME['blocker'] : item.fact === 'dockerfile' ? undefined : EVIDENCE_NAME[item.fact];
+    const boot = missing.filter((path) => BOOT_FILE.test(path) && (EVIDENCE_SOURCE.test(path) || path.endsWith('.json'))).sort(byDepth);
+    // A numbered file is one migration, not the code that runs them.
+    const named = name === undefined ? [] : missing.filter((path) => EVIDENCE_SOURCE.test(path) && name.test(path) && !/(?:^|\/)\d[^/]*$/.test(path) && !boot.includes(path)).sort(byDepth);
+    for (const path of [...boot.slice(0, MAX_EVIDENCE_FILES_PER_QUESTION / 2), ...named].slice(0, MAX_EVIDENCE_FILES_PER_QUESTION)) requested.add(path);
+  }
+  return [...requested].slice(0, MAX_EVIDENCE_FILES);
 }
 
 /** Build the pack: the shared start path, then one window set per open question, inside `MAX_PACK_CHARS`. */

@@ -23,6 +23,7 @@ import {
   createAppJwt,
   InMemoryGithubInstallationStore,
   createInstallationToken,
+  fetchFilesForAnalysis,
   fetchHeadSha,
   fetchRepositoryTreeEntries,
   getCommit,
@@ -438,6 +439,28 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     // One tree call + one blob call per relevant file (3) — never touches
     // README.md, node_modules/**, or the directory entry.
     expect(calls).toHaveLength(4);
+  });
+
+  it('fetches the named evidence files of the AI Analysis: blobs within the size limit only', async () => {
+    const calls: string[] = [];
+    const fetchFn: FetchFn = async (url) => {
+      calls.push(url);
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [
+            { path: 'lib/app/application.ex', type: 'blob', sha: 'sha-app', size: 100 },
+            { path: 'config/runtime.exs', type: 'blob', sha: 'sha-big', size: 300_000 },
+            { path: 'lib', type: 'tree', sha: 'sha-dir' },
+          ],
+        });
+      }
+      return makeFetchResponse(200, { content: Buffer.from('def start').toString('base64'), encoding: 'base64' });
+    };
+
+    const files = await fetchFilesForAnalysis(REF, 'tok', fetchFn, ['lib/app/application.ex', 'config/runtime.exs', 'lib', 'missing.ex']);
+
+    expect(files).toEqual({ 'lib/app/application.ex': 'def start' });
+    expect(calls).toHaveLength(2);
   });
 
   it('resolves a symlinked Dockerfile to the content of its target file', async () => {

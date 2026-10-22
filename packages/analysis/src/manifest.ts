@@ -187,6 +187,15 @@ function isDatabaseConnectionUnverified(
   return !bindings.some((binding) => !standard.has(binding.name) || evidenced.has(binding.name));
 }
 
+/** `isDatabaseConnectionUnverified` from the Analysis metadata alone: the open item of the AI Analysis. */
+export function databaseConnectionUnverified(meta: Record<string, unknown>): boolean {
+  const bindings = toEnvBindings(
+    readInfrastructureBindings(meta).filter((b) => b.resource === 'postgres'),
+    STANDARD_DATABASE_BINDINGS,
+  );
+  return isDatabaseConnectionUnverified(meta, bindings, toEnvVariables(meta['envVarModel'], meta['envVars']));
+}
+
 /** The canonical storage binding plus detected alias bucket names. */
 const STANDARD_STORAGE_BINDINGS: readonly { name: string; kind: ManifestEnvBinding['kind'] }[] = [
   { name: 'AWS_S3_BUCKET', kind: 'bucket' },

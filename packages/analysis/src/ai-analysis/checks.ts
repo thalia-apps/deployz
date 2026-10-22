@@ -11,8 +11,11 @@
  * - the start command is the image's CMD/ENTRYPOINT or a script the CMD runs;
  * - the port agrees with the Dockerfile EXPOSE / ENV PORT / HEALTHCHECK, or
  *   the app reads PORT (Deployz sets PORT to the manifest port);
+ * - the database variable is read on a cited production line, and its name
+ *   says that it holds a whole connection URL or JDBC URL;
  * - a low-confidence answer never passes.
  */
+import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
 import { isProductionFile, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
@@ -417,6 +420,23 @@ function springBootMigrates(tree: FileTree, path: string, line: string): boolean
   return !productionSources(tree).some((source) => MIGRATION_OFF.test(tree[source] ?? ''));
 }
 
+/** The binding format of a database variable, from its name: only a whole connection (a URL or a JDBC URL). */
+export function databaseVariableSemantic(name: string): 'url' | 'jdbc_url' | null {
+  const semantic = postgresSemantic(name);
+  return semantic === 'url' || semantic === 'jdbc_url' ? semantic : null;
+}
+
+/** A line that reads an environment variable or interpolates one into configuration. */
+const READS_VARIABLE = /process\.env|getenv|environ|ENV\[|ENV\.fetch|System\.(?:get|fetch)_?env|Environment\.GetEnvironmentVariable|os\.Getenv|std::env|env::var|\benv\(|\$\{\w/i;
+
+function checkDatabaseVariable(ctx: CheckContext, id: string, name: string, answer: FactAnswer): AnswerCheck {
+  const reasons = confidenceReasons(answer.confidence);
+  if (databaseVariableSemantic(name) === null) reasons.push(`${name} does not name a database URL or JDBC URL`);
+  const sources = new Set(productionSources(ctx.tree));
+  reasons.push(...checkEvidence(ctx.pack, answer.evidence, (line, path) => sources.has(path) && word(name).test(line) && READS_VARIABLE.test(line)));
+  return result(id, reasons);
+}
+
 /** A fact answer's value in its typed shape, or null when it does not parse. */
 export function factValue(question: Question, value: string): number | string | DockerfileValue | MigrationValue | null {
   if (question.kind !== 'fact') return null;
@@ -429,6 +449,8 @@ export function factValue(question: Question, value: string): number | string | 
       return value.startsWith('/') && value.length <= 200 ? value : null;
     case 'startCommand':
       return value.trim().length > 0 ? value.trim() : null;
+    case 'databaseVariable':
+      return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim()) ? value.trim() : null;
     case 'dockerfile':
     case 'migration': {
       let parsed: unknown;
@@ -468,6 +490,8 @@ export function checkFact(ctx: CheckContext, question: Question, answer: FactAns
       return checkDockerfile(ctx, answer.id, value as DockerfileValue, answer);
     case 'migration':
       return checkMigration(ctx, answer.id, value as MigrationValue, answer);
+    case 'databaseVariable':
+      return checkDatabaseVariable(ctx, answer.id, value as string, answer);
   }
 }
 

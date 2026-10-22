@@ -7,12 +7,13 @@ import {
   MAX_QUESTION_CHARS,
   bindingContractOf,
   buildEvidencePack,
+  evidenceFileRequests,
   isExcludedPath,
   packFiles,
   renderEvidencePack,
 } from '../../src/ai-analysis/evidence-pack.js';
-import type { FileTree } from '../../src/detectors.js';
-import { MONGO_OR_POSTGRES } from './helpers.js';
+import { TREE_PATHS, type FileTree } from '../../src/detectors.js';
+import { ELIXIR_SOURCES, elixirPostgres, MONGO_OR_POSTGRES } from './helpers.js';
 
 const pack = (tree: FileTree) => buildEvidencePack(tree, analyseRepo(tree));
 const windowOf = (tree: FileTree, path: string) => packFiles(pack(tree)).find((file) => file.path === path);
@@ -139,5 +140,35 @@ describe('the Deployz binding contract', () => {
     expect(contract.whenDatabase).toContain('DATABASE_PASSWORD');
     expect(contract.whenRedis).toEqual(expect.arrayContaining(['REDIS_URL', 'REDIS_HOST', 'REDIS_PORT']));
     expect(contract.whenStorage).toContain('S3_BUCKET');
+  });
+});
+
+describe('evidenceFileRequests', () => {
+  it('asks for the boot code and the named files the rules tree does not hold, never a numbered migration, a test or a browser file', () => {
+    const tree = elixirPostgres();
+    expect(evidenceFileRequests(tree, analyseRepo(tree)).sort()).toEqual(Object.keys(ELIXIR_SOURCES).sort());
+  });
+
+  it('asks for nothing without an open item or without the repository path list', () => {
+    const resolved: FileTree = {
+      Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
+      'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4' } }),
+      'src/index.js': "app.get('/health', r);\napp.listen(process.env.PORT || 3000);",
+    };
+    Object.defineProperty(resolved, TREE_PATHS, { value: [...Object.keys(resolved), 'src/main.go'], enumerable: false });
+    expect(evidenceFileRequests(resolved, analyseRepo(resolved))).toEqual([]);
+    const { ...withoutPaths } = elixirPostgres();
+    expect(evidenceFileRequests(withoutPaths, analyseRepo(withoutPaths))).toEqual([]);
+  });
+
+  it('shows the fetched files in the windows, the call that runs the migrations before a comment', () => {
+    const tree = elixirPostgres();
+    const withSources = { ...tree, ...ELIXIR_SOURCES };
+    const questions = buildEvidencePack(withSources, analyseRepo(tree)).questions;
+    expect(questions.map((question) => (question.kind === 'fact' ? question.fact : question.category))).toEqual(['migration', 'databaseVariable']);
+    const [migration, variable] = questions;
+    expect(migration!.windows[0]).toMatchObject({ path: 'lib/app/application.ex' });
+    expect(migration!.windows[0]!.lines.join('\n')).toContain('App.ReleaseTasks.migrate()');
+    expect(variable!.windows.map((file) => file.path)).toContain('config/runtime.exs');
   });
 });

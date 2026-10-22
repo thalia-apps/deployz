@@ -1121,6 +1121,36 @@ export async function buildFileTreeForAnalysis(
   return tree;
 }
 
+/**
+ * The named files of the repository (blobs within `ANALYSIS_MAX_FILE_BYTES`),
+ * for the AI evidence pack: the files `evidenceFileRequests` asks for. A path
+ * that is not a blob or cannot be read is left out.
+ */
+export async function fetchFilesForAnalysis(
+  ref: RepositoryRef,
+  installationToken: string,
+  fetchFn: FetchFn,
+  paths: readonly string[],
+): Promise<FileTree> {
+  const entries = await fetchRepositoryTreeEntries(ref, installationToken, fetchFn);
+  const entriesByPath = new Map(entries.map((entry) => [entry.path, entry]));
+  const wanted = paths
+    .map((path) => entriesByPath.get(path))
+    .filter((entry): entry is GitTreeEntry => entry?.type === 'blob' && (entry.size === undefined || entry.size <= ANALYSIS_MAX_FILE_BYTES));
+  const files: FileTree = {};
+  let next = 0;
+  const workers = Array.from({ length: Math.min(ANALYSIS_FETCH_CONCURRENCY, wanted.length) }, async () => {
+    while (next < wanted.length) {
+      const entry = wanted[next++];
+      if (!entry) break;
+      const content = await fetchEntryContent(ref, entry, entriesByPath, installationToken, fetchFn);
+      if (content !== null) files[entry.path] = content;
+    }
+  });
+  await Promise.all(workers);
+  return files;
+}
+
 // §216 fixture file trees, keyed by the fixture repo's `fullName` (the same
 // string `applications.repo_full_name` holds once a fixture repo is
 // "selected" — there is no separate repo-id column on the row). Mirrors the

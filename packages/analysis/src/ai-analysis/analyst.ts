@@ -11,7 +11,7 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 15;
+export const ANALYST_PROMPT_VERSION = 16;
 export const ANALYST_MAX_PROMPT_TOKENS = 30_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 12_000;
@@ -156,6 +156,7 @@ Give value, or answer "unknown" with value null:
 - healthPath: an unauthenticated path on the serving port that answers HTTP 200 without a redirect when the app is up: a registered health route, the path a production HEALTHCHECK probes, or a public page (for example "/" of a server-rendered app, or the login page). A route of a browser-side router is not a server route.
 - migration: {"mode":"startup|pre_deploy|none","command":null|"..."} as JSON text. "startup" = the start path (ENTRYPOINT, CMD, a script they run, or boot code) runs the schema migrations; command is null. Cite the line of the start script or the boot code that runs them. A dependency in a build file (package.json, .csproj, pom.xml, Cargo.toml) does not show that the app migrates, except Flyway or Liquibase in a Spring Boot build. "pre_deploy" = the start path does not migrate, and command is a migration command that the built image can run. "none" = no schema to migrate; this question is asked only for an app that requires a database, so when something other than the app creates the schema (for example a database init script), answer "unknown". A step behind a switch that is off by default does not run. Seeding is not a migration.
 - dockerfile: {"path":"...","context":"."} as JSON text: the Dockerfile that builds the production image from source and its build context.
+- databaseVariable: the environment variable that the production app reads its whole database connection from, as a URL or a JDBC URL (for example "DB_URL"). Deployz then sets it to the managed database. Cite the line that reads it. A variable that holds only a part (a host, a user, a password) or a driver connection string ("Host=...;Username=..."), and a name that only a test, an example or a Compose file sets, is "unknown".
 
 OUTPUT
 Return {"answers":[...]} with exactly one entry for each question id:

@@ -16,7 +16,7 @@
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
 import type { FileTree } from '../detectors.js';
 import type { AnalystOutput, SupportedEngine } from './analyst.js';
-import { factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
+import { databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
 import type { EvidencePack } from './evidence-pack.js';
 import { LOCAL_FILESYSTEM_FINDING } from './open-items.js';
 
@@ -187,6 +187,20 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
         meta['hasHealthEndpoint'] = true;
         findings = replaceFinding(findings, 'health-endpoint', { detected: true, path: value as string, mode: 'explicit' });
         break;
+      case 'databaseVariable': {
+        // Deployz sets the variable to the managed database, as the rules do for an alias they find in code.
+        const name = value as string;
+        const read = (answer.evidence.find((item) => item.quote.includes(name)) ?? answer.evidence[0])?.path;
+        const model = Array.isArray(meta['envVarModel']) ? (meta['envVarModel'] as Record<string, unknown>[]).filter((entry) => entry['key'] !== name) : [];
+        model.push({ key: name, secret: false, source: [`read in ${read}`], purpose: 'infrastructure_binding', required: false, confidence: 'high', classification: 'deployz_managed' });
+        meta['envVarModel'] = model;
+        const bindings = Array.isArray(meta['infrastructureBindings']) ? (meta['infrastructureBindings'] as Record<string, unknown>[]) : [];
+        meta['infrastructureBindings'] = [
+          ...bindings.filter((binding) => binding['applicationVariable'] !== name),
+          { resource: 'postgres', semantic: databaseVariableSemantic(name), applicationVariable: name, source: 'ai', confidence: 'high' },
+        ];
+        break;
+      }
       case 'migration': {
         const { mode, command } = value as MigrationValue;
         meta['migrationMode'] = mode;
