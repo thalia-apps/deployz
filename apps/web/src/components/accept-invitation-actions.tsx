@@ -62,6 +62,37 @@ export function AcceptInvitationActions({ id }: { id: string }) {
   );
 }
 
+// Sends the verification email again when the first one was lost.
+export function ResendVerificationButton({
+  email,
+  callbackUrl,
+}: {
+  email: string;
+  callbackUrl: string;
+}) {
+  const [pending, setPending] = useState(false);
+
+  async function onResend(): Promise<void> {
+    setPending(true);
+    const { error } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: `${window.location.origin}${callbackUrl}`,
+    });
+    setPending(false);
+    if (error) {
+      toast.error("We couldn't send the email. Try again in a moment.");
+      return;
+    }
+    toast.success('Verification email sent.');
+  }
+
+  return (
+    <Button variant="outline" loading={pending} loadingText="Sending email…" onClick={onResend}>
+      Resend verification email
+    </Button>
+  );
+}
+
 // Signs out so the visitor can sign back in with the invited email address.
 export function SignOutButton() {
   const router = useRouter();

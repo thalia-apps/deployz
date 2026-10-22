@@ -257,6 +257,7 @@ import {
   listOrganizations,
   rejectInvitation,
   removeMember,
+  requireVerifiedEmail,
   resendInvitation,
   revokeInvitation,
   transferOwnership,
@@ -361,7 +362,12 @@ import {
   summarizeStackEvents,
   type StoredStackEvent,
 } from './stack-event-progress.js';
-import { createRequireAuth, requireRole, type OrganizationRow } from './require-auth.js';
+import {
+  createRequireAuth,
+  requireOwnerOrAdmin,
+  requireRole,
+  type OrganizationRow,
+} from './require-auth.js';
 import { createRequireTeamAdmin, isTeamAdmin } from './admin/auth.js';
 import { registerAdminRoutes } from './admin/routes.js';
 import {
@@ -579,7 +585,7 @@ function requireActor(request: FastifyRequest): Actor {
   if (!user) {
     throw new UnauthorizedError();
   }
-  return { id: user.id, name: user.name, email: user.email };
+  return { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified };
 }
 
 /** The caller's session row id — the tenant pointer writes target it. */
@@ -2862,17 +2868,23 @@ export async function buildServer({
   );
 
   // Pending invitations addressed to the caller, across every tenant.
-  app.get('/api/invitations', { preHandler: requireAuth }, async (request) => ({
-    invitations: await listInvitationsForEmail(db, requireActor(request).email),
-  }));
+  app.get('/api/invitations', { preHandler: requireAuth }, async (request) => {
+    const actor = requireActor(request);
+    requireVerifiedEmail(actor);
+    return { invitations: await listInvitationsForEmail(db, actor.email) };
+  });
 
   // UNAUTHENTICATED by design — the invitee may not have an account yet, and
   // the accept screen has to name the organization before they sign in. Only
   // non-sensitive display fields: no member list, no tenant internals.
-  app.get('/api/invitations/:invitationId', async (request) => {
-    const { invitationId } = request.params as { invitationId: string };
-    return getPublicInvitation(db, invitationId);
-  });
+  app.get(
+    '/api/invitations/:invitationId',
+    { config: { rateLimit: PUBLIC_INSTALL_RATE_LIMIT } },
+    async (request) => {
+      const { invitationId } = request.params as { invitationId: string };
+      return getPublicInvitation(db, invitationId);
+    },
+  );
 
   app.post(
     '/api/invitations/:invitationId/accept',
@@ -4152,6 +4164,7 @@ export async function buildServer({
 
   // DELETE /api/applications/:id — Remove an application (only if it has zero deployments)
   app.delete('/api/applications/:id', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const app = await loadOwnedApplication(db, id, organizationId);
@@ -4450,6 +4463,7 @@ export async function buildServer({
   // and Purge on the deployment are the only paths that touch the customer's
   // AWS account, and they stay the vendor's explicit choice.
   app.delete('/api/customers/:id', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const customer = await loadOwnedCustomer(db, id, organizationId);
@@ -6116,6 +6130,7 @@ export async function buildServer({
 
   // POST /api/deployments/:id/destroy — Trigger (or reuse) a DESTROY job
   app.post('/api/deployments/:id/destroy', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const deployment = await loadOwnedDeployment(db, id, organizationId);
@@ -6473,6 +6488,7 @@ export async function buildServer({
     '/api/deployments/:id/disconnect/force-complete',
     { preHandler: requireAuth },
     async (request) => {
+      requireOwnerOrAdmin(request);
       const { id } = request.params as { id: string };
       requireUuidId(id);
       const organizationId = requireSessionOrganizationId(request);
@@ -6488,6 +6504,7 @@ export async function buildServer({
   // typed the deployment name in the dashboard to confirm; the relay
   // re-verifies ownership of every resource before deleting it.
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     requireUuidId(id);
     const organizationId = requireSessionOrganizationId(request);
@@ -6735,6 +6752,7 @@ export async function buildServer({
 
   // POST /api/deployments/:id/relay/reset — §14 re-enrollment.
   app.post('/api/deployments/:id/relay/reset', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const deployment = await loadOwnedDeployment(db, id, organizationId);

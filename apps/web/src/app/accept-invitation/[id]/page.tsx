@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-import { AcceptInvitationActions, SignOutButton } from '@/components/accept-invitation-actions';
+import {
+  AcceptInvitationActions,
+  ResendVerificationButton,
+  SignOutButton,
+} from '@/components/accept-invitation-actions';
 import { DeployzBrand } from '@/components/deployz-brand';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -84,6 +88,19 @@ export default async function AcceptInvitationPage({
           Sign out, then sign in with the invited address to accept.
         </p>
         <SignOutButton />
+      </InvitationCard>
+    );
+  }
+
+  if (!me.user.emailVerified) {
+    return (
+      <InvitationCard title={`Join ${invitation.organizationName}`}>
+        <p className="text-sm text-muted-foreground">
+          Verify your email address first. Open the verification link we sent to{' '}
+          <span className="font-medium text-foreground">{me.user.email}</span>, then reload this
+          page to accept.
+        </p>
+        <ResendVerificationButton email={me.user.email} callbackUrl={callbackUrl} />
       </InvitationCard>
     );
   }

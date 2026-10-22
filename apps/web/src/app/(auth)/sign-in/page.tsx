@@ -11,12 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { authClient } from '@/lib/auth-client';
-
-// Only a relative path is a safe redirect target — an absolute URL in
-// callbackUrl would be an open redirect.
-function isSafeCallbackUrl(url: string | null): url is string {
-  return url !== null && url.startsWith('/') && !url.startsWith('//');
-}
+import { isSafeCallbackUrl } from '@/lib/safe-callback-url';
 
 // The other auth page must keep the same destination — an invited visitor who
 // switches between sign-in and sign-up still has to land back on their

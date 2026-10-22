@@ -170,7 +170,7 @@ describe('GET /api/me and organization create/list/activate (isolation)', () => 
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     orgA = await signUpAndGetOrg(auth, db, `me-a-${crypto.randomUUID()}@example.com`);
     orgB = await signUpAndGetOrg(auth, db, `me-b-${crypto.randomUUID()}@example.com`);
     const { emailSender } = createRecordingEmailSender();
@@ -282,7 +282,7 @@ describe('GET/PATCH /api/organization — role permissions', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `settings-owner-${crypto.randomUUID()}@example.com`);
     adminUser = await signUpAndGetOrg(auth, db, `settings-admin-${crypto.randomUUID()}@example.com`);
     memberUser = await signUpAndGetOrg(auth, db, `settings-member-${crypto.randomUUID()}@example.com`);
@@ -381,7 +381,7 @@ describe('GET /api/organization/members — shape and ordering', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `members-owner-${crypto.randomUUID()}@example.com`);
     memberUser = await signUpAndGetOrg(auth, db, `members-member-${crypto.randomUUID()}@example.com`);
     adminUser = await signUpAndGetOrg(auth, db, `members-admin-${crypto.randomUUID()}@example.com`);
@@ -434,7 +434,7 @@ describe('Invitations — create, duplicate, permission, resend, revoke', () => 
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `invite-owner-${crypto.randomUUID()}@example.com`);
     memberUser = await signUpAndGetOrg(auth, db, `invite-member-${crypto.randomUUID()}@example.com`);
     await addMember(db, owner.organizationId, memberUser.userId, 'member');
@@ -591,7 +591,7 @@ describe('Invitations — expiry and reissue', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `expiry-owner-${crypto.randomUUID()}@example.com`);
     const { emailSender } = createRecordingEmailSender();
     app = await buildServer({ auth, db, emailSender });
@@ -658,7 +658,7 @@ describe('Invitations — accept/reject (cross-account)', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `accept-owner-${crypto.randomUUID()}@example.com`);
     const recorder = createRecordingEmailSender();
     sentEmails = recorder.sentEmails;
@@ -764,7 +764,7 @@ describe('PATCH /api/organization/members/:memberId — permissions and safeguar
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `role-owner-${crypto.randomUUID()}@example.com`);
     adminA = await signUpAndGetOrg(auth, db, `role-admin-a-${crypto.randomUUID()}@example.com`);
     adminB = await signUpAndGetOrg(auth, db, `role-admin-b-${crypto.randomUUID()}@example.com`);
@@ -895,7 +895,7 @@ describe('DELETE /api/organization/members/:memberId — permissions, safeguards
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `remove-owner-${crypto.randomUUID()}@example.com`);
     adminA = await signUpAndGetOrg(auth, db, `remove-admin-a-${crypto.randomUUID()}@example.com`);
     adminB = await signUpAndGetOrg(auth, db, `remove-admin-b-${crypto.randomUUID()}@example.com`);
@@ -1014,7 +1014,7 @@ describe('POST /api/organization/leave', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     owner = await signUpAndGetOrg(auth, db, `leave-owner-${crypto.randomUUID()}@example.com`);
     adminA = await signUpAndGetOrg(auth, db, `leave-admin-${crypto.randomUUID()}@example.com`);
     memberX = await signUpAndGetOrg(auth, db, `leave-member-${crypto.randomUUID()}@example.com`);
@@ -1082,7 +1082,7 @@ describe('POST /api/organization/transfer-ownership', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     const { emailSender } = createRecordingEmailSender();
     app = await buildServer({ auth, db, emailSender });
   }, 60_000);
@@ -1166,7 +1166,7 @@ describe('DELETE /api/organization', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     const recorder = createRecordingEmailSender();
     sentEmails = recorder.sentEmails;
     app = await buildServer({ auth, db, emailSender: recorder.emailSender });
@@ -1216,8 +1216,11 @@ describe('DELETE /api/organization', () => {
     const orgId = (created.json() as { id: string }).id;
     const application = await insertApplication(db, orgId);
     const customer = await insertCustomer(db, orgId);
-    // A non-live deployment must not block deletion.
-    const deployment = await insertDeployment(db, orgId, application.id, customer.id, { state: 'DELETED' });
+    // A removed, fully purged deployment must not block deletion.
+    const deployment = await insertDeployment(db, orgId, application.id, customer.id, {
+      state: 'DELETED',
+      cleanupState: 'COMPLETE',
+    });
     const [job] = await db
       .insert(schema.deploymentJobs)
       .values({ deploymentId: deployment.id, type: 'INSTALL', idempotencyKey: crypto.randomUUID() })
@@ -1307,7 +1310,7 @@ describe('DELETE /api/account', () => {
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     const { emailSender } = createRecordingEmailSender();
     app = await buildServer({ auth, db, emailSender });
   }, 60_000);
@@ -1360,7 +1363,7 @@ describe('every mutating organization/invitation/account route returns 401 witho
     client = new PGlite();
     await applyMigrations(client);
     db = createDb(client);
-    auth = createAuth(db);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
     const { emailSender } = createRecordingEmailSender();
     app = await buildServer({ auth, db, emailSender });
   }, 60_000);

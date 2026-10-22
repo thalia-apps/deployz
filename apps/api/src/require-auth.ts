@@ -49,6 +49,13 @@ export function requireRole(request: FastifyRequest): OrganizationRole {
   return role as OrganizationRole;
 }
 
+/** Destructive tenant actions (destroy, purge, delete) need owner or admin. */
+export function requireOwnerOrAdmin(request: FastifyRequest): void {
+  if (requireRole(request) === 'member') {
+    throw new ApiError(403, 'INSUFFICIENT_ROLE', 'Your role does not allow this action');
+  }
+}
+
 // Central read-only guard for Team Admin's "View as Vendor" support mode
 // (docs/admin/team-admin.md's View as Vendor security model): no vendor-facing
 // write is classified safe in the MVP, so every non-GET/HEAD/OPTIONS request

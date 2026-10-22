@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import type { OrgRole, OrganizationSummary, SubscriptionStatus } from './organization-vocabulary';
 
 interface Me {
-  user: { id: string; name: string; email: string; image: string | null };
+  user: { id: string; name: string; email: string; emailVerified: boolean; image: string | null };
   organization: {
     id: string;
     name: string;
@@ -61,13 +61,11 @@ export async function fetchMyInvitations(): Promise<PendingInvitation[]> {
 }
 
 export interface PublicInvitation {
-  id: string;
   email: string;
   role: string;
   status: 'pending' | 'accepted' | 'rejected' | 'canceled' | 'expired';
   organizationName: string;
   inviterName: string;
-  expiresAt: string;
 }
 
 /** The invitation as its recipient sees it. Unauthenticated: the invitee may

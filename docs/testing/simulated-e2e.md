@@ -101,6 +101,7 @@ re-litigated:
 | `DOMAIN_FIXTURE_MODE` | `true` | DNS/HTTPS domain checks pass only for `*.deployz-fixture.test` hostnames, with no throttle. |
 | `TEAM_ADMIN_EMAILS` | `*@admin-e2e.deployz.test` | Team Admin env-grant allowlist (`docs/admin/team-admin.md`). Lets `e2e/admin.spec.ts` mint an admin account by signing up with a matching email — no DB seeding needed. |
 | `BILLING_FIXTURE_MODE` | `true` | Canned billing states for the billing UI scenarios. |
+| `EMAIL_VERIFICATION_FIXTURE_MODE` | `true` | Every new user starts with a verified e-mail, so invitation scenarios need no inbox. |
 | `DEPLOYZ_DEFAULT_HTTPS_FIXTURE` | `true` | Turns on the fixture default-HTTPS machine (fake Cloudflare and probe). Off by default; required for `e2e/scenario-default-https.spec.ts`, which skips without it. |
 | `WEB_PORT`, `API_PORT` | port numbers | Override the default 3000/3001 so a run does not reuse another worktree's dev servers. |
 | Scrub list | — | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_PROFILE`, `AWS_DEFAULT_PROFILE`, `JOB_QUEUE_URL`, `EMAIL_FROM`, `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY` — removed from the API's environment before it boots (`scripts/e2e-env.mjs`'s `scrubEnv`), so credentials or config present in a developer's shell can't leak real AWS/email behaviour into a default run. |

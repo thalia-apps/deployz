@@ -64,6 +64,9 @@ export default defineConfig({
         // deployment through the real routes exercise the entitlement gate
         // instead of always hitting 402 SUBSCRIPTION_REQUIRED.
         BILLING_FIXTURE_MODE: 'true',
+        // Every new user has a verified e-mail, so the invitation specs can
+        // accept without an inbox (invitations require a verified e-mail).
+        EMAIL_VERIFICATION_FIXTURE_MODE: 'true',
         // Phase 11 default HTTPS under the fixture DNS (opt-in): the existing
         // fixture suite is written against HTTP-only installs, so the
         // automatic default-HTTPS flow stays off unless an operator sets this

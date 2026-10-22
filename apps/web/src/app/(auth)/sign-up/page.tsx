@@ -12,12 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { authClient } from '@/lib/auth-client';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '@/lib/legal-links';
-
-// Only a relative path is a safe redirect target — an absolute URL in
-// callbackUrl would be an open redirect.
-function isSafeCallbackUrl(url: string | null): url is string {
-  return url !== null && url.startsWith('/') && !url.startsWith('//');
-}
+import { isSafeCallbackUrl } from '@/lib/safe-callback-url';
 
 // The other auth page must keep the same destination — an invited visitor who
 // switches between sign-in and sign-up still has to land back on their
@@ -70,6 +65,8 @@ function SignUpForm() {
       name: String(form.get('name') ?? ''),
       email: String(form.get('email') ?? ''),
       password: String(form.get('password') ?? ''),
+      // Where the e-mail verification link lands once the address is confirmed.
+      callbackURL: `${window.location.origin}${isSafeCallbackUrl(callbackUrl) ? callbackUrl : '/dashboard'}`,
     });
     setPending(false);
     if (failure) {
