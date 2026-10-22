@@ -188,7 +188,8 @@ const RANKS: Record<string, Rank> = {
   migration: last((path, line) => (NAMES_ONLY.test(line) ? 3 : START_FILE.test(path) ? 0 : MIGRATION_CALL.test(line) ? 1 : 2)),
   databaseVariable: last((_path, line) => (READS_ENV.test(line) ? 0 : 2)),
 };
-const MIGRATION_CALL = /(?:\w*migrat\w*|\w*upgrade\w*|ensure\w*(?:schema|tables?)|\w*install\w*)(?:\.\w+)?\s*\(|CREATE TABLE/i;
+/** A call that runs migrations, or a quoted command or flag name that starts them (`"migrate"`, `'db:migrate'`). */
+const MIGRATION_CALL = /(?:\w*migrat\w*|\w*upgrade\w*|ensure\w*(?:schema|tables?)|\w*install\w*)(?:\.\w+)?\s*\(|CREATE TABLE|["'`]-{0,2}[\w:]*migrat\w*["'`]/i;
 const NAMES_ONLY = /^\s*(?:using|import|from|require|alias|use|package|namespace|\/\/|#|\*|\/\*|<!--)/;
 /** Windows of one file in one question, so one long file does not use the whole budget. */
 const MAX_WINDOWS_PER_FILE = 3;
