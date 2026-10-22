@@ -1,7 +1,7 @@
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { setupFastifyErrorHandler } from '@sentry/node';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { fromNodeHeaders } from 'better-auth/node';
 import { and, desc, eq, getTableColumns, gt, gte, inArray, isNull, like, ne, notInArray, sql } from 'drizzle-orm';
 import Fastify, {
@@ -158,6 +158,7 @@ import { env } from './env.js';
 import { ApiError, NotFoundError, UnauthorizedError, toErrorEnvelope } from './errors.js';
 import {
   createAppJwt,
+  createInstallState,
   createGithubStore,
   fetchInstallationAccount,
   getCommit,
@@ -169,6 +170,7 @@ import {
   listRepositories,
   mintInstallationToken,
   parseRepoFullName,
+  verifyInstallState,
   verifyWebhookSignature,
   type FetchFn,
   type GithubWebhookEvent,
@@ -469,6 +471,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // magnitude over the install page's 5s poll cadence (12/min) — several tabs,
 // "Check now" clicks, and NAT'd offices all fit — while still bounding an
 // anonymous caller who has nothing but a guessable-length uuid to try.
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
 const PUBLIC_INSTALL_RATE_LIMIT = { max: 300, timeWindow: '1 minute' } as const;
 
 // Commit selector routes hit GitHub's API on every call (no caching) — capped
@@ -2289,11 +2296,13 @@ export async function buildServer({
   // is the gateway unless X-Forwarded-For is honored — and the per-IP rate
   // limit on the public install routes would otherwise pool every customer
   // into the gateway's single bucket. The Lambda is only reachable through
-  // that gateway, so the header is trustworthy here.
+  // that gateway, so the right-most X-Forwarded-For hop (the one the gateway
+  // appends) is trustworthy; the left-most entries are client-supplied.
+  const trustGatewayHop = (_address: string, hop: number): boolean => hop < 1;
   const app = Fastify(
     loggerInstance
-      ? { loggerInstance, trustProxy: true }
-      : { logger: { level: 'warn' }, trustProxy: true },
+      ? { loggerInstance, trustProxy: trustGatewayHop }
+      : { logger: { level: 'warn' }, trustProxy: trustGatewayHop },
   );
 
   // Sentry owns capture via the onError hook this registers. Capture filter:
@@ -2301,7 +2310,7 @@ export async function buildServer({
   // (5xx ApiError, unknown throws) is. Do NOT captureException in the custom
   // error handler below — that would double-report.
   setupFastifyErrorHandler(app, {
-    shouldHandleError: (error) => !(error instanceof ApiError) || error.statusCode >= 500,
+    shouldHandleError: (error) => toErrorEnvelope(error).statusCode >= 500,
   });
 
   // Single render path for every thrown error: structured envelope, no stack
@@ -2319,6 +2328,40 @@ export async function buildServer({
     }
     return reply.code(statusCode).send(body);
   });
+
+  // CSRF: the session cookie is SameSite=Lax and the web origins share a site
+  // with the API, so a state-changing request that carries it must come from
+  // a trusted web origin. Relay and webhook routes carry no session cookie.
+  // A request with neither Origin nor Referer is not a browser request
+  // (browsers always send Origin on unsafe methods), so it is not a CSRF vector.
+  app.addHook('onRequest', async (request) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
+    if (!request.headers.cookie?.includes('session_token=')) return;
+    const { origin, referer } = request.headers;
+    if (origin === undefined && referer === undefined) return;
+    let source = origin;
+    if (source === undefined) {
+      try {
+        source = new URL(referer!).origin;
+      } catch {
+        source = undefined;
+      }
+    }
+    if (source === undefined || !env.webOrigins.includes(source)) {
+      throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Request origin is not allowed');
+    }
+  });
+
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('strict-transport-security', 'max-age=31536000; includeSubDomains');
+    reply.header('referrer-policy', 'strict-origin-when-cross-origin');
+  });
+
+  app.setNotFoundHandler((_request, reply) =>
+    reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } }),
+  );
 
   // Browser origin differs by port; cookies are host-scoped, so credentialed
   // CORS + trustedOrigins is the whole cookie story. `methods` must be listed
@@ -2466,6 +2509,9 @@ export async function buildServer({
   // GitHub and Paddle webhooks verify signatures over the raw body, so
   // register a raw-json parser for those routes before the JSON parser
   // consumes them. A bad signature -> 400/401 structured envelope.
+  // No route reads a text/plain body; Fastify's default parser would let a
+  // cross-site form post one.
+  app.removeContentTypeParser('text/plain');
   app.addContentTypeParser(
     'application/json',
     { parseAs: 'string', bodyLimit: 1048576 },
@@ -2480,7 +2526,7 @@ export async function buildServer({
       try {
         done(null, JSON.parse(body as string));
       } catch (error) {
-        done(error as Error);
+        done(Object.assign(error as Error, { statusCode: 400 }));
       }
     },
   );
@@ -3593,9 +3639,23 @@ export async function buildServer({
       return reply.redirect(`${env.webUrl}/sign-in?callbackUrl=${encodeURIComponent(target)}`);
     }
   };
+  // Starts an install: the signed state ties the GitHub install this browser
+  // is about to make to this session's organization (checked on the way back).
+  const githubStateSecret = env.betterAuthSecret ?? randomBytes(32).toString('hex');
+  app.get('/api/github/connect', { preHandler: requireAuth }, async (request, reply) => {
+    const installUrl = githubAppInstallUrl ?? env.githubAppInstallUrl;
+    if (!installUrl) {
+      throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
+    }
+    const organizationId = requireSessionOrganizationId(request);
+    const target = new URL(installUrl);
+    target.searchParams.set('state', createInstallState(githubStateSecret, organizationId, Date.now()));
+    return reply.redirect(target.toString());
+  });
   app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
-    const { installation_id: installationId } = request.query as {
+    const { installation_id: installationId, state } = request.query as {
       installation_id?: string | undefined;
+      state?: string | undefined;
     };
     // This GET writes a binding, which the support-mode guard (non-GET only)
     // cannot see.
@@ -3629,6 +3689,13 @@ export async function buildServer({
         request.log.warn({ installationId }, 'github setup refused: installation bound to another organization');
         return reply.redirect(`${dashboardUrl}?github=failed`);
       }
+      // Anyone can open this URL with an installation id they do not own. Only
+      // an install this organization started (valid state) can create a
+      // binding; re-visits of an existing own binding only refresh it.
+      if (existing === null && !verifyInstallState(githubStateSecret, state, organizationId, Date.now())) {
+        request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
+        return reply.redirect(`${dashboardUrl}?github=failed`);
+      }
 
       await githubStore.set({
         id: installationId,
@@ -3657,7 +3724,7 @@ export async function buildServer({
     const installations = await listInstallations(githubStore, organizationId, { fixtureMode });
     return {
       installations,
-      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) || null,
+      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
     };
   });
 
@@ -6935,10 +7002,10 @@ export async function buildServer({
   app.get('/api/deployments/:id/events', { preHandler: requireAuth }, async (request) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
+    const { limit, offset } = paginationQuerySchema.parse(request.query);
     await loadOwnedDeployment(db, id, organizationId);
-    const { limit, offset } = request.query as { limit?: string; offset?: string };
-    const take = Math.min(Number(limit ?? 50), 200);
-    const skip = Number(offset ?? 0);
+    const take = Math.min(limit ?? 50, 200);
+    const skip = offset ?? 0;
     // The newest events, returned oldest first: a long-lived deployment has
     // more than one page, and its latest activity must be on the first one.
     const rows = await db
@@ -6955,9 +7022,9 @@ export async function buildServer({
   app.get('/api/deployments/:id/stack-events', { preHandler: requireAuth }, async (request) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
+    const { limit } = paginationQuerySchema.parse(request.query);
     await loadOwnedDeployment(db, id, organizationId);
-    const { limit } = request.query as { limit?: string };
-    const take = Math.min(Number(limit ?? 100), 200);
+    const take = Math.min(limit ?? 100, 200);
     const rows = await db
       .select()
       .from(schema.deploymentStackEvents)
@@ -7666,6 +7733,9 @@ export async function buildServer({
       // baseURL Better Auth was configured with.
       const url = new URL(request.url, env.apiUrl);
       const headers = fromNodeHeaders(request.headers);
+      // Better Auth rate-limits on the first X-Forwarded-For entry, which the
+      // caller controls; hand it the trusted address instead.
+      headers.set('x-forwarded-for', request.ip);
       const init: RequestInit = {
         method: request.method,
         headers,

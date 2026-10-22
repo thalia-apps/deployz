@@ -4017,6 +4017,7 @@ describe('server — GitHub installation binding', () => {
       db,
       githubFixtureMode: false,
       githubFetch,
+      githubAppInstallUrl: 'https://github.com/apps/deployz-test/installations/new',
       githubAppId: 'test-app-id',
       // A real key: the setup route signs an RS256 App JWT, so a placeholder
       // string fails inside node:crypto rather than in the route.
@@ -4034,10 +4035,45 @@ describe('server — GitHub installation binding', () => {
     await client?.close();
   });
 
-  it('binds an installation to the caller organization and redirects to the dashboard', async () => {
-    const response = await app.inject({
+  const startInstall = async (cookie: string): Promise<string> => {
+    const connect = await app.inject({ method: 'GET', url: '/api/github/connect', headers: { cookie } });
+    expect(connect.statusCode).toBe(302);
+    const location = new URL(String(connect.headers['location']));
+    expect(location.origin + location.pathname).toBe('https://github.com/apps/deployz-test/installations/new');
+    return location.searchParams.get('state')!;
+  };
+
+  it('refuses to bind an installation without a state this organization issued', async () => {
+    const withoutState = await app.inject({
       method: 'GET',
       url: '/api/github/setup?installation_id=4242',
+      headers: { cookie: org.cookie },
+    });
+    expect(withoutState.headers['location']).toContain('/dashboard/applications?github=failed');
+
+    const otherState = await startInstall(other.cookie);
+    const withOtherState = await app.inject({
+      method: 'GET',
+      url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(otherState)}`,
+      headers: { cookie: org.cookie },
+    });
+    expect(withOtherState.headers['location']).toContain('/dashboard/applications?github=failed');
+
+    const forged = await app.inject({
+      method: 'GET',
+      url: '/api/github/setup?installation_id=4242&state=9999999999999.x.deadbeef',
+      headers: { cookie: org.cookie },
+    });
+    expect(forged.headers['location']).toContain('/dashboard/applications?github=failed');
+
+    expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+  });
+
+  it('binds an installation to the caller organization and redirects to the dashboard', async () => {
+    const state = await startInstall(org.cookie);
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}`,
       headers: { cookie: org.cookie },
     });
 
