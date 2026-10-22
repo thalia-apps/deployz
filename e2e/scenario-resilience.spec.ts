@@ -224,6 +224,9 @@ test.describe('force-complete-repeated-failures', () => {
     await expect
       .poll(async () => (await api.getDeployment(deploymentId)).state, { timeout: 15_000 })
       .toBe('HEALTHY');
+    // HEALTHY lands before the post-install auto-deploy settles; a DESTROY in
+    // that window is correctly refused 409 by operation exclusivity.
+    await waitForInstallAutoDeploy(api, deploymentId);
 
     // First DESTROY → FAILED (delete-failure outcome).
     const destroy1 = await request.post(`${API_URL}/api/deployments/${deploymentId}/destroy`, { data: {} });
