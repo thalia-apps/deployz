@@ -596,7 +596,7 @@ export function startSimulatedRelay(options: StartSimulatedRelayOptions): Simula
     // used to provide — and passes through verbatim whatever the control
     // plane itself sends once it does.
     if (typeof command.payload['templateUrl'] !== 'string' || command.payload['templateUrl'] === '') {
-      command.payload['templateUrl'] = 'https://simulated-templates.deployz.test/application/v1/compiled-template.json';
+      command.payload['templateUrl'] = 'https://simulated-templates.s3.us-east-1.amazonaws.com/application/v1/compiled-template.json';
     }
     const result = await baseInstallExecutor(command);
     if (!result.deferred && settlement === null) {

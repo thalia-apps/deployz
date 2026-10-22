@@ -257,7 +257,7 @@ test.describe('stale-install-resurrect', () => {
       stackName,
       startedAt: new Date().toISOString(),
       payload: {
-        templateUrl: 'https://simulated-templates.deployz.test/application/v1/compiled-template.json',
+        templateUrl: 'https://simulated-templates.s3.us-east-1.amazonaws.com/application/v1/compiled-template.json',
         redisRequired: false,
         databaseRequired: true,
         stackName,

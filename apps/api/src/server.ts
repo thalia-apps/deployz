@@ -470,12 +470,12 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // magnitude over the install page's 5s poll cadence (12/min) — several tabs,
 // "Check now" clicks, and NAT'd offices all fit — while still bounding an
 // anonymous caller who has nothing but a guessable-length uuid to try.
+const PUBLIC_INSTALL_RATE_LIMIT = { max: 300, timeWindow: '1 minute' } as const;
+
 const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
-
-const PUBLIC_INSTALL_RATE_LIMIT = { max: 300, timeWindow: '1 minute' } as const;
 
 // Commit selector routes hit GitHub's API on every call (no caching) — capped
 // well under GitHub's own per-installation rate limits while comfortably
