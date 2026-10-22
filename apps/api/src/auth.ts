@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
+import { createEmailSender, sendQuietly, type EmailSender } from './email.js';
 import { env } from './env.js';
 import { organizationSlug, seedFixtureBillingSubscription } from './organizations.js';
 
@@ -20,9 +21,19 @@ export function createAuth(
   // Injectable Paddle migration Phase 7 fixture-mode override (mirrors
   // ServerDeps.billingFixtureMode's `?? env.x` pattern) — tests can enable it
   // without mutating module-level env.
-  opts: { billingFixtureMode?: boolean; cookiePrefix?: string } = {},
+  opts: {
+    billingFixtureMode?: boolean;
+    cookiePrefix?: string;
+    // Marks every new user's e-mail as verified (simulated E2E and unit tests
+    // only — see env.emailVerificationFixtureMode).
+    emailVerificationFixtureMode?: boolean;
+    emailSender?: EmailSender;
+  } = {},
 ) {
   const billingFixtureMode = opts.billingFixtureMode ?? env.billingFixtureMode;
+  const emailVerificationFixtureMode =
+    opts.emailVerificationFixtureMode ?? env.emailVerificationFixtureMode;
+  const emailSender = opts.emailSender ?? createEmailSender();
   const cookiePrefix = opts.cookiePrefix ?? env.cookiePrefix;
   return betterAuth({
     appName: 'Deployz',
@@ -57,6 +68,18 @@ export function createAuth(
       : {}),
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     emailAndPassword: { enabled: true },
+    // Sign-in stays open to unverified accounts; organization invitations
+    // (the only way to join another tenant) require a verified e-mail.
+    emailVerification: {
+      sendOnSignUp: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        await sendQuietly(emailSender, {
+          to: user.email,
+          subject: 'Verify your Deployz email address',
+          body: ['Confirm your email address to finish setting up Deployz:', '', url].join('\n'),
+        });
+      },
+    },
     socialProviders: {
       github: {
         clientId: env.githubClientId,
@@ -83,6 +106,15 @@ export function createAuth(
       },
     },
     databaseHooks: {
+      ...(emailVerificationFixtureMode
+        ? {
+            user: {
+              create: {
+                before: async (user) => ({ data: { ...user, emailVerified: true } }),
+              },
+            },
+          }
+        : {}),
       session: {
         create: {
           // Tenant resolution, single code path: every session gets an active

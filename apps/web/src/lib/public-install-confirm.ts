@@ -14,7 +14,7 @@ export interface PublicInstallConfirmBody {
 }
 
 export type PublicInstallConfirmResult =
-  | { ok: true; installLinkId: string }
+  | { ok: true; installLinkId: string; installLinkToken: string }
   | { ok: false; code: string };
 
 /** POST /api/public-install/:linkId/confirm — idempotent customer acceptance. */
@@ -35,8 +35,8 @@ export async function confirmPublicInstall(
     },
   );
   if (response.status === 201 || response.status === 200) {
-    const payload = (await response.json()) as { installLinkId: string };
-    return { ok: true, installLinkId: payload.installLinkId };
+    const payload = (await response.json()) as { installLinkId: string; installLinkToken: string };
+    return { ok: true, installLinkId: payload.installLinkId, installLinkToken: payload.installLinkToken };
   }
   const payload: unknown = await response.json().catch(() => null);
   const code = (payload as { error?: { code?: string } } | null)?.error?.code ?? 'UNKNOWN';

@@ -1,6 +1,7 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 
 import { API_URL, expect, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { fixtureSha } from './fixture-sha.js';
 
 /**
  * Phase E: browser-level UI coverage for the simulated scenarios — the same
@@ -51,7 +52,7 @@ async function createRelease(
   version: string,
 ): Promise<string> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version, gitSha: `sha-${version}` },
+    data: { version, gitSha: fixtureSha(version) },
   });
   if (!response.ok()) {
     throw new Error(`create release ${version} failed: ${response.status()} ${await response.text()}`);

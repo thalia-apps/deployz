@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
@@ -9,6 +10,7 @@ import { InstallLoadError } from '@/components/install-load-error';
 import { InstallProgress } from '@/components/install-progress';
 import { InstallRetryButton } from '@/components/install-retry-button';
 import { InvitationTokenGate } from '@/components/invitation-token-gate';
+import { LinkTokenGate } from '@/components/link-token-gate';
 import { PublicInstallFlow } from '@/components/public-install-flow';
 import { TechnicalDetails } from '@/components/technical-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,6 +24,7 @@ import {
   installPlanRetainedComponents,
   RETENTION_CHARGES_NOTE,
 } from '@/lib/install-plan';
+import { LINK_TOKEN_COOKIE } from '@/lib/link-token-cookie';
 import { fetchPublicInstallData } from '@/lib/public-install-data';
 import { publicInstallErrorMessage } from '@/lib/public-install-types';
 import { fetchInstallStatusServer } from '@/lib/install-status';
@@ -73,11 +76,15 @@ export default async function InstallPage({
     );
   }
 
+  // The link secret reaches the server as a cookie: the browser moves it out
+  // of the URL fragment (LinkTokenGate), so it never appears in a request URL.
+  const token = (await cookies()).get(LINK_TOKEN_COOKIE)?.value;
+
   // Fetched in parallel: the status projection is a nice-to-have for the
   // first paint (a failed fetch just costs one extra client round trip —
   // see fetchInstallStatusServer), so it never blocks or fails the page.
   const [lookup, initialStatus] = await Promise.all([
-    fetchInstallData(installLinkId),
+    fetchInstallData(installLinkId, token),
     fetchInstallStatusServer(installLinkId),
   ]);
 
@@ -111,6 +118,21 @@ export default async function InstallPage({
   }
 
   const data = lookup.data;
+  const tokenGate = (
+    <LinkTokenGate
+      path={`/install/${installLinkId}`}
+      current={token}
+      fallback={
+        <Alert>
+          <AlertTitle>Open the full install link</AlertTitle>
+          <AlertDescription>
+            This page needs the whole link that {data.publisherName} sent. Open the link as you
+            received it, or ask {data.publisherName} for a new link.
+          </AlertDescription>
+        </Alert>
+      }
+    />
+  );
 
   // The customer pressed "Review setup in AWS" and the control plane is
   // waiting for the connector to enroll. Never a failure: past the staleness
@@ -154,7 +176,11 @@ export default async function InstallPage({
                     </p>
                   </div>
                 </div>
-                <InstallRetryButton installLinkId={installLinkId} />
+                {data.credentialsWithheld ? (
+                  tokenGate
+                ) : (
+                  <InstallRetryButton installLinkId={installLinkId} token={token} />
+                )}
               </section>
             ) : null
           }
@@ -270,7 +296,9 @@ export default async function InstallPage({
 
           <CustomerInstallSections plan={data.plan} />
 
-          {data.existingStackUpdate ? (
+          {data.credentialsWithheld ? (
+            tokenGate
+          ) : data.existingStackUpdate ? (
             <ExistingConnectorUpdate installLinkId={installLinkId} update={data.existingStackUpdate} />
           ) : (
           <section aria-labelledby="connect-aws" className="flex flex-col gap-2">

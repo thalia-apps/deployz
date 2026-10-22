@@ -17,6 +17,7 @@ import {
   productionDeploymentCounts,
 } from '../billing-domain.js';
 
+import { redactClaimedPayload } from '../claimed-payload.js';
 import { deriveDeploymentStatus, toVendorDeploymentStatus } from '../deployment-status.js';
 import { parseDefaultHttps } from '../default-https.js';
 import { findActiveDomain } from '../domains.js';
@@ -116,7 +117,7 @@ function redactStructured(value: unknown, keyHint?: string): unknown {
   if (typeof value === 'string') {
     return keyHint !== undefined && SECRET_KEY_PATTERN.test(keyHint) ? '[REDACTED]' : redactSecrets(value);
   }
-  if (Array.isArray(value)) return value.map((entry) => redactStructured(entry));
+  if (Array.isArray(value)) return value.map((entry) => redactStructured(entry, keyHint));
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [key, redactStructured(entry, key)]),
@@ -1020,7 +1021,7 @@ export async function getDeploymentDetail(db: RuntimeDb, id: string, now: Date =
     ...job,
     // Job payloads carry real per-deployment secrets (install parameters) —
     // never hand them to the dashboard un-redacted, even for admins.
-    payload: redactStructured(job.payload),
+    payload: redactStructured(redactClaimedPayload(job)),
     result: redactStructured(job.result),
     stuck: isJobStuck(job, now),
     normalizedError: job.failureCode,
@@ -1136,7 +1137,7 @@ export async function getJobDetail(db: RuntimeDb, id: string, now: Date = new Da
     ? await db.select().from(schema.customers).where(eq(schema.customers.id, deployment.customerId)).limit(1)
     : [undefined];
 
-  const payload = redactStructured(job.payload ?? {});
+  const payload = redactStructured(redactClaimedPayload(job) ?? {});
 
   const eventRows = await db
     .select()

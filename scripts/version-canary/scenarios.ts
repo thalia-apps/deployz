@@ -233,8 +233,8 @@ export async function runJourney(canary: Canary): Promise<void> {
     await setApplicationSizes(canary, JOURNEY_APPLICATION_SIZES);
     await buildRelease(canary, 'v1');
     const invitation = await createJourneyInvitation(canary);
-    const installLinkId = await customerConfirmsChosenSize(canary, invitation, chosen);
-    await continueInstallFromLink(canary, installLinkId);
+    const { installLinkId, installLinkToken } = await customerConfirmsChosenSize(canary, invitation, chosen);
+    await continueInstallFromLink(canary, installLinkId, installLinkToken);
 
     await evidence.step('v1 is the serving release after install (auto-deploy + digest reconciliation)', async (details) => {
       await waitForPointer(canary, 'v1', 15 * 60_000);

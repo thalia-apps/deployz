@@ -17,6 +17,8 @@
 import type { APIRequestContext } from '@playwright/test';
 
 import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
+import { fixtureSha } from './fixture-sha.js';
 
 interface DeploymentResponse {
   state: string;
@@ -66,7 +68,7 @@ async function createRelease(
   version: string,
 ): Promise<string> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version, gitSha: `sha-${version}` },
+    data: { version, gitSha: fixtureSha(version) },
   });
   if (!response.ok()) {
     throw new Error(`create release ${version} failed: ${response.status()} ${await response.text()}`);
@@ -651,13 +653,13 @@ test.describe('two-apps-1.0.0', () => {
     // Release '1.0.0' for both apps.  In BUILD_FIXTURE_MODE the build
     // completes synchronously so the release is READY when creation returns.
     const releaseAResp = await request.post(`${API_URL}/api/applications/${appA.id}/releases`, {
-      data: { version: '1.0.0', gitSha: 'sha-1.0.0-A' },
+      data: { version: '1.0.0', gitSha: fixtureSha('1.0.0-A') },
     });
     expect(releaseAResp.ok()).toBeTruthy();
     const releaseA = (await releaseAResp.json()) as { id: string };
 
     const releaseBResp = await request.post(`${API_URL}/api/applications/${appB.id}/releases`, {
-      data: { version: '1.0.0', gitSha: 'sha-1.0.0-B' },
+      data: { version: '1.0.0', gitSha: fixtureSha('1.0.0-B') },
     });
     expect(releaseBResp.ok()).toBeTruthy();
     const releaseB = (await releaseBResp.json()) as { id: string };
@@ -678,7 +680,9 @@ test.describe('two-apps-1.0.0', () => {
       const launch = await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
       expect(launch.ok()).toBeTruthy();
 
-      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
         quickCreateUrl: string | null;
       };
       expect(installInfo.quickCreateUrl).not.toBeNull();

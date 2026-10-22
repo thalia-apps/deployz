@@ -11,6 +11,7 @@ import type { Region } from '@deployz/contracts';
 import { createAuth, type Auth } from './auth.js';
 import { createDeploymentRecord } from './deploy-links.js';
 import { env } from './env.js';
+import { installLinkToken } from './install-link-token.js';
 import { buildServer } from './server.js';
 
 // Phase 2 — targeted installation invitations: a vendor creates an invitation
@@ -470,7 +471,7 @@ describe('targeted installation invitations', () => {
     await app.inject({
       method: 'POST',
       url: `/api/install/${installLinkId}/retry`,
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-deployz-token': installLinkToken(installLinkId) },
       payload: '{}',
     });
 

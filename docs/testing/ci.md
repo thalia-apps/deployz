@@ -304,3 +304,12 @@ level and layers. If the new rule names a path (as `API_NON_CRITICAL` and
 `CDK_CUSTOMER_SIDE` do), add it to `VERIFIED_PATHS` too — test 17
 (`every path the rules name exists on disk`) fails the build if a listed
 path stops existing.
+
+## Workflow supply chain
+
+Every third-party `uses:` in `.github/workflows/` is pinned to a commit SHA
+with the tag in a trailing comment; `.github/dependabot.yml` proposes weekly
+updates for npm, GitHub Actions and the web Dockerfile base image. Values that
+a pull request or a dispatch input controls reach a `run:` step through
+`env:`, never through `${{ }}` expansion in the script. `.github/CODEOWNERS`
+names the owners of `.github/`, `packages/cdk/` and `apps/api/src/server.ts`.

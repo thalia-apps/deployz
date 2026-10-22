@@ -5,6 +5,7 @@ import { AcceptInvitationActions, SignOutButton } from '@/components/accept-invi
 import { DeployzBrand } from '@/components/deployz-brand';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { VerifyEmailPrompt } from '@/components/verify-email-prompt';
 import { fetchMe, fetchPublicInvitation, type PublicInvitation } from '@/lib/me';
 
 const STATUS_MESSAGES: Record<Exclude<PublicInvitation['status'], 'pending'>, string> = {
@@ -84,6 +85,14 @@ export default async function AcceptInvitationPage({
           Sign out, then sign in with the invited address to accept.
         </p>
         <SignOutButton />
+      </InvitationCard>
+    );
+  }
+
+  if (!me.user.emailVerified) {
+    return (
+      <InvitationCard title={`Join ${invitation.organizationName}`}>
+        <VerifyEmailPrompt email={me.user.email} />
       </InvitationCard>
     );
   }

@@ -13,6 +13,7 @@
 import type { APIRequestContext } from '@playwright/test';
 
 import { API_URL, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { fixtureSha } from './fixture-sha.js';
 
 interface DeploymentResponse {
   state: string;
@@ -40,7 +41,7 @@ async function createRelease(
   version: string,
 ): Promise<string> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version, gitSha: `sha-${version}` },
+    data: { version, gitSha: fixtureSha(version) },
   });
   if (!response.ok()) {
     throw new Error(`create release ${version} failed: ${response.status()} ${await response.text()}`);

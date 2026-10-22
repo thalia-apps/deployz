@@ -60,7 +60,7 @@ jobs:
       tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
@@ -284,7 +284,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ needs.gate.outputs.sha }}
 
@@ -324,10 +324,10 @@ jobs:
           exit 1
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
@@ -523,7 +523,7 @@ jobs:
       # credentials in the middle; MaxSessionDuration on the role is the same
       # value. It runs after the build, so the build spends no session time.
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -701,10 +701,13 @@ jobs:
       # The gate job compares the next commit against this tag, which is the
       # tag for this environment.
       - name: Record the deployed commit
+        env:
+          DEPLOY_TAG: ${{ needs.gate.outputs.tag }}
+          DEPLOY_SHA: ${{ needs.gate.outputs.sha }}
         run: |
           set -euo pipefail
-          git tag -f "${{ needs.gate.outputs.tag }}" "${{ needs.gate.outputs.sha }}"
-          git push -f origin "refs/tags/${{ needs.gate.outputs.tag }}"
+          git tag -f "$DEPLOY_TAG" "$DEPLOY_SHA"
+          git push -f origin "refs/tags/$DEPLOY_TAG"
 
       # The relay that drives every install ships inside this template's Lambda
       # assets, and each region serves its own copy from

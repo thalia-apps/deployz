@@ -84,3 +84,14 @@ describe('resolveDefaultUrl — canonical Deployz address (Phase 9 completion)',
     expect(resolveDefaultUrl(undefined)).toBeNull();
   });
 });
+
+describe('resolveAppUrl — relay-reported endpoint', () => {
+  it('ignores an endpoint that is not an AWS load balancer hostname', () => {
+    for (const endpoint of ['evil.example.com', 'https://evil.example.com/login', 'alb.elb.amazonaws.com.evil.com']) {
+      const jobs = [
+        { type: 'INSTALL', state: 'SUCCEEDED', result: { output: { outputs: { ExportDeployzApplicationPublicEndpoint: endpoint } } } },
+      ] as const;
+      expect(resolveAppUrl(jobs, null, null)).toBeNull();
+    }
+  });
+});

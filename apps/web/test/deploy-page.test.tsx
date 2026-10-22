@@ -11,6 +11,13 @@ vi.mock('next/navigation', () => ({
 const mocks = vi.hoisted(() => ({
   fetchDeployLinkData: vi.fn(),
   fetchDeployLinkStatusServer: vi.fn(),
+  cookieToken: undefined as string | undefined,
+}));
+
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: () => (mocks.cookieToken === undefined ? undefined : { value: mocks.cookieToken }),
+  }),
 }));
 
 vi.mock('../src/lib/deploy-link-flow', () => ({
@@ -27,7 +34,7 @@ const DeployPage = (await import('../src/app/deploy/[publicId]/page')).default;
 const PUBLIC_ID = 'b7e2a91c-1f3a-4c5d-8e9f-0a1b2c3d4e5f';
 const TOKEN = 'a'.repeat(64);
 const QUICK_CREATE = 'https://console.aws.amazon.com/cloudformation/quickcreate';
-const SECURITY_HREF = `/deploy/${PUBLIC_ID}/security?token=${TOKEN}`;
+const SECURITY_HREF = `/deploy/${PUBLIC_ID}/security`;
 
 function securityLink(doc: Document): Element | undefined {
   // The waiting/launched layouts link straight to the security page; the
@@ -89,11 +96,11 @@ function resolvedData(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 async function renderPage(search?: string): Promise<Document> {
+  mocks.cookieToken = search === undefined ? TOKEN : undefined;
   // DeployPage is an async server component: await it to the resolved JSX
   // tree first — renderToString cannot suspend.
   const element = await DeployPage({
     params: Promise.resolve({ publicId: PUBLIC_ID }),
-    searchParams: Promise.resolve(search === undefined ? { token: TOKEN } : {}),
   });
   const { window } = new JSDOM(renderToString(element));
   return window.document;
@@ -192,9 +199,9 @@ describe('DeployPage', () => {
     expect(expired.body.textContent).toContain('has expired');
   });
 
-  it('treats a missing token as an invalid link', async () => {
+  it('leaves a first visit to the browser gate, which reads the URL fragment', async () => {
     const doc = await renderPage('');
-    expect(doc.body.textContent).toContain("isn't valid");
+    expect(doc.body.textContent).toBe('');
     expect(mocks.fetchDeployLinkData).not.toHaveBeenCalled();
   });
 });

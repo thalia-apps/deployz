@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
@@ -8,6 +9,7 @@ import { ExistingConnectorUpdate } from '@/components/existing-connector-update'
 import { InstallLaunchButton } from '@/components/install-launch-button';
 import { InstallProgress } from '@/components/install-progress';
 import { InstallRetryButton } from '@/components/install-retry-button';
+import { LinkTokenGate } from '@/components/link-token-gate';
 import { Button } from '@/components/ui/button';
 import {
   fetchDeployLinkData,
@@ -16,6 +18,7 @@ import {
 import { cloudFormationStacksUrl } from '@/lib/aws-console';
 import { RELAY_STUCK_GUIDANCE } from '@/lib/deployment-vocabulary';
 import { installPlanRegionLabel } from '@/lib/install-plan';
+import { LINK_TOKEN_COOKIE } from '@/lib/link-token-cookie';
 
 // Rendered per request so the resolve — including the Quick Create link the
 // control plane builds for this deployment's region — is always fresh.
@@ -31,21 +34,24 @@ export const metadata: Metadata = {
 // Link, the customer opens it here, connects their own AWS account through
 // the SAME flow as the install page, and watches the deployment come up. The
 // token in the URL is the only credential — it authorizes exactly this one
-// deployment flow and never becomes a session. Reuse rule: the review, AWS
+// deployment flow and never becomes a session. It travels in the URL
+// fragment; LinkTokenGate moves it into a cookie, so it never appears in a
+// request URL. Reuse rule: the review, AWS
 // connection, progress, domain and retry experiences are the install page's,
 // with resolve/launch/retry/status calls re-keyed to the deploy link.
-export default async function DeployPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ publicId: string }>;
-  searchParams: Promise<{ token?: string }>;
-}) {
+export default async function DeployPage({ params }: { params: Promise<{ publicId: string }> }) {
   const { publicId } = await params;
-  const { token } = await searchParams;
+  const token = (await cookies()).get(LINK_TOKEN_COOKIE)?.value;
 
+  // A first visit has no cookie yet: the gate takes the secret from the
+  // fragment and refreshes. The invalid copy shows only when there is none.
   if (!token) {
-    return <DeployLinkInvalidState reason="invalid" />;
+    return (
+      <LinkTokenGate
+        path={`/deploy/${publicId}`}
+        fallback={<DeployLinkInvalidState reason="invalid" />}
+      />
+    );
   }
 
   // Fetched in parallel: the status projection is a nice-to-have for the
@@ -57,11 +63,17 @@ export default async function DeployPage({
   ]);
 
   if (!result.ok) {
-    return <DeployLinkInvalidState reason={result.reason} />;
+    // A stale cookie from an earlier link: a new fragment still replaces it.
+    return (
+      <>
+        <DeployLinkInvalidState reason={result.reason} />
+        <LinkTokenGate path={`/deploy/${publicId}`} current={token} fallback={null} />
+      </>
+    );
   }
   const data = result.data;
   const deployLink = { publicId, token };
-  const securityHref = `/deploy/${encodeURIComponent(publicId)}/security?token=${encodeURIComponent(token)}`;
+  const securityHref = `/deploy/${encodeURIComponent(publicId)}/security`;
   const securityLink = (
     <Button asChild variant="link" className="h-auto w-fit px-0">
       <Link href={securityHref}>Security details</Link>

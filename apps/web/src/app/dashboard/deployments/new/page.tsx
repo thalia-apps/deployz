@@ -395,7 +395,7 @@ function NewDeploymentScreen() {
         });
         setCreatedCustomerId(customerId);
         setCreatedApplicationId(applicationId);
-        setInstallLink(`${origin}/install/${deployment.installLinkId}`);
+        setInstallLink(`${origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`);
       } else {
         // The invitation-first path: no deployment row and no entitlement
         // use here — the customer confirms later, and billing is checked at

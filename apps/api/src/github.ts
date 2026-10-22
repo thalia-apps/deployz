@@ -98,6 +98,45 @@ export function verifyWebhookSignature(
 }
 
 // ---------------------------------------------------------------------------
+// Install state (binds a GitHub install to the organization that started it)
+// ---------------------------------------------------------------------------
+
+const INSTALL_STATE_TTL_MS = 10 * 60 * 1000;
+
+function signInstallState(secret: string, payload: string): string {
+  return createHmac('sha256', secret).update(payload).digest('hex');
+}
+
+// `<expiryMs>.<organizationId>.<hmac>`. GitHub hands `state` back unchanged on
+// the Setup URL redirect, so a callback that carries a valid one was started
+// by a session of that organization.
+export function createInstallState(secret: string, organizationId: string, nowMs: number): string {
+  const payload = `${nowMs + INSTALL_STATE_TTL_MS}.${organizationId}`;
+  return `${payload}.${signInstallState(secret, payload)}`;
+}
+
+export function verifyInstallState(
+  secret: string,
+  state: string | undefined,
+  organizationId: string,
+  nowMs: number,
+): boolean {
+  const parts = state?.split('.');
+  if (!parts || parts.length !== 3) {
+    return false;
+  }
+  const [expiry, stateOrganizationId, signature] = parts as [string, string, string];
+  const provided = Buffer.from(signature, 'utf8');
+  const computed = Buffer.from(signInstallState(secret, `${expiry}.${stateOrganizationId}`), 'utf8');
+  return (
+    provided.length === computed.length &&
+    timingSafeEqual(provided, computed) &&
+    stateOrganizationId === organizationId &&
+    Number(expiry) > nowMs
+  );
+}
+
+// ---------------------------------------------------------------------------
 // GitHub App JWT (RS256, iat/exp claims)
 // ---------------------------------------------------------------------------
 

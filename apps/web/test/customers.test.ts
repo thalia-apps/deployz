@@ -62,6 +62,7 @@ function deployment(overrides: Partial<FleetDeployment> = {}): FleetDeployment {
     bootstrapStackName: null,
     installStartedAt: null,
     installLinkId: 'link-1',
+    installLinkToken: 'token-1',
     deploymentStatus: deploymentStatus('READY'),
     ...overrides,
   };
@@ -267,9 +268,9 @@ describe('singleDeploymentDestination', () => {
 
 describe('installLinkUrl', () => {
   it('builds the URL from the deployment\'s existing installLinkId', () => {
-    const dep = deployment({ installLinkId: 'abc123' });
+    const dep = deployment({ installLinkId: 'abc123', installLinkToken: 'secret456' });
     expect(installLinkUrl(dep, 'https://app.example.com')).toBe(
-      'https://app.example.com/install/abc123',
+      'https://app.example.com/install/abc123#secret456',
     );
   });
 });

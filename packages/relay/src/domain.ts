@@ -14,6 +14,7 @@ import {
   ACMClient,
   DeleteCertificateCommand,
   DescribeCertificateCommand,
+  ListTagsForCertificateCommand,
   RequestCertificateCommand,
 } from '@aws-sdk/client-acm';
 import {
@@ -48,6 +49,7 @@ export interface AcmClient {
     validationRecord?: { name: string; value: string };
   }>;
   deleteCertificate(arn: string): Promise<void>; // must swallow ResourceNotFoundException
+  certificateTags(arn: string): Promise<Record<string, string> | undefined>; // undefined when the certificate is gone
 }
 
 export interface LoadBalancerInfo {
@@ -240,6 +242,27 @@ async function removeDomain(command: RelayCommand, deps: DomainExecutorDeps): Pr
     let detachedFromListener = false;
 
     if (payload.certificateArn) {
+      // The control plane names the certificate; the relay only deletes one
+      // this installation requested.
+      const tags = await deps.acm.certificateTags(payload.certificateArn);
+      if (tags === undefined) {
+        return {
+          commandId: command.id,
+          idempotencyKey: command.idempotencyKey,
+          success: true,
+          output: { removed: true },
+        };
+      }
+      if (tags[DEPLOYZ_INSTALLATION_TAG] !== deps.installationId) {
+        return {
+          commandId: command.id,
+          idempotencyKey: command.idempotencyKey,
+          success: false,
+          error: 'Certificate does not belong to this installation — refusing to delete it',
+          failureCode: 'UNKNOWN',
+        };
+      }
+
       const loadBalancer = await deps.elb.findTaggedLoadBalancer(DEPLOYZ_INSTALLATION_TAG, deps.installationId);
 
       if (loadBalancer) {
@@ -381,6 +404,16 @@ const realAcmClient: AcmClient = {
       await getAcmSdkClient().send(new DeleteCertificateCommand({ CertificateArn: arn }));
     } catch (err) {
       if (isNotFound(err)) return;
+      throw err;
+    }
+  },
+
+  async certificateTags(arn) {
+    try {
+      const response = await getAcmSdkClient().send(new ListTagsForCertificateCommand({ CertificateArn: arn }));
+      return Object.fromEntries((response.Tags ?? []).map((tag) => [tag.Key ?? '', tag.Value ?? '']));
+    } catch (err) {
+      if (isNotFound(err)) return undefined;
       throw err;
     }
   },

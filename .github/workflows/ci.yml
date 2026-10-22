@@ -38,7 +38,7 @@ jobs:
       # The selector diffs base...HEAD, so the history between them must
       # be present.
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -80,13 +80,13 @@ jobs:
       FULL: ${{ github.event_name != 'pull_request' || needs.plan.outputs.risk == 'critical' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -96,7 +96,7 @@ jobs:
       # so a partial restore stays safe. Tests run through vitest directly
       # and are never satisfied from this cache.
       - name: Cache Turborepo output
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ github.sha }}
@@ -129,9 +129,11 @@ jobs:
 
       - name: Run tests (affected projects)
         if: env.FULL != 'true' && needs.plan.outputs.risk != 'minimal' && needs.plan.outputs.unit_projects != ''
+        env:
+          UNIT_PROJECTS: ${{ needs.plan.outputs.unit_projects }}
         run: |
           args=""
-          for p in ${{ needs.plan.outputs.unit_projects }}; do
+          for p in $UNIT_PROJECTS; do
             args="$args --project $p"
           done
           pnpm vitest run $args
@@ -142,7 +144,9 @@ jobs:
 
       - name: Lint (affected)
         if: env.FULL != 'true' && needs.plan.outputs.risk != 'minimal' && needs.plan.outputs.lint_packages != ''
-        run: pnpm turbo run lint $(for p in ${{ needs.plan.outputs.lint_packages }}; do printf ' --filter=%s' "$p"; done)
+        env:
+          LINT_PACKAGES: ${{ needs.plan.outputs.lint_packages }}
+        run: pnpm turbo run lint $(for p in $LINT_PACKAGES; do printf ' --filter=%s' "$p"; done)
 
       # scripts/ is not a workspace package, so `pnpm build` never compiles
       # the real-AWS harnesses and eslint only covers the .mjs runners.
@@ -203,22 +207,22 @@ jobs:
 
       - name: Checkout
         if: steps.part.outputs.run == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install pnpm
         if: steps.part.outputs.run == 'true'
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - name: Setup Node.js
         if: steps.part.outputs.run == 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: pnpm
 
       - name: Cache Turborepo output
         if: steps.part.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ github.sha }}
@@ -238,7 +242,7 @@ jobs:
       # run, which is a few seconds.
       - name: Cache Playwright browser
         if: steps.part.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -253,17 +257,21 @@ jobs:
 
       - name: Browser scenario specs
         if: env.MODE == 'fixture' && matrix.part == 'scenarios'
-        run: node scripts/e2e.mjs e2e/scenario-ui.spec.ts e2e/scenario-release-unavailable.spec.ts ${{ needs.plan.outputs.playwright_files }}
+        env:
+          PLAYWRIGHT_FILES: ${{ needs.plan.outputs.playwright_files }}
+        run: node scripts/e2e.mjs e2e/scenario-ui.spec.ts e2e/scenario-release-unavailable.spec.ts $PLAYWRIGHT_FILES
 
       # The default-HTTPS spec skips every test unless its fixture flag is
       # on, and the other specs are written against HTTP-only installs, so it
       # always runs on its own server.
       - name: Touched Playwright specs
         if: env.MODE == 'files' && matrix.part == 'fixture-1'
+        env:
+          PLAYWRIGHT_FILES: ${{ needs.plan.outputs.playwright_files }}
         run: |
           rest=""
           https=false
-          for f in ${{ needs.plan.outputs.playwright_files }}; do
+          for f in $PLAYWRIGHT_FILES; do
             if [ "$f" = "e2e/scenario-default-https.spec.ts" ]; then https=true; else rest="$rest $f"; fi
           done
           if [ -n "$rest" ]; then node scripts/e2e.mjs $rest; fi
@@ -282,7 +290,7 @@ jobs:
         run: DEPLOYZ_DEFAULT_HTTPS_FIXTURE=true node scripts/e2e.mjs e2e/scenario-default-https.spec.ts
 
       - name: Upload traces on failure
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: e2e-simulated-results-${{ matrix.part }}
@@ -299,6 +307,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Assert planned checks
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          TEST_BUILD_RESULT: ${{ needs.test-build.result }}
+          E2E_RESULT: ${{ needs.e2e-simulated.result }}
+          PLAN_RISK: ${{ needs.plan.outputs.risk }}
+          PLAN_PLAYWRIGHT: ${{ needs.plan.outputs.playwright }}
         run: |
           status=0
           assert() {
@@ -307,16 +321,16 @@ jobs:
               status=1
             fi
           }
-          assert "Plan tests" "${{ needs.plan.result }}"
-          assert "Test and build" "${{ needs.test-build.result }}"
-          assert "Simulated E2E" "${{ needs.e2e-simulated.result }}"
-          if [ -z "${{ needs.plan.outputs.risk }}" ]; then
+          assert "Plan tests" "$PLAN_RESULT"
+          assert "Test and build" "$TEST_BUILD_RESULT"
+          assert "Simulated E2E" "$E2E_RESULT"
+          if [ -z "$PLAN_RISK" ]; then
             echo "::error::No test plan was published"
             status=1
           fi
-          if [ "${{ needs.plan.outputs.risk }}" != "minimal" ] && [ "${{ needs.plan.outputs.playwright }}" != "none" ] && [ "${{ needs.e2e-simulated.result }}" == "skipped" ]; then
+          if [ "$PLAN_RISK" != "minimal" ] && [ "$PLAN_PLAYWRIGHT" != "none" ] && [ "$E2E_RESULT" == "skipped" ]; then
             echo "::error::The plan selected Playwright coverage but the Simulated E2E job did not run"
             status=1
           fi
           if [ "$status" != "0" ]; then exit 1; fi
-          echo "PR Gate passed (risk: ${{ needs.plan.outputs.risk }}, playwright: ${{ needs.plan.outputs.playwright }})"
+          echo "PR Gate passed (risk: $PLAN_RISK, playwright: $PLAN_PLAYWRIGHT)"

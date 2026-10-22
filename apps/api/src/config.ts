@@ -89,7 +89,7 @@ export interface ApplicationConfigView {
 
 export const configEntrySchema = z.object({
   key: z.string().min(1),
-  value: z.string(),
+  value: z.string().max(65536),
   isSecret: z.boolean(),
 });
 

@@ -392,6 +392,28 @@ describe('duplicate guards', () => {
     expect(second.statusCode).toBe(409);
     expect(second.json()).toMatchObject({ error: { code: 'RELEASE_VERSION_EXISTS' } });
   });
+
+  it('refuses a release input that could reach the build command, and a second build at once', async () => {
+    const application = await send(
+      app,
+      'POST',
+      '/api/applications',
+      { ...repo, repoFullName: 'acme/build-inputs', repoUrl: 'https://github.com/acme/build-inputs' },
+      { cookie },
+    );
+    const url = `/api/applications/${(application.json() as { id: string }).id}/releases`;
+
+    const badVersion = await send(app, 'POST', url, { version: '1.0 --build-arg X', gitSha: 'a'.repeat(40) }, { cookie });
+    expect(badVersion.statusCode).toBe(400);
+    const branchRef = await send(app, 'POST', url, { version: '1.0.0', gitSha: 'main' }, { cookie });
+    expect(branchRef.statusCode).toBe(400);
+
+    const first = await send(app, 'POST', url, { version: '1.0.0', gitSha: 'a'.repeat(40) }, { cookie });
+    expect(first.statusCode).toBe(201);
+    const second = await send(app, 'POST', url, { version: '1.0.1', gitSha: 'b'.repeat(40) }, { cookie });
+    expect(second.statusCode).toBe(409);
+    expect(second.json()).toMatchObject({ error: { code: 'RELEASE_BUILD_IN_PROGRESS' } });
+  });
 });
 
 describe('relay liveness (pure)', () => {

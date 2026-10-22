@@ -1,7 +1,7 @@
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { setupFastifyErrorHandler } from '@sentry/node';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { fromNodeHeaders } from 'better-auth/node';
 import { and, desc, eq, getTableColumns, gt, gte, inArray, isNull, like, ne, notInArray, sql } from 'drizzle-orm';
 import Fastify, {
@@ -32,8 +32,6 @@ import {
 import {
   DESTROY_PENDING_STALE_AFTER_MS,
   DEPLOYMENT_MANIFEST_SCHEMA_VERSION,
-  APP_API_KEY_PARAMETER,
-  APP_SIGNING_SECRET_PARAMETER,
   REGION_LABELS,
   RELAY_STALE_AFTER_MS,
   SUPPORTED_AWS_REGIONS,
@@ -66,7 +64,10 @@ import {
   isSupportedRegion,
   ownershipClassificationsFromSpec,
   regionSchema,
+  RELEASE_VERSION_PATTERN,
+  repoRelativePathSchema,
   relayCapabilitiesSchema,
+  relayIdentitySchema,
   relayCommandProgressSchema,
   releaseEvidenceSchema,
   requiredInfrastructureComponents,
@@ -137,6 +138,7 @@ import { markDeploymentLive, markDeploymentRemoved } from './billing-lifecycle.j
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePaddleWebhook } from './billing-webhooks.js';
+import { redactClaimedPayload } from './claimed-payload.js';
 import { createPaddle, type PaddleBilling } from './paddle.js';
 import {
   createConfigStore,
@@ -146,7 +148,6 @@ import {
   getConfig,
   listProvidedConfigKeys,
   listVendorValues,
-  SECRET_MASK,
   setConfig,
   setConfigBodySchema,
   type ConfigDeps,
@@ -156,6 +157,7 @@ import { env } from './env.js';
 import { ApiError, NotFoundError, UnauthorizedError, toErrorEnvelope } from './errors.js';
 import {
   createAppJwt,
+  createInstallState,
   createGithubStore,
   fetchInstallationAccount,
   getCommit,
@@ -167,6 +169,7 @@ import {
   listRepositories,
   mintInstallationToken,
   parseRepoFullName,
+  verifyInstallState,
   verifyWebhookSignature,
   type FetchFn,
   type GithubWebhookEvent,
@@ -198,6 +201,7 @@ import { buildFailureContext, toStructuredEvent } from './failure-context.js';
 import { createDrizzlePendingSecretStore, createSecretCipherFromEnv } from './pending-secrets.js';
 import { retryEligibilityFor } from './retry-eligibility.js';
 import { buildInstallPayload, buildRelayConfigEntries, queuePostInstallConfig, requireTaskFamilySuffix } from './install-config.js';
+import { installLinkToken, verifyInstallLinkToken } from './install-link-token.js';
 import { requirePreflightReady, runApplicationPreflight, runDeploymentPreflight } from './preflight.js';
 import {
   confirmPublicInstall,
@@ -253,6 +257,7 @@ import {
   listOrganizations,
   rejectInvitation,
   removeMember,
+  requireVerifiedEmail,
   resendInvitation,
   revokeInvitation,
   transferOwnership,
@@ -357,7 +362,12 @@ import {
   summarizeStackEvents,
   type StoredStackEvent,
 } from './stack-event-progress.js';
-import { createRequireAuth, requireRole, type OrganizationRow } from './require-auth.js';
+import {
+  createRequireAuth,
+  requireOwnerOrAdmin,
+  requireRole,
+  type OrganizationRow,
+} from './require-auth.js';
 import { createRequireTeamAdmin, isTeamAdmin } from './admin/auth.js';
 import { registerAdminRoutes } from './admin/routes.js';
 import {
@@ -469,6 +479,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // anonymous caller who has nothing but a guessable-length uuid to try.
 const PUBLIC_INSTALL_RATE_LIMIT = { max: 300, timeWindow: '1 minute' } as const;
 
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
 // Commit selector routes hit GitHub's API on every call (no caching) — capped
 // well under GitHub's own per-installation rate limits while comfortably
 // covering normal use (opening the release picker, paging, typing a sha).
@@ -484,6 +499,10 @@ const BUILD_EXPLANATION_RATE_LIMIT = { max: 5, timeWindow: '1 minute' } as const
 // blocked preflight evaluation per window is recorded per deployment — the
 // blockingCount still travels on the one event that is kept.
 const RELAY_BLOCKED_PREFLIGHT_THROTTLE_MS = 15 * 60 * 1000;
+/** Upper bounds on what one relay may store: a heartbeat's observed state
+ *  (serialized) and the stack-event rows kept per job. */
+const MAX_OBSERVED_STATE_CHARS = 256 * 1024;
+const MAX_STACK_EVENTS_PER_JOB = 2000;
 
 // The §35 contract fields the analyser auto-detects and the vendor can take
 // ownership of by editing them (see PATCH /api/applications/:id). `name` is
@@ -566,7 +585,7 @@ function requireActor(request: FastifyRequest): Actor {
   if (!user) {
     throw new UnauthorizedError();
   }
-  return { id: user.id, name: user.name, email: user.email };
+  return { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified };
 }
 
 /** The caller's session row id — the tenant pointer writes target it. */
@@ -1267,9 +1286,30 @@ const PUBLIC_RETRYABLE_STATES: ReadonlySet<string> = new Set([
   'INSTALLING',
 ]);
 
-function assertPublicRetryAllowed(deployment: { state: string }): void {
+async function assertPublicRetryAllowed(
+  db: RuntimeDb,
+  deployment: { id: string; state: string; relayStatus: string },
+): Promise<void> {
   if (!PUBLIC_RETRYABLE_STATES.has(deployment.state)) {
     throw new ApiError(409, 'INSTALL_NOT_RETRYABLE', `Deployment is ${deployment.state}, not retryable.`);
+  }
+  // A connected relay that is running the INSTALL is not stuck: a retry would
+  // cancel its job and lock it out.
+  if (deployment.relayStatus === 'CONNECTED') {
+    const [runningInstall] = await db
+      .select({ id: schema.deploymentJobs.id })
+      .from(schema.deploymentJobs)
+      .where(
+        and(
+          eq(schema.deploymentJobs.deploymentId, deployment.id),
+          eq(schema.deploymentJobs.type, 'INSTALL'),
+          eq(schema.deploymentJobs.state, 'RUNNING'),
+        ),
+      )
+      .limit(1);
+    if (runningInstall) {
+      throw new ApiError(409, 'INSTALL_IN_PROGRESS', 'The installation is running. Wait for it to finish.');
+    }
   }
 }
 
@@ -1752,6 +1792,15 @@ async function requireDeployableState(db: RuntimeDb, deployment: DeploymentRow):
       'This deployment never completed its first install; use Retry install instead.',
     );
   }
+  // A failed DESTROY stopped billing for good. Deploying again would serve
+  // the application unbilled, so only a new disconnect is allowed.
+  if (deployment.state === 'FAILED' && (await latestJobIsDestroy(db, deployment.id))) {
+    throw new ApiError(
+      409,
+      'DEPLOYMENT_NOT_DEPLOYABLE',
+      'The last disconnect failed. Disconnect this deployment again.',
+    );
+  }
   // §9.5 relay-liveness gates, mirroring retry-install's refusals: a job
   // queued for a relay that is not (or no longer) connected would sit
   // REQUESTED until the watchdog fails it an hour later, which the vendor
@@ -2088,55 +2137,7 @@ const JOB_SUCCESS_STATE: Partial<Record<JobType, DeploymentRow['state']>> = {
  */
 const RELEASE_ADVANCING_JOBS = new Set<JobType>(['DEPLOY_RELEASE', 'ROLLBACK']);
 
-/**
- * Parameters the control plane GENERATES at install time — their values are
- * secrets. `redactClaimedPayload` scrubs these from the INSTALL job payload
- * once the relay has claimed it, so generated install secrets do not sit in
- * `deployment_jobs.payload` indefinitely (§31 "stop storing generated install
- * secrets unnecessarily in job payloads").
- */
-const INSTALL_SECRET_PARAMETER_IDS = new Set<string>([
-  APP_API_KEY_PARAMETER,
-  APP_SIGNING_SECRET_PARAMETER,
-]);
-
-/**
- * The relay receives a command's payload exactly once, at claim time
- * (`GET /api/relay/commands`). After that response the stored row never
- * needs the plaintext again, so the claim handler scrubs it in the same
- * request that serves it:
- *  - CONFIG_UPDATE: newly-entered secret VALUES (transport-only) become
- *    key stubs — the DB keeps key names, never values.
- *  - INSTALL: generated secret parameter values become SECRET_MASK; plain
- *    parameters (image reference, desired count) survive untouched.
- */
-export function redactClaimedPayload(job: {
-  readonly type: string;
-  readonly payload: Record<string, unknown> | null;
-}): Record<string, unknown> | null {
-  const payload = job.payload;
-  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
-
-  if (job.type === 'CONFIG_UPDATE' && Array.isArray(payload['secrets'])) {
-    return {
-      ...payload,
-      secrets: (payload['secrets'] as { key?: unknown }[]).map((entry) => ({
-        key: typeof entry.key === 'string' ? entry.key : '',
-      })),
-    };
-  }
-
-  if (job.type === 'INSTALL' && typeof payload['parameters'] === 'object' && payload['parameters'] !== null) {
-    const parameters = payload['parameters'] as Record<string, unknown>;
-    const redacted: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(parameters)) {
-      redacted[key] = INSTALL_SECRET_PARAMETER_IDS.has(key) ? SECRET_MASK : value;
-    }
-    return { ...payload, parameters: redacted };
-  }
-
-  return payload;
-}
+export { redactClaimedPayload };
 
 /** §40 event type per job outcome. Job types with no vendor-visible event are absent. */
   const JOB_RESULT_EVENT: Partial<
@@ -2287,11 +2288,13 @@ export async function buildServer({
   // is the gateway unless X-Forwarded-For is honored — and the per-IP rate
   // limit on the public install routes would otherwise pool every customer
   // into the gateway's single bucket. The Lambda is only reachable through
-  // that gateway, so the header is trustworthy here.
+  // that gateway, so the right-most X-Forwarded-For hop (the one the gateway
+  // appends) is trustworthy; the left-most entries are client-supplied.
+  const trustGatewayHop = (_address: string, hop: number): boolean => hop < 1;
   const app = Fastify(
     loggerInstance
-      ? { loggerInstance, trustProxy: true }
-      : { logger: { level: 'warn' }, trustProxy: true },
+      ? { loggerInstance, trustProxy: trustGatewayHop }
+      : { logger: { level: 'warn' }, trustProxy: trustGatewayHop },
   );
 
   // Sentry owns capture via the onError hook this registers. Capture filter:
@@ -2299,7 +2302,7 @@ export async function buildServer({
   // (5xx ApiError, unknown throws) is. Do NOT captureException in the custom
   // error handler below — that would double-report.
   setupFastifyErrorHandler(app, {
-    shouldHandleError: (error) => !(error instanceof ApiError) || error.statusCode >= 500,
+    shouldHandleError: (error) => toErrorEnvelope(error).statusCode >= 500,
   });
 
   // Single render path for every thrown error: structured envelope, no stack
@@ -2317,6 +2320,40 @@ export async function buildServer({
     }
     return reply.code(statusCode).send(body);
   });
+
+  // CSRF: the session cookie is SameSite=Lax and the web origins share a site
+  // with the API, so a state-changing request that carries it must come from
+  // a trusted web origin. Relay and webhook routes carry no session cookie.
+  // A request with neither Origin nor Referer is not a browser request
+  // (browsers always send Origin on unsafe methods), so it is not a CSRF vector.
+  app.addHook('onRequest', async (request) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
+    if (!request.headers.cookie?.includes('session_token=')) return;
+    const { origin, referer } = request.headers;
+    if (origin === undefined && referer === undefined) return;
+    let source = origin;
+    if (source === undefined) {
+      try {
+        source = new URL(referer!).origin;
+      } catch {
+        source = undefined;
+      }
+    }
+    if (source === undefined || !env.webOrigins.includes(source)) {
+      throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Request origin is not allowed');
+    }
+  });
+
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('strict-transport-security', 'max-age=31536000; includeSubDomains');
+    reply.header('referrer-policy', 'strict-origin-when-cross-origin');
+  });
+
+  app.setNotFoundHandler((_request, reply) =>
+    reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Not found' } }),
+  );
 
   // Browser origin differs by port; cookies are host-scoped, so credentialed
   // CORS + trustedOrigins is the whole cookie story. `methods` must be listed
@@ -2464,6 +2501,9 @@ export async function buildServer({
   // GitHub and Paddle webhooks verify signatures over the raw body, so
   // register a raw-json parser for those routes before the JSON parser
   // consumes them. A bad signature -> 400/401 structured envelope.
+  // No route reads a text/plain body; Fastify's default parser would let a
+  // cross-site form post one.
+  app.removeContentTypeParser('text/plain');
   app.addContentTypeParser(
     'application/json',
     { parseAs: 'string', bodyLimit: 1048576 },
@@ -2478,7 +2518,7 @@ export async function buildServer({
       try {
         done(null, JSON.parse(body as string));
       } catch (error) {
-        done(error as Error);
+        done(Object.assign(error as Error, { statusCode: 400 }));
       }
     },
   );
@@ -2828,17 +2868,23 @@ export async function buildServer({
   );
 
   // Pending invitations addressed to the caller, across every tenant.
-  app.get('/api/invitations', { preHandler: requireAuth }, async (request) => ({
-    invitations: await listInvitationsForEmail(db, requireActor(request).email),
-  }));
+  app.get('/api/invitations', { preHandler: requireAuth }, async (request) => {
+    const actor = requireActor(request);
+    requireVerifiedEmail(actor);
+    return { invitations: await listInvitationsForEmail(db, actor.email) };
+  });
 
   // UNAUTHENTICATED by design — the invitee may not have an account yet, and
   // the accept screen has to name the organization before they sign in. Only
   // non-sensitive display fields: no member list, no tenant internals.
-  app.get('/api/invitations/:invitationId', async (request) => {
-    const { invitationId } = request.params as { invitationId: string };
-    return getPublicInvitation(db, invitationId);
-  });
+  app.get(
+    '/api/invitations/:invitationId',
+    { config: { rateLimit: PUBLIC_INSTALL_RATE_LIMIT } },
+    async (request) => {
+      const { invitationId } = request.params as { invitationId: string };
+      return getPublicInvitation(db, invitationId);
+    },
+  );
 
   app.post(
     '/api/invitations/:invitationId/accept',
@@ -2914,6 +2960,10 @@ export async function buildServer({
     async (request) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
+    const hasLinkToken = verifyInstallLinkToken(
+      installLinkId,
+      firstHeaderValue(request.headers['x-deployz-token']),
+    );
     const rows = await db
       .select({
         applicationName: schema.applications.name,
@@ -3053,8 +3103,12 @@ export async function buildServer({
       //
       // DZ-AUDIT-013: the relayCredential is carried alongside the enrollment
       // code whenever one has been established. Spent codes get no link.
+      //
+      // The link id alone is not enough: both credential-bearing fields need
+      // the fragment-carried link token (x-deployz-token). Without it the
+      // page learns only that the credentials are withheld.
       quickCreateUrl:
-        !alreadyInstalled && existingStackUpdateFor(row) === null
+        hasLinkToken && !alreadyInstalled && existingStackUpdateFor(row) === null
           ? (() => {
               const templateUrl = resolveBootstrapTemplate(row.region, {
                 ...(env.bootstrapTemplateUrl
@@ -3074,7 +3128,8 @@ export async function buildServer({
                 : null;
             })()
           : null,
-      existingStackUpdate: existingStackUpdateFor(row),
+      existingStackUpdate: hasLinkToken ? existingStackUpdateFor(row) : null,
+      credentialsWithheld: !hasLinkToken && !alreadyInstalled,
       alreadyInstalled,
     };
     },
@@ -3273,6 +3328,11 @@ export async function buildServer({
     async (request, reply) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
+    // The retry rotates the relay credential, so the link id alone is not
+    // enough: a wrong or missing token is the same 404 as an unknown id.
+    if (!verifyInstallLinkToken(installLinkId, firstHeaderValue(request.headers['x-deployz-token']))) {
+      throw new NotFoundError('Installation not found');
+    }
     const rows = await db
       .select({ deployment: schema.deployments, applicationName: schema.applications.name })
       .from(schema.deployments)
@@ -3295,7 +3355,7 @@ export async function buildServer({
         'This deployment installed successfully before; contact the vendor to make changes.',
       );
     }
-    assertPublicRetryAllowed(deployment);
+    await assertPublicRetryAllowed(db, deployment);
     const nextAttempt = deployment.attemptNumber + 1;
     const keepsConnector = retryKeepsConnector(deployment);
     const stackName = keepsConnector
@@ -3591,9 +3651,23 @@ export async function buildServer({
       return reply.redirect(`${env.webUrl}/sign-in?callbackUrl=${encodeURIComponent(target)}`);
     }
   };
+  // Starts an install: the signed state ties the GitHub install this browser
+  // is about to make to this session's organization (checked on the way back).
+  const githubStateSecret = env.betterAuthSecret ?? randomBytes(32).toString('hex');
+  app.get('/api/github/connect', { preHandler: requireAuth }, async (request, reply) => {
+    const installUrl = githubAppInstallUrl ?? env.githubAppInstallUrl;
+    if (!installUrl) {
+      throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
+    }
+    const organizationId = requireSessionOrganizationId(request);
+    const target = new URL(installUrl);
+    target.searchParams.set('state', createInstallState(githubStateSecret, organizationId, Date.now()));
+    return reply.redirect(target.toString());
+  });
   app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
-    const { installation_id: installationId } = request.query as {
+    const { installation_id: installationId, state } = request.query as {
       installation_id?: string | undefined;
+      state?: string | undefined;
     };
     // This GET writes a binding, which the support-mode guard (non-GET only)
     // cannot see.
@@ -3627,6 +3701,13 @@ export async function buildServer({
         request.log.warn({ installationId }, 'github setup refused: installation bound to another organization');
         return reply.redirect(`${dashboardUrl}?github=failed`);
       }
+      // Anyone can open this URL with an installation id they do not own. Only
+      // an install this organization started (valid state) can create a
+      // binding; re-visits of an existing own binding only refresh it.
+      if (existing === null && !verifyInstallState(githubStateSecret, state, organizationId, Date.now())) {
+        request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
+        return reply.redirect(`${dashboardUrl}?github=failed`);
+      }
 
       await githubStore.set({
         id: installationId,
@@ -3655,7 +3736,7 @@ export async function buildServer({
     const installations = await listInstallations(githubStore, organizationId, { fixtureMode });
     return {
       installations,
-      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) || null,
+      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
     };
   });
 
@@ -3717,11 +3798,20 @@ export async function buildServer({
   // client clear a currently-set value by sending `null`. For the boolean
   // requirement fields `null` means "reset to the detected value" (the columns
   // are NOT NULL, so the handler writes the detected value, never null).
+  // The relay rejects a migration command that is blank, over 4096
+  // characters or holds NUL (packages/relay/src/deploy.ts); refuse it here
+  // so a bad value does not fail the vendor's deploy late.
+  const repositoryCommandSchema = z
+    .string()
+    .refine((value) => value.trim().length > 0 && value.length <= 4096 && !value.includes('\0'), {
+      message: 'Command must be 1-4096 characters and contain no NUL character',
+    });
+
   const patchApplicationBodySchema = z.object({
     name: z.string().min(1).optional(),
     containerPort: z.number().int().nullish(),
     healthPath: z.string().nullish(),
-    migrationCommand: z.string().nullish(),
+    migrationCommand: repositoryCommandSchema.nullish(),
     // Reset to detected: the detected command, no vendor-override marker.
     // (A null migrationCommand is the vendor's "No separate migration".)
     resetMigrationCommand: z.literal(true).optional(),
@@ -3732,11 +3822,11 @@ export async function buildServer({
     defaultSizeProfile: infrastructureSizeTierSchema.optional(),
     minimumSizeProfile: infrastructureSizeTierSchema.optional(),
     // Phase 2 manifest overrides — stored on detected_metadata.manifestOverrides.
-    appRoot: z.string().nullish(),
-    dockerfilePath: z.string().nullish(),
-    buildContext: z.string().nullish(),
+    appRoot: repoRelativePathSchema.nullish(),
+    dockerfilePath: repoRelativePathSchema.nullish(),
+    buildContext: repoRelativePathSchema.nullish(),
     buildCommand: z.string().nullish(),
-    startCommand: z.string().nullish(),
+    startCommand: repositoryCommandSchema.nullish(),
   });
 
   const createCustomerBodySchema = z.object({
@@ -3809,8 +3899,10 @@ export async function buildServer({
     .strict();
 
   const createReleaseBodySchema = z.object({
-    version: z.string().min(1),
-    gitSha: z.string().min(1),
+    version: z
+      .string()
+      .regex(RELEASE_VERSION_PATTERN, 'Use letters, digits, ".", "_" and "-" only, up to 101 characters'),
+    gitSha: z.string().regex(/^[0-9a-f]{7,40}$/, 'gitSha must be 7-40 lowercase hexadecimal characters'),
   });
 
   const deployBodySchema = z.object({
@@ -4072,6 +4164,7 @@ export async function buildServer({
 
   // DELETE /api/applications/:id — Remove an application (only if it has zero deployments)
   app.delete('/api/applications/:id', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const app = await loadOwnedApplication(db, id, organizationId);
@@ -4370,6 +4463,7 @@ export async function buildServer({
   // and Purge on the deployment are the only paths that touch the customer's
   // AWS account, and they stay the vendor's explicit choice.
   app.delete('/api/customers/:id', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const customer = await loadOwnedCustomer(db, id, organizationId);
@@ -4767,7 +4861,7 @@ export async function buildServer({
           'This deployment installed successfully before; contact the vendor to make changes.',
         );
       }
-      assertPublicRetryAllowed(deployment);
+      await assertPublicRetryAllowed(db, deployment);
       const nextAttempt = deployment.attemptNumber + 1;
       const keepsConnector = retryKeepsConnector(deployment);
       const stackName = keepsConnector
@@ -4934,7 +5028,10 @@ export async function buildServer({
       const body = publicInstallConfirmBodySchema.parse(request.body);
       const token = firstHeaderValue(request.headers['x-deployz-token']);
       const result = await confirmPublicInstall(db, linkId, body, configDeps, token, templatePublisher);
-      return reply.code(result.created ? 201 : 200).send({ installLinkId: result.installLinkId });
+      return reply.code(result.created ? 201 : 200).send({
+        installLinkId: result.installLinkId,
+        installLinkToken: installLinkToken(result.installLinkId),
+      });
     },
   );
 
@@ -5102,7 +5199,7 @@ export async function buildServer({
       }
       throw error;
     }
-    return reply.code(201).send(deployment);
+    return reply.code(201).send({ ...deployment, installLinkToken: installLinkToken(deployment.installLinkId) });
   });
 
   // GET /api/regions — the region options for the "Create customer
@@ -5223,6 +5320,7 @@ export async function buildServer({
         const specComponents = specComponentsForStatus(row.deployment.specV2, derived.components, []);
         return {
           ...toFleetRow(derivedRow),
+          installLinkToken: installLinkToken(derivedRow.deployment.installLinkId),
           deploymentStatus: {
             ...toVendorDeploymentStatus(derived),
             ...(specComponents ? { specComponents } : {}),
@@ -5283,6 +5381,7 @@ export async function buildServer({
     const sizeProfile = resolveStoredInfrastructureSizeProfile(rows[0]!.deployment.desiredState);
     return {
       ...toFleetRow(derivedRow),
+      installLinkToken: installLinkToken(derivedRow.deployment.installLinkId),
       jobs: jobs.map((job) => ({ ...job, payload: redactClaimedPayload(job) ?? {} })),
       customDomain,
       appUrl,
@@ -5322,12 +5421,43 @@ export async function buildServer({
       );
     }
 
+    // One build at a time per application: a loop of release requests must
+    // not queue unlimited 60-minute privileged builds.
+    const building = await db
+      .select({ id: schema.releases.id })
+      .from(schema.releases)
+      .where(and(eq(schema.releases.applicationId, id), eq(schema.releases.releaseStatus, 'BUILDING')))
+      .limit(1);
+    if (building.length > 0) {
+      throw new ApiError(
+        409,
+        'RELEASE_BUILD_IN_PROGRESS',
+        'Another release of this application is still building. Wait until it finishes.',
+      );
+    }
+
+    // The release records the commit that was built, never a short prefix:
+    // a short sha is resolved to the full 40-character sha now.
+    const gitSha =
+      body.gitSha.length === 40
+        ? body.gitSha
+        : (githubFixtureMode ?? env.githubFixtureMode)
+          ? getFixtureCommit(body.gitSha).sha
+          : (
+              await getCommit(
+                parseRepoFullName(application.repoFullName),
+                body.gitSha,
+                await resolveCommitInstallationToken(application, organizationId),
+                githubFetch,
+              )
+            ).sha;
+
     const row = await createReleaseRecord(db, {
       organizationId,
       userId: request.user?.id ?? null,
       applicationId: id,
       version: body.version,
-      gitSha: body.gitSha,
+      gitSha,
     });
 
     return reply.code(201).send(row);
@@ -6000,6 +6130,7 @@ export async function buildServer({
 
   // POST /api/deployments/:id/destroy — Trigger (or reuse) a DESTROY job
   app.post('/api/deployments/:id/destroy', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const deployment = await loadOwnedDeployment(db, id, organizationId);
@@ -6357,6 +6488,7 @@ export async function buildServer({
     '/api/deployments/:id/disconnect/force-complete',
     { preHandler: requireAuth },
     async (request) => {
+      requireOwnerOrAdmin(request);
       const { id } = request.params as { id: string };
       requireUuidId(id);
       const organizationId = requireSessionOrganizationId(request);
@@ -6372,6 +6504,7 @@ export async function buildServer({
   // typed the deployment name in the dashboard to confirm; the relay
   // re-verifies ownership of every resource before deleting it.
   app.post('/api/deployments/:id/purge', { preHandler: requireAuth }, async (request, reply) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     requireUuidId(id);
     const organizationId = requireSessionOrganizationId(request);
@@ -6619,6 +6752,7 @@ export async function buildServer({
 
   // POST /api/deployments/:id/relay/reset — §14 re-enrollment.
   app.post('/api/deployments/:id/relay/reset', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request);
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const deployment = await loadOwnedDeployment(db, id, organizationId);
@@ -6900,10 +7034,10 @@ export async function buildServer({
   app.get('/api/deployments/:id/events', { preHandler: requireAuth }, async (request) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
+    const { limit, offset } = paginationQuerySchema.parse(request.query);
     await loadOwnedDeployment(db, id, organizationId);
-    const { limit, offset } = request.query as { limit?: string; offset?: string };
-    const take = Math.min(Number(limit ?? 50), 200);
-    const skip = Number(offset ?? 0);
+    const take = Math.min(limit ?? 50, 200);
+    const skip = offset ?? 0;
     // The newest events, returned oldest first: a long-lived deployment has
     // more than one page, and its latest activity must be on the first one.
     const rows = await db
@@ -6920,9 +7054,9 @@ export async function buildServer({
   app.get('/api/deployments/:id/stack-events', { preHandler: requireAuth }, async (request) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
+    const { limit } = paginationQuerySchema.parse(request.query);
     await loadOwnedDeployment(db, id, organizationId);
-    const { limit } = request.query as { limit?: string };
-    const take = Math.min(Number(limit ?? 100), 200);
+    const take = Math.min(limit ?? 100, 200);
     const rows = await db
       .select()
       .from(schema.deploymentStackEvents)
@@ -7631,6 +7765,9 @@ export async function buildServer({
       // baseURL Better Auth was configured with.
       const url = new URL(request.url, env.apiUrl);
       const headers = fromNodeHeaders(request.headers);
+      // Better Auth rate-limits on the first X-Forwarded-For entry, which the
+      // caller controls; hand it the trusted address instead.
+      headers.set('x-forwarded-for', request.ip);
       const init: RequestInit = {
         method: request.method,
         headers,
@@ -7685,6 +7822,14 @@ export async function buildServer({
       throw new ApiError(401, 'UNAUTHORIZED', 'Invalid relay credentials');
     }
     return deployment;
+  }
+
+  /** A DELETED deployment reads no configuration and reports no health. Its
+   *  relay keeps only the command channel, which a later PURGE needs. */
+  function requireNotDeleted(deployment: DeploymentRow): void {
+    if (deployment.state === 'DELETED') {
+      throw new ApiError(410, 'DEPLOYMENT_DELETED', 'This deployment was removed.');
+    }
   }
 
   /** The rotation grace header the relay sends while adopting a new token. */
@@ -8015,6 +8160,12 @@ export async function buildServer({
         'enrollmentCode and installationId are required',
       );
     }
+    if (
+      body.awsAccountId !== undefined &&
+      !relayIdentitySchema.shape.awsAccountId.safeParse(body.awsAccountId).success
+    ) {
+      throw new ApiError(400, 'INVALID_REQUEST', 'awsAccountId must be a 12-digit AWS account id');
+    }
     const capabilitiesParsed = relayCapabilitiesSchema.safeParse(body.capabilities);
 
     // The enrollment code — not the installation id — is what identifies the
@@ -8051,6 +8202,10 @@ export async function buildServer({
           'Only a bootstrap stack deployed from the install link can present the right token.',
         );
       }
+    }
+    const linkGate = installLinkGate(deployment);
+    if (linkGate) {
+      throw new ApiError(410, linkGate.code, linkGate.message);
     }
 
     if (deployment.enrollmentUsedAt !== null) {
@@ -8271,6 +8426,11 @@ export async function buildServer({
     // and surfaces later as the customer task's IMAGE_PULL_FAILED.
     if (installJob && typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
       await grantPullToCustomer(ecrGrantDeps, body.installationId!, body.awsAccountId);
+    }
+    // A retry or reset that minted a new installation id leaves the previous
+    // installation's grant behind; this re-enrollment replaces it.
+    if (deployment.previousInstallationId && deployment.previousInstallationId !== body.installationId) {
+      await revokePullFromCustomer(ecrGrantDeps, deployment.previousInstallationId);
     }
 
     return reply.code(200).send({ registered: true });
@@ -8687,7 +8847,7 @@ export async function buildServer({
         .where(
           and(
             eq(schema.deploymentJobs.id, id),
-            inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
+            eq(schema.deploymentJobs.state, 'RUNNING'),
           ),
         )
         .returning();
@@ -8696,6 +8856,17 @@ export async function buildServer({
       // force-completed/cancelled) must not flip the deployment state again or
       // recompute release pointers against a since-changed deployment row.
       if (updated.length === 0) {
+        // A job the relay never claimed cannot be settled by the relay. The
+        // relay keeps its settled marker and reports again after its next
+        // poll has claimed the job.
+        const [current] = await tx
+          .select({ state: schema.deploymentJobs.state })
+          .from(schema.deploymentJobs)
+          .where(eq(schema.deploymentJobs.id, id))
+          .limit(1);
+        if (current && ['REQUESTED', 'QUEUED', 'WAITING'].includes(current.state)) {
+          throw new ApiError(409, 'COMMAND_NOT_CLAIMED', 'The relay has not claimed this command.');
+        }
         alreadySettled = true;
         return;
       }
@@ -8762,7 +8933,7 @@ export async function buildServer({
       if (job.type === 'PURGE' && state === 'SUCCEEDED') {
         await tx
           .update(schema.deployments)
-          .set({ cleanupState: 'COMPLETE' })
+          .set({ cleanupState: 'COMPLETE', relayCredential: null, relayTokenHash: null })
           .where(eq(schema.deployments.id, deployment.id));
       }
       // A failed PURGE must NOT resurrect the deployment (never back to
@@ -8995,10 +9166,15 @@ export async function buildServer({
     }
 
     const now = new Date();
-    const insertedRows = await db
+    const [{ stored = 0 } = {}] = await db
+      .select({ stored: sql<number>`count(*)::int` })
+      .from(schema.deploymentStackEvents)
+      .where(eq(schema.deploymentStackEvents.jobId, job.id));
+    const newEvents = body.events.slice(0, Math.max(0, MAX_STACK_EVENTS_PER_JOB - stored));
+    const insertedRows = newEvents.length === 0 ? [] : await db
       .insert(schema.deploymentStackEvents)
       .values(
-        body.events.map((event) => ({
+        newEvents.map((event) => ({
           deploymentId: deployment.id,
           jobId: job.id,
           providerEventId: event.eventId,
@@ -9235,6 +9411,17 @@ export async function buildServer({
       token,
       oldRelayToken(request),
     );
+    requireNotDeleted(deployment);
+
+    if (
+      body.identity?.awsAccountId !== undefined &&
+      !relayIdentitySchema.shape.awsAccountId.safeParse(body.identity.awsAccountId).success
+    ) {
+      throw new ApiError(400, 'INVALID_REQUEST', 'identity.awsAccountId must be a 12-digit AWS account id');
+    }
+    if (JSON.stringify(body.observedState ?? {}).length > MAX_OBSERVED_STATE_CHARS) {
+      throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'observedState is too large');
+    }
 
     const healthStatusParsed = healthStatusSchema.safeParse(body.healthStatus);
     // Identity rides every heartbeat (token-authenticated), so a deployment
@@ -9582,6 +9769,7 @@ export async function buildServer({
       token,
       oldRelayToken(request),
     );
+    requireNotDeleted(deployment);
 
     // Phase 4: generated keys ride along as `generated: true` entries (no
     // value — the relay mints them inside the customer's account).

@@ -68,6 +68,7 @@ const fetchFn: RepositoryFetch = async (url, init) => {
     json: () => response.json(),
     arrayBuffer: () => response.arrayBuffer(),
     text: () => response.text(),
+    body: response.body,
   };
 };
 

@@ -291,6 +291,10 @@ describe('billing lifecycle', () => {
     expect(afterRequest.billingStoppedAt).not.toBeNull();
     const stoppedAt = afterRequest.billingStoppedAt;
 
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, jobId));
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${jobId}/result`,

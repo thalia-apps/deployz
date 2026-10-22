@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { createReadyRelease } from './seed-ready-manifest.js';
+import { fixtureSha } from './fixture-sha.js';
 
 // Environment variables setup (docs/environment-variables.md): the vendor
 // → customer → release lifecycle for one required
@@ -233,7 +234,7 @@ test('vendor configures a customer-provided secret, publishes an install link, a
   expect(settingsWrite.ok()).toBeTruthy();
 
   const blockedRelease = await page.request.post(`${API_URL}/api/applications/${application.id}/releases`, {
-    data: { version: `1.0.0-${suffix}`, gitSha: `sha-blocked-${suffix}` },
+    data: { version: `1.0.0-${suffix}`, gitSha: fixtureSha(`blocked-${suffix}`) },
   });
   expect(blockedRelease.status()).toBe(422);
   const blockedBody = (await blockedRelease.json()) as { error: { code: string } };
@@ -248,7 +249,7 @@ test('vendor configures a customer-provided secret, publishes an install link, a
   expect(buildValueWrite.ok()).toBeTruthy();
 
   const unblockedRelease = await page.request.post(`${API_URL}/api/applications/${application.id}/releases`, {
-    data: { version: `1.0.1-${suffix}`, gitSha: `sha-unblocked-${suffix}` },
+    data: { version: `1.0.1-${suffix}`, gitSha: fixtureSha(`unblocked-${suffix}`) },
   });
   expect(unblockedRelease.ok()).toBeTruthy();
 });

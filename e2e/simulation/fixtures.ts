@@ -17,6 +17,7 @@ import { expect, test as base, type APIRequestContext, type Page } from '@playwr
 import { createReadyRelease } from '../seed-ready-manifest.js';
 import { extractQuickCreateParam, startSimulatedRelay, type SimulatedRelayHandle } from './relay-harness.js';
 import { getScenario } from './scenarios/index.js';
+import { installLinkHeaders } from '../install-link.js';
 
 export const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -80,7 +81,9 @@ export function buildApi(request: APIRequestContext): DeployzApi {
       return (await response.json()) as Record<string, unknown>;
     },
     async getInstallInfo(installLinkId) {
-      const response = await request.get(`${API_URL}/api/install/${installLinkId}`);
+      const response = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    });
       if (!response.ok()) {
         throw new Error(`GET /api/install/${installLinkId} -> ${response.status()}`);
       }
@@ -326,7 +329,9 @@ async function seedAndLaunch(
   }
 
   // DZ-AUDIT-013: fetch the server-minted relay credential from the install page.
-  const installResponse = await request.get(`${API_URL}/api/install/${deployment.installLinkId}`);
+  const installResponse = await request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
+      headers: await installLinkHeaders(request, deployment.installLinkId),
+    });
   if (!installResponse.ok()) {
     throw new Error(`get install info failed: ${installResponse.status()}`);
   }
@@ -538,7 +543,9 @@ export const test = base.extend<{
       throw new Error(`get deployment detail failed: ${deploymentDetail.status()}`);
     }
     const { installLinkId } = (await deploymentDetail.json()) as { installLinkId: string };
-    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`);
+    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    });
     if (!installInfo.ok()) {
       throw new Error(`get install info failed: ${installInfo.status()}`);
     }

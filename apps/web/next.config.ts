@@ -10,6 +10,22 @@ const nextConfig: NextConfig = {
   // The dev-tools indicator badge renders bottom-left in dev mode and would
   // sit inside every visual-regression screenshot.
   devIndicators: false,
+  poweredByHeader: false,
+  // Script CSP is post-MVP; these headers stop framing and sniffing only.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
   // Emit .next/standalone: a self-contained server plus only the node_modules
   // it actually traced. This is what the container image ships, and it is why
   // the image does not need pnpm or the workspace at runtime.

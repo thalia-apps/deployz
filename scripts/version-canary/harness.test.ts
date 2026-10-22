@@ -1064,7 +1064,7 @@ describe('journey requests', () => {
         const sent = body as { planFingerprint: string; sizeProfile: string };
         const stale = sent.planFingerprint !== fingerprints[sent.sizeProfile];
         if (stale) return { status: confirmStale.status, body: { error: { code: confirmStale.code } }, headers: new Headers() };
-        return { status: 201, body: { installLinkId: 'link-1' }, headers: new Headers() };
+        return { status: 201, body: { installLinkId: 'link-1', installLinkToken: 'link-token-1' }, headers: new Headers() };
       }
       throw new Error(`unexpected request ${method} ${path}`);
     }) as never);
@@ -1093,7 +1093,7 @@ describe('journey requests', () => {
     const invite = calls.find((c) => c.path.endsWith('/invitations'))!;
     expect(invite.body).toEqual({ applicationId: 'app-1', recommendedRegion: 'us-east-1', recommendedSizeProfile: 'large' });
 
-    await expect(customerConfirmsChosenSize(canary, invitation, 'small')).resolves.toBe('link-1');
+    await expect(customerConfirmsChosenSize(canary, invitation, 'small')).resolves.toEqual({ installLinkId: 'link-1', installLinkToken: 'link-token-1' });
 
     const publicCalls = calls.filter((c) => c.path.startsWith('/api/public-install/'));
     expect(publicCalls.length).toBeGreaterThanOrEqual(5);

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 
 import { DeployLinkInvalidState } from '@/components/deploy-link-invalid-state';
 import { SecurityDetailsContent } from '@/components/security-details-content';
 import { fetchDeployLinkData } from '@/lib/deploy-link-flow';
+import { LINK_TOKEN_COOKIE } from '@/lib/link-token-cookie';
 
 // Rendered per request so the resolve is always fresh — same rule as the
 // /deploy page this hangs off.
@@ -17,18 +19,15 @@ export const metadata: Metadata = {
 // The Security Details sub-page of the tokenized deploy link: the same trust
 // story the install link serves, resolved through the same
 // x-deployz-token-header flow and failing closed exactly like /deploy. The
-// token is never rendered in page content — it only travels back to the
-// customer through the back link's query string, the convention the /deploy
-// page itself already uses.
+// token comes from the cookie the /deploy page set and is never rendered in
+// page content.
 export default async function DeploySecurityPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ publicId: string }>;
-  searchParams: Promise<{ token?: string }>;
 }) {
   const { publicId } = await params;
-  const { token } = await searchParams;
+  const token = (await cookies()).get(LINK_TOKEN_COOKIE)?.value;
 
   if (!token) {
     return <DeployLinkInvalidState reason="invalid" />;
@@ -43,7 +42,7 @@ export default async function DeploySecurityPage({
   return (
     <SecurityDetailsContent
       plan={result.data.plan}
-      backHref={`/deploy/${encodeURIComponent(publicId)}?token=${encodeURIComponent(token)}`}
+      backHref={`/deploy/${encodeURIComponent(publicId)}`}
       backLabel="Back to deployment"
     />
   );

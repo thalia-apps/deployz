@@ -169,7 +169,7 @@ export function PublicInstallFlow({ linkId, resolve, token, customerKnown = fals
       );
 
       if (result.ok) {
-        router.push(`/install/${result.installLinkId}`);
+        router.push(`/install/${result.installLinkId}#${result.installLinkToken}`);
         return;
       }
 

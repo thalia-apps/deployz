@@ -105,6 +105,14 @@ describe('deploy contract, busy gate and restart', () => {
     return row!.id;
   }
 
+  /** The relay claims a command by polling; a result is accepted only after that. */
+  async function claim(jobId: string): Promise<void> {
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, jobId));
+  }
+
   function post(path: string, body: unknown) {
     return app.inject({
       method: 'POST',
@@ -789,6 +797,7 @@ describe('deploy contract, busy gate and restart', () => {
     expect(first.statusCode, first.body).toBe(202);
     const { jobId: firstJobId } = first.json() as { jobId: string };
 
+    await claim(firstJobId);
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${firstJobId}/result`,
@@ -826,6 +835,7 @@ describe('deploy contract, busy gate and restart', () => {
     expect(first.statusCode, first.body).toBe(202);
     const { jobId: firstJobId } = first.json() as { jobId: string };
 
+    await claim(firstJobId);
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${firstJobId}/result`,
@@ -857,6 +867,7 @@ describe('deploy contract, busy gate and restart', () => {
     expect(replay.statusCode, replay.body).toBe(200);
     expect((replay.json() as { jobId: string }).jobId).toBe(firstJobId);
 
+    await claim(firstJobId);
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${firstJobId}/result`,
@@ -941,6 +952,7 @@ describe('deploy contract, busy gate and restart', () => {
           (j) => j.type === type && (j.payload as { releaseId?: string }).releaseId === releaseId,
         );
       if (!target) throw new Error(`no ${type} job for ${releaseId}`);
+      await claim(target.id);
       const response = await app.inject({
         method: 'POST',
         url: `/api/relay/commands/${target.id}/result`,
@@ -1000,6 +1012,7 @@ describe('deploy contract, busy gate and restart', () => {
       .select()
       .from(schema.deploymentJobs)
       .where(eq(schema.deploymentJobs.deploymentId, deployment.id));
+    await claim(job!.id);
     const failed = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${job!.id}/result`,

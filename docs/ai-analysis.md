@@ -23,6 +23,18 @@ behind the AI boundary are in `docs/decisions/README.md`.
 - Repository files, sample env files and error text are untrusted data. The
   prompts say so; secret-looking values are redacted before they leave the
   process; raw application logs are never collected.
+- **Repository commands are not sandboxed.** Deployz runs the migration,
+  worker and scheduled commands that the repository declares (a
+  `package.json` migrate script, a `Procfile` line, a `render.yaml` or
+  Kubernetes cron command). The rules that choose a migration script
+  (`selectMigrationScript`) protect data; they are not a command allowlist.
+  The default branch is trusted input: a command in it runs under `sh -c`
+  in the customer account with the privileges of the application container.
+  No boundary is crossed, but a contributor who can push to the default
+  branch can run a command the vendor never confirmed. The API refuses a
+  vendor-set migration or start command that is blank, longer than 4096
+  characters or holds a NUL character (the limits the relay applies). A
+  vendor confirmation step for auto-filled commands is a post-MVP item.
 
 ## The flow
 

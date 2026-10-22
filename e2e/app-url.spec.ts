@@ -8,6 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
 import { fetchInstallCredentials } from './simulation/relay-harness.js';
+import { installLinkToken } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -86,7 +87,7 @@ test('a successful INSTALL with an ALB endpoint shows a working link and copy bu
   // DZ-AUDIT-013: the relay presents the server-minted credential from the
   // Quick Create URL (a real relay reads it from the stack's secret), not an
   // arbitrary bearer token.
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
   const authHeaders = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {

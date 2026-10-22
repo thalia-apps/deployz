@@ -1,3 +1,4 @@
+import { DEPLOYZ_INSTALLATION_TAG } from '@deployz/contracts';
 import { describe, expect, it } from 'vitest';
 
 import type { RelayCommand } from './commands.js';
@@ -13,6 +14,7 @@ import {
 
 interface FakeCertificate {
   status: string;
+  tags?: Record<string, string>;
   validationRecord?: { name: string; value: string };
 }
 
@@ -44,6 +46,12 @@ class FakeAcmClient implements AcmClient {
     const cert = this.certificates.get(arn);
     if (!cert) throw new Error(`no fake certificate registered for ${arn}`);
     return cert;
+  }
+
+  async certificateTags(arn: string): Promise<Record<string, string> | undefined> {
+    const cert = this.certificates.get(arn);
+    if (!cert) return undefined;
+    return cert.tags ?? { [DEPLOYZ_INSTALLATION_TAG]: INSTALLATION_ID };
   }
 
   async deleteCertificate(arn: string): Promise<void> {
@@ -497,7 +505,23 @@ describe('createDomainExecutors — REMOVE_DOMAIN', () => {
 
     expect(result.success).toBe(true);
     expect(result.output).toEqual({ removed: true });
-    expect(acm.deleteCalls).toEqual(['arn:long-gone']);
+    expect(acm.deleteCalls).toEqual([]);
+  });
+
+  it('remove refuses a certificate that does not carry this installation tag', async () => {
+    const acm = new FakeAcmClient();
+    acm.certificates.set('arn:foreign', { status: 'ISSUED', tags: { [DEPLOYZ_INSTALLATION_TAG]: 'other' } });
+    acm.certificates.set('arn:untagged', { status: 'ISSUED', tags: {} });
+    const elb = new FakeElbClient();
+    elb.loadBalancer = undefined;
+
+    const executors = createDomainExecutors({ acm, elb, installationId: INSTALLATION_ID });
+    for (const certificateArn of ['arn:foreign', 'arn:untagged']) {
+      const result = await executors.REMOVE_DOMAIN(removeCommand({ certificateArn }));
+      expect(result.success).toBe(false);
+    }
+
+    expect(acm.deleteCalls).toEqual([]);
   });
 
   it('remove with cert in use but no listener change: fails immediately, no retry', async () => {

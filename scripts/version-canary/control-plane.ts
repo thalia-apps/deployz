@@ -372,8 +372,8 @@ export class ControlPlane {
     customerId: string;
     region: string;
     sizeProfile?: string;
-  }): Promise<{ id: string; installLinkId: string }> {
-    const { body } = await this.request<{ id: string; installLinkId: string }>('POST', '/api/deployments', {
+  }): Promise<{ id: string; installLinkId: string; installLinkToken: string }> {
+    const { body } = await this.request<{ id: string; installLinkId: string; installLinkToken: string }>('POST', '/api/deployments', {
       ...input,
       deploymentType: 'TEST',
     });
@@ -422,8 +422,8 @@ export class ControlPlane {
     token: string,
     input: PublicInstallConfirmInput,
     allowStatus: number[] = [],
-  ): Promise<{ status: number; body: { installLinkId?: string; error?: { code?: string } } }> {
-    const { status, body } = await this.request<{ installLinkId?: string; error?: { code?: string } }>(
+  ): Promise<{ status: number; body: { installLinkId?: string; installLinkToken?: string; error?: { code?: string } } }> {
+    const { status, body } = await this.request<{ installLinkId?: string; installLinkToken?: string; error?: { code?: string } }>(
       'POST',
       `/api/public-install/${linkId}/confirm`,
       input,
@@ -437,7 +437,7 @@ export class ControlPlane {
     return body;
   }
 
-  async getInstallInfo(installLinkId: string): Promise<{
+  async getInstallInfo(installLinkId: string, installLinkToken: string): Promise<{
     quickCreateUrl: string | null;
     bootstrapStackName: string;
     deploymentId: string;
@@ -448,7 +448,7 @@ export class ControlPlane {
       bootstrapStackName: string;
       deploymentId: string;
       alreadyInstalled: boolean;
-    }>('GET', `/api/install/${installLinkId}`);
+    }>('GET', `/api/install/${installLinkId}`, undefined, { headers: { 'x-deployz-token': installLinkToken } });
     return body;
   }
 

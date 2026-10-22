@@ -15,9 +15,12 @@ import { InstallRetryError, retryInstallAttempt } from '@/lib/install-data';
 // the connector stack that is already in the customer's account.
 export function InstallRetryButton({
   installLinkId,
+  token,
   deployLink = null,
 }: {
   installLinkId: string;
+  /** The install link token (the page URL fragment); the retry needs it. */
+  token?: string | undefined;
   /** Set on the /deploy page: the retry resolves through the deploy link
    *  (token header) instead of the install link. */
   deployLink?: DeployLinkToken | null;
@@ -33,7 +36,7 @@ export function InstallRetryButton({
       if (deployLink) {
         await retryDeployLinkAttempt(deployLink.publicId, deployLink.token);
       } else {
-        await retryInstallAttempt(installLinkId);
+        await retryInstallAttempt(installLinkId, token);
       }
       router.refresh();
     } catch (caught) {

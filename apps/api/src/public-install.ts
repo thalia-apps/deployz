@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { mintedEnvKeys } from '@deployz/analysis';
@@ -61,6 +61,13 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 /** How long a freshly minted targeted invitation stays valid. */
 export const DEFAULT_INVITATION_TTL_DAYS = 30;
+
+/**
+ * How many deployments one reusable public link may create per day. The link
+ * is anonymous, so the cap bounds the customer rows, templates and vendor
+ * billing an abuser can cause. A vendor who needs more regenerates the link.
+ */
+export const PUBLIC_LINK_DAILY_CONFIRM_LIMIT = 50;
 
 // The invitation.opened event is throttled in memory — the schema has no
 // last-used column to throttle on (deploy-links.ts writes last_used_at; here
@@ -514,6 +521,26 @@ export async function confirmPublicInstall(
   // two concurrent different-key confirms still admit exactly one deployment.
   if (link.customerId !== null && link.confirmedAt !== null) {
     throw new ApiError(410, 'PUBLIC_INSTALL_LINK_USED', 'This installation link has already been used.');
+  }
+
+  if (link.customerId === null) {
+    const recent = await db
+      .select({ id: schema.deployments.id })
+      .from(schema.deployments)
+      .where(
+        and(
+          eq(schema.deployments.publicInstallLinkId, link.id),
+          gte(schema.deployments.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+        ),
+      )
+      .limit(PUBLIC_LINK_DAILY_CONFIRM_LIMIT);
+    if (recent.length >= PUBLIC_LINK_DAILY_CONFIRM_LIMIT) {
+      throw new ApiError(
+        429,
+        'PUBLIC_INSTALL_LIMIT_REACHED',
+        'This installation link has reached its daily limit. Try again tomorrow.',
+      );
+    }
   }
 
   // PRODUCTION deployments require an ACTIVE subscription — the same gate as

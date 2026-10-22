@@ -65,7 +65,7 @@ export interface AdminRouteDeps {
 /** requireTeamAdmin guarantees request.user/sessionId are set before any handler here runs. */
 function requireActor(request: FastifyRequest): Actor {
   const user = request.user!;
-  return { id: user.id, name: user.name, email: user.email };
+  return { id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified };
 }
 
 /** Admin detail routes 404 on a malformed id rather than let it reach the
