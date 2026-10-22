@@ -6,30 +6,37 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { apiRequest, errorMessage } from '@/lib/api-client';
+import { VerifyEmailPrompt } from '@/components/verify-email-prompt';
+import { ApiRequestError, apiRequest, errorMessage } from '@/lib/api-client';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/organization-vocabulary';
 
 // §41 screen 18 team management — invite by email. Owner/admin only
 // (enforced by the caller). Shows the server's message for 409
 // ALREADY_MEMBER / ALREADY_INVITED as-is (§65).
-export function InviteMemberForm() {
+export function InviteMemberForm({ userEmail }: { userEmail: string }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNeedsVerification(false);
     try {
       await apiRequest('/api/organization/invitations', { method: 'POST', body: { email, role } });
       setEmail('');
       setRole('member');
       router.refresh();
     } catch (err) {
-      setError(errorMessage(err));
+      if (err instanceof ApiRequestError && err.code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerification(true);
+      } else {
+        setError(errorMessage(err));
+      }
     } finally {
       setPending(false);
     }
@@ -75,6 +82,7 @@ export function InviteMemberForm() {
           Send invitation
         </Button>
       </div>
+      {needsVerification ? <VerifyEmailPrompt email={userEmail} /> : null}
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}

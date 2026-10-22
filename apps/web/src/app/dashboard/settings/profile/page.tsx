@@ -5,6 +5,7 @@ import { DeleteAccount } from '@/components/delete-account';
 import { PasswordForm } from '@/components/password-form';
 import { ProfileForm } from '@/components/profile-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { VerifyEmailPrompt } from '@/components/verify-email-prompt';
 import { fetchMe, fetchMyInvitations } from '@/lib/me';
 
 // Account screen: display name (editable), sign-in email (read-only),
@@ -34,6 +35,7 @@ export default async function ProfilePage() {
               Your sign-in address. It cannot be changed here.
             </p>
           </div>
+          {me.user.emailVerified ? null : <VerifyEmailPrompt email={me.user.email} />}
           <ProfileForm name={me.user.name} />
         </CardContent>
       </Card>

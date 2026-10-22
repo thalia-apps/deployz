@@ -61,7 +61,7 @@ export default async function MembersPage() {
             <CardTitle>Invite someone</CardTitle>
           </CardHeader>
           <CardContent>
-            <InviteMemberForm />
+            <InviteMemberForm userEmail={me?.user.email ?? ''} />
           </CardContent>
         </Card>
       ) : null}
