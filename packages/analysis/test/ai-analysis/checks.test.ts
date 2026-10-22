@@ -211,6 +211,24 @@ describe('checkFact', () => {
     expect(checkFact(db, migration, fact('q8', JSON.stringify({ mode: 'pre_deploy', command: 'python3 manage.py collectstatic' }), { evidence })).ok).toBe(false);
   });
 
+  it('databaseVariable: a cited production line reads it, and its name says it holds a whole URL or JDBC URL', () => {
+    const question: Question = { id: 'q5', kind: 'fact', fact: 'databaseVariable', windows: [] };
+    const files: FileTree = {
+      'config/runtime.exs': 'db_url = System.fetch_env!("DB_URL")\ndb_host = System.get_env("DB_HOST")\n# DB_URL is required',
+      '.env.example': 'DB_URL=',
+    };
+    const base = contextOf({ ...tree, ...files });
+    const lines = (path: string) => ({ path, start: 1, lines: files[path]!.split('\n') });
+    const db = { ...base, pack: { ...base.pack, startPath: [...base.pack.startPath, lines('config/runtime.exs'), lines('.env.example')] }, database: 'postgres' as const };
+    expect(checkFact(db, question, fact('q5', 'DB_URL', { evidence: cite('config/runtime.exs', 1, 'System.fetch_env!("DB_URL")') })).ok).toBe(true);
+    expect(checkFact(db, question, fact('q5', 'DB_HOST', { evidence: cite('config/runtime.exs', 2, 'System.get_env("DB_HOST")') })).reasons).toEqual([
+      'DB_HOST does not name a database URL or JDBC URL',
+    ]);
+    expect(checkFact(db, question, fact('q5', 'DB_URL', { evidence: cite('config/runtime.exs', 3, 'DB_URL is required') })).ok).toBe(false);
+    expect(checkFact(db, question, fact('q5', 'DB_URL', { evidence: cite('.env.example', 1, 'DB_URL=') })).ok).toBe(false);
+    expect(checkFact(db, question, fact('q5', 'not a name')).reasons).toEqual(['not a name is not a valid databaseVariable']);
+  });
+
   it('migration: arguments added to a package script must be shown by a cited line', () => {
     const migration: Question = { id: 'q8', kind: 'fact', fact: 'migration', windows: [] };
     const scripts = contextOf(tree);

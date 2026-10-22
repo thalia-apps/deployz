@@ -7,13 +7,14 @@
  */
 import type { AnalysisResult } from '../analyser.js';
 import type { AiGateway, TokenUsage } from '../ai-gateway.js';
-import type { FileTree } from '../detectors.js';
+import { TREE_PATHS, type FileTree } from '../detectors.js';
 import { ANALYST_PROMPT_VERSION, ANALYST_TIMEOUT_MS, runAnalyst, type AnalystOutput } from './analyst.js';
 import { checkAnswers } from './checks.js';
 import { buildEvidencePack } from './evidence-pack.js';
 import { mergeAiAnswers, type MergeResult } from './merge.js';
 
 export { ANALYST_PROMPT_VERSION } from './analyst.js';
+export { evidenceFileRequests } from './evidence-pack.js';
 export type { AnalystOutput, BlockerAnswer, Evidence, FactAnswer } from './analyst.js';
 export type { AnswerCheck } from './checks.js';
 export type { EvidencePack, Question } from './evidence-pack.js';
@@ -54,13 +55,20 @@ export interface AiAnalysisOutcome {
   readonly report: AiAnalysisReport;
 }
 
+/**
+ * `evidenceFiles` are the files of `evidenceFileRequests` that the caller
+ * fetched: the pack and the checks read them, the merge re-runs the rules on
+ * the rules tree only.
+ */
 export async function runAiAnalysis(
-  input: { tree: FileTree; rules: AnalysisResult; gateways: AiAnalysisGateways },
+  input: { tree: FileTree; rules: AnalysisResult; gateways: AiAnalysisGateways; evidenceFiles?: FileTree | undefined },
   options: { abortSignal?: AbortSignal | undefined } = {},
 ): Promise<AiAnalysisOutcome> {
   const started = Date.now();
   const { tree, rules } = input;
-  const pack = buildEvidencePack(tree, rules);
+  const evidenceTree: FileTree = { ...tree, ...input.evidenceFiles };
+  Object.defineProperty(evidenceTree, TREE_PATHS, { value: (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS], enumerable: false });
+  const pack = buildEvidencePack(evidenceTree, rules);
 
   let answers: AnalystOutput = { blockers: [], facts: [] };
   let analyst: CallRecord | null = null;
@@ -75,8 +83,8 @@ export async function runAiAnalysis(
   const meta = rules.metadata;
   const database = (meta['postgres'] as { required?: unknown } | undefined)?.required === true ? 'postgres' : (meta['mysql'] as { required?: unknown } | undefined)?.required === true ? 'mysql' : 'none';
   const dockerfile = typeof meta['dockerfilePath'] === 'string' ? meta['dockerfilePath'] : null;
-  const checks = checkAnswers({ pack, tree, dockerfile, database }, answers.blockers, answers.facts);
-  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks });
+  const checks = checkAnswers({ pack, tree: evidenceTree, dockerfile, database }, answers.blockers, answers.facts);
+  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks, evidenceFiles: input.evidenceFiles });
   return {
     merge,
     report: {

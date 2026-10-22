@@ -23,6 +23,7 @@ import {
   collectUnresolvedQuestions,
   deriveAmbiguities,
   detectDeclaredWorkerCommands,
+  evidenceFileRequests,
   dockerfileWorkdirs,
   isDevToolCommand,
   listDockerfileCandidates,
@@ -42,6 +43,7 @@ import { ApiError } from './errors.js';
 import { recordEvent } from './events.js';
 import { effectiveReadinessReport } from './fix-instructions.js';
 import {
+  fetchFilesForAnalysis,
   fetchHeadSha,
   getFileTreeForAnalysis,
   mintInstallationToken,
@@ -403,7 +405,11 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // applies on its own; a migration command may cite the script it runs; a
 // startup migration may cite Flyway or Liquibase in a Spring Boot build.
 // Stored v63 rows ask the vendor for those facts.
-export const ANALYSIS_VERSION = 64;
+// Version 65 (AI evidence files, prompt v16): the AI pack also reads the boot
+// code and the named source files that the rules tree does not hold (C#,
+// Java, Elixir, PHP, Rust), and the AI names the variable the app reads its
+// database connection from. Stored v64 rows keep those questions open.
+export const ANALYSIS_VERSION = 65;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -517,7 +523,7 @@ export async function runApplicationAnalysis(
     const analysis = analyseRepo(tree);
     // AI-first Analysis: `shadow` records the AI result next to the rules;
     // `ai` uses it. Any AI failure falls back to the rules path below.
-    const aiRun = engine === 'rules' ? null : await runAiEngine(deps.aiAnalysis, tree, analysis);
+    const aiRun = engine === 'rules' ? null : await runAiEngine(deps.aiAnalysis, tree, analysis, evidenceFileLoader(deps, application, realModeToken));
     const aiMerge = engine === 'ai' ? (aiRun?.merge ?? null) : null;
     // §15 AI fallback: only runs when the deterministic scanner left a real
     // question unresolved, and can never fail the analysis — any AI error
@@ -839,6 +845,17 @@ async function fetchTreeForApplication(
   });
 }
 
+/** Fetches the AI evidence files of the analysed commit; null in fixture mode, where the tree is all there is. */
+function evidenceFileLoader(
+  deps: AnalysisRunnerDeps,
+  application: ApplicationRow,
+  realModeToken: string | undefined,
+): ((paths: readonly string[]) => Promise<FileTree>) | null {
+  if (deps.githubFixtureMode || !realModeToken) return null;
+  const ref = { ...parseRepoFullName(application.repoFullName), branch: application.defaultBranch };
+  return (paths) => fetchFilesForAnalysis(ref, realModeToken, deps.fetchFn, paths);
+}
+
 // ── §15 AI repository-analysis fallback ─────────────────────────────────────
 
 /** The deterministic facts `RepositoryAiInput.detected` needs, read off `analysis.metadata`. */
@@ -897,11 +914,15 @@ async function runAiEngine(
   gateways: AiAnalysisGateways | undefined,
   tree: FileTree,
   analysis: AnalysisResult,
+  loadFiles: ((paths: readonly string[]) => Promise<FileTree>) | null,
 ): Promise<{ merge: MergeResult | null; record: Record<string, unknown> }> {
   const startedAt = Date.now();
   if (!gateways) return { merge: null, record: { status: 'fallback', reason: 'not_configured' } };
   try {
-    const outcome = await runAiAnalysis({ tree, rules: analysis, gateways }, { abortSignal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS) });
+    const requested = loadFiles === null ? [] : evidenceFileRequests(tree, analysis);
+    // An unreadable evidence file only narrows the windows; it never stops the AI Analysis.
+    const evidenceFiles = requested.length > 0 && loadFiles !== null ? await loadFiles(requested).catch(() => ({})) : {};
+    const outcome = await runAiAnalysis({ tree, rules: analysis, gateways, evidenceFiles }, { abortSignal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS) });
     return { merge: outcome.merge, record: { status: 'ok', ...outcome.report, generatedAt: new Date().toISOString() } };
   } catch (error) {
     const reason = error instanceof Error ? error.name : 'unknown';

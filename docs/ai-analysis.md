@@ -279,15 +279,36 @@ is final.
     application service in the production Compose file.
   - A fact that the rules did not resolve: no port, no start command, no
     health path (`vendor_required`: a health handler whose route was not
-    resolved), no Dockerfile or a tied choice, or an
-    unknown migration mode for a required database.
+    resolved), no Dockerfile or a tied choice, an
+    unknown migration mode for a required database, or no variable that the
+    app reads its required database connection from (the
+    `database-connection-unverified` case: no binding name is read with
+    evidence).
   - A repository with no open item makes no model call.
+- **Evidence files** (`evidenceFileRequests`): the rules tree fetches only
+  some source languages (TypeScript, JavaScript, Python, Ruby, Go) and at
+  most 200 files. For a repository with an open item, the API also fetches
+  up to 40 production files that the tree does not hold: the boot files
+  (`Program.cs`, `*Startup.cs`, `*Application.java`, `main.rs`,
+  `application.ex`, `config/runtime.exs`, `index.php`, `appsettings.json`)
+  and the files named after each question (a migration manager or runner,
+  `DatabaseManager`, `release_tasks`, an installer; health controllers and
+  routes; configuration and storage files). A numbered migration file, a
+  test, an example and a browser file are never fetched. The pack and the
+  checks read these files; the rules and the merge re-run never see them,
+  so a rules value cannot change because of them. An unreadable file only
+  narrows the windows.
 - **Evidence pack** (`evidence-pack.ts`): the selected Dockerfile and the
   scripts it starts (the start path, shown once), then one small evidence
   window for each question. A window holds the lines around the best search
   hits (8 lines before and after) with their repository line numbers. A hit
   that reads an environment variable ranks first; for a health path a quoted
-  health route ranks first, and a browser-side router ranks last. Start and
+  health route ranks first, and a browser-side router ranks last. For a
+  migration, a hit in a start file ranks first, then a call that runs the
+  migrations (`MigrateMaster(install)`, `databaseManager.Install()`, a boot
+  `ensureSchema()`), and an import, a comment or a namespace line ranks
+  last. For the database variable, a line that reads the environment ranks
+  first. Start and
   migration questions also get the `scripts` block of `package.json`.
   Limits: 8,000 characters for the start path, 8,000 for each question,
   40,000 for the pack. The pack starts with the Deployz binding contract
@@ -295,7 +316,7 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 15): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 16): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
@@ -336,6 +357,12 @@ is final.
     adds arguments to a package script (`npm run alteration deploy`) needs
     a cited line that shows those arguments; the AI can invent an argument
     or leave out a required one, and then the migration fails.
+  - Database variable: a cited production source line reads the variable
+    (an environment read or a `${NAME}` interpolation; never an env sample,
+    a Compose file or a document), and the name says that it holds a whole
+    connection: a URL (`DB_URL`, `*_DSN`, `*_DB_URI`) or a JDBC URL. A part
+    (`DB_HOST`) or a name without a known format (`BTCPAY_POSTGRES`, a
+    driver connection string) fails: Deployz cannot set its value.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the
@@ -354,7 +381,19 @@ is final.
   never READY, because it can stop the start (Logto refuses to start until
   its database alterations are deployed). Its fix class is CODE_CHANGE (a
   change to verify, outcome 2); a migration question that the rules ask
-  with a known candidate command stays SETTING.
+  with a known candidate command stays SETTING. A passing database variable
+  becomes a `deployz_managed` variable and a `postgres` binding (`url` or
+  `jdbc_url`), the same as an alias that the rules read in code, so Deployz
+  sets it and `database-connection-unverified` is gone. An unknown one
+  keeps that vendor question.
+  - A `required` answer keeps the rules fix class. A required datastore is
+    already a CAPABILITY_GAP (outcome 3). Durable local state and a second
+    Compose service stay CODE_CHANGE (outcome 2) also when the AI says
+    `required`: the app can move its data to S3 or the database, or drop
+    the service. The live exam confirms it: the AI says `required` for the
+    local state of healthy apps (new-18, new-7) and of apps whose reviewed
+    change makes them deployable (new-21, repo-050, new-8). A CAPABILITY_GAP
+    there would be a wrong "not deployable".
 - **Fallback:** an unconfigured gateway, an outage, a timeout (240 s for
   the whole run), a schema failure or a spend-limit error stores
   `aiEngine: {status: 'fallback', reason}` and the rules result is used.

@@ -2,7 +2,7 @@ import type { z } from 'zod';
 
 import type { AiGateway, AiGatewayResponse, AiGenerateOptions } from '../../src/ai-gateway.js';
 import type { BlockerAnswer, FactAnswer } from '../../src/ai-analysis/analyst.js';
-import type { FileTree } from '../../src/detectors.js';
+import { TREE_PATHS, type FileTree } from '../../src/detectors.js';
 
 export const cite = (path: string, line: number, quote: string) => [{ path, line, quote }];
 
@@ -82,3 +82,24 @@ export const MONGO_DECLARED_ONLY: FileTree = {
   'src/index.js': HEALTHY_INDEX,
   'docker-compose.yml': ['services:', '  app:', '    build: .', '    ports:', '      - "3000:3000"', '  mongodb:', '    image: mongo:7', ''].join('\n'),
 };
+
+/**
+ * An Elixir release with a required PostgreSQL database. The rules tree holds
+ * the Dockerfile, mix.exs and the Compose file; the boot code and the runtime
+ * configuration (`ELIXIR_SOURCES`) are only in the repository path list.
+ */
+export const ELIXIR_SOURCES: FileTree = {
+  'lib/app/application.ex': ['defmodule App.Application do', '  use Application', '  # Runs the migrations', '  def start(_type, _args) do', '    App.ReleaseTasks.migrate()', '  end', 'end'].join('\n'),
+  'config/runtime.exs': ['import Config', 'if config_env() == :prod do', '  db_url = System.fetch_env!("DB_URL")', '  db_host = System.get_env("DB_HOST")', '  config :app, App.Repo, url: db_url', '  config :app, App.Mailer, relay: Util.fetch_env!("MAILER_HOST", all: "localhost")', 'end'].join('\n'),
+};
+
+export function elixirPostgres(): FileTree {
+  const tree: FileTree = {
+    Dockerfile: ['FROM elixir:1.18-alpine AS build', 'COPY . .', 'RUN mix release', 'FROM alpine:3.20', 'COPY --from=build /app/_build/prod/rel/app /app', 'ENV PORT=4000', 'EXPOSE 4000', 'CMD ["/app/bin/app", "start"]'].join('\n'),
+    'mix.exs': ['defmodule App.MixProject do', '  defp deps do', '    [{:ecto_sql, "~> 3.10"}, {:postgrex, "~> 0.17"}]', '  end', 'end'].join('\n'),
+    'docker-compose.yml': ['services:', '  app:', '    build: .', '  db:', '    image: postgres:16'].join('\n'),
+  };
+  const unfetched = [...Object.keys(ELIXIR_SOURCES), 'priv/repo/migrations/20200101_init.exs', 'test/app_test.exs', 'assets/js/app.js'];
+  Object.defineProperty(tree, TREE_PATHS, { value: [...Object.keys(tree), ...unfetched], enumerable: false });
+  return tree;
+}

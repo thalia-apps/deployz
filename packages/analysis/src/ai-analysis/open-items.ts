@@ -5,17 +5,19 @@
  *   needs the item (an unsupported datastore, durable local state, a second
  *   application service in the production Compose file).
  * - A fact that the rules did not resolve: no port, no start command, no
- *   health path, no Dockerfile or a tied choice, or an unknown migration for a
- *   required database.
+ *   health path, no Dockerfile or a tied choice, an unknown migration for a
+ *   required database, or no variable that the app reads its required database
+ *   connection from.
  *
  * Every other rules value is final for the AI engine. A repository with no
  * open item makes no model call.
  */
 import type { AnalysisResult } from '../analyser.js';
 import { listDockerfileCandidates, type FileTree } from '../detectors.js';
+import { databaseConnectionUnverified } from '../manifest.js';
 
 export type BlockerCategory = 'datastore' | 'local_state' | 'compose_service';
-export const OPEN_FACTS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'migration'] as const;
+export const OPEN_FACTS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'migration', 'databaseVariable'] as const;
 export type OpenFact = (typeof OPEN_FACTS)[number];
 
 /** The dependency of the local-state finding that the manifest reads from `usesLocalFilesystem`. */
@@ -108,6 +110,7 @@ export function collectOpenItems(tree: FileTree, rules: AnalysisResult): OpenIte
     startCommand: !Array.isArray(meta['startupCommands']) || meta['startupCommands'].length === 0,
     healthPath: meta['healthMode'] === 'vendor_required',
     migration: database && meta['migrationMode'] === 'unknown',
+    databaseVariable: database && databaseConnectionUnverified(meta),
   };
   for (const fact of OPEN_FACTS) if (open[fact]) items.push({ kind: 'fact', fact });
   return items;

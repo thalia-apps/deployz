@@ -4961,7 +4961,7 @@ const LOCATION_SUFFIX_REGEX = /_(?:URI|URL|ENDPOINT|HOST|PUBLIC_KEY|PUBLISHABLE_
 const TOKEN_QUANTITY_REGEX = /(?:^|_)(?:MAX|MIN|NUM)_TOKENS(?=_|$)|(?:^|_)TOKENS_(?:LIMIT|PER)(?=_|$)|_TOKEN_(?:LIMIT|COUNT|BUDGET|MAX|MIN)(?=_|$)/gi;
 
 /** Name-based credential heuristic — value-free, so it can never leak anything. */
-function isSecretName(key: string): boolean {
+export function isSecretName(key: string): boolean {
   return (
     SECRET_NAME_REGEX.test(key.replace(TOKEN_QUANTITY_REGEX, '_')) && !LOCATION_SUFFIX_REGEX.test(key)
   );

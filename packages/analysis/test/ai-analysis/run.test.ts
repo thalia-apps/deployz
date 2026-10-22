@@ -4,7 +4,8 @@ import { analyseRepo } from '../../src/analyser.js';
 import { SpendLimitExceededError, type AiGateway } from '../../src/ai-gateway.js';
 import { ANALYST_PROMPT_VERSION, parseAnalysisEngine, runAiAnalysis } from '../../src/ai-analysis/index.js';
 import type { FileTree } from '../../src/detectors.js';
-import { blocker, cite, fakeGateway, MONGO_OR_POSTGRES, toWire } from './helpers.js';
+import { databaseConnectionUnverified } from '../../src/manifest.js';
+import { blocker, cite, ELIXIR_SOURCES, elixirPostgres, fact, fakeGateway, MONGO_OR_POSTGRES, toWire } from './helpers.js';
 
 const resolved: FileTree = {
   Dockerfile: ['FROM node:20', 'EXPOSE 3000', 'CMD ["node", "src/index.js"]'].join('\n'),
@@ -48,6 +49,38 @@ describe('runAiAnalysis', () => {
     const { merge, report } = await runAiAnalysis(inputOf(MONGO_OR_POSTGRES, analyst));
     expect(report.failedChecks).toBe(1);
     expect(merge.analysis.metadata['unsupportedReasons']).toHaveLength(1);
+  });
+
+  it('reads the fetched evidence files: a startup migration and the database variable they show enter the analysis', async () => {
+    const tree = elixirPostgres();
+    const answers = [
+      fact('q1', JSON.stringify({ mode: 'startup', command: null }), { evidence: cite('lib/app/application.ex', 5, 'App.ReleaseTasks.migrate()') }),
+      fact('q2', 'DB_URL', { evidence: cite('config/runtime.exs', 3, 'System.fetch_env!("DB_URL")') }),
+    ];
+    const analyst = fakeGateway(toWire([], answers));
+    const { merge, report } = await runAiAnalysis({ ...inputOf(tree, analyst), evidenceFiles: ELIXIR_SOURCES });
+    expect(analyst.prompts[0]).toContain('config/runtime.exs');
+    expect(report.failedChecks).toBe(0);
+    expect(merge.analysis.metadata['migrationMode']).toBe('startup');
+    expect(merge.analysis.metadata['infrastructureBindings']).toContainEqual({ resource: 'postgres', semantic: 'url', applicationVariable: 'DB_URL', source: 'ai', confidence: 'high' });
+    expect(databaseConnectionUnverified(merge.analysis.metadata)).toBe(false);
+    expect(databaseConnectionUnverified(analyseRepo(tree).metadata)).toBe(true);
+    // Without the files the answers cite nothing the pack shows.
+    const { report: without } = await runAiAnalysis(inputOf(tree, fakeGateway(toWire([], answers))));
+    expect(without.failedChecks).toBe(2);
+  });
+
+  it('a variable that an evidence file reads with no default is required, also when every answer is unknown', async () => {
+    const tree = elixirPostgres();
+    const unknown = fakeGateway(toWire([], [fact('q1', null), fact('q2', null)]));
+    const { merge } = await runAiAnalysis({ ...inputOf(tree, unknown), evidenceFiles: ELIXIR_SOURCES });
+    const model = merge.analysis.metadata['envVarModel'] as Array<Record<string, unknown>>;
+    expect(model).toContainEqual(expect.objectContaining({ key: 'MAILER_HOST', required: true, classification: 'customer_required', source: ['read in config/runtime.exs'] }));
+    // A database URL that the app requires becomes a binding, as the rules make it for a name they read.
+    expect(model).toContainEqual(expect.objectContaining({ key: 'DB_URL', classification: 'deployz_managed' }));
+    expect(merge.analysis.metadata['infrastructureBindings']).toContainEqual(expect.objectContaining({ applicationVariable: 'DB_URL', semantic: 'url' }));
+    // DB_HOST has a default (System.get_env), so it is not required.
+    expect(model.some((entry) => entry['key'] === 'DB_HOST')).toBe(false);
   });
 
   it('rejects when the gateway throws, the answer fails the schema, or a call uses more tokens than its budget', async () => {

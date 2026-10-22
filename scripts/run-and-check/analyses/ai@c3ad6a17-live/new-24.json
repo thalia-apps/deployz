@@ -1,0 +1,155 @@
+{
+  "id": "new-24",
+  "commit": "77d112f365e210ebdfa2f9790c8202a0e3b1c74e",
+  "analyser": "ai@c3ad6a17-live",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "dotnet",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"dotnet\", \"Nop.Web.dll\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0713988,
+        "promptTokens": 15455,
+        "completionTokens": 515
+      },
+      "latencyMs": 7858
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7859,
+    "questions": 2,
+    "generatedAt": "2026-10-22T09:01:25.032Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
