@@ -4,6 +4,9 @@ source:
   kind: git
   repository: dani-garcia/vaultwarden
   commit: a6c3bd6d1826fb527822df4a2655f34fd440d7d4
+outcomePatch:
+  environment: { I_REALLY_WANT_VOLATILE_STORAGE: "true" }
+  reason: "In a container without a volume, Vaultwarden exits with 'No persistent volume!' unless I_REALLY_WANT_VOLATILE_STORAGE is set (src/main.rs:487-496). The database is PostgreSQL. The data folder (RSA key, attachments, sends) is local state: the s3 feature (Cargo.toml:42) moves it to S3 with a build change."
 notes:
   - Root Dockerfile (Rust build with sqlite, mysql and postgresql). No vendor input. Every setting in src/config.rs has a default or is optional.
   - build.rs reads the version from git, and ignores the error when git is not there. No build argument is given.

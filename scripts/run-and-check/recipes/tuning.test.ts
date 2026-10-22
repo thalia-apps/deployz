@@ -47,8 +47,8 @@ const TUNING_IDS = [
   'new-19',
 ] as const;
 
-// The reviewed truths (`healthPath`, `localState`, `setupWizard`) are read by the claim check and the full run only, never by the Analysis.
-const RECIPE_KEYS = ['id', 'set', 'source', 'build', 'vendorInputs', 'databaseEngine', 'smoke', 'healthPath', 'localState', 'setupWizard', 'notes'];
+// The reviewed truths (`outcomePatch`, `healthPath`, `localState`, `setupWizard`) are read by the claim check and the full run only, never by the Analysis.
+const RECIPE_KEYS = ['id', 'set', 'source', 'build', 'vendorInputs', 'databaseEngine', 'smoke', 'outcomePatch', 'healthPath', 'localState', 'setupWizard', 'notes'];
 
 const recipesDir = dirname(fileURLToPath(import.meta.url));
 

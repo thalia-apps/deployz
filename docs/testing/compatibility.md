@@ -160,8 +160,17 @@ database. A person reviews each recipe.
 An optional `outcomePatch` holds the reviewed change that makes an
 application deployable with Deployz when it is not deployable as it is:
 environment values that the vendor sets (for example the variable that
-selects PostgreSQL instead of an embedded store) and the reason. It is the
-truth for outcome 2. Add a patch only after a person reviews it.
+selects PostgreSQL instead of an embedded store) and the reason. The reason
+also names a repository change or a vendor answer that the full run does
+not apply (a migration command, a port, a database binding), with the
+repository lines and the full run log line that show it. Then
+`environment` can be empty. It is the truth for outcome 2. Add a patch only
+after a person reviews it. A full run that fails is not outcome 3 when such
+a change removes the cause: a driver class or dialect that the image sets
+(new-23), a start command or start arguments (new-29, new-16), a build
+output that the Dockerfile does not make (repo-013), a runtime that a
+dependency does not support (repo-016), a port conflict with a variable
+that Deployz sets (new-15).
 
 Three more optional reviewed fields record a truth that one start of the
 application cannot show. Only the claim check and the full run read them;
