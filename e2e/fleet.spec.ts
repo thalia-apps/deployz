@@ -398,7 +398,7 @@ test('a new release marks a HEALTHY deployment "Update available" on the fleet l
 
   const releaseResponse = await page.request.post(
     `${API_URL}/api/applications/${applicationId}/releases`,
-    { data: { version: '1.0.0', gitSha: 'e2e0000000000000000000000000000deadbeef' } },
+    { data: { version: '1.0.0', gitSha: 'e2e00000000000000000000000000000deadbeef' } },
   );
   expect(releaseResponse.ok()).toBeTruthy();
 
