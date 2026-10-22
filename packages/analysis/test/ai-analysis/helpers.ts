@@ -90,7 +90,7 @@ export const MONGO_DECLARED_ONLY: FileTree = {
  */
 export const ELIXIR_SOURCES: FileTree = {
   'lib/app/application.ex': ['defmodule App.Application do', '  use Application', '  # Runs the migrations', '  def start(_type, _args) do', '    App.ReleaseTasks.migrate()', '  end', 'end'].join('\n'),
-  'config/runtime.exs': ['import Config', 'if config_env() == :prod do', '  db_url = System.fetch_env!("DB_URL")', '  db_host = System.get_env("DB_HOST")', '  config :app, App.Repo, url: db_url', '  config :app, App.Mailer, relay: System.fetch_env!("MAILER_HOST")', 'end'].join('\n'),
+  'config/runtime.exs': ['import Config', 'if config_env() == :prod do', '  db_url = System.fetch_env!("DB_URL")', '  db_host = System.get_env("DB_HOST")', '  config :app, App.Repo, url: db_url', '  config :app, App.Mailer, relay: Util.fetch_env!("MAILER_HOST", all: "localhost")', 'end'].join('\n'),
 };
 
 export function elixirPostgres(): FileTree {

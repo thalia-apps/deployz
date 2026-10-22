@@ -83,11 +83,12 @@ function deployzSets(pack: EvidencePack, engine: SupportedEngine, setting: strin
 
 /**
  * A read with no default that stops the start when the variable is not set:
- * Elixir `System.fetch_env!("X")`, Rust `env::var("X").expect(…)` or
- * `.unwrap()`, C# `GetEnvironmentVariable("X") ?? throw`.
+ * Elixir `System.fetch_env!("X")` or an app's own `Util.fetch_env!("X", …)`
+ * (a `!` call raises), Rust `env::var("X").expect(…)` or `.unwrap()`, C#
+ * `GetEnvironmentVariable("X") ?? throw`.
  */
 const REQUIRED_READ =
-  /System\.fetch_env!\(\s*"([A-Z][A-Z0-9_]*)"|env::var\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\.(?:expect|unwrap)\(|GetEnvironmentVariable\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\?\?\s*throw/g;
+  /\bfetch_env!\(\s*"([A-Z][A-Z0-9_]*)"|env::var\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\.(?:expect|unwrap)\(|GetEnvironmentVariable\(\s*"([A-Z][A-Z0-9_]*)"\s*\)\s*\?\?\s*throw/g;
 
 /**
  * The required variables that the evidence files read and the rules did not
