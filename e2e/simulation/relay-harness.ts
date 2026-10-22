@@ -248,9 +248,12 @@ export function extractQuickCreateParam(quickCreateUrl: string, paramName: strin
 export async function fetchInstallCredentials(
   apiUrl: string,
   installLinkId: string,
+  installLinkToken: string,
   fetchFn: FetchFn = globalThis.fetch as unknown as FetchFn,
 ): Promise<{ enrollmentCode: string; relayCredential: string }> {
-  const response = await fetchFn(`${apiUrl}/api/install/${installLinkId}`);
+  const response = await fetchFn(`${apiUrl}/api/install/${installLinkId}`, {
+    headers: { 'x-deployz-token': installLinkToken },
+  });
   if (response.status !== 200) {
     throw new Error(`GET /api/install/${installLinkId} -> ${response.status}`);
   }

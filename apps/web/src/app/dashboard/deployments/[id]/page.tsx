@@ -2132,7 +2132,7 @@ function InstallLinkCard({ detail }: { detail: FleetDeploymentDetail }) {
   const url =
     typeof window === 'undefined'
       ? ''
-      : `${window.location.origin}/install/${detail.installLinkId}`;
+      : `${window.location.origin}/install/${detail.installLinkId}#${detail.installLinkToken}`;
   // The customer launched the install but no relay has enrolled within the
   // staleness window — guidance, never a failure.
   const stuck =

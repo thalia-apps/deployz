@@ -21,8 +21,12 @@ existing deployment architecture — it does not add a second pipeline.
   removed with the invitation model), but the API still mints new links
   (`POST /api/customers/:customerId/deploy-links`, plus revoke and
   regenerate). Pick application + region, generate, copy the URL once.
-- Customer side: `/deploy/<publicId>?token=<secret>`
-  (`apps/web/src/app/deploy/[publicId]/page.tsx`). Review (application, AWS
+- Customer side: `/deploy/<publicId>#<secret>`
+  (`apps/web/src/app/deploy/[publicId]/page.tsx`). The secret is in the URL
+  fragment, so it never reaches a request URL, an access log or a Referer.
+  The page moves it into a cookie scoped to `/deploy/<publicId>` and removes
+  it from the address bar (`LinkTokenGate`); the server page sends it as the
+  header below. Review (application, AWS
   region, resources), "Deploy to AWS" handoff, then the install flow's own
   progress, domain and retry experience.
 - Backend: `apps/api/src/deploy-links.ts` (lifecycle services), routes in
@@ -35,7 +39,7 @@ existing deployment architecture — it does not add a second pipeline.
   is stored (`token_hash`); the raw secret is returned exactly once, by
   generate and regenerate.
 - Every public call presents the secret in the `x-deployz-token` header —
-  never in a request URL. `resolveDeployLink` verifies it with the same
+  never in a request URL or query string. `resolveDeployLink` verifies it with the same
   constant-time compare the relay tokens use, then enforces: revoked → 410
   `DEPLOY_LINK_REVOKED`, expired (30-day TTL) → 410 `DEPLOY_LINK_EXPIRED`,
   wrong token / unknown id / deleted deployment → 404 (never a distinction an

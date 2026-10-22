@@ -20,6 +20,7 @@ import { createReadyRelease } from './seed-ready-manifest.js';
 import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expectPlanMatchesInventory, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
 
 interface DeploymentResponse {
   state: string;
@@ -156,7 +157,9 @@ test.describe('phase4-composition', () => {
     expect(launch.ok()).toBeTruthy();
 
     // ── Install — the real relay drives the phase4-composition scenario. ───
-    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();

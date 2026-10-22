@@ -20,6 +20,7 @@ import type { APIRequestContext } from '@playwright/test';
 import { startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expect, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
 
 interface DeploymentResponse {
   state: string;
@@ -125,7 +126,9 @@ test.describe('migration workloads (phase 4c)', () => {
     relay!.stop();
     const reset = await request.post(`${API_URL}/api/deployments/${deploymentId}/relay/reset`, { data: {} });
     expect(reset.ok()).toBeTruthy();
-    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
       existingStackUpdate: { enrollmentCode: string; relayCredential: string | null } | null;
     };

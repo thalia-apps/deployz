@@ -30,6 +30,8 @@ interface InstallData {
   quickCreateUrl: string | null;
   /** Set instead of `quickCreateUrl` when the connector stack already exists in the customer's account (a reconnect): they update it. */
   existingStackUpdate: ExistingStackUpdate | null;
+  /** True when the request lacked the link token, so the credentials above were left out. */
+  credentialsWithheld: boolean;
   /** True once a relay has enrolled — the link has already been used. */
   alreadyInstalled: boolean;
   /** The deployment this install link names — needed once installed, to scope the domain card. */
@@ -74,11 +76,15 @@ export type InstallLinkLookup =
 /** Fetch the public install page data, distinguishing invalid, expired and
  *  revoked links (the API returns 410 with a code for the latter two). Any
  *  other failure is `error`, never a claim about the link. */
-export async function fetchInstallData(installLinkId: string): Promise<InstallLinkLookup> {
+export async function fetchInstallData(
+  installLinkId: string,
+  token?: string | undefined,
+): Promise<InstallLinkLookup> {
   let response: Response;
   try {
     response = await fetch(`${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}`, {
       cache: 'no-store',
+      ...(token ? { headers: { 'x-deployz-token': token } } : {}),
     });
   } catch {
     return { status: 'error' };
@@ -144,10 +150,14 @@ export class InstallRetryError extends Error {
  * INSTALL_ALREADY_SUCCEEDED when the deployment was ever installed
  * successfully.
  */
-export async function retryInstallAttempt(installLinkId: string): Promise<RetryInstallResult> {
+export async function retryInstallAttempt(
+  installLinkId: string,
+  token?: string | undefined,
+): Promise<RetryInstallResult> {
   const response = await fetch(`${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}/retry`, {
     method: 'POST',
     cache: 'no-store',
+    ...(token ? { headers: { 'x-deployz-token': token } } : {}),
   });
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);

@@ -13,8 +13,9 @@ import type { DeploymentManifest, EnvironmentSetting } from '@deployz/contracts'
 import { createAuth, type Auth } from './auth.js';
 import { SECRET_MASK } from './config.js';
 import { env } from './env.js';
+import { installLinkToken } from './install-link-token.js';
 import { runApplicationPreflight } from './preflight.js';
-import { publicInstallInputs } from './public-install.js';
+import { PUBLIC_LINK_DAILY_CONFIRM_LIMIT, publicInstallInputs } from './public-install.js';
 import { buildServer } from './server.js';
 
 // Phase 3 public install links — the customer-side installation review
@@ -371,8 +372,9 @@ describe('public install links', () => {
     const payload = confirmPayload();
     const response = await confirm(link.id, payload);
     expect(response.statusCode, response.body).toBe(201);
-    const body = response.json() as { installLinkId: string };
+    const body = response.json() as { installLinkId: string; installLinkToken: string };
     expect(body.installLinkId).toMatch(UUID_SHAPE);
+    expect(body.installLinkToken).toBe(installLinkToken(body.installLinkId));
 
     const [deployment] = await db
       .select()
@@ -504,6 +506,34 @@ describe('public install links', () => {
       .from(schema.deployments)
       .where(eq(schema.deployments.publicInstallLinkId, link.id));
     expect(deployments).toHaveLength(2);
+  });
+
+  it('a reusable link refuses a confirm past its daily deployment limit with 429', async () => {
+    const { link } = await insertEnabledLink(db, org.organizationId);
+    const first = await confirm(link.id, confirmPayload());
+    expect(first.statusCode).toBe(201);
+    const [template] = await db
+      .select()
+      .from(schema.deployments)
+      .where(eq(schema.deployments.publicInstallLinkId, link.id));
+    const { id: _id, installLinkId: _installLinkId, ...copyable } = template!;
+    await db.insert(schema.deployments).values(
+      Array.from({ length: PUBLIC_LINK_DAILY_CONFIRM_LIMIT - 1 }, () => ({
+        ...copyable,
+        enrollmentCode: crypto.randomUUID(),
+        installationId: null,
+        confirmKey: crypto.randomUUID(),
+      })),
+    );
+
+    const refused = await confirm(link.id, confirmPayload());
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json()).toMatchObject({ error: { code: 'PUBLIC_INSTALL_LIMIT_REACHED' } });
+    const deployments = await db
+      .select({ id: schema.deployments.id })
+      .from(schema.deployments)
+      .where(eq(schema.deployments.publicInstallLinkId, link.id));
+    expect(deployments).toHaveLength(PUBLIC_LINK_DAILY_CONFIRM_LIMIT);
   });
 
   it('two concurrent confirms with the same key create exactly one deployment', async () => {

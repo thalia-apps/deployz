@@ -951,7 +951,7 @@ function fakes(script: Script): { deps: DeployDeps; calls: string[]; puts: Recor
         const { ControlPlaneError } = await import('../version-canary/control-plane.js');
         throw new ControlPlaneError(script.createDeploymentError.status, script.createDeploymentError.code, script.createDeploymentError.message, null);
       }
-      return { id: 'dep-1', installLinkId: 'link-1' };
+      return { id: 'dep-1', installLinkId: 'link-1', installLinkToken: 'link-token-1' };
     },
     async getDeployment() {
       reads += 1;

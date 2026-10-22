@@ -10,6 +10,7 @@ import { extractQuickCreateParam } from './simulation/relay-harness.js';
 // never raw AWS/CFN/ECS/ALB terms (M14: deployment health only).
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
+import { installLinkHeaders } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -68,7 +69,9 @@ async function seedDeployment(page: Page): Promise<{
   };
 
   // DZ-AUDIT-013: the server-minted relay credential rides the Quick Create URL.
-  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`);
+  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
+      headers: await installLinkHeaders(page.request, deployment.installLinkId),
+    });
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();

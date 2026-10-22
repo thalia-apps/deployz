@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createReadyRelease } from './seed-ready-manifest.js';
 import { extractQuickCreateParam, fetchInstallCredentials } from './simulation/relay-harness.js';
+import { installLinkHeaders } from './install-link.js';
 
 // Redis Support MVP (tasks 1-9): §7 Redis detection + §8 the managed,
 // automatic-provisioning path for supported Redis usage. Fixture mode (Task
@@ -85,7 +86,9 @@ async function seedCustomerAndDeployment(
     enrollmentCode: string;
   };
 
-  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`);
+  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
+      headers: await installLinkHeaders(page.request, deployment.installLinkId),
+    });
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();

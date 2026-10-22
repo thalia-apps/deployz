@@ -201,6 +201,7 @@ import { buildFailureContext, toStructuredEvent } from './failure-context.js';
 import { createDrizzlePendingSecretStore, createSecretCipherFromEnv } from './pending-secrets.js';
 import { retryEligibilityFor } from './retry-eligibility.js';
 import { buildInstallPayload, buildRelayConfigEntries, queuePostInstallConfig, requireTaskFamilySuffix } from './install-config.js';
+import { installLinkToken, verifyInstallLinkToken } from './install-link-token.js';
 import { requirePreflightReady, runApplicationPreflight, runDeploymentPreflight } from './preflight.js';
 import {
   confirmPublicInstall,
@@ -1279,9 +1280,30 @@ const PUBLIC_RETRYABLE_STATES: ReadonlySet<string> = new Set([
   'INSTALLING',
 ]);
 
-function assertPublicRetryAllowed(deployment: { state: string }): void {
+async function assertPublicRetryAllowed(
+  db: RuntimeDb,
+  deployment: { id: string; state: string; relayStatus: string },
+): Promise<void> {
   if (!PUBLIC_RETRYABLE_STATES.has(deployment.state)) {
     throw new ApiError(409, 'INSTALL_NOT_RETRYABLE', `Deployment is ${deployment.state}, not retryable.`);
+  }
+  // A connected relay that is running the INSTALL is not stuck: a retry would
+  // cancel its job and lock it out.
+  if (deployment.relayStatus === 'CONNECTED') {
+    const [runningInstall] = await db
+      .select({ id: schema.deploymentJobs.id })
+      .from(schema.deploymentJobs)
+      .where(
+        and(
+          eq(schema.deploymentJobs.deploymentId, deployment.id),
+          eq(schema.deploymentJobs.type, 'INSTALL'),
+          eq(schema.deploymentJobs.state, 'RUNNING'),
+        ),
+      )
+      .limit(1);
+    if (runningInstall) {
+      throw new ApiError(409, 'INSTALL_IN_PROGRESS', 'The installation is running. Wait for it to finish.');
+    }
   }
 }
 
@@ -2926,6 +2948,10 @@ export async function buildServer({
     async (request) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
+    const hasLinkToken = verifyInstallLinkToken(
+      installLinkId,
+      firstHeaderValue(request.headers['x-deployz-token']),
+    );
     const rows = await db
       .select({
         applicationName: schema.applications.name,
@@ -3065,8 +3091,12 @@ export async function buildServer({
       //
       // DZ-AUDIT-013: the relayCredential is carried alongside the enrollment
       // code whenever one has been established. Spent codes get no link.
+      //
+      // The link id alone is not enough: both credential-bearing fields need
+      // the fragment-carried link token (x-deployz-token). Without it the
+      // page learns only that the credentials are withheld.
       quickCreateUrl:
-        !alreadyInstalled && existingStackUpdateFor(row) === null
+        hasLinkToken && !alreadyInstalled && existingStackUpdateFor(row) === null
           ? (() => {
               const templateUrl = resolveBootstrapTemplate(row.region, {
                 ...(env.bootstrapTemplateUrl
@@ -3086,7 +3116,8 @@ export async function buildServer({
                 : null;
             })()
           : null,
-      existingStackUpdate: existingStackUpdateFor(row),
+      existingStackUpdate: hasLinkToken ? existingStackUpdateFor(row) : null,
+      credentialsWithheld: !hasLinkToken && !alreadyInstalled,
       alreadyInstalled,
     };
     },
@@ -3285,6 +3316,11 @@ export async function buildServer({
     async (request, reply) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
+    // The retry rotates the relay credential, so the link id alone is not
+    // enough: a wrong or missing token is the same 404 as an unknown id.
+    if (!verifyInstallLinkToken(installLinkId, firstHeaderValue(request.headers['x-deployz-token']))) {
+      throw new NotFoundError('Installation not found');
+    }
     const rows = await db
       .select({ deployment: schema.deployments, applicationName: schema.applications.name })
       .from(schema.deployments)
@@ -3307,7 +3343,7 @@ export async function buildServer({
         'This deployment installed successfully before; contact the vendor to make changes.',
       );
     }
-    assertPublicRetryAllowed(deployment);
+    await assertPublicRetryAllowed(db, deployment);
     const nextAttempt = deployment.attemptNumber + 1;
     const keepsConnector = retryKeepsConnector(deployment);
     const stackName = keepsConnector
@@ -4811,7 +4847,7 @@ export async function buildServer({
           'This deployment installed successfully before; contact the vendor to make changes.',
         );
       }
-      assertPublicRetryAllowed(deployment);
+      await assertPublicRetryAllowed(db, deployment);
       const nextAttempt = deployment.attemptNumber + 1;
       const keepsConnector = retryKeepsConnector(deployment);
       const stackName = keepsConnector
@@ -4978,7 +5014,10 @@ export async function buildServer({
       const body = publicInstallConfirmBodySchema.parse(request.body);
       const token = firstHeaderValue(request.headers['x-deployz-token']);
       const result = await confirmPublicInstall(db, linkId, body, configDeps, token, templatePublisher);
-      return reply.code(result.created ? 201 : 200).send({ installLinkId: result.installLinkId });
+      return reply.code(result.created ? 201 : 200).send({
+        installLinkId: result.installLinkId,
+        installLinkToken: installLinkToken(result.installLinkId),
+      });
     },
   );
 
@@ -5146,7 +5185,7 @@ export async function buildServer({
       }
       throw error;
     }
-    return reply.code(201).send(deployment);
+    return reply.code(201).send({ ...deployment, installLinkToken: installLinkToken(deployment.installLinkId) });
   });
 
   // GET /api/regions — the region options for the "Create customer
@@ -5267,6 +5306,7 @@ export async function buildServer({
         const specComponents = specComponentsForStatus(row.deployment.specV2, derived.components, []);
         return {
           ...toFleetRow(derivedRow),
+          installLinkToken: installLinkToken(derivedRow.deployment.installLinkId),
           deploymentStatus: {
             ...toVendorDeploymentStatus(derived),
             ...(specComponents ? { specComponents } : {}),
@@ -5327,6 +5367,7 @@ export async function buildServer({
     const sizeProfile = resolveStoredInfrastructureSizeProfile(rows[0]!.deployment.desiredState);
     return {
       ...toFleetRow(derivedRow),
+      installLinkToken: installLinkToken(derivedRow.deployment.installLinkId),
       jobs: jobs.map((job) => ({ ...job, payload: redactClaimedPayload(job) ?? {} })),
       customDomain,
       appUrl,

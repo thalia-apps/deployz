@@ -29,6 +29,7 @@ import { createReadyRelease } from './seed-ready-manifest.js';
 import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
 
 interface ReadinessResponse {
   analysisStatus: string;
@@ -343,7 +344,9 @@ test.describe('monorepo-classified-deploy (C)', () => {
     // advanced — the classification result composes all the way through the
     // simulated build+deploy pass.
     // DZ-AUDIT-013: fetch the server-minted relay credential from the install page.
-    const installInfo = await request.get(`${API_URL}/api/install/${deployment.installLinkId}`).then((r) => r.json()) as {
+    const installInfo = await request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
+      headers: await installLinkHeaders(request, deployment.installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();

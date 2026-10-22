@@ -7,11 +7,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // branch and the public-link fall-through.
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: () => (mocks.cookieToken === undefined ? undefined : { value: mocks.cookieToken }),
+  }),
+}));
 
 const mocks = vi.hoisted(() => ({
   fetchPublicInstallData: vi.fn(),
   fetchInstallData: vi.fn(),
   fetchInstallStatusServer: vi.fn(),
+  cookieToken: undefined as string | undefined,
 }));
 
 vi.mock('../src/lib/public-install-data', () => ({
@@ -107,6 +113,7 @@ async function renderPage(linkId: string = LINK_ID): Promise<Document> {
 }
 
 beforeEach(() => {
+  mocks.cookieToken = undefined;
   mocks.fetchPublicInstallData.mockReset();
   mocks.fetchInstallData.mockReset();
   mocks.fetchInstallStatusServer.mockReset().mockResolvedValue(null);
@@ -126,6 +133,31 @@ describe('InstallPage per-deployment flow', () => {
     expect(doc.body.textContent).toContain('AWS resources');
     expect(doc.body.textContent).toContain('ECS Fargate service');
     expect(doc.body.textContent).toContain('RDS PostgreSQL database');
+  });
+
+  it('sends the link token from the cookie to the control plane', async () => {
+    mocks.cookieToken = 'link-secret';
+    mocks.fetchPublicInstallData.mockResolvedValue(null);
+    mocks.fetchInstallData.mockResolvedValue({ status: 'ok', data: resolvedData() });
+
+    await renderPage();
+
+    expect(mocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, 'link-secret');
+  });
+
+  it('offers no AWS connection until the link token arrives', async () => {
+    mocks.fetchPublicInstallData.mockResolvedValue(null);
+    mocks.fetchInstallData.mockResolvedValue({
+      status: 'ok',
+      data: resolvedData({ quickCreateUrl: null, credentialsWithheld: true }),
+    });
+
+    const doc = await renderPage();
+
+    // The gate renders nothing on the server: the browser reads the URL fragment.
+    expect(doc.body.textContent).toContain('to your AWS account');
+    expect(doc.body.textContent).not.toContain('Connect AWS account');
+    expect(doc.querySelector('a[href^="https://console.aws.amazon.com"]')).toBeNull();
   });
 
   it('delegates an unknown link to the invitation token gate', async () => {

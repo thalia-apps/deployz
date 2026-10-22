@@ -20,7 +20,9 @@ Both invitation kinds live in `public_install_links`
 
 - **Reusable public link** — `customer_id`/`token_hash` NULL, `enabled`
   gates it, one live per application. Anyone holding the URL may review and
-  confirm; each confirmation creates its own customer and deployment.
+  confirm; each confirmation creates its own customer and deployment. One
+  link creates at most 50 deployments in 24 hours (`429
+  PUBLIC_INSTALL_LIMIT_REACHED`). Vendor approval and a CAPTCHA are post-MVP.
 - **Targeted invitation** — `customer_id` + `token_hash` set, `expires_at`
   (default 30 days), optional `recommended_region`. Exactly one deployment,
   ever: confirmation stamps `confirmed_at` (state `used`).
@@ -105,15 +107,28 @@ customer is involved. See `docs/product/user-flows.md` for all entry points.
 ## Customer deployment links
 
 Each deployment keeps its own `install_link_id`
-(`/install/:installLinkId`). Copy actions on the vendor's customer page are
+(`/install/:installLinkId`). The id alone is not a credential. The URL carries
+a second secret as its fragment (`/install/:installLinkId#<token>`), derived
+as an HMAC of the id with the server secret, so nothing extra is stored. The
+page moves it into a path-scoped cookie and removes it from the address bar;
+the server page sends it as the `x-deployz-token` header. Without it
+`GET /api/install/:installLinkId` still serves the progress view but leaves
+out `quickCreateUrl` and `existingStackUpdate` (the relay enrollment code and
+credential) and sets `credentialsWithheld`, and `POST
+/api/install/:installLinkId/retry` answers 404. The vendor dashboard and the
+confirm response return `installLinkToken` next to `installLinkId`, so every
+link the product shows or copies includes the fragment. A link copied before
+this change has no fragment: the customer asks the vendor to copy it again.
+Copy actions on the vendor's customer page are
 attached to the deployment row and copy that deployment's own URL — there is
 no customer-level "the install link" and no helper that picks one deployment
 for a customer.
 
 ## Legacy compatibility
 
-- Existing `/deploy/:publicId` links keep working end to end; the flow is
-  marked `region_selection = 'legacy_publisher_fixed'`.
+- Existing `/deploy/:publicId` links keep working end to end (their secret
+  now travels in the URL fragment, see [`deploy-links.md`](deploy-links.md));
+  the flow is marked `region_selection = 'legacy_publisher_fixed'`.
 - Existing `/install/:installLinkId` links are unchanged (they were always
   per-deployment).
 - No existing deployment is rewritten. The legacy `/deploy` creation surface

@@ -166,9 +166,12 @@ watchdog, and the stack-event progress route's settlement backstop):
 
 The customer-facing retry (`POST /api/install/:id/retry`,
 `POST /api/deploy-links/:id/retry`) re-arms a first install with a fresh
-enrollment code and credential. It is refused after any successful install and
-outside NOT_INSTALLED, WAITING_FOR_RELAY and INSTALLING (for example while a
-DESTROY runs); a retry during INSTALLING is allowed on purpose. A FAILED
+enrollment code and credential. It needs the link token (`x-deployz-token`;
+the install link id alone gets a 404). It is refused after any successful
+install and outside NOT_INSTALLED, WAITING_FOR_RELAY and INSTALLING (for
+example while a DESTROY runs). A retry during INSTALLING is allowed on purpose
+when the customer abandoned the attempt, but not while a connected relay is
+running the INSTALL job (`409 INSTALL_IN_PROGRESS`). A FAILED
 install is the vendor's to retry (retry-install, or a relay reset when the
 connector is disconnected), so the customer pages show no retry for it and
 the route refuses it.

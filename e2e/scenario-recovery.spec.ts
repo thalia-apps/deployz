@@ -28,6 +28,7 @@ import { memoryPendingStore, type PendingCommand } from '@deployz/relay/pending'
 import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
 import type { SimulatedCustomerAccount } from './simulation/simulated-account.js';
+import { installLinkHeaders } from './install-link.js';
 
 interface DeploymentResponse {
   state: string;
@@ -107,7 +108,9 @@ test.describe('install-link-retry', () => {
 
     // 1. Start a relay (happy-path) so the install begins and an
     // installationId is assigned.
-    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
@@ -133,7 +136,10 @@ test.describe('install-link-retry', () => {
 
       // 3. Call install-link retry while the install is in progress.
       //    The route resets to NOT_INSTALLED and records previousInstallationId.
-      const retryResp = await request.post(`${API_URL}/api/install/${installLinkId}/retry`, { data: {} });
+      const retryResp = await request.post(`${API_URL}/api/install/${installLinkId}/retry`, {
+      data: {},
+      headers: await installLinkHeaders(request, installLinkId),
+    });
       expect(retryResp.ok()).toBeTruthy();
       const retryBody = (await retryResp.json()) as {
         state: string;
@@ -148,7 +154,9 @@ test.describe('install-link-retry', () => {
       expect(retryBody.existingStackUpdate).not.toBeNull();
 
       // 4. Verify the deployment re-armed: fetch the fresh credential.
-      const refreshedInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+      const refreshedInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
         quickCreateUrl: string | null;
         existingStackUpdate: { enrollmentCode: string; relayCredential: string } | null;
       };
@@ -198,7 +206,9 @@ test.describe('stale-install-resurrect', () => {
     const { deploymentId, installLinkId, enrollmentCode, installationId, api } = deployzInstall;
 
     // a. Fetch the install info + RelayCredential (same pattern as install-link-retry).
-    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+    const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();

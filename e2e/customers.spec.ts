@@ -73,7 +73,7 @@ async function seedDeployment(
   page: Page,
   applicationId: string,
   customerId: string,
-): Promise<{ id: string; installLinkId: string; enrollmentCode: string }> {
+): Promise<{ id: string; installLinkId: string; installLinkToken: string; enrollmentCode: string }> {
   const response = await page.request.post(`${API_URL}/api/deployments`, {
     data: { applicationId, customerId, region: 'us-east-1' },
   });
@@ -81,6 +81,7 @@ async function seedDeployment(
   return (await response.json()) as {
     id: string;
     installLinkId: string;
+    installLinkToken: string;
     enrollmentCode: string;
   };
 }
@@ -181,7 +182,9 @@ test('the customer name opens the customer page, which shows the install link', 
   await expect(page.getByText('Acme Holdings')).toBeVisible();
   await page.getByRole('button', { name: 'Copy install link' }).click();
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText).toBe(`${new URL(page.url()).origin}/install/${deployment.installLinkId}`);
+  expect(clipboardText).toBe(
+    `${new URL(page.url()).origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`,
+  );
   await expect(page.getByRole('link', { name: 'View deployment' })).toHaveAttribute(
     'href',
     `/dashboard/deployments/${deployment.id}`,
@@ -203,7 +206,7 @@ test('editing name, email and company leaves the install link, the deployment an
 
   await page.goto(`/dashboard/customers/${customer.id}`);
   await page.getByRole('button', { name: 'Copy install link' }).click();
-  const installLink = `${new URL(page.url()).origin}/install/${deployment.installLinkId}`;
+  const installLink = `${new URL(page.url()).origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`;
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(installLink);
 
   await page.getByRole('button', { name: 'Edit customer' }).click();

@@ -17,6 +17,7 @@
 import type { APIRequestContext } from '@playwright/test';
 
 import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
 
 interface DeploymentResponse {
   state: string;
@@ -678,7 +679,9 @@ test.describe('two-apps-1.0.0', () => {
       const launch = await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
       expect(launch.ok()).toBeTruthy();
 
-      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
         quickCreateUrl: string | null;
       };
       expect(installInfo.quickCreateUrl).not.toBeNull();
