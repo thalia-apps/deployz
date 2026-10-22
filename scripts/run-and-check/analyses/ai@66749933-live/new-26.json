@@ -1,0 +1,149 @@
+{
+  "id": "new-26",
+  "commit": "33032c83051086b28cb1da0d84e835018a5e50a8",
+  "analyser": "ai@66749933-live",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "docusaurus build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"bin/teslamate\", \"start\"]",
+      "port": 4000
+    },
+    "health": {
+      "path": "/health_check",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05296104,
+        "promptTokens": 11289,
+        "completionTokens": 417
+      },
+      "latencyMs": 6333
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": "/health_check",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6335,
+    "questions": 2,
+    "generatedAt": "2026-10-22T07:53:44.657Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

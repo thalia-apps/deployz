@@ -1,0 +1,167 @@
+{
+  "id": "new-12",
+  "commit": "2308bebd2b54edc8ac8d484be5c9b4e972aed7cc",
+  "analyser": "ai@66749933-live2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "ops",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "ops/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"start\"]",
+      "port": 4000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/runtime.exs"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05051376,
+        "promptTokens": 10516,
+        "completionTokens": 448
+      },
+      "latencyMs": 7014
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": "DB_URL",
+        "answer": "value",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7018,
+    "questions": 2,
+    "generatedAt": "2026-10-22T07:52:42.203Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
