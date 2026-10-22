@@ -1916,6 +1916,10 @@ describe('server — relay bearer auth, INSTALL job, and command/result/health f
       .from(schema.deploymentJobs)
       .where(and(eq(schema.deploymentJobs.deploymentId, fresh.id), eq(schema.deploymentJobs.type, 'INSTALL')));
 
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, installJob!.id));
     await postJson(
       app,
       `/api/relay/commands/${installJob!.id}/result`,
@@ -2415,6 +2419,8 @@ describe('server — relay bearer auth, INSTALL job, and command/result/health f
   });
 
   it('persists observedState/relayStatus/lastHealthAt/healthStatus from the relay payload', async () => {
+    // The previous test settled a DESTROY, which left the shared deployment DELETED.
+    await db.update(schema.deployments).set({ state: 'HEALTHY' }).where(eq(schema.deployments.id, deployment.id));
     const response = await postJson(
       app,
       '/api/relay/health',
@@ -6799,6 +6805,8 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
         deploymentId: deployment.id,
         type: 'CONFIG_UPDATE',
         idempotencyKey: `${deployment.id}:CONFIG_UPDATE:${crypto.randomUUID()}`,
+        state: 'RUNNING',
+        startedAt: new Date(),
         payload: { changedKeys: ['CARRIED_KEY'] },
       })
       .returning();

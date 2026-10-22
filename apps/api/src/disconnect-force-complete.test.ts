@@ -464,6 +464,10 @@ describe('disconnect force-complete + persisted liveness', () => {
     const eligible = await seedPurgeEligibleDeployment();
     const { jobId } = (await (await purge(eligible.id)).json()) as { jobId: string };
 
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, jobId));
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${jobId}/result`,
@@ -498,6 +502,10 @@ describe('disconnect force-complete + persisted liveness', () => {
     expect(first.statusCode, first.body).toBe(202);
     const { jobId } = first.json() as { jobId: string };
 
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, jobId));
     const failed = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${jobId}/result`,

@@ -472,6 +472,19 @@ describe('Team Admin: deployments + jobs + connections read models', () => {
       expect(body.deployment.id).toBe(depFailed.id);
     });
 
+    it('never returns an unclaimed CONFIG_UPDATE secret value', async () => {
+      const job = await insertJob(db, depFailed.id, {
+        type: 'CONFIG_UPDATE',
+        state: 'REQUESTED',
+        payload: { changedKeys: ['DB_PASSWORD'], secrets: [{ key: 'DB_PASSWORD', value: 'hunter2-plain-customer-value' }] },
+      });
+      const response = await getReq(app, `/api/admin/jobs/${job.id}`, admin.cookie);
+      expect(response.statusCode).toBe(200);
+      expect(response.body).not.toContain('hunter2-plain-customer-value');
+      const deployment = await getReq(app, `/api/admin/deployments/${depFailed.id}`, admin.cookie);
+      expect(deployment.body).not.toContain('hunter2-plain-customer-value');
+    });
+
     it('404s for an unknown job id', async () => {
       const response = await getReq(app, `/api/admin/jobs/${crypto.randomUUID()}`, admin.cookie);
       expect(response.statusCode).toBe(404);

@@ -32,8 +32,6 @@ import {
 import {
   DESTROY_PENDING_STALE_AFTER_MS,
   DEPLOYMENT_MANIFEST_SCHEMA_VERSION,
-  APP_API_KEY_PARAMETER,
-  APP_SIGNING_SECRET_PARAMETER,
   REGION_LABELS,
   RELAY_STALE_AFTER_MS,
   SUPPORTED_AWS_REGIONS,
@@ -69,6 +67,7 @@ import {
   RELEASE_VERSION_PATTERN,
   repoRelativePathSchema,
   relayCapabilitiesSchema,
+  relayIdentitySchema,
   relayCommandProgressSchema,
   releaseEvidenceSchema,
   requiredInfrastructureComponents,
@@ -139,6 +138,7 @@ import { markDeploymentLive, markDeploymentRemoved } from './billing-lifecycle.j
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePaddleWebhook } from './billing-webhooks.js';
+import { redactClaimedPayload } from './claimed-payload.js';
 import { createPaddle, type PaddleBilling } from './paddle.js';
 import {
   createConfigStore,
@@ -148,7 +148,6 @@ import {
   getConfig,
   listProvidedConfigKeys,
   listVendorValues,
-  SECRET_MASK,
   setConfig,
   setConfigBodySchema,
   type ConfigDeps,
@@ -493,6 +492,10 @@ const BUILD_EXPLANATION_RATE_LIMIT = { max: 5, timeWindow: '1 minute' } as const
 // blocked preflight evaluation per window is recorded per deployment — the
 // blockingCount still travels on the one event that is kept.
 const RELAY_BLOCKED_PREFLIGHT_THROTTLE_MS = 15 * 60 * 1000;
+/** Upper bounds on what one relay may store: a heartbeat's observed state
+ *  (serialized) and the stack-event rows kept per job. */
+const MAX_OBSERVED_STATE_CHARS = 256 * 1024;
+const MAX_STACK_EVENTS_PER_JOB = 2000;
 
 // The §35 contract fields the analyser auto-detects and the vendor can take
 // ownership of by editing them (see PATCH /api/applications/:id). `name` is
@@ -1761,6 +1764,15 @@ async function requireDeployableState(db: RuntimeDb, deployment: DeploymentRow):
       'This deployment never completed its first install; use Retry install instead.',
     );
   }
+  // A failed DESTROY stopped billing for good. Deploying again would serve
+  // the application unbilled, so only a new disconnect is allowed.
+  if (deployment.state === 'FAILED' && (await latestJobIsDestroy(db, deployment.id))) {
+    throw new ApiError(
+      409,
+      'DEPLOYMENT_NOT_DEPLOYABLE',
+      'The last disconnect failed. Disconnect this deployment again.',
+    );
+  }
   // §9.5 relay-liveness gates, mirroring retry-install's refusals: a job
   // queued for a relay that is not (or no longer) connected would sit
   // REQUESTED until the watchdog fails it an hour later, which the vendor
@@ -2097,55 +2109,7 @@ const JOB_SUCCESS_STATE: Partial<Record<JobType, DeploymentRow['state']>> = {
  */
 const RELEASE_ADVANCING_JOBS = new Set<JobType>(['DEPLOY_RELEASE', 'ROLLBACK']);
 
-/**
- * Parameters the control plane GENERATES at install time — their values are
- * secrets. `redactClaimedPayload` scrubs these from the INSTALL job payload
- * once the relay has claimed it, so generated install secrets do not sit in
- * `deployment_jobs.payload` indefinitely (§31 "stop storing generated install
- * secrets unnecessarily in job payloads").
- */
-const INSTALL_SECRET_PARAMETER_IDS = new Set<string>([
-  APP_API_KEY_PARAMETER,
-  APP_SIGNING_SECRET_PARAMETER,
-]);
-
-/**
- * The relay receives a command's payload exactly once, at claim time
- * (`GET /api/relay/commands`). After that response the stored row never
- * needs the plaintext again, so the claim handler scrubs it in the same
- * request that serves it:
- *  - CONFIG_UPDATE: newly-entered secret VALUES (transport-only) become
- *    key stubs — the DB keeps key names, never values.
- *  - INSTALL: generated secret parameter values become SECRET_MASK; plain
- *    parameters (image reference, desired count) survive untouched.
- */
-export function redactClaimedPayload(job: {
-  readonly type: string;
-  readonly payload: Record<string, unknown> | null;
-}): Record<string, unknown> | null {
-  const payload = job.payload;
-  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
-
-  if (job.type === 'CONFIG_UPDATE' && Array.isArray(payload['secrets'])) {
-    return {
-      ...payload,
-      secrets: (payload['secrets'] as { key?: unknown }[]).map((entry) => ({
-        key: typeof entry.key === 'string' ? entry.key : '',
-      })),
-    };
-  }
-
-  if (job.type === 'INSTALL' && typeof payload['parameters'] === 'object' && payload['parameters'] !== null) {
-    const parameters = payload['parameters'] as Record<string, unknown>;
-    const redacted: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(parameters)) {
-      redacted[key] = INSTALL_SECRET_PARAMETER_IDS.has(key) ? SECRET_MASK : value;
-    }
-    return { ...payload, parameters: redacted };
-  }
-
-  return payload;
-}
+export { redactClaimedPayload };
 
 /** §40 event type per job outcome. Job types with no vendor-visible event are absent. */
   const JOB_RESULT_EVENT: Partial<
@@ -7801,6 +7765,14 @@ export async function buildServer({
     return deployment;
   }
 
+  /** A DELETED deployment reads no configuration and reports no health. Its
+   *  relay keeps only the command channel, which a later PURGE needs. */
+  function requireNotDeleted(deployment: DeploymentRow): void {
+    if (deployment.state === 'DELETED') {
+      throw new ApiError(410, 'DEPLOYMENT_DELETED', 'This deployment was removed.');
+    }
+  }
+
   /** The rotation grace header the relay sends while adopting a new token. */
   function oldRelayToken(request: { headers: Record<string, unknown> }): string | undefined {
     const value = request.headers['x-deployz-old-token'];
@@ -8129,6 +8101,12 @@ export async function buildServer({
         'enrollmentCode and installationId are required',
       );
     }
+    if (
+      body.awsAccountId !== undefined &&
+      !relayIdentitySchema.shape.awsAccountId.safeParse(body.awsAccountId).success
+    ) {
+      throw new ApiError(400, 'INVALID_REQUEST', 'awsAccountId must be a 12-digit AWS account id');
+    }
     const capabilitiesParsed = relayCapabilitiesSchema.safeParse(body.capabilities);
 
     // The enrollment code — not the installation id — is what identifies the
@@ -8165,6 +8143,10 @@ export async function buildServer({
           'Only a bootstrap stack deployed from the install link can present the right token.',
         );
       }
+    }
+    const linkGate = installLinkGate(deployment);
+    if (linkGate) {
+      throw new ApiError(410, linkGate.code, linkGate.message);
     }
 
     if (deployment.enrollmentUsedAt !== null) {
@@ -8385,6 +8367,11 @@ export async function buildServer({
     // and surfaces later as the customer task's IMAGE_PULL_FAILED.
     if (installJob && typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
       await grantPullToCustomer(ecrGrantDeps, body.installationId!, body.awsAccountId);
+    }
+    // A retry or reset that minted a new installation id leaves the previous
+    // installation's grant behind; this re-enrollment replaces it.
+    if (deployment.previousInstallationId && deployment.previousInstallationId !== body.installationId) {
+      await revokePullFromCustomer(ecrGrantDeps, deployment.previousInstallationId);
     }
 
     return reply.code(200).send({ registered: true });
@@ -8801,7 +8788,7 @@ export async function buildServer({
         .where(
           and(
             eq(schema.deploymentJobs.id, id),
-            inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
+            eq(schema.deploymentJobs.state, 'RUNNING'),
           ),
         )
         .returning();
@@ -8810,6 +8797,17 @@ export async function buildServer({
       // force-completed/cancelled) must not flip the deployment state again or
       // recompute release pointers against a since-changed deployment row.
       if (updated.length === 0) {
+        // A job the relay never claimed cannot be settled by the relay. The
+        // relay keeps its settled marker and reports again after its next
+        // poll has claimed the job.
+        const [current] = await tx
+          .select({ state: schema.deploymentJobs.state })
+          .from(schema.deploymentJobs)
+          .where(eq(schema.deploymentJobs.id, id))
+          .limit(1);
+        if (current && ['REQUESTED', 'QUEUED', 'WAITING'].includes(current.state)) {
+          throw new ApiError(409, 'COMMAND_NOT_CLAIMED', 'The relay has not claimed this command.');
+        }
         alreadySettled = true;
         return;
       }
@@ -8876,7 +8874,7 @@ export async function buildServer({
       if (job.type === 'PURGE' && state === 'SUCCEEDED') {
         await tx
           .update(schema.deployments)
-          .set({ cleanupState: 'COMPLETE' })
+          .set({ cleanupState: 'COMPLETE', relayCredential: null, relayTokenHash: null })
           .where(eq(schema.deployments.id, deployment.id));
       }
       // A failed PURGE must NOT resurrect the deployment (never back to
@@ -9109,10 +9107,15 @@ export async function buildServer({
     }
 
     const now = new Date();
-    const insertedRows = await db
+    const [{ stored = 0 } = {}] = await db
+      .select({ stored: sql<number>`count(*)::int` })
+      .from(schema.deploymentStackEvents)
+      .where(eq(schema.deploymentStackEvents.jobId, job.id));
+    const newEvents = body.events.slice(0, Math.max(0, MAX_STACK_EVENTS_PER_JOB - stored));
+    const insertedRows = newEvents.length === 0 ? [] : await db
       .insert(schema.deploymentStackEvents)
       .values(
-        body.events.map((event) => ({
+        newEvents.map((event) => ({
           deploymentId: deployment.id,
           jobId: job.id,
           providerEventId: event.eventId,
@@ -9349,6 +9352,17 @@ export async function buildServer({
       token,
       oldRelayToken(request),
     );
+    requireNotDeleted(deployment);
+
+    if (
+      body.identity?.awsAccountId !== undefined &&
+      !relayIdentitySchema.shape.awsAccountId.safeParse(body.identity.awsAccountId).success
+    ) {
+      throw new ApiError(400, 'INVALID_REQUEST', 'identity.awsAccountId must be a 12-digit AWS account id');
+    }
+    if (JSON.stringify(body.observedState ?? {}).length > MAX_OBSERVED_STATE_CHARS) {
+      throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'observedState is too large');
+    }
 
     const healthStatusParsed = healthStatusSchema.safeParse(body.healthStatus);
     // Identity rides every heartbeat (token-authenticated), so a deployment
@@ -9696,6 +9710,7 @@ export async function buildServer({
       token,
       oldRelayToken(request),
     );
+    requireNotDeleted(deployment);
 
     // Phase 4: generated keys ride along as `generated: true` entries (no
     // value — the relay mints them inside the customer's account).

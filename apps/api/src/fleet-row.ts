@@ -66,7 +66,10 @@ export function toFleetRow(row: {
   };
 }
 
-/** The hostname a completed INSTALL job's CDK output reports the ALB at. */
+const ALB_ENDPOINT_PATTERN = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)*\.elb\.amazonaws\.com\/?$/i;
+
+/** The hostname a completed INSTALL job's CDK output reports the ALB at. The
+ *  relay reports it, so only an AWS load balancer hostname is accepted. */
 export function albEndpointFromResult(result: DeploymentJobRow['result']): string | null {
   if (!result || typeof result !== 'object') return null;
   const output = (result as Record<string, unknown>).output;
@@ -79,7 +82,7 @@ export function albEndpointFromResult(result: DeploymentJobRow['result']): strin
   // literal name.
   const key = Object.keys(outputs).find((k) => k.endsWith('PublicEndpoint'));
   const endpoint = key === undefined ? undefined : (outputs as Record<string, unknown>)[key];
-  return typeof endpoint === 'string' && endpoint.length > 0 ? endpoint : null;
+  return typeof endpoint === 'string' && ALB_ENDPOINT_PATTERN.test(endpoint) ? endpoint : null;
 }
 
 /**
