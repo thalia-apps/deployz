@@ -97,17 +97,16 @@ test.describe('retry-install-recovery', () => {
 test.describe('install-link-retry', () => {
   test.use({ deployzScenario: 'happy-path', deployzStartRelay: false });
 
-  test('@scenario:install-link-retry mid-flight install-link retry records previousInstallationId and re-arms cleanly', async ({
+  test('@scenario:install-link-retry mid-flight install-link retry is refused while the connected relay runs the install', async ({
     request,
     deployzInstall,
   }) => {
     test.setTimeout(60_000);
-    // NOTE: deployzStartRelay is false — we start the relay manually after
-    // calling install-link retry, so we control timing precisely.
+    // NOTE: deployzStartRelay is false — we start the relay manually, so the
+    // retry lands while the INSTALL is running.
     const { deploymentId, installLinkId, enrollmentCode, api } = deployzInstall;
 
-    // 1. Start a relay (happy-path) so the install begins and an
-    // installationId is assigned.
+    // 1. Start a relay (happy-path) so the install begins.
     const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
       headers: await installLinkHeaders(request, installLinkId),
     }).then((r) => r.json()) as {
@@ -126,7 +125,7 @@ test.describe('install-link-retry', () => {
     });
 
     try {
-      // 2. Wait for INSTALLING (installationId set).
+      // 2. Wait for INSTALLING.
       await expect
         .poll(async () => (await api.getDeployment(deploymentId)).state, {
           timeout: 15_000,
@@ -134,60 +133,23 @@ test.describe('install-link-retry', () => {
         })
         .toBe('INSTALLING');
 
-      // 3. Call install-link retry while the install is in progress.
-      //    The route resets to NOT_INSTALLED and records previousInstallationId.
+      // 3. A retry while the connected relay runs the INSTALL would cancel
+      //    its job and lock it out, so the public route refuses it.
       const retryResp = await request.post(`${API_URL}/api/install/${installLinkId}/retry`, {
-      data: {},
-      headers: await installLinkHeaders(request, installLinkId),
-    });
-      expect(retryResp.ok()).toBeTruthy();
-      const retryBody = (await retryResp.json()) as {
-        state: string;
-        attemptNumber: number;
-        quickCreateUrl: string | null;
-        existingStackUpdate: { enrollmentCode: string; relayCredential: string } | null;
-      };
-      expect(retryBody.state).toBe('NOT_INSTALLED');
-      expect(retryBody.attemptNumber).toBe(1);
-      // The connector registered, so the retry updates its stack: no second connector.
-      expect(retryBody.quickCreateUrl).toBeNull();
-      expect(retryBody.existingStackUpdate).not.toBeNull();
-
-      // 4. Verify the deployment re-armed: fetch the fresh credential.
-      const refreshedInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
-      headers: await installLinkHeaders(request, installLinkId),
-    }).then((r) => r.json()) as {
-        quickCreateUrl: string | null;
-        existingStackUpdate: { enrollmentCode: string; relayCredential: string } | null;
-      };
-      expect(refreshedInfo.quickCreateUrl).toBeNull();
-      const freshEnrollment = refreshedInfo.existingStackUpdate!.enrollmentCode;
-      const freshRelayCred = refreshedInfo.existingStackUpdate!.relayCredential;
-
-      // Fresh enrollment code is different from the first.
-      expect(freshEnrollment).not.toBe(enrollmentCode);
-
-      // 5. The deployment re-arms: start a second relay with the fresh code.
-      relayA.stop();
-      const relayB = startSimulatedRelay({
-        scenario: getScenario('happy-path'),
-        apiUrl: API_URL,
-        installationId,
-        enrollmentCode: freshEnrollment,
-        relayToken: freshRelayCred,
+        data: {},
+        headers: await installLinkHeaders(request, installLinkId),
       });
+      expect(retryResp.status()).toBe(409);
+      const retryBody = (await retryResp.json()) as { error: { code: string } };
+      expect(retryBody.error.code).toBe('INSTALL_IN_PROGRESS');
 
-      try {
-        // 6. The install succeeds to HEALTHY.
-        await expect
-          .poll(async () => (await api.getDeployment(deploymentId)).state, {
-            timeout: 20_000,
-            message: 'waiting for retried install to reach HEALTHY',
-          })
-          .toBe('HEALTHY');
-      } finally {
-        relayB.stop();
-      }
+      // 4. The running install is untouched and reaches HEALTHY.
+      await expect
+        .poll(async () => (await api.getDeployment(deploymentId)).state, {
+          timeout: 20_000,
+          message: 'waiting for the install to reach HEALTHY',
+        })
+        .toBe('HEALTHY');
     } finally {
       relayA.stop();
     }
