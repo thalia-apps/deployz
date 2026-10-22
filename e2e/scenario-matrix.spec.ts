@@ -30,6 +30,7 @@ import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay
 import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expect, expectPlanMatchesInventory, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
 import { installLinkHeaders } from './install-link.js';
+import { fixtureSha } from './fixture-sha.js';
 
 interface ReadinessResponse {
   analysisStatus: string;
@@ -272,7 +273,7 @@ test.describe('redis-success (B)', () => {
     const installed = (await api.getDeployment(deploymentId)) as unknown as DeploymentResponse;
     const releaseResponse = await request.post(
       `${API_URL}/api/applications/${installed.applicationId}/releases`,
-      { data: { version: '1.0.0', gitSha: 'sha-1.0.0' } },
+      { data: { version: '1.0.0', gitSha: fixtureSha('1.0.0') } },
     );
     expect(releaseResponse.ok()).toBeTruthy();
     const release = (await releaseResponse.json()) as { id: string };
@@ -374,7 +375,7 @@ test.describe('monorepo-classified-deploy (C)', () => {
       await waitForInstallAutoDeploy(buildApi(request), deployment.id);
 
       const releaseResponse = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-        data: { version: '1.0.0', gitSha: 'sha-1.0.0' },
+        data: { version: '1.0.0', gitSha: fixtureSha('1.0.0') },
       });
       expect(releaseResponse.ok()).toBeTruthy();
       const release = (await releaseResponse.json()) as { id: string };
