@@ -25,3 +25,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 0
+    # The web image stays on the Node major that the API Lambdas use (22).
+    # node:25-alpine has no corepack, and the Dockerfile needs it.
+    ignore:
+      - dependency-name: node
+        update-types:
+          - version-update:semver-major
