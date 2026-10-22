@@ -1,0 +1,246 @@
+{
+  "id": "repo-205",
+  "commit": "6296c0c855b13050a19ad111f88bc804ab85bdaf",
+  "analyser": "rules@de6be85e",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "ng build public",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALFIO_DEMO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/SpringBootLauncher.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHIFT_APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHIFT_POSTGRESQL_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHIFT_POSTGRESQL_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHIFT_POSTGRESQL_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHIFT_POSTGRESQL_DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_ENV_POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_ENV_POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_ENV_POSTGRES_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_PORT_5432_TCP_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_PORT_5432_TCP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/main/java/alfio/config/support/PlatformProvider.java"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

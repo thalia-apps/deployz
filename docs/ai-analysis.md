@@ -297,9 +297,12 @@ is final.
     `database-connection-unverified` case: no binding name is read with
     evidence).
   - A repository with no open item makes no model call.
-- **Evidence files** (`evidenceFileRequests`): the rules tree fetches only
-  some source languages (TypeScript, JavaScript, Python, Ruby, Go) and at
-  most 200 files. For a repository with an open item, the API also fetches
+- **Evidence files** (`evidenceFileRequests`): the rules tree fetches at
+  most 200 files of some source languages (TypeScript, JavaScript, Python,
+  Ruby, Go, C#, Java, Kotlin, PHP, Rust, Elixir; the rules read the
+  variables of each, see docs/environment-variables.md#code-reads). Scala
+  and the files the cap left out are not in it. For a repository with an
+  open item, the API also fetches
   up to 40 production files that the tree does not hold: the boot files
   (`Program.cs`, `*Startup.cs`, `*Application.java`, `main.rs`,
   `application.ex`, `config/runtime.exs`, `index.php`, `appsettings.json`)

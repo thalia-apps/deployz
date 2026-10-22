@@ -239,6 +239,7 @@ const EXACT_USER_NAMES = new Set([
 const EXACT_PASSWORD_NAMES = new Set([
   'PGPASSWORD',
   'DATABASE_PASSWORD',
+  'DATABASE_PASS',
   'POSTGRES_PASSWORD',
   'MYSQL_PASSWORD',
   'DBPASSWORD',
@@ -250,10 +251,14 @@ const EXACT_PASSWORD_NAMES = new Set([
 // `SENTRY_DSN` ends in `_DSN` but is an error tracker's address, never the database.
 const ERROR_TRACKER_NAME_REGEX = /(?:^|_)(?:SENTRY|GLITCHTIP|BUGSNAG|ROLLBAR|HONEYBADGER)(?:_|$)/;
 
+// A Docker link (`POSTGRES_ENV_POSTGRES_DB`) or OpenShift v2 (`OPENSHIFT_POSTGRESQL_DB_HOST`)
+// sets these names; an app that finds one can switch to that platform's mode (alf.io).
+const PLATFORM_LINK_NAME_REGEX = /^OPENSHIFT_|_ENV_(?:POSTGRES|MYSQL)_/;
+
 /** The postgres semantic a variable name carries, when the name is a known convention. */
 export function postgresSemantic(name: string): BindingSemantic | null {
   const upper = name.toUpperCase();
-  if (ERROR_TRACKER_NAME_REGEX.test(upper)) return null;
+  if (ERROR_TRACKER_NAME_REGEX.test(upper) || PLATFORM_LINK_NAME_REGEX.test(upper)) return null;
   if (EXACT_URL_NAMES.has(upper) || URL_SUFFIX_REGEX.test(upper)) return 'url';
   if (JDBC_URL_REGEX.test(upper)) return 'jdbc_url';
   if (EXACT_HOST_NAMES.has(upper) || HOST_SUFFIX_REGEX.test(upper)) return 'host';
@@ -316,6 +321,24 @@ export function derivedS3EnvValue(variable: ManifestEnvVariable, region: string)
   return null;
 }
 
+/**
+ * Variables that production JVM code hands to a JDBC data source, so they hold
+ * a `jdbc:postgresql://…` URL whatever their name: `quarkus.datasource.jdbc.url=${X}`,
+ * `spring.datasource.url=${X}`, `jdbc-url: ${X}`, `DriverManager.getConnection(System.getenv("X")…)`.
+ */
+function jdbcUrlEnvNames(tree: FileTree): Set<string> {
+  const names = new Set<string>();
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !isRuntimeSourcePath(path)) continue;
+    if (/(?:^|\/)application[^/]*\.(?:properties|ya?ml)$/i.test(path)) {
+      for (const m of content.matchAll(/(?:\bjdbc[.-]?url|\bjdbcUrl|\bdatasource\.url)\s*[=:]\s*["']?\$\{([A-Z][A-Z0-9_]*)(?::[^}]*)?\}/gi)) names.add(m[1]!);
+    } else if (/\.(?:java|kt)$/.test(path)) {
+      for (const m of content.matchAll(/DriverManager\.getConnection\(\s*System\.getenv\(\s*"([A-Z][A-Z0-9_]*)"/g)) names.add(m[1]!);
+    }
+  }
+  return names;
+}
+
 // ── Derivation ──────────────────────────────────────────────────────────────
 
 /**
@@ -345,10 +368,12 @@ export function deriveInfrastructureBindings(tree: FileTree, analysis: AnalysisR
       seen.add(name);
       bindings.push({ resource: 'postgres', semantic: 'url', applicationVariable: name, source: 'explicit', confidence: 'high' });
     }
+    const jdbcNames = jdbcUrlEnvNames(tree);
     for (const key of model.keys()) {
       if (seen.has(key)) continue;
-      const semantic = postgresSemantic(key);
-      if (semantic === null) continue;
+      const nameSemantic = postgresSemantic(key);
+      if (nameSemantic === null) continue;
+      const semantic = nameSemantic === 'url' && jdbcNames.has(key) ? 'jdbc_url' : nameSemantic;
       const evidence = evidenceForVar(model, tree, key);
       if (evidence === null) continue;
       seen.add(key);

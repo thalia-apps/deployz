@@ -688,7 +688,9 @@ const IGNORED_DIR_SEGMENTS = new Set([
 // in turn) — without it here, that script is never fetched in real (non-
 // fixture) mode and the detector has nothing to read. `ini` joins it for the
 // same reason: a CMD `uwsgi --ini uwsgi.ini` can carry a `hook-pre-app` migration.
-const SOURCE_EXTENSION_REGEX = /\.(sh|ini|ts|js|mjs|cjs|jsx|tsx|py|rb|go)$/i;
+// C#, Java, Kotlin, PHP, Rust and Elixir join it so the env-var model sees the
+// variables those apps read (detectEnvVarModel), inside the same file cap.
+const SOURCE_EXTENSION_REGEX = /\.(sh|ini|ts|js|mjs|cjs|jsx|tsx|py|rb|go|cs|java|kt|php|rs|ex|exs)$/i;
 // A manifest, a Dockerfile or a Prisma schema anywhere in the tree — a
 // workspace repository keeps all three outside the root, and the detectors
 // read every one of them (packages/analysis/src/detectors.ts).
@@ -714,10 +716,11 @@ const COMPOSE_REGEX = /(?:^|\/)(?:docker-)?compose(?:\.[\w.-]+)?\.ya?ml$/i;
 // samples vendors actually commit (never a real `.env`, which is gitignored).
 const ENV_SAMPLE_REGEX = /(?:^|\/)\.env\.(?:example|template|sample)$/i;
 // Framework config files that read env vars under the app's own names: Rails
-// `config/*.yml` (ERB), Laravel `config/*.php`, Spring `application*.properties|yml`.
+// `config/*.yml` (ERB), Laravel `config/*.php`, Spring `application*.properties|yml`,
+// and the .NET `appsettings.json` values that an environment variable overrides.
 // Direct children of `config/` only — `config/locales/` would flood the cap.
 const CONFIG_ENV_FILE_REGEX =
-  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$/i;
+  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$/i;
 // File-based health routes — the same shape detectHealthEndpoint matches on
 // the path rather than on the file's contents — and a NestJS
 // `health.controller.ts`, whose `@Controller('health')` is the only evidence.
