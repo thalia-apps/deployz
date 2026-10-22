@@ -321,6 +321,24 @@ export function derivedS3EnvValue(variable: ManifestEnvVariable, region: string)
   return null;
 }
 
+/**
+ * Variables that production JVM code hands to a JDBC data source, so they hold
+ * a `jdbc:postgresql://…` URL whatever their name: `quarkus.datasource.jdbc.url=${X}`,
+ * `spring.datasource.url=${X}`, `jdbc-url: ${X}`, `DriverManager.getConnection(System.getenv("X")…)`.
+ */
+function jdbcUrlEnvNames(tree: FileTree): Set<string> {
+  const names = new Set<string>();
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !isRuntimeSourcePath(path)) continue;
+    if (/(?:^|\/)application[^/]*\.(?:properties|ya?ml)$/i.test(path)) {
+      for (const m of content.matchAll(/(?:\bjdbc[.-]?url|\bjdbcUrl|\bdatasource\.url)\s*[=:]\s*["']?\$\{([A-Z][A-Z0-9_]*)(?::[^}]*)?\}/gi)) names.add(m[1]!);
+    } else if (/\.(?:java|kt)$/.test(path)) {
+      for (const m of content.matchAll(/DriverManager\.getConnection\(\s*System\.getenv\(\s*"([A-Z][A-Z0-9_]*)"/g)) names.add(m[1]!);
+    }
+  }
+  return names;
+}
+
 // ── Derivation ──────────────────────────────────────────────────────────────
 
 /**
@@ -350,10 +368,12 @@ export function deriveInfrastructureBindings(tree: FileTree, analysis: AnalysisR
       seen.add(name);
       bindings.push({ resource: 'postgres', semantic: 'url', applicationVariable: name, source: 'explicit', confidence: 'high' });
     }
+    const jdbcNames = jdbcUrlEnvNames(tree);
     for (const key of model.keys()) {
       if (seen.has(key)) continue;
-      const semantic = postgresSemantic(key);
-      if (semantic === null) continue;
+      const nameSemantic = postgresSemantic(key);
+      if (nameSemantic === null) continue;
+      const semantic = nameSemantic === 'url' && jdbcNames.has(key) ? 'jdbc_url' : nameSemantic;
       const evidence = evidenceForVar(model, tree, key);
       if (evidence === null) continue;
       seen.add(key);

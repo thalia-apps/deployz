@@ -97,7 +97,11 @@ OpenShift v2 names (`OPENSHIFT_*`) are never bound: an app can switch to
 that platform's mode when it finds one. A Spring `spring.datasource` gets
 the relaxed-binding names `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`,
 except when the same file pins an embedded driver (H2, HSQLDB, Derby): a
-PostgreSQL URL would fail that driver at start.
+PostgreSQL URL would fail that driver at start. A URL-named variable that
+production JVM config passes to a JDBC data source
+(`quarkus.datasource.jdbc.url=${X}`, `spring.datasource.url=${X}`,
+`jdbc-url`, `DriverManager.getConnection(System.getenv("X"))`) gets the JDBC
+URL (`jdbc:postgresql://…`), whatever its name.
 
 ## Map a variable to a managed value
 

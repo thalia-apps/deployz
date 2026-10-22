@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { postgresSemantic } from '../src/bindings.js';
+import { deriveInfrastructureBindings, postgresSemantic } from '../src/bindings.js';
 import { detectEnvVarModel, detectHealthEndpoint, isRuntimeSourcePath, type FileTree } from '../src/detectors.js';
 
 function modelByKey(tree: FileTree) {
@@ -164,6 +164,21 @@ describe('env reads in C#, Java, PHP, Rust and Elixir', () => {
     expect(byKey.get('SMTP_PASSWORD')).toMatchObject({ required: false });
     expect(byKey.get('EXPORTS_BUCKET')).toMatchObject({ required: false });
     expect(byKey.has('DEV_ONLY_KEY')).toBe(false);
+  });
+
+  it('a URL variable that the JVM config passes to a JDBC data source binds as a JDBC URL', () => {
+    const tree: FileTree = {
+      'backend/src/main/resources/application.properties': 'quarkus.datasource.jdbc.url=${GEOPULSE_POSTGRES_URL}\nquarkus.datasource.username=${GEOPULSE_POSTGRES_USERNAME}',
+      'src/main/java/app/Report.java': 'var c = DriverManager.getConnection(System.getenv("REPORTS_DB_URL"));',
+      'src/app.ts': 'const cacheDb = process.env.CACHE_DATABASE_URL;',
+    };
+    const model = detectEnvVarModel(tree);
+    const bindings = deriveInfrastructureBindings(tree, { findings: [], rejections: [], metadata: { postgres: { required: true }, envVarModel: model } });
+    const semantic = (name: string) => bindings.find((b) => b.applicationVariable === name)?.semantic;
+    expect(semantic('GEOPULSE_POSTGRES_URL')).toBe('jdbc_url');
+    expect(semantic('REPORTS_DB_URL')).toBe('jdbc_url');
+    expect(semantic('GEOPULSE_POSTGRES_USERNAME')).toBe('username');
+    expect(semantic('CACHE_DATABASE_URL')).toBe('url');
   });
 
   it('a Deployz database name binds, a Docker-link or OpenShift name does not', () => {
