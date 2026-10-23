@@ -13,6 +13,7 @@
 
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
+import { installLinkHeaders } from './install-link.js';
 import { createReadyRelease } from './seed-ready-manifest.js';
 import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
@@ -119,10 +120,12 @@ test.describe('vendor-dispute', () => {
     };
 
     expect((await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} })).ok()).toBeTruthy();
-    const installInfo = (await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json())) as {
+    const installInfo = (await request
+      .get(`${API_URL}/api/install/${installLinkId}`, { headers: await installLinkHeaders(request, installLinkId) })
+      .then((r) => r.json())) as {
       quickCreateUrl: string | null;
     };
-    expect(installInfo.quickCreateUrl, JSON.stringify(installInfo)).not.toBeNull();
+    expect(installInfo.quickCreateUrl).not.toBeNull();
     const relay = startSimulatedRelay({
       scenario: getScenario('vendor-dispute'),
       apiUrl: API_URL,
