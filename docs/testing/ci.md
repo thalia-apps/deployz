@@ -214,10 +214,12 @@ There is no `plan` job (no PR base to diff against). `test-build` and
 the same set a `critical` pull request runs. `pr-gate` does not run either
 (it is `if: github.event_name == 'pull_request'`).
 
-Deploying is a separate concern from testing, but it does gate on CI now:
-`release.yml` triggers on `workflow_run` of a successful `CI` run for `main`
-(a pull-request CI run has the PR branch as `head_branch` and is filtered
-out). It calls `deploy-api.yml` and `deploy-web.yml`, which are reusable
+Deploying is a separate concern from testing. `release.yml` has two
+automatic triggers (a temporary MVP relaxation, until public launch): a push
+to `main` releases staging at once, in parallel with the main CI run, and
+`workflow_run` of a successful `CI` run for `main` releases production (a
+pull-request CI run has the PR branch as `head_branch` and is filtered out).
+It calls `deploy-api.yml` and `deploy-web.yml`, which are reusable
 workflows that take an environment and a commit. Each one keeps its own
 `gate` job, which checks two things before anything deploys: the commit is
 still the tip of `main` (an older run must not deploy over a newer one), and
@@ -226,9 +228,11 @@ not `ci.yml`'s risk classification — see
 `.github/workflows/deploy-api.yml` / `deploy-web.yml` and
 [`../operations/control-plane.md`](../operations/control-plane.md)).
 
-Staging deploys first. `staging-verify` then polls the staging hosts, and the
-two production jobs wait for a reviewer's approval on the `production`
-Environment. The deploy job re-checks the tip of `main` after the approval, so
+The push run deploys staging, and `staging-verify` then polls the staging
+hosts. The run after CI deploys production only: it does not wait for the
+staging deploy or `staging-verify`. The two production jobs wait for a
+reviewer's approval when the `production` Environment has required
+reviewers. The deploy job re-checks the tip of `main` after the approval, so
 a commit that is no longer current fails instead of deploying. Each deploy
 holds a concurrency group for its own environment and service, so a staging
 deploy never waits for a production deploy. The deploy tag is `deployed/api`

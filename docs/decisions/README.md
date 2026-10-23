@@ -49,6 +49,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
 | 2026-10-21 | The rules Analysis asks about an unusable migration script, and a start script with two background servers is a multi-process image | Active |
 | 2026-10-23 | A vendor can dispute an allowlisted blocker ("not used in production"); the TEST deployment proves the answer | Active |
+| 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1358,3 +1359,26 @@ with no migration); a `deployz.yaml` repository file (post-MVP).
 What would change it: dispute counts show a hard blocker that is often false
 (add it to the list), a need for vendor-hosted external dependencies, or
 TEST failures after disputes that show a finding must not be disputable.
+
+## Staging deploys on merge until public launch (2026-10-23)
+
+Context: Deployz is not open to the public. A merge waited for a second full
+CI run on `main` (10 to 16 minutes) before staging, and production waited for
+staging and an approval. This slowed development.
+
+Decision: `release.yml` also triggers on a push to `main`. That run releases
+staging only, in parallel with the CI run. The run that starts after CI passes
+on `main` releases production only. It does not wait for the staging deploy
+or `staging-verify`. The tip-of-`main` check, the stage gate and the
+per-environment concurrency groups stay. The required reviewers on the
+`production` Environment are a repository setting and stay independent of
+this change.
+
+- A commit can run on staging before its CI run on `main` finishes. A red CI
+  run still stops production.
+- A failed staging deploy does not stop production.
+
+What would change it: the public launch. Then remove the `push` trigger,
+release production again only after `staging-verify`, and make sure the
+`production` Environment has required reviewers. This partly replaces the
+2026-10-09 release decision, which stays the target shape.
