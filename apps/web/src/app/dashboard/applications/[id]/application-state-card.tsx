@@ -4,6 +4,7 @@ import { ArrowUpRight, Check, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { InstallLinkControls } from '@/components/public-install-link-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +17,10 @@ import type {
   ApplicationBlocker,
   ApplicationOutcome,
   ApplicationPresentation,
+  ApplicationState,
   SetupLifecycleItem,
 } from '@/lib/application-state';
+import { DOCS } from '@/lib/docs-links';
 import type { DeployabilityOutcome, FixClass } from '@/lib/readiness';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +47,13 @@ const OUTCOME_BADGE: Record<DeployabilityOutcome, 'success' | 'warning' | 'destr
   DEPLOYABLE: 'success',
   DEPLOYABLE_WITH_CHANGES: 'warning',
   NOT_DEPLOYABLE: 'destructive',
+};
+
+const STATE_DOCS: Partial<Record<ApplicationState, { href: string; label: string }>> = {
+  'analysis-failed': { href: DOCS.analysisProblems, label: 'Fix analysis problems' },
+  'configuration-required': { href: DOCS.analysis, label: 'How to read the analysis results' },
+  'configuration-review': { href: DOCS.analysis, label: 'How to read the analysis results' },
+  'ready-to-test': { href: DOCS.testDeployment, label: 'About test deployments' },
 };
 
 const REANALYSE_LOADING_TEXT: Partial<Record<ApplicationActionId, string>> = {
@@ -147,6 +157,13 @@ export function ApplicationStateCard({
     (presentation.state === 'ready-to-share' || presentation.state === 'customers-active') &&
     presentation.readinessSummary !== null;
 
+  // When the install link is this card's primary action, its docs link lives
+  // here; otherwise the separate install-link card carries it.
+  const stateDocs =
+    presentation.installLinkPlacement === 'primary'
+      ? { href: DOCS.installLinks, label: 'How install links work' }
+      : STATE_DOCS[presentation.state];
+
   const hasFooterContent =
     presentation.installLinkPlacement === 'primary' ||
     presentation.primaryAction !== null ||
@@ -167,6 +184,7 @@ export function ApplicationStateCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">{presentation.message}</p>
+        {stateDocs ? <DocsLink href={stateDocs.href}>{stateDocs.label}</DocsLink> : null}
 
         {presentation.notices.map((notice, index) => (
           <Alert key={index} variant={notice.tone === 'error' ? 'destructive' : 'default'}>
@@ -257,6 +275,9 @@ function BlockerGroups({ blockers }: { blockers: ApplicationBlocker[] }) {
               ))}
               {items.length > 5 ? <li>and {items.length - 5} more</li> : null}
             </ul>
+            {group === 'CAPABILITY_GAP' ? (
+              <DocsLink href={DOCS.notSupported}>What Deployz doesn&apos;t support</DocsLink>
+            ) : null}
           </section>
         );
       })}

@@ -4,8 +4,10 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { RepositoryPicker } from '@/components/repository-picker';
 import { fetchApplications, type Application } from '@/lib/applications';
+import { DOCS } from '@/lib/docs-links';
 
 // Every application after the first is added here (the first one's picker
 // sits inline on the Applications page). The existing applications are only
@@ -38,6 +40,7 @@ export default function NewApplicationPage() {
           Applications
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Add application</h1>
+        <DocsLink href={DOCS.requirements}>What your application needs</DocsLink>
       </div>
       <RepositoryPicker applications={applications} />
     </div>

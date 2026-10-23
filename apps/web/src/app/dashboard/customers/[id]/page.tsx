@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { copyInstallLink } from '@/components/copy-install-link';
 import { StatusBadge } from '@/components/status-badge';
 import { EditCustomerDialog } from '@/components/edit-customer-dialog';
+import { DocsLink } from '@/components/docs-link';
 import { InvitationDialog } from '@/components/invitation-form';
 import {
   AlertDialog,
@@ -37,6 +38,7 @@ import {
 import { errorMessage } from '@/lib/api-client';
 import { fetchDeploymentsForCustomer } from '@/lib/deployments';
 import { relativeTime } from '@/lib/diagnostics';
+import { DOCS } from '@/lib/docs-links';
 import { revokePublicInstallLink } from '@/lib/public-install-links';
 import { regionOptionLabel } from '@/lib/regions';
 
@@ -307,6 +309,7 @@ function InvitationsCard({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Invitations</CardTitle>
+        <DocsLink href={DOCS.invitations}>How customer invitations work</DocsLink>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {invitations === null ? (

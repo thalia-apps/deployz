@@ -9,6 +9,7 @@ import { allowedSizeTiers, type InfrastructureSizeTier } from '@deployz/contract
 
 import { copyInstallLink } from '@/components/copy-install-link';
 import { CustomerPicker } from '@/components/customer-picker';
+import { DocsLink } from '@/components/docs-link';
 import { ManageBillingButton } from '@/components/manage-billing-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,7 @@ import {
   NEW_CUSTOMER_VALUE,
   type Customer,
 } from '@/lib/customers';
+import { DOCS } from '@/lib/docs-links';
 import { fetchApplicationPreflight, type PreflightResult } from '@/lib/preflight';
 import { fetchRegions, type RegionOption } from '@/lib/regions';
 import { sizeTierCompute, sizeTierLabel } from '@/lib/size-tiers';
@@ -447,6 +449,9 @@ function NewDeploymentScreen() {
             The customer picks the AWS region and confirms. A deployment is created only after they confirm.
           </p>
         )}
+        <DocsLink href={isTestDeployment ? DOCS.testDeployment : DOCS.invitations} className="mt-1">
+          {isTestDeployment ? 'About test deployments' : 'How customer invitations work'}
+        </DocsLink>
       </div>
 
       {/* Customer mode: an evaluation or canceled vendor needs a self-serve
@@ -459,6 +464,7 @@ function NewDeploymentScreen() {
               Customers can confirm invitations only with an active subscription. Billing starts
               with your subscription — see What it costs. Test deployments stay free.
             </CardDescription>
+            <DocsLink href={DOCS.billing}>How pricing and billing work</DocsLink>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-3">
             {checkoutState === 'paid' ? (
@@ -656,6 +662,9 @@ function NewDeploymentScreen() {
                         Optional. The customer chooses the final region.
                       </p>
                     )}
+                    <DocsLink href={DOCS.regions} className="text-xs">
+                      About AWS Regions
+                    </DocsLink>
                   </>
                 )}
               </div>

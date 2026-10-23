@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { DocsLink } from '@/components/docs-link';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +19,7 @@ import {
   generateFixInstructions,
   type FixInstructions,
 } from '@/lib/readiness';
+import { DOCS } from '@/lib/docs-links';
 
 // Fix-instructions dialog — generates the consolidated coding-agent prompt
 // for the unresolved readiness findings and hands it to the vendor to paste
@@ -114,6 +116,7 @@ export function FixInstructionsDialog({
           <DialogDescription>
             Paste into your coding agent. Deployz doesn&apos;t change your repository.
           </DialogDescription>
+          <DocsLink href={DOCS.fixFindings}>How to fix analysis findings</DocsLink>
         </DialogHeader>
 
         {state.status === 'generating' ? (

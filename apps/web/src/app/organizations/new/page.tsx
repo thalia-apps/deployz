@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { CreateOrganizationForm } from '@/components/create-organization-form';
+import { DocsLink } from '@/components/docs-link';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { DOCS } from '@/lib/docs-links';
 import { fetchMe } from '@/lib/me';
 
 // Reachable both as the "you have no organization yet" landing spot (the
@@ -22,6 +24,7 @@ export default async function NewOrganizationPage() {
         {hasOrganizations ? null : (
           <CardDescription>Create an organization to continue.</CardDescription>
         )}
+        <DocsLink href={DOCS.organizationAndTeam}>About organizations and teams</DocsLink>
       </CardHeader>
       <CardContent>
         <CreateOrganizationForm />

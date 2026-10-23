@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { DeployzBrand } from '@/components/deployz-brand';
+import { DocsLink } from '@/components/docs-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { apiUrl } from '@/lib/api-url';
+import { DOCS } from '@/lib/docs-links';
 import { resolveGithubSetupRoute } from '@/lib/github-setup';
 import { fetchMe } from '@/lib/me';
 
@@ -50,6 +52,7 @@ export default async function GithubSetupPage({
       <Button asChild variant="outline">
         <Link href="/dashboard/applications">Go to applications</Link>
       </Button>
+      <DocsLink href={DOCS.github}>How to connect GitHub</DocsLink>
     </SetupCard>
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +18,7 @@ import {
   type GithubInstallation,
   type GithubRepository,
 } from '@/lib/github';
+import { DOCS } from '@/lib/docs-links';
 import { loadGithubState, type GithubState } from '@/lib/github-state';
 import { connectedApplicationsByRepo, filterRepositories } from '@/lib/repository-picker';
 
@@ -121,6 +123,7 @@ function ConnectGitHubEmptyState({ connectUrl }: { connectUrl: string | null }) 
           GitHub isn&apos;t configured for this workspace.
         </p>
       ) : null}
+      <DocsLink href={DOCS.github}>How to connect GitHub</DocsLink>
     </section>
   );
 }
@@ -172,6 +175,7 @@ function RepositoryList({
           Grant Deployz access to a repository in GitHub.
         </p>
         <ManageGithubAccess connectUrl={connectUrl} />
+        <DocsLink href={DOCS.github}>How to give Deployz access</DocsLink>
       </section>
     );
   }

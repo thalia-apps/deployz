@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { ListLoadingState, ListSearchInput, NoMatchesState, SortableHead } from '@/components/list-controls';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,7 @@ import { STAGE_LABEL, STEP_LABEL, removedProgress } from '@/lib/deployment-progr
 import { STATUS_FILTER_GROUPS, STATUS_GROUP_LABELS } from '@/lib/deployment-status-groups';
 import { fetchDeployments, type FleetDeployment } from '@/lib/deployments';
 import { relativeTime } from '@/lib/diagnostics';
+import { DOCS } from '@/lib/docs-links';
 import { formatDateTime, nextSort, sortParams, type SortState } from '@/lib/list-view';
 import { regionName, regionOptionLabel } from '@/lib/regions';
 import { useListParams } from '@/lib/use-list-params';
@@ -182,7 +184,10 @@ export default function DeploymentsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Deployments</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Deployments</h1>
+          <DocsLink href={DOCS.listStatuses}>What each status means</DocsLink>
+        </div>
         {/* The empty state owns the sole call to action; a header copy of it
             would show the same button twice on one screen. */}
         {state.status === 'empty' ? null : (

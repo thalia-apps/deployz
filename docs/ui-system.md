@@ -496,6 +496,12 @@ One `<h1>` per page.
   failures are never toast-only.
 - For in-progress states, see Loading above.
 
+## Documentation links
+
+Link to the product documentation with `DocsLink` and the URLs in
+`lib/docs-links.ts`. The placement and audience rules are in
+[`product/ux-guidelines.md`](product/ux-guidelines.md#documentation-links).
+
 ## Responsive expectations
 
 - Desktop: full sidebar, compact operational content.

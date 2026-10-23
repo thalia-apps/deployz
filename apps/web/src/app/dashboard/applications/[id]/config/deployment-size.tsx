@@ -11,6 +11,7 @@ import {
   type InfrastructureSizeTier,
 } from '@deployz/contracts';
 
+import { DocsLink } from '@/components/docs-link';
 import { SizeSelect } from '@/components/size-select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { errorMessage } from '@/lib/api-client';
 import { fetchApplicationPlan, updateApplicationSizes, type Application } from '@/lib/applications';
 import { estimateKind } from '@/lib/configuration-inventory';
+import { DOCS } from '@/lib/docs-links';
 import { formatMonthlyRange } from '@/lib/footprint';
 import { regionOptionLabel } from '@/lib/regions';
 import { formatCompute, sizeTierCompute, sizeTierLabel } from '@/lib/size-tiers';
@@ -229,6 +231,7 @@ export function DeploymentSize({
         <div>
           <h3 className="text-sm font-semibold">Customer sizes</h3>
           <p className="text-sm text-muted-foreground">Changes apply to new install links and new deployments.</p>
+          <DocsLink href={DOCS.defaultAndMinimumSize}>How to choose the default and minimum size</DocsLink>
         </div>
         <div className="grid gap-4 sm:max-w-xl sm:grid-cols-2">
           <div className="flex flex-col gap-2">

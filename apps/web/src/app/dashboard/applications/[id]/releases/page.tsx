@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { releaseBuildFailureSummary, RELEASE_INFRASTRUCTURE_COPY } from '@deployz/copy-map';
 
 import { CommitPicker, type CommitPickerHandle } from '@/components/commit-picker';
+import { DocsLink } from '@/components/docs-link';
 import { ReleaseFailureDetails } from '@/components/release-failure-details';
 import { useApplicationPage } from '../application-page-context';
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/lib/deployments';
 import type { DeploymentPlan } from '@deployz/contracts';
 import { relativeTime } from '@/lib/diagnostics';
+import { DOCS } from '@/lib/docs-links';
 import {
   RELEASE_STATUS_BADGE,
   RELEASE_STATUS_EXPLANATION,
@@ -234,6 +236,7 @@ function CreateReleaseForm({
         <CardDescription>
           Records an immutable version. It does not update any customer.
         </CardDescription>
+        <DocsLink href={DOCS.createRelease}>How releases work</DocsLink>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

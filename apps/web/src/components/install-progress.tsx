@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { StepList, type StepListItem } from '@/components/step-list';
 import { AwsInfrastructureDetails } from '@/components/aws-infrastructure-details';
 import { CustomDomainCard } from '@/components/custom-domain-card';
+import { DocsLink } from '@/components/docs-link';
 import {
   DeploymentTracker,
   WireStepList,
@@ -41,6 +42,7 @@ import {
   STARTUP_FAILURE_CUSTOMER_NOTE,
   STARTUP_FAILURE_TITLE,
 } from '@/lib/diagnostic-vocabulary';
+import { DOCS } from '@/lib/docs-links';
 import { OWNERSHIP_NOTE } from '@/lib/security-details';
 import { useStatusPoll } from '@/lib/use-status-poll';
 
@@ -245,7 +247,10 @@ export function InstallProgress({
         <Alert variant="destructive">
           <AlertTriangle aria-hidden />
           <AlertTitle>AWS reported a problem</AlertTitle>
-          <AlertDescription>{status.provisioningIssue.message}</AlertDescription>
+          <AlertDescription>
+            <p>{status.provisioningIssue.message}</p>
+            <DocsLink href={DOCS.customerInstallFails}>If the deployment fails</DocsLink>
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -467,6 +472,7 @@ function CustomerFailurePanel({
         </>
       }
       impact={cleanup ? CLEANUP_COPY[cleanup] : undefined}
+      explanation={<DocsLink href={DOCS.customerInstallFails}>If the deployment fails</DocsLink>}
       whoActs={
         actionRequired
           ? 'Something in the AWS account or setup must change before a retry can succeed. Contact your software provider to retry after that change.'

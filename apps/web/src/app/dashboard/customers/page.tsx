@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { DeleteCustomerDialog } from '@/components/delete-customer-dialog';
+import { DocsLink } from '@/components/docs-link';
 import { EditCustomerDialog } from '@/components/edit-customer-dialog';
 import { ListLoadingState, ListSearchInput, NoMatchesState, SortableHead } from '@/components/list-controls';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,7 @@ import {
 import { CUSTOMER_BUCKET_BADGE } from '@/lib/deployment-status-groups';
 import { fetchDeployments, type FleetDeployment } from '@/lib/deployments';
 import { relativeTime } from '@/lib/diagnostics';
+import { DOCS } from '@/lib/docs-links';
 import { formatDateTime, nextSort, sortParams, type SortState } from '@/lib/list-view';
 import { useListParams } from '@/lib/use-list-params';
 
@@ -174,7 +176,10 @@ export default function CustomersPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
+          <DocsLink href={DOCS.customerStatuses}>What each status means</DocsLink>
+        </div>
         {state.status === 'loaded' && customers.length === 0 ? null : (
           <Button asChild size="sm">
             <Link href="/dashboard/deployments/new">Invite customer</Link>

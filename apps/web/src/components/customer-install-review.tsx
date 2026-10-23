@@ -4,12 +4,14 @@ import type { ReactNode } from 'react';
 import type { DeploymentPlan } from '@deployz/contracts';
 
 import { AwsInfrastructureDetails } from '@/components/aws-infrastructure-details';
+import { DocsLink } from '@/components/docs-link';
 import { FootprintCost } from '@/components/footprint-cost';
 import { FootprintSummary } from '@/components/footprint-summary';
 import { InstallPlanComponentTable } from '@/components/install-plan-component-table';
 import { TablePanel } from '@/components/table-panel';
 import { TechnicalDetails } from '@/components/technical-details';
 import { Button } from '@/components/ui/button';
+import { DOCS } from '@/lib/docs-links';
 import { installPlanRetentionNote, RETENTION_CHARGES_NOTE } from '@/lib/install-plan';
 
 // The customer's one pre-deploy review (ux-guidelines §1, §8), shared by the
@@ -57,6 +59,7 @@ export function CustomerInstallReview({
             {retentionNote} {RETENTION_CHARGES_NOTE}
           </p>
         ) : null}
+        <DocsLink href={DOCS.customerWhatRuns}>What runs in your AWS account</DocsLink>
         {plan || technicalExtra ? (
           <TechnicalDetails>
             {plan ? (
@@ -79,7 +82,10 @@ export function CustomerInstallReview({
           AWS cost estimate unavailable for this Region.
         </p>
       ) : (
-        <FootprintCost estimate={plan?.costEstimate} />
+        <div className="flex flex-col gap-1">
+          <FootprintCost estimate={plan?.costEstimate} />
+          <DocsLink href={DOCS.customerCostEstimate}>How to read the estimate</DocsLink>
+        </div>
       )}
 
       <section aria-labelledby="install-access" className="flex flex-col gap-3">

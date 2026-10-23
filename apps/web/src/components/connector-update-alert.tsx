@@ -1,8 +1,10 @@
 import type { VendorDeploymentStatus } from '@deployz/contracts';
 import { RefreshCw } from 'lucide-react';
 
+import { DocsLink } from '@/components/docs-link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DOCS } from '@/lib/docs-links';
 
 // A customer-approved update of the existing connector stack. It is not a
 // reconnect: the credential stays, so nothing here asks for a new one.
@@ -41,6 +43,7 @@ export function ConnectorUpdateAlert({
             </a>
           </Button>
         ) : null}
+        <DocsLink href={DOCS.updateConnector}>How to update the connector</DocsLink>
       </AlertDescription>
     </Alert>
   );

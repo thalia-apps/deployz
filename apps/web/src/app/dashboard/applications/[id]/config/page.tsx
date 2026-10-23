@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState, type FormEvent, type ReactNode } from 'r
 
 import { deliversConfigValue, type EnvironmentSetting } from '@deployz/contracts';
 
+import { DocsLink } from '@/components/docs-link';
 import { SecretInput } from '@/components/secret-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import {
   type ConfigEntry,
   type MaskedConfigEntry,
 } from '@/lib/config';
+import { DOCS } from '@/lib/docs-links';
 import { fetchEnvironmentSettings } from '@/lib/environment-settings';
 import { TONE_TEXT } from '@/lib/status-tone';
 import { cn } from '@/lib/utils';
@@ -445,6 +447,7 @@ function ConfigSection({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
+        <DocsLink href={DOCS.customerConfiguration}>How customer overrides work</DocsLink>
       </CardHeader>
       <CardContent>
         <form key={version} onSubmit={handleSubmit} className="flex flex-col gap-5">

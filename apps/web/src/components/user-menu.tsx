@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, FileText, LogOut, Settings, Shield } from 'lucide-react';
+import { BookOpen, ChevronDown, FileText, LogOut, Settings, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -24,6 +24,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { authClient } from '@/lib/auth-client';
+import { DOCS_URL } from '@/lib/docs-links';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '@/lib/legal-links';
 
 const SETTINGS_HREF = '/dashboard/settings/profile';
@@ -89,6 +90,12 @@ function UserMenuItems({
         </Link>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <a href={DOCS_URL} target="_blank" rel="noreferrer">
+          <BookOpen aria-hidden />
+          Documentation
+        </a>
+      </DropdownMenuItem>
       <DropdownMenuItem asChild>
         <a href={TERMS_OF_SERVICE_URL} target="_blank" rel="noreferrer">
           <FileText aria-hidden />
