@@ -4,6 +4,7 @@ import { Bot, Copy, FileText, LifeBuoy, RotateCcw, Sparkles } from 'lucide-react
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { DocsLink } from '@/components/docs-link';
 import { FailurePanel } from '@/components/failure-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
   type BuildLogLines,
   type ExcerptLine,
 } from '@/lib/release-build-failure';
+import { DOCS } from '@/lib/docs-links';
 import type { Release } from '@/lib/releases';
 import { cn } from '@/lib/utils';
 
@@ -197,6 +199,12 @@ export function ReleaseFailureDetails({
             <div aria-live="polite">
               <ExplanationResult state={explanation} />
             </div>
+
+            {deployzIssue ? (
+              <DocsLink href={DOCS.contactSupport}>How to contact Deployz support</DocsLink>
+            ) : (
+              <DocsLink href={DOCS.buildFailures}>How to fix a failed build</DocsLink>
+            )}
           </div>
         }
         impact={installedInstead ? `Customers still get ${installedInstead.version}.` : null}

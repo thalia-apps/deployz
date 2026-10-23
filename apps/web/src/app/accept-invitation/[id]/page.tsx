@@ -3,9 +3,11 @@ import type { ReactNode } from 'react';
 
 import { AcceptInvitationActions, SignOutButton } from '@/components/accept-invitation-actions';
 import { DeployzBrand } from '@/components/deployz-brand';
+import { DocsLink } from '@/components/docs-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { VerifyEmailPrompt } from '@/components/verify-email-prompt';
+import { DOCS } from '@/lib/docs-links';
 import { fetchMe, fetchPublicInvitation, type PublicInvitation } from '@/lib/me';
 
 const STATUS_MESSAGES: Record<Exclude<PublicInvitation['status'], 'pending'>, string> = {
@@ -103,6 +105,7 @@ export default async function AcceptInvitationPage({
         {invitation.inviterName} invited you to join {invitation.organizationName} as{' '}
         {invitation.role}.
       </p>
+      <DocsLink href={DOCS.organizationAndTeam}>About roles and team members</DocsLink>
       <AcceptInvitationActions id={id} />
     </InvitationCard>
   );

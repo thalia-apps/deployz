@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { InstallLoadError } from '@/components/install-load-error';
 import { PublicInstallFlow } from '@/components/public-install-flow';
 import { SecurityDetailsContent } from '@/components/security-details-content';
 import { Spinner } from '@/components/ui/spinner';
+import { DOCS } from '@/lib/docs-links';
 import { fetchPublicInstallData } from '@/lib/public-install-data';
 import { publicInstallErrorMessage, type PublicInstallResolve } from '@/lib/public-install-types';
 
@@ -112,6 +114,7 @@ export function InvitationTokenGate({ installLinkId, view = 'install' }: Invitat
           This installation link doesn&apos;t match an active installation. The one-time code may be
           missing or incorrect. Contact whoever sent you this link for a new one.
         </p>
+        <DocsLink href={DOCS.customerLinkDoesNotOpen}>If the link does not open</DocsLink>
       </div>
     );
   }

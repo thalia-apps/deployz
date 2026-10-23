@@ -24,6 +24,7 @@ import { PreflightSummary } from '@/components/preflight-summary';
 import { ActivityFeed } from '@/components/activity-feed';
 import { ConnectorUpdateAlert } from '@/components/connector-update-alert';
 import { DeploymentHero } from '@/components/deployment-hero';
+import { DocsLink } from '@/components/docs-link';
 import { StatusBadge } from '@/components/status-badge';
 import { TechnicalDetails } from '@/components/technical-details';
 import { InfrastructureEvents } from '@/components/infrastructure-events';
@@ -137,6 +138,7 @@ import {
   type RetryEligibility,
 } from '@/lib/diagnostics';
 import { isConfigurationFailure } from '@/lib/diagnostic-vocabulary';
+import { DOCS } from '@/lib/docs-links';
 import { TONE_TEXT } from '@/lib/status-tone';
 import { cn } from '@/lib/utils';
 import {
@@ -514,6 +516,7 @@ function DetailBody({
         <h2 id="infrastructure" className="text-base font-semibold">
           Infrastructure
         </h2>
+        <DocsLink href={DOCS.awsResources}>AWS resources Deployz creates</DocsLink>
         {detail.size ? (
           <p className="text-sm text-muted-foreground" data-testid="deployment-size-label">
             Size: {detail.size.label}
@@ -1022,7 +1025,7 @@ function DeploymentActions({
           </Button>
         ) : null}
         {retryCtaKind === 'contact-support' ? (
-          <span className="text-sm text-muted-foreground">Contact Deployz support</span>
+          <DocsLink href={DOCS.contactSupport}>Contact Deployz support</DocsLink>
         ) : null}
         {hero.kind === 'removal-failed' ? (
           <Button
@@ -1270,6 +1273,7 @@ function DeployUpdateDialog({
           <DialogDescription>
             Choose a release for {applicationName}.
           </DialogDescription>
+          <DocsLink href={DOCS.deployUpdate}>How updates work</DocsLink>
         </DialogHeader>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading releases…</p>
@@ -1421,6 +1425,9 @@ function RollbackDialog({
         <Alert variant="destructive">
           <AlertTriangle aria-hidden />
           <AlertTitle>Application rollback does not automatically reverse database migrations.</AlertTitle>
+          <AlertDescription>
+            <DocsLink href={DOCS.rollbackSafeMigrations}>Keep migrations safe for rollback</DocsLink>
+          </AlertDescription>
         </Alert>
         <OperationError error={error} />
         <AlertDialogFooter>
@@ -1482,6 +1489,7 @@ function RestartDialog({
             The application will restart behind the load balancer. The running version does not
             change.
           </AlertDialogDescription>
+          <DocsLink href={DOCS.restart}>When to restart a deployment</DocsLink>
         </AlertDialogHeader>
         <OperationError error={error} />
         <AlertDialogFooter>
@@ -1978,6 +1986,7 @@ function DisconnectDialog({
           <AlertDialogDescription>
             Removing the deployment takes down the running application and its networking.
           </AlertDialogDescription>
+          <DocsLink href={DOCS.removeDeployment}>What removal deletes and keeps</DocsLink>
         </AlertDialogHeader>
         <div className="flex flex-col gap-3 text-sm text-muted-foreground">
           {loading ? (
@@ -2192,6 +2201,7 @@ function InstallLinkCard({ detail }: { detail: FleetDeploymentDetail }) {
               Issue new install link
             </Button>
           </div>
+          <DocsLink href={DOCS.newInstallLink}>What a new install link changes</DocsLink>
           {expiresAt ? (
             <p className="text-sm text-muted-foreground" data-testid="install-link-expiry">
               {expired

@@ -1,10 +1,12 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { DocsLink } from '@/components/docs-link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InviteMemberForm } from '@/components/invite-member-form';
 import { LeaveOrganizationButton, MembersList } from '@/components/members-list';
 import { PendingInvitations } from '@/components/pending-invitations';
+import { DOCS } from '@/lib/docs-links';
 import { fetchInvitations, fetchMembers } from '@/lib/organization';
 import { canManageTeam } from '@/lib/organization-vocabulary';
 import { fetchMe } from '@/lib/me';
@@ -32,6 +34,7 @@ export default async function MembersPage() {
           Settings
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
+        <DocsLink href={DOCS.organizationAndTeam}>About roles and team members</DocsLink>
       </div>
 
       <Card>

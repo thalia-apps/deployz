@@ -340,8 +340,30 @@ Build only these. Everything else is direct shadcn composition.
 | `TechnicalDetails` | differently named disclosures |
 | `SecretInput` (exists) | the inline password field in `public-install-flow.tsx` |
 | `EmptyState` over shadcn `Empty` | hand-written empty blocks, only when a page is touched anyway |
+| `DocsLink` over `lib/docs-links.ts` | hand-written links to the product documentation |
 
 Do not build `PageHeader`, generic data tables or card factories.
+
+### Documentation links
+
+The product documentation is at `https://deployz.dev/docs/`.
+
+- Take every docs URL from `lib/docs-links.ts`. Do not write a docs URL in a
+  component.
+- Show one docs link per surface (page header, card, dialog or panel). The
+  link text says what the page explains, for example "How install links
+  work", not "Docs" or "Learn more".
+- Put the link under the description or the explanation. Never put it in an
+  action row or next to the primary action.
+- In a `FailurePanel`, the link goes in the `explanation` slot. A classified
+  deployment failure links to its failure-code entry
+  (`failureCodeDocsUrl`); `UNKNOWN` links to the troubleshooting overview.
+- Customer pages (`/install`, `/deploy` and their security pages) link only
+  to the Customer guide pages (`customers/*`). A component that both roles
+  see picks the page by role, as `CustomDomainCard` does with `canManage`.
+- Admin pages, sign-in, sign-up and Home have no docs links. Home's only
+  link is the current step's action (§4); the user menu's Documentation
+  item is the general entry point.
 
 ## 12. UX-BACKEND items
 

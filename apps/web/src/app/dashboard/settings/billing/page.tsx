@@ -1,10 +1,12 @@
 import { Receipt } from 'lucide-react';
 
+import { DocsLink } from '@/components/docs-link';
 import { ManageBillingButton } from '@/components/manage-billing-button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { fetchBillingSummary, formatDollars, type BillingSummary } from '@/lib/billing';
+import { DOCS } from '@/lib/docs-links';
 import { subscriptionStatusLabel } from '@/lib/organization-vocabulary';
 
 // §48 billing display. Paddle migration Phase 11 splits it in two, because
@@ -25,7 +27,10 @@ export default async function BillingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
+        <DocsLink href={DOCS.billing}>How pricing and billing work</DocsLink>
+      </div>
 
       {billing.subscription ? (
         <SubscribedCard billing={billing} />

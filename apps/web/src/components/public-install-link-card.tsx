@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { allowedSizeTiers, type InfrastructureSizeTier } from '@deployz/contracts';
 
+import { DocsLink } from '@/components/docs-link';
 import { SizeSelect } from '@/components/size-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -32,6 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ApiRequestError, errorMessage } from '@/lib/api-client';
 import { fetchApplication } from '@/lib/applications';
 import type { InstallLinkPresentation, InstallLinkStatus } from '@/lib/application-state';
+import { DOCS } from '@/lib/docs-links';
 import {
   createPublicInstallLink,
   publicInstallHtmlSnippet,
@@ -422,7 +424,10 @@ export function PublicInstallLinkCard({ applicationId, installLink, onChanged }:
   return (
     <Card data-testid="public-install-link-card">
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="shrink-0 text-sm font-medium">Customer install link</p>
+        <div className="flex shrink-0 flex-col gap-1">
+          <p className="text-sm font-medium">Customer install link</p>
+          <DocsLink href={DOCS.installLinks}>How install links work</DocsLink>
+        </div>
         <InstallLinkControls applicationId={applicationId} installLink={installLink} onChanged={onChanged} />
       </CardContent>
     </Card>

@@ -3,6 +3,7 @@ import { ChevronDown, Database, HardDrive, Server, ShieldCheck, type LucideIcon 
 
 import { AwsResourcesTable } from '@/components/aws-resources-table';
 import { BeforeYouDeploySection } from '@/components/before-you-deploy-section';
+import { DocsLink } from '@/components/docs-link';
 import { EnvVarsTable } from '@/components/env-vars-table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -11,6 +12,7 @@ import {
   type ResourceCategory,
   type ResourceCategorySummary,
 } from '@/lib/customer-install-resources';
+import { DOCS } from '@/lib/docs-links';
 import { formatMonthlyRange } from '@/lib/footprint';
 
 const CATEGORY_ICON: Record<ResourceCategory, LucideIcon> = {
@@ -75,6 +77,7 @@ export function CustomerInstallSections({
                 <AwsResourcesTable plan={plan} />
               </CollapsibleContent>
             </Collapsible>
+            <DocsLink href={DOCS.customerWhatRuns}>What runs in your AWS account</DocsLink>
           </section>
         </>
       ) : null}
@@ -115,6 +118,9 @@ function CostEstimate({ plan }: { plan: DeploymentPlan | null }) {
       <p className="text-xs text-muted-foreground">
         AWS bills your account directly; actual charges depend on usage.
       </p>
+      <DocsLink href={DOCS.customerCostEstimate} className="text-xs">
+        How to read the estimate
+      </DocsLink>
     </section>
   );
 }

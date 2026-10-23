@@ -7,6 +7,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { DeploymentPlan } from '@deployz/contracts';
 
 import { ArchitectureDiagram } from '@/components/architecture-diagram';
+import { DocsLink } from '@/components/docs-link';
 import {
   Accordion,
   AccordionContent,
@@ -26,6 +27,7 @@ import {
   type PermissionRole,
   type PermissionStatement,
 } from '@/lib/bootstrap-permissions';
+import { DOCS } from '@/lib/docs-links';
 import { awsResourceGroups } from '@/lib/install-plan';
 import {
   CONNECTOR_STACK_RESOURCES,
@@ -515,6 +517,7 @@ export function SecurityDetailsContent({
         <p className="text-sm text-muted-foreground">
           Review what Deployz installs, what it can access, and how you stay in control.
         </p>
+        <DocsLink href={DOCS.customerSecurity}>Read the full security guide</DocsLink>
       </div>
 
       <ul aria-label="Security highlights" className="grid gap-4 sm:grid-cols-3">

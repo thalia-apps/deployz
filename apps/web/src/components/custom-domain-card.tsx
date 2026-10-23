@@ -3,6 +3,7 @@
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import {
   checkDomainByDeployLink,
   fetchDomainByDeployLink,
 } from '@/lib/deploy-link-flow';
+import { DOCS } from '@/lib/docs-links';
 import {
   addDomain,
   checkDomain,
@@ -220,6 +222,12 @@ export function CustomDomainCard(props: {
               onCheck={handleCheck}
               onOpenRemove={toggleRemovePanel}
             />
+          ) : null}
+
+          {ready && canManage ? (
+            <DocsLink href={DOCS.customDomains}>How custom domains work</DocsLink>
+          ) : ready && domain !== null ? (
+            <DocsLink href={DOCS.customerDomainDns}>How to create the DNS records</DocsLink>
           ) : null}
         </CardContent>
       </Card>

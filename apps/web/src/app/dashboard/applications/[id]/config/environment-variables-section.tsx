@@ -10,6 +10,7 @@ import {
 } from '@deployz/contracts';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { ListSearchInput } from '@/components/list-controls';
 import { SecretInput } from '@/components/secret-input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { saveConfig, type ApplicationConfig, type ConfigEntry, type MaskedConfigEntry } from '@/lib/config';
+import { DOCS } from '@/lib/docs-links';
 import { TONE_TEXT } from '@/lib/status-tone';
 import { cn } from '@/lib/utils';
 import {
@@ -524,6 +526,7 @@ function EnvironmentVariablesTable({
       <CardHeader>
         <CardTitle>Environment variables</CardTitle>
         {summary ? <CardDescription data-testid="environment-variables-summary">{summary}</CardDescription> : null}
+        <DocsLink href={DOCS.environmentVariables}>How to configure environment variables</DocsLink>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-2">

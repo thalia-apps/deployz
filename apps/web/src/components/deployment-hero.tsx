@@ -13,14 +13,16 @@ import type { ReactNode } from 'react';
 import { DeploymentUrlCard } from '@/components/deployment-url-card';
 import { DiagnosticExplanation, DiagnosticTechnical } from '@/components/diagnostic-explanation';
 import { ElapsedTime, timedSteps } from '@/components/deployment-progress-card';
+import { DocsLink } from '@/components/docs-link';
 import { FailurePanel } from '@/components/failure-panel';
 import { StepList } from '@/components/step-list';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { showApplicationUrl, type HeroModel, type HeroTone } from '@/lib/deployment-hero';
+import { showApplicationUrl, type HeroKind, type HeroModel, type HeroTone } from '@/lib/deployment-hero';
 import { JOB_STATE_LABEL, JOB_TYPE_LABEL } from '@/lib/deployment-vocabulary';
 import type { FleetDeploymentDetail } from '@/lib/deployments';
 import { relativeTime, type Diagnostic } from '@/lib/diagnostics';
 import { FAILURE_RECOVERABILITY, RECOVERABILITY_COPY } from '@/lib/diagnostic-vocabulary';
+import { DOCS, failureCodeDocsUrl } from '@/lib/docs-links';
 import { TONE_TEXT } from '@/lib/status-tone';
 import { cn } from '@/lib/utils';
 
@@ -90,7 +92,12 @@ export function DeploymentHero({
               description={hero.description}
               impact={hero.liveReleaseNote}
               whoActs={whoActs}
-              explanation={diagnostic ? <DiagnosticExplanation diagnostic={diagnostic} /> : undefined}
+              explanation={
+                <>
+                  {diagnostic ? <DiagnosticExplanation diagnostic={diagnostic} /> : null}
+                  <RecoveryDocsLink kind={hero.kind} diagnostic={diagnostic ?? null} />
+                </>
+              }
               technical={diagnostic ? <DiagnosticTechnical diagnostic={diagnostic} /> : undefined}
               testId="deployment-recovery-panel"
             />
@@ -129,6 +136,25 @@ export function DeploymentHero({
       <CardFooter className="flex-col items-stretch gap-2">{actions}</CardFooter>
     </Card>
   );
+}
+
+/** The documentation for the failure in the recovery panel: the failure
+ *  code's own entry when the failure is classified, else the page for the
+ *  condition the hero shows. */
+function RecoveryDocsLink({ kind, diagnostic }: { kind: HeroKind; diagnostic: Diagnostic | null }) {
+  if (diagnostic) {
+    return <DocsLink href={failureCodeDocsUrl(diagnostic.failureCode)}>What this failure means</DocsLink>;
+  }
+  if (kind === 'lost-contact') {
+    return <DocsLink href={DOCS.connectorOffline}>When a connector goes offline</DocsLink>;
+  }
+  if (kind === 'unhealthy' || kind === 'degraded') {
+    return <DocsLink href={DOCS.startupAndHealth}>Fix startup and health check failures</DocsLink>;
+  }
+  if (kind === 'removal-failed') {
+    return <DocsLink href={DOCS.removeDeployment}>How removal works</DocsLink>;
+  }
+  return <DocsLink href={DOCS.troubleshooting}>Troubleshooting</DocsLink>;
 }
 
 const ACTIVE_JOB_STATES = ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING'];

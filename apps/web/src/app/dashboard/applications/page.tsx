@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { DocsLink } from '@/components/docs-link';
 import { RepositoryPicker } from '@/components/repository-picker';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchApplications, type Application } from '@/lib/applications';
 import { applicationListBadge, type ApplicationPresentation } from '@/lib/application-state';
 import { fetchDeployments } from '@/lib/deployments';
+import { DOCS } from '@/lib/docs-links';
 import {
   READINESS_STATE_PRESENTATION,
   fetchReadiness,
@@ -117,6 +119,7 @@ export default function ApplicationsPage() {
           <h2 id="add-first-application" className="text-base font-semibold">
             Add your first application
           </h2>
+          <DocsLink href={DOCS.requirements}>What your application needs</DocsLink>
           <RepositoryPicker applications={appsState.applications} />
         </section>
       ) : null}

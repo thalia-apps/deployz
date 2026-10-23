@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { CustomerInstallReview } from '@/components/customer-install-review';
+import { DocsLink } from '@/components/docs-link';
 import { Badge } from '@/components/ui/badge';
 import { SecretInput } from '@/components/secret-input';
 import { Spinner } from '@/components/ui/spinner';
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DOCS } from '@/lib/docs-links';
 import { installPlanRegionLabel } from '@/lib/install-plan';
 import { fetchPublicInstallPlan } from '@/lib/public-install-data';
 import { confirmPublicInstall } from '@/lib/public-install-confirm';
@@ -224,6 +226,7 @@ export function PublicInstallFlow({ linkId, resolve, token, customerKnown = fals
             ))}
           </SelectContent>
         </Select>
+        <DocsLink href={DOCS.customerChooseRegion}>How to choose a Region</DocsLink>
       </section>
 
       <section aria-labelledby="public-size" className="flex flex-col gap-3">

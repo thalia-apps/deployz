@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
 import { CustomerInstallSections } from '@/components/customer-install-sections';
+import { DocsLink } from '@/components/docs-link';
 import { ExistingConnectorUpdate } from '@/components/existing-connector-update';
 import { InstallLaunchButton } from '@/components/install-launch-button';
 import { InstallLoadError } from '@/components/install-load-error';
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RELAY_STUCK_GUIDANCE } from '@/lib/deployment-vocabulary';
 import { cloudFormationStacksUrl } from '@/lib/aws-console';
+import { DOCS } from '@/lib/docs-links';
 import { fetchInstallData } from '@/lib/install-data';
 import {
   installPlanRegionLabel,
@@ -72,6 +74,7 @@ export default async function InstallPage({
           <AlertTitle>Install link unavailable</AlertTitle>
           <AlertDescription>{publicInstallErrorMessage(publicLookup.code)}</AlertDescription>
         </Alert>
+        <DocsLink href={DOCS.customerLinkDoesNotOpen}>If the link does not open</DocsLink>
       </div>
     );
   }
@@ -431,6 +434,7 @@ function RemovedDeployment({
         the retained data is deleted, because deletion runs through it. Then delete the connector
         stack.
       </p>
+      <DocsLink href={DOCS.customerRemove}>How to delete what remains</DocsLink>
       <Button asChild variant="outline" className="w-fit">
         <a
           href={cloudFormationStacksUrl(region, connectorStackName ?? undefined)}

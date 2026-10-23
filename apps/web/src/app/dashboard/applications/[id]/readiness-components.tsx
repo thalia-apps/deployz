@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { DeploymentStatusBadge } from '@/components/deployment-status-badge';
+import { DocsLink } from '@/components/docs-link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +25,7 @@ import {
   type UpdateApplicationInput,
   updateApplication,
 } from '@/lib/applications';
+import { DOCS } from '@/lib/docs-links';
 import {
   detectedFieldValue,
   requirementSummaryKeyFor,
@@ -217,6 +219,7 @@ export function EditDialog({
               detected sends existing deployments back to the command they were created with.
             </p>
           ) : null}
+          <DocsLink href={config.docs.href}>{config.docs.label}</DocsLink>
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
@@ -262,40 +265,47 @@ const FIELD_CONFIG: Record<
     booleanLabel?: string;
     /** When a saved change reaches new and existing deployments. */
     applies: string;
+    docs: { href: string; label: string };
   }
 > = {
   containerPort: {
     label: 'Container port',
     type: 'number',
     applies: 'New deployments use this value. Existing deployments keep the value they were created with.',
+    docs: { href: DOCS.requirements, label: 'Application requirements' },
   },
   healthPath: {
     label: 'Health check path',
     type: 'text',
     applies: 'New deployments use this value. Existing deployments keep the value they were created with.',
+    docs: { href: DOCS.healthCheckPath, label: 'How the health check works' },
   },
   migrationCommand: {
     label: 'Migration command',
     type: 'text',
     applies: 'New deployments use this choice. An existing deployment uses it on its next release deployment and keeps running as it is until then.',
+    docs: { href: DOCS.setMigrationCommand, label: 'How migrations run' },
   },
   databaseRequired: {
     label: 'Database',
     type: 'boolean',
     booleanLabel: 'Database required',
     applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+    docs: { href: DOCS.dataServices, label: 'Databases, cache, and file storage' },
   },
   storageRequired: {
     label: 'File storage',
     type: 'boolean',
     booleanLabel: 'File storage required',
     applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+    docs: { href: DOCS.dataServices, label: 'Databases, cache, and file storage' },
   },
   redisRequired: {
     label: 'Cache / queue',
     type: 'boolean',
     booleanLabel: 'Redis required',
     applies: 'New deployments use this choice. Existing deployments keep the resources they were created with.',
+    docs: { href: DOCS.dataServices, label: 'Databases, cache, and file storage' },
   },
 };
 
