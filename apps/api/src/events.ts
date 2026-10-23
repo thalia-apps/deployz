@@ -135,6 +135,10 @@ export type DeploymentEventType =
   | 'application.preflight_evaluated'
   | 'application.configuration_saved'
   | 'application.environment_settings_saved'
+  // A vendor's "not used in production" answer on an allowlisted blocker.
+  // The payload names the finding id only, never the evidence text.
+  | 'application.analysis_disputed'
+  | 'application.analysis_dispute_withdrawn'
   | 'customer.created'
   // release/build telemetry. `release.created` is written by the release
   // route; `release.build_*` by the cdk worker (packages/cdk/src/lambda/

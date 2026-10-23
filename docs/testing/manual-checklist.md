@@ -18,8 +18,8 @@ new simulated scenario or canary case
 ## Before you start
 
 1. **Fix the commit under test.** Production is the last commit on `main`
-   whose CI run was green: `release.yml` runs after a successful CI run and
-   calls `deploy-api.yml` and `deploy-web.yml`, and the `deployed/api` and
+   whose CI run was green: `release.yml` releases production after a
+   successful CI run and calls `deploy-api.yml` and `deploy-web.yml`, and the `deployed/api` and
    `deployed/web` tags name the commits production runs. The
    `deployed/staging/api` and `deployed/staging/web` tags name staging's.
    Record

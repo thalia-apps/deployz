@@ -5,7 +5,7 @@
  * never calls AWS, never writes infrastructure or a secret value, and never
  * sets deployment or job state.
  */
-import type { AnalysisResult } from '../analyser.js';
+import type { AnalysisResult, ResourceOverrides } from '../analyser.js';
 import type { AiGateway, TokenUsage } from '../ai-gateway.js';
 import { TREE_PATHS, type FileTree } from '../detectors.js';
 import { ANALYST_PROMPT_VERSION, ANALYST_TIMEOUT_MS, runAnalyst, type AnalystOutput } from './analyst.js';
@@ -61,7 +61,14 @@ export interface AiAnalysisOutcome {
  * the rules tree only.
  */
 export async function runAiAnalysis(
-  input: { tree: FileTree; rules: AnalysisResult; gateways: AiAnalysisGateways; evidenceFiles?: FileTree | undefined },
+  input: {
+    tree: FileTree;
+    rules: AnalysisResult;
+    gateways: AiAnalysisGateways;
+    evidenceFiles?: FileTree | undefined;
+    /** Vendor overrides already applied to `rules`. */
+    baseOverrides?: ResourceOverrides | undefined;
+  },
   options: { abortSignal?: AbortSignal | undefined } = {},
 ): Promise<AiAnalysisOutcome> {
   const started = Date.now();
@@ -84,7 +91,7 @@ export async function runAiAnalysis(
   const database = (meta['postgres'] as { required?: unknown } | undefined)?.required === true ? 'postgres' : (meta['mysql'] as { required?: unknown } | undefined)?.required === true ? 'mysql' : 'none';
   const dockerfile = typeof meta['dockerfilePath'] === 'string' ? meta['dockerfilePath'] : null;
   const checks = checkAnswers({ pack, tree: evidenceTree, dockerfile, database }, answers.blockers, answers.facts);
-  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks, evidenceFiles: input.evidenceFiles });
+  const merge = mergeAiAnswers({ tree, rules, pack, answers, checks, evidenceFiles: input.evidenceFiles, baseOverrides: input.baseOverrides });
   return {
     merge,
     report: {

@@ -449,7 +449,7 @@ test('release.yml calls one deploy workflow for each service and stage', () => {
     );
     assert.ok(
       condition.includes('!cancelled()'),
-      `${RELEASE_WORKFLOW} jobs.${name}.if must carry !cancelled(), which is what lets it evaluate when staging-verify was skipped on a production-only dispatch.`,
+      `${RELEASE_WORKFLOW} jobs.${name}.if must carry !cancelled(), which is what lets it evaluate when staging-verify was skipped on a production-only run.`,
     );
     assert.ok(
       !condition.includes('always()'),
@@ -476,6 +476,25 @@ test('release.yml calls one deploy workflow for each service and stage', () => {
       `${RELEASE_WORKFLOW} jobs.staging-verify.needs must include ${name}, or the poll races that deploy and proves the previous staging deployment.`,
     );
   }
+});
+
+// MVP relaxation: staging is skipped. Only a successful CI run on main (or a
+// dispatch) releases production, and only a dispatch releases staging.
+test('release.yml releases production after CI on main and staging only on a dispatch', () => {
+  const triggers = WORKFLOWS[RELEASE_WORKFLOW].on ?? {};
+  assert.deepEqual(
+    Object.keys(triggers).sort(),
+    ['workflow_dispatch', 'workflow_run'],
+    `${RELEASE_WORKFLOW} must trigger on workflow_run and workflow_dispatch only.`,
+  );
+  assert.deepEqual(triggers.workflow_run?.workflows, ['CI'], `${RELEASE_WORKFLOW} on.workflow_run.workflows must be [CI].`);
+  assert.deepEqual(triggers.workflow_run?.branches, ['main'], `${RELEASE_WORKFLOW} on.workflow_run.branches must be [main].`);
+  const decide = stepsOf(jobsOf(RELEASE_WORKFLOW).plan).find((step) => step?.id === 'decide');
+  assert.match(
+    String(decide?.run ?? ''),
+    /workflow_dispatch\/staging\) staging=true; production=false ;;/,
+    `${RELEASE_WORKFLOW} jobs.plan step decide must release staging only on a staging dispatch.`,
+  );
 });
 
 function assertIdTokenWrite(file, name, job) {

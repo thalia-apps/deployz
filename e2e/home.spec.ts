@@ -64,16 +64,12 @@ async function patchDeployments(
   patches: Record<string, Record<string, unknown>>,
 ): Promise<void> {
   await page.route(`${API_URL}/api/deployments*`, async (route) => {
-    let body: { deployments: Record<string, unknown>[] };
-    try {
-      const response = await route.fetch();
-      body = (await response.json()) as typeof body;
-    } catch (error) {
-      // A navigation cancels a poll that is still in flight, and Playwright
-      // disposes its response. Nothing waits for that request any more.
-      if (error instanceof Error && error.message.includes('disposed')) return;
-      throw error;
-    }
+    // A navigation disposes the response of a request the page no longer needs.
+    const body = await route
+      .fetch()
+      .then((response) => response.json() as Promise<{ deployments: Record<string, unknown>[] }>)
+      .catch(() => null);
+    if (!body) return;
     for (const row of body.deployments) Object.assign(row, patches[row['id'] as string] ?? {});
     await route.fulfill({ json: body });
   });

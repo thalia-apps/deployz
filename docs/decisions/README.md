@@ -48,6 +48,9 @@ Three decisions with substantial detail have their own files:
 | 2026-10-21 | Without health evidence the health check probes `/` and accepts 200-399 | Active |
 | 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
 | 2026-10-21 | The rules Analysis asks about an unusable migration script, and a start script with two background servers is a multi-process image | Active |
+| 2026-10-23 | A vendor can dispute an allowlisted blocker ("not used in production"); the TEST deployment proves the answer | Active |
+| 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Superseded 2026-10-23 (staging is skipped) |
+| 2026-10-23 | Until public launch, staging is skipped: production deploys after CI on `main`, and staging deploys only from a dispatch | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1325,3 +1328,77 @@ Each rule changes one repository of the 58 recipes and 10 fixtures.
 
 What would change it: a full exam shows a false problem from either rule,
 or Deployz runs several processes of one image as one service.
+
+## A vendor can dispute an allowlisted blocker (2026-10-23)
+
+Context: rules and AI analysis cannot be right for every repository. A false
+blocker (MongoDB in test fixtures, a development Compose service, a declared
+volume that holds no data) stopped the vendor with no product path forward.
+Only the AI could dismiss a blocker.
+
+Decision: the vendor can mark a blocking finding as "not used in
+production" when the finding is on a fixed allowlist
+(`DISPUTABLE_FINDING_IDS`). The answer is an input to `analyseRepo`, so the
+manifest, preflight and compiler see one result. It applies only while the
+analysis finds the same evidence text, and it is kept across re-analysis.
+Details: [`../ai-analysis.md#vendor-disputes`](../ai-analysis.md#vendor-disputes).
+
+- The allowlist rule: a wrong answer only fails the vendor's own TEST
+  deployment. GPU, architecture (Kubernetes, serverless, Terraform), no
+  buildable Dockerfile and a `.git` copy stay hard blockers.
+- The vendor answer and the AI dismissal have separate provenance. The AI
+  never writes the vendor list.
+- The storage findings are on the list with a "Files can be lost" warning,
+  because the AI can already dismiss local-disk state.
+
+Rejected: a conversational assistant (cost, prompt-injection exposure, and
+every useful result must still map to the same closed set of overrides); a
+new decision table with a proposal lifecycle (the dispute list on
+`detected_metadata` and the evidence text give persistence and staleness
+with no migration); a `deployz.yaml` repository file (post-MVP).
+
+What would change it: dispute counts show a hard blocker that is often false
+(add it to the list), a need for vendor-hosted external dependencies, or
+TEST failures after disputes that show a finding must not be disputable.
+
+## Staging deploys on merge until public launch (2026-10-23)
+
+Context: Deployz is not open to the public. A merge waited for a second full
+CI run on `main` (10 to 16 minutes) before staging, and production waited for
+staging and an approval. This slowed development.
+
+Decision: `release.yml` also triggers on a push to `main`. That run releases
+staging only, in parallel with the CI run. The run that starts after CI passes
+on `main` releases production only. It does not wait for the staging deploy
+or `staging-verify`. The tip-of-`main` check, the stage gate and the
+per-environment concurrency groups stay. The required reviewers on the
+`production` Environment are a repository setting and stay independent of
+this change.
+
+- A commit can run on staging before its CI run on `main` finishes. A red CI
+  run still stops production.
+- A failed staging deploy does not stop production.
+
+What would change it: the public launch. Then remove the `push` trigger,
+release production again only after `staging-verify`, and make sure the
+`production` Environment has required reviewers. This partly replaces the
+2026-10-09 release decision, which stays the target shape.
+
+## Staging is skipped until public launch (2026-10-23)
+
+Context: after the previous decision, staging no longer delayed production,
+but every merge still deployed it. Staging is not used for testing at this
+stage.
+
+Decision: `release.yml` no longer triggers on a push to `main`. The run after a
+successful CI run on `main` releases production only. Staging deploys only
+from a `workflow_dispatch` of `release.yml` with `environment: staging`. The
+staging stack and Lightsail service stay as they are, so a dispatch still
+works.
+
+- Nothing deploys a commit before its CI run on `main` passes.
+- No automatic deploy proves a change on staging before production.
+
+What would change it: the public launch, or a need to test on staging before
+production. Then release staging first and production only after
+`staging-verify`, as the 2026-10-09 decision describes.

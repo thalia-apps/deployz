@@ -1,5 +1,6 @@
 'use client';
 
+import { isDisputableFinding } from '@deployz/contracts';
 import { ArrowUpRight, Check, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
@@ -196,7 +197,7 @@ export function ApplicationStateCard({
         {presentation.outcome ? <DeployabilityOutcomeLine outcome={presentation.outcome} renderAction={renderAction} /> : null}
 
         {presentation.state === 'configuration-required' && presentation.blockers.length > 0 ? (
-          <BlockerGroups blockers={presentation.blockers} />
+          <BlockerGroups applicationId={applicationId} blockers={presentation.blockers} />
         ) : null}
 
         {showReadinessSummary ? (
@@ -260,7 +261,8 @@ function DeployabilityOutcomeLine({
   );
 }
 
-function BlockerGroups({ blockers }: { blockers: ApplicationBlocker[] }) {
+function BlockerGroups({ applicationId, blockers }: { applicationId: string; blockers: ApplicationBlocker[] }) {
+  const disputable = blockers.some((blocker) => isDisputableFinding(blocker.id));
   return (
     <div className="flex flex-col gap-2" data-testid="blocker-groups">
       {BLOCKER_GROUPS.map(({ group, label }) => {
@@ -281,6 +283,17 @@ function BlockerGroups({ blockers }: { blockers: ApplicationBlocker[] }) {
           </section>
         );
       })}
+      {disputable ? (
+        <p className="text-xs text-muted-foreground" data-testid="blocker-dispute-hint">
+          Is this wrong?{' '}
+          <Link
+            href={`/dashboard/applications/${applicationId}/config#required-changes`}
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            Review it in Resources
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

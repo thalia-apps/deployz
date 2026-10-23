@@ -5,7 +5,7 @@
 // ever produces the fix-instructions document, never a finding or a state.
 // §65: all copy here is jargon-free. Never a percentage.
 
-import type { ApplicationRequirementsSummary, PlanComponentGroup } from '@deployz/contracts';
+import type { ApplicationRequirementsSummary, PlanComponentGroup, VendorDismissedRejection } from '@deployz/contracts';
 
 import { apiUrl } from '@/lib/api-url';
 import type { Application } from '@/lib/applications';
@@ -158,6 +158,8 @@ export interface ApplicationReadiness {
     customer: number;
     total: number;
   } | null;
+  /** The vendor's "not used in production" answers. Absent from older API responses. */
+  vendorDismissedRejections?: VendorDismissedRejection[];
 }
 
 // ── Detected facts (mirrors `ApplicationAnalysis` in @deployz/contracts) ────
@@ -555,6 +557,44 @@ export async function fetchReadiness(applicationId: string): Promise<Application
     throw new Error(`Readiness request failed (${response.status})`);
   }
   return (await response.json()) as ApplicationReadiness;
+}
+
+/** A refused dispute; `code` is the API error code (FINDING_CHANGED, ANALYSIS_IN_PROGRESS, …). */
+export class BlockerDisputeError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = 'BlockerDisputeError';
+  }
+}
+
+async function sendBlockerDispute(url: string, init: RequestInit): Promise<void> {
+  const response = await fetch(url, { credentials: 'include', ...init });
+  if (response.ok) return;
+  const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+  throw new BlockerDisputeError(
+    body?.error?.message ?? "Couldn't save your answer. Try again.",
+    body?.error?.code ?? null,
+  );
+}
+
+/** Mark an allowlisted blocking finding as "not used in production"; the API analyses the application again. */
+export async function disputeBlocker(applicationId: string, findingId: string, reason: string): Promise<void> {
+  await sendBlockerDispute(`${apiUrl}/api/applications/${encodeURIComponent(applicationId)}/blocker-disputes`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ findingId, reason }),
+  });
+}
+
+/** Undo a "not used in production" answer; the API analyses the application again. */
+export async function withdrawBlockerDispute(applicationId: string, findingId: string): Promise<void> {
+  await sendBlockerDispute(
+    `${apiUrl}/api/applications/${encodeURIComponent(applicationId)}/blocker-disputes/${encodeURIComponent(findingId)}`,
+    { method: 'DELETE' },
+  );
 }
 
 // ── Configuration table helpers ─────────────────────────────────────────────

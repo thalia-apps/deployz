@@ -150,6 +150,8 @@ export type {
   ReadinessResolution,
 } from './readiness-report.js';
 export { buildReadinessReport, reconcileReadiness, verdictFromReadiness } from './readiness-report.js';
+export type { VendorResourceOverrides } from './vendor-disputes.js';
+export { vendorResourceOverrides } from './vendor-disputes.js';
 
 export type { ManifestSource, ManifestReadinessContext } from './manifest.js';
 export { normalizeDeploymentManifest, evaluateManifestReadiness, generatedEnvKeys, mintedEnvKeys } from './manifest.js';
