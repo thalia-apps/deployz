@@ -1,36 +1,28 @@
 # CI
 
 What `.github/workflows/ci.yml` runs, and how `scripts/test-affected.mjs`
-decides what a pull request needs. See [`strategy.md`](strategy.md) for the
+decides what a change needs when you test it locally. See [`strategy.md`](strategy.md) for the
 layer model this classifies into, and
 [`simulated-e2e.md`](simulated-e2e.md) for what the Playwright suite itself
 does.
 
 ## The jobs
 
-CI runs on every pull request to `main`, every push to `main`, and on
-demand (`workflow_dispatch`, for a manual full-regression run on any
-branch).
+CI runs on every push to `main` and on demand (`workflow_dispatch`, for a
+manual full-regression run on any branch). Every run is the full
+regression.
 
-### `plan` (pull requests only)
-
-Runs `node --test scripts/test-affected.test.mjs` (the selector's own
-self-test — it must pass before the plan is trusted), then
-`node scripts/test-affected.mjs --base=<PR base SHA> --format=json
---github-output`, adding `--full` when the pull request carries the
-`ci:full` label. It publishes the plan as job outputs (`risk`,
-`unit_projects`, `lint_packages`, `playwright`, `playwright_files`,
-`typecheck_scripts`) and writes a short job summary: the risk level, the
-reasons, the Vitest projects, the Playwright mode, and any AWS escalation
-commands. A push to `main` or a manual run skips this job entirely — there
-is no PR base to diff against, so `test-build` and `e2e-simulated` run
-their full-regression branch instead.
+Until public launch, there is no pull-request CI (a temporary MVP
+relaxation, see [`../decisions/README.md`](../decisions/README.md)). A pull
+request merges with no required check. The full CI run on `main` is the
+gate before production: `release.yml` releases production only after it
+passes. To test a branch before a merge, dispatch `ci.yml` on that branch.
 
 ### `test-build`
 
 Static checks, unit tests, and integration tests, from the workspace root
-so every selected Vitest project runs in one parallel invocation. Runs
-`pnpm build` (skipped only for a `minimal` PR), then:
+so every Vitest project runs in one parallel invocation. Runs `pnpm build`,
+then:
 
 - `pnpm typecheck:e2e` — typechecks `e2e/` (Playwright strips types, so
   this is the only place the simulation harness's TypeScript is checked).
@@ -43,20 +35,12 @@ so every selected Vitest project runs in one parallel invocation. Runs
   the concurrency group, the dispatch default, the tag name, `release.yml`'s
   calling jobs and its staging gate, `id-token: write`, `secrets: inherit`
   only in `release.yml`, and one `COOKIE_PREFIX` for both services).
-- `pnpm vitest run` (every project) on a push, a manual run, or a
-  `critical` PR; otherwise `pnpm vitest run --project <p>` for each
-  project the plan selected (`unit_projects`).
-- `pnpm lint` (whole workspace) on a push, a manual run, or a `critical`
-  PR; otherwise `pnpm turbo run lint --filter=<p>` for each package the
-  plan selected (`lint_packages`).
-- `pnpm typecheck:scripts` when the plan set `typecheck_scripts`, or
-  always on a push/manual run/critical PR (a harness script imports a
-  workspace package that changed, or the harness's own directory
-  changed).
-- `pnpm synth:smoke` — the CDK bundling smoke — only on the full
-  regression (push, manual run, or `critical`). The Vitest project
-  synthesizes with placeholder Lambda bundling, so this is the one
-  pre-merge proof every Lambda entry point still bundles for real.
+- `pnpm vitest run` (every project).
+- `pnpm lint` (whole workspace).
+- `pnpm typecheck:scripts`.
+- `pnpm synth:smoke` — the CDK bundling smoke. The Vitest project
+  synthesizes with placeholder Lambda bundling, so this is the one proof
+  every Lambda entry point still bundles for real.
 
 ### `e2e-simulated`
 
@@ -69,34 +53,24 @@ matrix of four parts: `fixture-1`, `fixture-2`, `fixture-3` and
 Playwright workers (four workers were no faster than two), so it is
 sharded three ways with `--shard=n/3`; the scenario suites run in the
 fourth part. Each part builds, installs the Chromium browser (cached by
-lockfile hash), then runs its share of the mode the plan selected
-(`playwright`, or `full` on a push/manual run/critical PR):
+lockfile hash), then runs its share:
 
-| Mode | `fixture-1..3` | `scenarios` |
-| --- | --- | --- |
-| `full` | `node scripts/e2e.mjs --grep-invert "@scenario\|visual" --shard=n/3` (every non-visual, non-scenario spec) | `node scripts/e2e.mjs --scenarios` (every simulated scenario), then `DEPLOYZ_DEFAULT_HTTPS_FIXTURE=true node scripts/e2e.mjs e2e/scenario-default-https.spec.ts` |
-| `fixture` | the same three shards | `node scripts/e2e.mjs e2e/scenario-ui.spec.ts e2e/scenario-release-unavailable.spec.ts <playwright_files>` (the two browser-driven scenario specs, plus any scenario spec the change touched directly) |
-| `files` | `fixture-1` runs `node scripts/e2e.mjs <playwright_files>`; the other parts finish in seconds without setup | nothing |
-| `none` | the job is skipped | |
+- `fixture-1..3`: `node scripts/e2e.mjs --grep-invert "@scenario|visual"
+  --shard=n/3` (every non-visual, non-scenario spec).
+- `scenarios`: `node scripts/e2e.mjs --scenarios` (every simulated
+  scenario), then `DEPLOYZ_DEFAULT_HTTPS_FIXTURE=true node scripts/e2e.mjs
+  e2e/scenario-default-https.spec.ts`.
 
-Skipped entirely on a `minimal` PR. Each part uploads `test-results/` as
-an `e2e-simulated-results-<part>` artifact on failure. The visual suite
-(`e2e/visual.spec.ts`) never runs here — its committed snapshots are
-Windows-generated.
-
-### `pr-gate`
-
-The required status check for pull requests. Fails when `plan`,
-`test-build`, or `e2e-simulated` failed or was cancelled, when no plan was
-published, or when the plan selected Playwright coverage (`playwright !=
-'none'`) but `e2e-simulated` was skipped. A job that was intentionally
-skipped (for example the whole `e2e-simulated` job on a docs-only PR)
-does not fail the gate on its own.
+Each part uploads `test-results/` as an `e2e-simulated-results-<part>`
+artifact on failure. The visual suite (`e2e/visual.spec.ts`) never runs
+here — its committed snapshots are Windows-generated.
 
 ## Change classification
 
-`scripts/test-affected.mjs` maps the pull request's changed files (`git
-diff` against the PR base) to one risk level.
+`scripts/test-affected.mjs` maps a change's files (`git diff` against a
+base) to one risk level. CI does not run it while there is no pull-request
+CI; use it locally (`pnpm test:affected`) to choose the tests to run before
+a merge.
 
 - **`minimal`** — every changed file matches the documentation patterns
   (`docs/`, `*.md`, `*.txt`, `*.png`, `LICENSE`, `.gitignore`,
@@ -200,19 +174,9 @@ AWS-interface file, the stateless profile otherwise), plus `pnpm e2e:fresh`
 for a bootstrap-stack change, and `pnpm canary:fixture-repo && ...` for a
 `packages/fixture` change. See [`strategy.md`](strategy.md#the-escalation-policy-for-coding-agents).
 
-## The `ci:full` label
-
-Applying the `ci:full` label to a pull request passes `--full` to the
-selector, which forces `critical` regardless of what changed. Use it to
-verify a flake fix or to measure the full suite's timing on a small
-change.
-
 ## What a push to `main` runs
 
-There is no `plan` job (no PR base to diff against). `test-build` and
-`e2e-simulated` both take the full-regression branch unconditionally —
-the same set a `critical` pull request runs. `pr-gate` does not run either
-(it is `if: github.event_name == 'pull_request'`).
+`test-build` and `e2e-simulated` both run the full regression.
 
 Deploying is a separate concern from testing, but it does gate on CI:
 `release.yml` triggers on `workflow_run` of a successful `CI` run for `main`
@@ -270,11 +234,8 @@ them ([`compatibility.md`](compatibility.md#the-exam-on-x86_64-runners)).
 ## Timing expectations
 
 See [`strategy.md`](strategy.md#timing-expectations) for the measured
-numbers. In short: a `minimal` (docs-only) PR finishes in well under a
-minute; a `targeted` web PR takes about 5 minutes (the three fixture
-shards and the browser scenario specs run in parallel with `test-build`);
-a `critical` PR or a push to `main` takes about 6.5 minutes, bound by
-`test-build`'s full Vitest run.
+numbers. In short: a push to `main` takes about 10 to 16 minutes, bound by
+`test-build`'s full Vitest run and the fixture shards.
 
 ## Troubleshooting
 
@@ -290,9 +251,6 @@ a `critical` PR or a push to `main` takes about 6.5 minutes, bound by
 - **Re-running:** use `workflow_dispatch` on `ci.yml` for a manual
   full-regression run on any branch (useful for confirming a flake is
   fixed, independent of any pull request).
-- **Reading the plan:** the `plan` job's step summary shows the risk
-  level, the reasons, the selected Vitest projects, the Playwright mode,
-  and any AWS escalation commands — read it before re-running anything.
 - **Preview a plan locally** without pushing:
   `node scripts/test-affected.mjs --files=a,b,c` (comma- or
   space-separated paths), or `pnpm test:affected` to plan against your

@@ -52,6 +52,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Superseded 2026-10-23 (staging is skipped) |
 | 2026-10-23 | Until public launch, staging is skipped: production deploys after CI on `main`, and staging deploys only from a dispatch | Active |
 | 2026-10-23 | Until public launch, the `production` Environment has no required reviewers: production deploys without an approval | Active |
+| 2026-10-23 | Until public launch, there is no pull-request CI: the full CI run on `main` is the only gate before production | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1425,3 +1426,28 @@ setting, not a workflow change.
 What would change it: the public launch, or the first real customer on
 production. Then set required reviewers on the `production` Environment
 again, as the 2026-10-08 and 2026-10-09 decisions describe.
+
+## No pull-request CI until public launch (2026-10-23)
+
+Context: a change ran the full CI twice: once on its pull request (10 to 16
+minutes) and once more on `main` before production. Deployz is not open to
+the public, and many sessions open pull requests in parallel.
+
+Decision: `ci.yml` runs only on a push to `main` and on `workflow_dispatch`,
+and every run is the full regression. The `plan` and `pr-gate` jobs are
+removed. A pull request is still required, but it has no required status
+check (the "PR Gate" check is removed from the "restrict main" ruleset), so
+it merges at once. The full CI run on `main` is the only gate before
+production. To test a branch before a merge, dispatch `ci.yml` on that
+branch or run `pnpm test:affected` locally.
+
+- Production still gets only commits that passed the full regression, as
+  they are on `main`.
+- A broken change can reach `main`. Its CI run fails, nothing deploys, and
+  every later merge waits for a fix. A later green run deploys everything
+  before it.
+
+What would change it: the public launch, or a red `main` that blocks merges
+often. Then restore the pull-request trigger, the `plan` and `pr-gate`
+jobs, and "PR Gate" as a required check, before the production reviewers
+come back.
