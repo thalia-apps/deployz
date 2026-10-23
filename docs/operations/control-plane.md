@@ -122,11 +122,12 @@ the staging web app in parallel, then `staging-verify`.
 check of the marketing host, because `deploy-web.yml` polls the dashboard
 host alone.
 
-The approval, when the `production` Environment has required reviewers, gates
-the two production deploy jobs, and nothing else. It comes
-from the required reviewers on the `production` Environment, which both called
-deploy jobs declare, so both jobs wait together and one approval releases both
-services. Staging needs no approval.
+Until public launch, the `production` Environment has no required reviewers,
+so production deploys without an approval (see
+[`../decisions/README.md`](../decisions/README.md)). When required reviewers
+are set again, the approval gates the two production deploy jobs, and nothing
+else. Both called deploy jobs declare the Environment, so both jobs wait
+together and one approval releases both services. Staging needs no approval.
 
 Each deploy records the commit it shipped in its own tag: `deployed/api` and
 `deployed/web` for production, `deployed/staging/api` and
@@ -137,7 +138,8 @@ production deploys next. Each deploy job also holds its own concurrency group,
 never waits for a production deploy, and no group ever cancels a running
 deploy.
 
-An approval can arrive after a newer merge. The production deploy job
+When required reviewers are set, an approval can arrive after a newer merge.
+The production deploy job
 therefore re-reads the tip of `main` after the approval and fails when the
 commit has moved, instead of deploying a stale commit. The run then names the
 newer commit: approve the pending run for it, or dispatch the deploy with that
@@ -219,10 +221,9 @@ session-cookie name (`COOKIE_PREFIX`).
 There are two GitHub Environments, `production` and `staging`. Each one holds
 the variables for its own stage. Both deploy jobs declare the Environment
 they deploy, and the caller chooses it with the `environment` input. The
-`production` Environment allows the `main` branch only and needs a reviewer's
-approval. That approval gates the two production deploy jobs inside the
-release run that starts after CI (see *Promotion, approval and rollback*). The `staging` Environment allows any branch and needs no
-approval.
+`production` Environment allows the `main` branch only. Until public launch
+it has no required reviewers (see *Promotion, approval and rollback*). The
+`staging` Environment allows any branch and needs no approval.
 
 The step *Verify the environment values match the stage* then refuses a
 deploy whose values belong to another stage. It reports every violation at
