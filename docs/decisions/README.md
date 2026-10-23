@@ -49,7 +49,8 @@ Three decisions with substantial detail have their own files:
 | 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
 | 2026-10-21 | The rules Analysis asks about an unusable migration script, and a start script with two background servers is a multi-process image | Active |
 | 2026-10-23 | A vendor can dispute an allowlisted blocker ("not used in production"); the TEST deployment proves the answer | Active |
-| 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Active |
+| 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Superseded 2026-10-23 (staging is skipped) |
+| 2026-10-23 | Until public launch, staging is skipped: production deploys after CI on `main`, and staging deploys only from a dispatch | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1382,3 +1383,22 @@ What would change it: the public launch. Then remove the `push` trigger,
 release production again only after `staging-verify`, and make sure the
 `production` Environment has required reviewers. This partly replaces the
 2026-10-09 release decision, which stays the target shape.
+
+## Staging is skipped until public launch (2026-10-23)
+
+Context: after the previous decision, staging no longer delayed production,
+but every merge still deployed it. Staging is not used for testing at this
+stage.
+
+Decision: `release.yml` no longer triggers on a push to `main`. The run after a
+successful CI run on `main` releases production only. Staging deploys only
+from a `workflow_dispatch` of `release.yml` with `environment: staging`. The
+staging stack and Lightsail service stay as they are, so a dispatch still
+works.
+
+- Nothing deploys a commit before its CI run on `main` passes.
+- No automatic deploy proves a change on staging before production.
+
+What would change it: the public launch, or a need to test on staging before
+production. Then release staging first and production only after
+`staging-verify`, as the 2026-10-09 decision describes.

@@ -1,7 +1,6 @@
 # One entry point for a release. MVP relaxation (temporary, until public
-# launch): a push to main deploys staging at once, while CI runs. Production
-# deploys from the run that starts after CI passes on main, and that run does
-# not wait for the staging deploy.
+# launch): staging is skipped. The run that starts after CI passes on main
+# deploys production only. Staging deploys only from a dispatch.
 #
 # This workflow decides what to release and in which order. The work itself
 # stays in .github/workflows/deploy-api.yml and .github/workflows/deploy-web.yml,
@@ -14,8 +13,6 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -23,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: The one stage to release. A push releases staging, and a successful CI run on main releases production.
+        description: The one stage to release. A successful CI run on main releases production only.
         type: choice
         default: staging
         options: [staging, production]
@@ -69,10 +66,10 @@ jobs:
             echo "::error::There is no commit to release: the dispatch input, the CI run and the workflow ref are all empty."
             exit 1
           fi
-          # A push releases staging. A successful CI run releases production.
-          # A dispatch releases the one stage the operator chose.
+          # A successful CI run releases production only. A dispatch releases
+          # the one stage the operator chose.
           case "$EVENT/$TARGET" in
-            push/*|workflow_dispatch/staging) staging=true; production=false ;;
+            workflow_dispatch/staging) staging=true; production=false ;;
             *) staging=false; production=true ;;
           esac
           echo "sha=$sha" >> "$GITHUB_OUTPUT"

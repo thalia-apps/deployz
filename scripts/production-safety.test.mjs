@@ -478,23 +478,22 @@ test('release.yml calls one deploy workflow for each service and stage', () => {
   }
 });
 
-// MVP relaxation: a push to main releases staging, and only a successful CI
-// run on main (or a dispatch) releases production.
-test('release.yml releases staging on a push to main and production after CI on main', () => {
+// MVP relaxation: staging is skipped. Only a successful CI run on main (or a
+// dispatch) releases production, and only a dispatch releases staging.
+test('release.yml releases production after CI on main and staging only on a dispatch', () => {
   const triggers = WORKFLOWS[RELEASE_WORKFLOW].on ?? {};
   assert.deepEqual(
     Object.keys(triggers).sort(),
-    ['push', 'workflow_dispatch', 'workflow_run'],
-    `${RELEASE_WORKFLOW} must trigger on push, workflow_run and workflow_dispatch only.`,
+    ['workflow_dispatch', 'workflow_run'],
+    `${RELEASE_WORKFLOW} must trigger on workflow_run and workflow_dispatch only.`,
   );
-  assert.deepEqual(triggers.push?.branches, ['main'], `${RELEASE_WORKFLOW} on.push.branches must be [main].`);
   assert.deepEqual(triggers.workflow_run?.workflows, ['CI'], `${RELEASE_WORKFLOW} on.workflow_run.workflows must be [CI].`);
   assert.deepEqual(triggers.workflow_run?.branches, ['main'], `${RELEASE_WORKFLOW} on.workflow_run.branches must be [main].`);
   const decide = stepsOf(jobsOf(RELEASE_WORKFLOW).plan).find((step) => step?.id === 'decide');
   assert.match(
     String(decide?.run ?? ''),
-    /push\/\*\|workflow_dispatch\/staging\) staging=true; production=false ;;/,
-    `${RELEASE_WORKFLOW} jobs.plan step decide must release staging only on a push, so production never deploys before CI passes.`,
+    /workflow_dispatch\/staging\) staging=true; production=false ;;/,
+    `${RELEASE_WORKFLOW} jobs.plan step decide must release staging only on a staging dispatch.`,
   );
 });
 
