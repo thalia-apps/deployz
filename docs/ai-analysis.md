@@ -652,7 +652,8 @@ TEST deployment fails in the vendor's own account.
   action "Not used in production". It opens a confirmation dialog with the
   evidence and the consequence. The two storage findings add a "Files can
   be lost" warning. "Your answers", below the table, lists each answer with
-  Undo. The Overview card links to the row ("Is this wrong? Review it in
+  Undo. An unsupported reason that a blocking finding already shows gets no
+  separate "Supported architecture" row and is counted once. The Overview card links to the row ("Is this wrong? Review it in
   Resources").
 - **Telemetry.** `application.analysis_disputed` and
   `application.analysis_dispute_withdrawn`

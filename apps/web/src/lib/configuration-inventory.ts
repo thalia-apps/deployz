@@ -300,6 +300,28 @@ function addBlockerDispute(row: InventoryRow, readiness: ApplicationReadiness): 
   if (stale) row.issues.push({ label: 'Evidence changed', variant: 'warning', text: STALE_DISPUTE_TEXT });
 }
 
+/** Unsupported reasons with fixed text in the manifest (packages/analysis/src/manifest.ts), by the finding that shows them. */
+const FIXED_UNSUPPORTED_REASONS: Readonly<Record<string, string>> = {
+  'Persistent local filesystem storage is not supported': 'local-file-storage',
+  'The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain':
+    'build-context-git-metadata',
+};
+
+/**
+ * The architecture questions that need their own row. An unsupported reason
+ * ("compatibility") that a blocking finding already shows is the same
+ * blocker: it stays on that finding's row, with its actions, and is not
+ * counted twice.
+ */
+export function openArchitectureQuestions(readiness: ApplicationReadiness): { item: ArchitectureUnresolved; index: number }[] {
+  const blockers = readiness.findings.filter((finding) => finding.blocking);
+  const shown = (question: string): boolean =>
+    blockers.some((finding) => finding.technicalEvidence === question || finding.id === FIXED_UNSUPPORTED_REASONS[question]);
+  return (readiness.architecture?.unresolved ?? [])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !(item.kind === 'compatibility' && shown(item.question)));
+}
+
 function unresolvedIssue(item: ArchitectureUnresolved): InventoryIssue {
   return { label: item.blocking ? 'Blocking' : 'Needs input', variant: 'destructive', text: item.question };
 }
@@ -370,7 +392,7 @@ export function deriveServiceInventory(input: {
   const settings = deriveConfigurationRows(application, readiness);
   const footprint = plan?.footprint ?? null;
   const components = new Map((footprint ? footprintComponentRows(footprint) : []).map((row) => [row.id, row]));
-  const unresolved = (readiness.architecture?.unresolved ?? []).map((item, index) => ({ item, index }));
+  const unresolved = openArchitectureQuestions(readiness);
   const consumed = new Set<number>();
   const pools: Pools = {
     resources: [...(plan?.awsResources ?? [])],

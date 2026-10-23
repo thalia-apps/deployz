@@ -17,6 +17,7 @@ import { deriveAnalysisDetails, deriveRequiredChanges, type AnalysisDetail } fro
 import {
   deriveServiceInventory,
   formatRowCost,
+  openArchitectureQuestions,
   type BlockerDispute,
   type InventoryAction,
   type InventoryGroup,
@@ -86,11 +87,12 @@ export function ConfigurationDialogs({
 
 /**
  * How many items on the Resources tab need the vendor: the required changes
- * and the unresolved architecture questions. Recommended findings and
- * external services stay on their rows without a count.
+ * and the architecture questions that are not already one of them.
+ * Recommended findings and external services stay on their rows without a
+ * count.
  */
 export function resourceAttentionCount(readiness: ApplicationReadiness): number {
-  return deriveRequiredChanges(readiness).length + (readiness.architecture?.unresolved.length ?? 0);
+  return deriveRequiredChanges(readiness).length + openArchitectureQuestions(readiness).length;
 }
 
 // The Configuration tab's "Resources" panel: a short attention line, then
