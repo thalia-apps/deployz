@@ -122,7 +122,7 @@ test.describe('vendor-dispute', () => {
     const installInfo = (await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json())) as {
       quickCreateUrl: string | null;
     };
-    expect(installInfo.quickCreateUrl).not.toBeNull();
+    expect(installInfo.quickCreateUrl, JSON.stringify(installInfo)).not.toBeNull();
     const relay = startSimulatedRelay({
       scenario: getScenario('vendor-dispute'),
       apiUrl: API_URL,
