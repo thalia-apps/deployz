@@ -11,8 +11,8 @@ rule: [`../decisions/deploy-gate.md`](../decisions/deploy-gate.md).
 API Lambda, SQS queue and worker Lambda, the CodeBuild/ECR release pipeline,
 the KMS key, the public template bucket) for a push to `main` that touches
 `apps/api`, `packages/{cdk,db,contracts,analysis,relay,copy-map}` or the
-lockfile. `.github/workflows/release.yml` calls it after the CI workflow
-succeeds, once for each stage it releases, and it can also be dispatched on
+lockfile. `.github/workflows/release.yml` calls it for staging on a push to
+`main`, and for production after the CI workflow succeeds on `main`, and it can also be dispatched on
 its own from the Actions tab for one service (see *Promotion, approval and
 rollback*). A commit that is no longer the tip of `main` when its CI finishes
 is not deployed; the newer commit's run deploys instead. One deploy runs at a
@@ -60,7 +60,8 @@ service, and then checks `https://app.deployz.dev/healthz`. Each push stores
 a new image in the container service, and Lightsail refuses a push when the
 service holds 150 images. Before each push, the workflow deletes all images
 except the newest 10 and the image that a current or pending deployment runs.
-`release.yml` waits for CI; a red CI run on `main` deploys nothing. When
+A red CI run on `main` deploys nothing to production, but staging already
+runs that commit. When
 validating a production change, record the SHA and confirm the release run
 finished.
 
@@ -110,16 +111,20 @@ Environment. A second AWS account is the post-MVP fix.
 
 ### Promotion, approval and rollback
 
-`.github/workflows/release.yml` is the one entry point for a release. It runs
-after a successful CI run for a push to `main` and releases in this order:
-the staging API and the staging web app in parallel, then `staging-verify`,
-then the production API and the production web app in parallel.
+`.github/workflows/release.yml` is the one entry point for a release. It is
+relaxed for the MVP, until public launch (see
+[`../decisions/README.md`](../decisions/README.md)). A push to `main`
+releases the staging API and the staging web app in parallel, then
+`staging-verify`. A successful CI run for that push then releases the
+production API and the production web app in parallel. The production run
+does not wait for the staging deploy or `staging-verify`.
 `staging-verify` polls staging's `<API_URL>/health/ready`,
 `https://<APP_HOST>/healthz` and `https://<MARKETING_HOST>/`. It is the only
 check of the marketing host, because `deploy-web.yml` polls the dashboard
 host alone.
 
-The approval gates the two production deploy jobs, and nothing else. It comes
+The approval, when the `production` Environment has required reviewers, gates
+the two production deploy jobs, and nothing else. It comes
 from the required reviewers on the `production` Environment, which both called
 deploy jobs declare, so both jobs wait together and one approval releases both
 services. Staging needs no approval.
@@ -217,8 +222,7 @@ the variables for its own stage. Both deploy jobs declare the Environment
 they deploy, and the caller chooses it with the `environment` input. The
 `production` Environment allows the `main` branch only and needs a reviewer's
 approval. That approval gates the two production deploy jobs inside the
-release run, after the staging verification (see *Promotion, approval and
-rollback*). The `staging` Environment allows any branch and needs no
+release run that starts after CI (see *Promotion, approval and rollback*). The `staging` Environment allows any branch and needs no
 approval.
 
 The step *Verify the environment values match the stage* then refuses a
