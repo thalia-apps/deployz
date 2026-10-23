@@ -16,6 +16,9 @@ behind the AI boundary are in `docs/decisions/README.md`.
   produces a secret value. It flips a deterministic Analysis verdict in two
   cases only: the Compose multi-service downgrade (see "AI fallback"), and
   a checked answer under `ANALYSIS_ENGINE=ai` (see "AI-first Analysis").
+- The vendor, not the AI, can mark an allowlisted blocker as "not used in
+  production" (see "Vendor disputes"). That answer is a vendor decision with
+  its own provenance. The AI never creates, changes or removes it.
 - Every AI output crosses a strict Zod schema before anything reads it. A
   malformed, oversized or missing answer degrades to the deterministic
   result — an analysis still completes, a diagnosis still shows copy-map
@@ -29,6 +32,7 @@ behind the AI boundary are in `docs/decisions/README.md`.
 ```
 Repository (GitHub tree, bounded)
   → analyseRepo: deterministic detectors + rejection checks
+    (a second pass applies the vendor's still-matching disputes)
   → ANALYSIS_ENGINE=rules (default): AI fallback ONLY for an
     unresolved question; merge is deterministic-always-wins
     ANALYSIS_ENGINE=ai: checked AI answers fill the open facts and
@@ -575,6 +579,64 @@ confidence, and its fix class in `FIX_CLASSES`), a test in
 `readiness-report.test.ts`, and — when the deployment
 gate must enforce it — the matching check in `manifest.ts` /
 `preflight.ts`. Bump `ANALYSIS_VERSION`.
+
+## Vendor disputes
+
+A vendor can mark a blocking finding as "not used in production" when the
+analysis read false evidence (a sample config, a test fixture, a development
+Compose service). Deployz then analyses the repository again without that
+blocker. Every other gate (readiness, manifest, preflight, compiler) still
+runs. The TEST deployment proves the result. If the vendor is wrong, the
+TEST deployment fails in the vendor's own account.
+
+- **Allowlist.** Only the ids in `DISPUTABLE_FINDING_IDS`
+  (`packages/contracts/src/vendor-disputes.ts`) accept a dispute:
+  `unsupported-database-mongo`, `-elasticsearch`, `-other`, `-sqlite`,
+  `-mariadb`, `unsupported-redis-setup`, `unsupported-message-queue`,
+  `unsupported-multi-service`, `unsupported-persistent-volume` and
+  `local-file-storage`. The rule: being wrong only fails the vendor's TEST
+  deployment. It does not bypass security, and it does not give an image
+  that Deployz cannot build. `unsupported-gpu`, `unsupported-architecture`,
+  `unsupported-no-dockerfile`, `build-context-git-metadata` and the
+  non-blocking findings are not on the list. The API enforces the list. The
+  UI only hides the action.
+- **Storage.** `detected_metadata.vendorDismissedRejections` holds
+  `{findingId, reason, dismissedAt, dismissedBy, stale?}`, at most 20
+  entries. `reason` is the finding's `technicalEvidence` when the vendor
+  answered. The AI dismissals stay a separate list (`dismissedRejections`
+  in `mergeAiAnswers`).
+- **Matching and staleness.** An answer applies only while a detected
+  rejection has the same finding id and the same reason text. For
+  `local-file-storage`, the text is the `local-filesystem` detector's
+  evidence, and a match sets `localFilesystem: false`. When the evidence
+  changes, the answer stays in the list with `stale: true` and does not
+  apply. The finding shows again with "Evidence changed". Note: a change to
+  the reason text in a new analysis version also makes the answer stale.
+- **Analysis.** `runApplicationAnalysis` runs `analyseRepo(tree)`, then
+  `vendorResourceOverrides` (`packages/analysis/src/vendor-disputes.ts`),
+  then `analyseRepo(tree, overrides)` when an answer matches. The AI engine
+  receives the same overrides as `baseOverrides`, so an AI re-run keeps
+  them. The run writes the list from the locked row and sets `stale` for the
+  answers it read.
+- **API.** `POST /api/applications/:id/blocker-disputes`
+  `{findingId, reason}` and
+  `DELETE /api/applications/:id/blocker-disputes/:findingId`. Both refuse
+  with 409 `ANALYSIS_IN_PROGRESS` while an analysis runs. POST refuses an id
+  that is not on the list (422 `FINDING_NOT_DISPUTABLE`) and evidence that
+  is not the stored finding's (409 `FINDING_CHANGED`). Both write the list,
+  set `ANALYZING` and record the event in one transaction, then run a
+  forced analysis (the commit-SHA cache never answers it).
+  `GET …/readiness` returns the list as `vendorDismissedRejections`.
+- **UI.** A disputable blocking row on the Resources tab has the secondary
+  action "Not used in production". It opens a confirmation dialog with the
+  evidence and the consequence. The two storage findings add a "Files can
+  be lost" warning. "Your answers", below the table, lists each answer with
+  Undo. The Overview card links to the row ("Is this wrong? Review it in
+  Resources").
+- **Telemetry.** `application.analysis_disputed` and
+  `application.analysis_dispute_withdrawn`
+  ([`product-telemetry.md`](product-telemetry.md)). They never hold the
+  evidence text.
 
 ## Async and scheduled workloads
 

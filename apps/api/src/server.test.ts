@@ -3035,6 +3035,7 @@ describe('server — fleet list & deployment detail joins, readiness derivation 
       detected: null,
       requirements: null,
       deploymentRequirementDrift: [],
+      vendorDismissedRejections: [],
       environmentSetup: null,
     });
   });
@@ -3113,6 +3114,7 @@ describe('server — fleet list & deployment detail joins, readiness derivation 
         storage: { detected: false, effective: false, overridden: false },
       },
       deploymentRequirementDrift: [],
+      vendorDismissedRejections: [],
       environmentSetup: { needsDecision: 0, missingValue: 0, missingBuildValue: 0, customer: 0, total: 0 },
       architecture: {
         counts: { schemaVersion: 1, workloadCount: 1, resourceCount: 2, managedResourceCount: 2, unresolvedCount: 0, hasBlockingUnresolved: false },

@@ -412,6 +412,30 @@ describe('configuration-required action and Share note', () => {
       'Change in your repository',
     );
     expect(container.querySelector('[data-testid="blocker-group-CAPABILITY_GAP"]')).toBeNull();
+    // local-file-storage is disputable: the card links to the row that has the answer.
+    expect(container.querySelector('[data-testid="blocker-dispute-hint"] a')?.getAttribute('href')).toBe(
+      '/dashboard/applications/app-1/config#required-changes',
+    );
+  });
+
+  it('shows no dispute hint when no required item is disputable', async () => {
+    mocks.fetchApplication.mockResolvedValue(baseApplication());
+    mocks.fetchReadiness.mockResolvedValue(
+      baseReadiness({
+        state: 'NEEDS_CHANGES',
+        outcome: 'NOT_DEPLOYABLE',
+        requiredCount: 1,
+        findings: [requiredFinding({ id: 'unsupported-gpu', title: 'Needs a GPU', fixClass: 'CAPABILITY_GAP' })],
+      }),
+    );
+    mocks.fetchDeploymentsForApplication.mockResolvedValue([]);
+    await act(async () => {
+      renderPage();
+    });
+    await waitForHeading();
+
+    expect(container.querySelector('[data-testid="blocker-group-CAPABILITY_GAP"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="blocker-dispute-hint"]')).toBeNull();
   });
 
   it('never-eligible states show a short Share note instead of the inactive install-link card', async () => {

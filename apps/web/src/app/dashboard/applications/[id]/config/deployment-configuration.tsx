@@ -17,6 +17,7 @@ import { deriveAnalysisDetails, deriveRequiredChanges, type AnalysisDetail } fro
 import {
   deriveServiceInventory,
   formatRowCost,
+  type BlockerDispute,
   type InventoryAction,
   type InventoryGroup,
   type InventoryRow,
@@ -32,6 +33,7 @@ import type {
 
 import { useApplicationPage } from '../application-page-context';
 import { EditDialog, RequirementDriftNotice } from '../readiness-components';
+import { BlockerDisputeDialog, VendorAnswers } from './blocker-dispute';
 import { DeploymentSize } from './deployment-size';
 
 const COLUMN_COUNT = 3;
@@ -98,6 +100,7 @@ export function ResourcesPanel() {
   const { data, loading, presentation, refresh, reanalyse } = useApplicationPage();
   const [editingField, setEditingField] = useState<EditableReadinessField | null>(null);
   const [fixOpen, setFixOpen] = useState(false);
+  const [disputing, setDisputing] = useState<BlockerDispute | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   // The dialogs open from state, not from a Radix trigger, so Radix has no
@@ -149,6 +152,10 @@ export function ResourcesPanel() {
     if (action.kind === 'edit') setEditingField(action.field);
     else setFixOpen(true);
   }
+  function startDispute(dispute: BlockerDispute): void {
+    rememberOpener();
+    setDisputing(dispute);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -165,6 +172,24 @@ export function ResourcesPanel() {
         architecture={readiness.architecture ?? null}
         drifts={readiness.deploymentRequirementDrift}
         onAction={runAction}
+        onDispute={startDispute}
+      />
+
+      <VendorAnswers
+        applicationId={application.id}
+        answers={readiness.vendorDismissedRejections ?? []}
+        analyzing={analyzing}
+        onChanged={refresh}
+      />
+
+      <BlockerDisputeDialog
+        applicationId={application.id}
+        dispute={disputing}
+        onClose={() => {
+          setDisputing(null);
+          restoreFocus();
+        }}
+        onSaved={refresh}
       />
 
       <ConfigurationDialogs
@@ -261,9 +286,10 @@ const ServicesSection = forwardRef<
     architecture: ApplicationArchitecture | null;
     drifts: DeploymentRequirementDriftSummary[];
     onAction: (action: InventoryAction) => void;
+    onDispute: (dispute: BlockerDispute) => void;
   }
 >(function ServicesSection(
-  { groups, analyzing, analysisStatus, readinessSummary, analyzedCommitSha, details, architecture, drifts, onAction },
+  { groups, analyzing, analysisStatus, readinessSummary, analyzedCommitSha, details, architecture, drifts, onAction, onDispute },
   ref,
 ) {
   const hasKept = groups.some((group) =>
@@ -308,7 +334,7 @@ const ServicesSection = forwardRef<
                   </TableHead>
                 </TableRow>
                 {group.rows.map((row) => (
-                  <ServiceRow key={row.id} row={row} onAction={onAction} />
+                  <ServiceRow key={row.id} row={row} analyzing={analyzing} onAction={onAction} onDispute={onDispute} />
                 ))}
               </Fragment>
             ))}
@@ -373,7 +399,17 @@ function afterRemovalText(afterRemoval: RowAfterRemoval): string | null {
   return null;
 }
 
-function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: InventoryAction) => void }) {
+function ServiceRow({
+  row,
+  analyzing,
+  onAction,
+  onDispute,
+}: {
+  row: InventoryRow;
+  analyzing: boolean;
+  onAction: (action: InventoryAction) => void;
+  onDispute: (dispute: BlockerDispute) => void;
+}) {
   const action = row.action;
   const mixed = row.afterRemoval === 'Mixed';
   const meta = [costText(row.cost), afterRemovalText(row.afterRemoval)].filter(Boolean).join(' · ');
@@ -468,6 +504,18 @@ function ServiceRow({ row, onAction }: { row: InventoryRow; onAction: (action: I
         </div>
       </TableCell>
       <TableCell className="align-top max-md:py-0 max-md:empty:hidden md:text-right">
+        {row.dispute ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-2 mb-2"
+            disabled={analyzing}
+            onClick={() => onDispute(row.dispute!)}
+            data-testid={row.dispute.testId}
+          >
+            Not used in production
+          </Button>
+        ) : null}
         {action?.kind === 'link' ? (
           <Button asChild variant="outline" size="sm" data-testid={action.testId}>
             <a href={action.href}>{action.label}</a>

@@ -11,6 +11,7 @@ import type {
   MergeResult,
   ReadinessReport,
   RepositoryAiInput,
+  ResourceOverrides,
 } from '@deployz/analysis';
 import {
   REPO_AI_TIMEOUT_MS,
@@ -34,8 +35,10 @@ import {
   runAiAnalysis,
   selectAiContextFiles,
   selectMigrationScript,
+  vendorResourceOverrides,
   verdictFromReadiness,
 } from '@deployz/analysis';
+import { readVendorDismissedRejections, type VendorDismissedRejection } from '@deployz/contracts';
 import type { RuntimeDb } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
@@ -520,10 +523,18 @@ export async function runApplicationAnalysis(
     }
 
     const tree = await fetchTreeForApplication(deps, application, realModeToken);
-    const analysis = analyseRepo(tree);
+    // The vendor's "not used in production" answers apply only while the
+    // rules find the same evidence; the second pass derives everything from them.
+    const rulesOnly = analyseRepo(tree);
+    const disputes = readVendorDismissedRejections(application.detectedMetadata);
+    const vendor = vendorResourceOverrides(rulesOnly, disputes);
+    const analysis = vendor.applied ? analyseRepo(tree, vendor.overrides) : rulesOnly;
     // AI-first Analysis: `shadow` records the AI result next to the rules;
     // `ai` uses it. Any AI failure falls back to the rules path below.
-    const aiRun = engine === 'rules' ? null : await runAiEngine(deps.aiAnalysis, tree, analysis, evidenceFileLoader(deps, application, realModeToken));
+    const aiRun =
+      engine === 'rules'
+        ? null
+        : await runAiEngine(deps.aiAnalysis, tree, analysis, evidenceFileLoader(deps, application, realModeToken), vendor.overrides);
     const aiMerge = engine === 'ai' ? (aiRun?.merge ?? null) : null;
     // §15 AI fallback: only runs when the deterministic scanner left a real
     // question unresolved, and can never fail the analysis — any AI error
@@ -562,6 +573,8 @@ export async function runApplicationAnalysis(
       // command, start command) have no column either; the build and the
       // deployment gate read them from this record.
       const manifestOverrides = app.detectedMetadata?.['manifestOverrides'];
+      // The vendor's answers are read from the locked row, so none is lost.
+      const vendorDismissedRejections = refreshDisputes(readVendorDismissedRejections(app.detectedMetadata), disputes, vendor.matched);
     const contractFieldUpdates = deriveContractFieldUpdates(vendorOverrides, tree, mergedAnalysis, aiResolved, resolvedWorkerCommands[0]?.command);
     // A migration script the runtime image is not shown to run is an open
     // vendor question until the vendor owns the field (a command, or no
@@ -602,6 +615,7 @@ export async function runApplicationAnalysis(
       ...(migrationNeedsInput !== null ? { migrationNeedsInput } : {}),
       ...(markerPresent ? { vendorOverrides } : {}),
       ...(manifestOverrides !== undefined ? { manifestOverrides } : {}),
+      ...(vendorDismissedRejections.length > 0 ? { vendorDismissedRejections } : {}),
       analysisVersion: ANALYSIS_VERSION,
       ...(engine !== 'rules' ? { analysisEngine: engine } : {}),
       ...(aiRun ? { aiEngine: aiRun.record } : {}),
@@ -904,6 +918,27 @@ function asRecord(value: unknown): Record<string, unknown> {
 /** The AI Analysis budget for the whole run: one analyst call and the checks, inside the 15-minute worker. */
 const AI_ENGINE_TIMEOUT_MS = 240_000;
 
+const disputeKey = (entry: VendorDismissedRejection): string => `${entry.findingId}\n${entry.reason}`;
+
+/**
+ * The locked row's answers with `stale` set from this run: an answer this run
+ * read is stale when its evidence no longer matched. An answer this run did
+ * not read keeps its state.
+ */
+function refreshDisputes(
+  current: readonly VendorDismissedRejection[],
+  read: readonly VendorDismissedRejection[],
+  matched: ReadonlySet<number>,
+): VendorDismissedRejection[] {
+  const readKeys = new Set(read.map(disputeKey));
+  const matchedKeys = new Set(read.filter((_, index) => matched.has(index)).map(disputeKey));
+  return current.map((entry) => {
+    if (!readKeys.has(disputeKey(entry))) return entry;
+    const { stale: _stale, ...rest } = entry;
+    return matchedKeys.has(disputeKey(entry)) ? rest : { ...rest, stale: true };
+  });
+}
+
 /**
  * Runs the AI-first Analysis and never throws: any failure (no gateway, an
  * outage, a timeout, invalid output) returns no merge, and the caller keeps
@@ -915,6 +950,7 @@ async function runAiEngine(
   tree: FileTree,
   analysis: AnalysisResult,
   loadFiles: ((paths: readonly string[]) => Promise<FileTree>) | null,
+  baseOverrides: ResourceOverrides,
 ): Promise<{ merge: MergeResult | null; record: Record<string, unknown> }> {
   const startedAt = Date.now();
   if (!gateways) return { merge: null, record: { status: 'fallback', reason: 'not_configured' } };
@@ -922,7 +958,7 @@ async function runAiEngine(
     const requested = loadFiles === null ? [] : evidenceFileRequests(tree, analysis);
     // An unreadable evidence file only narrows the windows; it never stops the AI Analysis.
     const evidenceFiles = requested.length > 0 && loadFiles !== null ? await loadFiles(requested).catch(() => ({})) : {};
-    const outcome = await runAiAnalysis({ tree, rules: analysis, gateways, evidenceFiles }, { abortSignal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS) });
+    const outcome = await runAiAnalysis({ tree, rules: analysis, gateways, evidenceFiles, baseOverrides }, { abortSignal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS) });
     return { merge: outcome.merge, record: { status: 'ok', ...outcome.report, generatedAt: new Date().toISOString() } };
   } catch (error) {
     const reason = error instanceof Error ? error.name : 'unknown';

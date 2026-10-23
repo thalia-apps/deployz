@@ -81,6 +81,9 @@ import {
   summarizeInfrastructureStatus,
   topologyDriftFor,
   workloadServicesFromSpec,
+  MAX_VENDOR_DISMISSED_REJECTIONS,
+  isDisputableFinding,
+  readVendorDismissedRejections,
   type ApplicationAnalysis,
   type ApplicationGraphSummary,
   type ApplicationRequirementsSummary,
@@ -94,6 +97,7 @@ import {
   type InfrastructureSummaryStatus,
   type PlanComponentGroup,
   type ResourceKind,
+  type VendorDismissedRejection,
   type VendorStackEvent,
 } from '@deployz/contracts';
 import { FAILURE_REMEDIATION, failureRecoverability, knownFailureCode, type FailureCode } from '@deployz/copy-map';
@@ -125,6 +129,7 @@ import {
   effectiveReadinessReport,
   fixInstructionsCacheKey,
   readCachedFixInstructions,
+  readReadinessReport,
 } from './fix-instructions.js';
 import { completePendingCheckoutIntent, createCheckoutIntent } from './billing-checkout.js';
 import {
@@ -1342,6 +1347,8 @@ interface ReadinessResponse {
    * is incomplete.
    */
   deploymentRequirementDrift: DeploymentRequirementDriftSummary[];
+  /** The vendor's "not used in production" answers (docs/ai-analysis.md#vendor-disputes). */
+  vendorDismissedRejections: VendorDismissedRejection[];
   /** Env-var setup counts (docs/environment-variables.md). Null while analysis is incomplete. */
   environmentSetup: {
     needsDecision: number;
@@ -1481,6 +1488,18 @@ function legacyReadiness(app: {
   };
 }
 
+const blockerDisputeBodySchema = z.object({ findingId: z.string().min(1).max(100), reason: z.string().min(1).max(2000) }).strict();
+
+/** A dispute changes the analysis input, so it waits for a complete analysis and never races a run. */
+function requireDisputeAnalysisComplete(analysisStatus: string): void {
+  if (analysisStatus === 'ANALYZING') {
+    throw new ApiError(409, 'ANALYSIS_IN_PROGRESS', 'Wait for the analysis to finish, then try again.');
+  }
+  if (analysisStatus !== 'COMPLETE') {
+    throw new ApiError(409, 'ANALYSIS_NOT_COMPLETE', 'Run the analysis before you change its findings.');
+  }
+}
+
 async function computeReadiness(
   db: RuntimeDb,
   app: ManifestApplicationRow & {
@@ -1511,6 +1530,7 @@ async function computeReadiness(
       detected: null,
       requirements: null,
       deploymentRequirementDrift: [],
+      vendorDismissedRejections: readVendorDismissedRejections(app.detectedMetadata),
       environmentSetup: null,
     };
   }
@@ -1544,6 +1564,7 @@ async function computeReadiness(
     requirements: computeApplicationRequirements(app, detected),
     deploymentRequirementDrift: computeDeploymentRequirementDrift(app, deployments),
     architecture: computeArchitecture(app),
+    vendorDismissedRejections: readVendorDismissedRejections(app.detectedMetadata),
     environmentSetup: {
       needsDecision: environmentSetup.counts.needsDecision,
       missingValue: environmentSetup.counts.missingValue,
@@ -4125,19 +4146,112 @@ export async function buildServer({
         payload: { schemaVersion: 1, applicationId: id },
       });
     });
-    // The §18/§19 pipeline runs on the worker, not after this response.
-    // Detaching it here with `void runAnalysis(id)` works on a long-lived
-    // server and silently does nothing on Lambda, which freezes the
-    // execution environment as soon as the reply is sent — the application
-    // would sit at ANALYZING for ever. Without a queue (local dev) the
-    // long-lived server can and does run it inline.
-    const queued = await enqueue({ type: 'ANALYSE_APPLICATION', applicationId: id, force });
+    await dispatchAnalysis(id, force);
+    return reply.code(202).send({ status: 'ANALYZING' });
+  });
+
+  // The §18/§19 pipeline runs on the worker, not after the response.
+  // Detaching it with `void runAnalysis(id)` works on a long-lived server and
+  // silently does nothing on Lambda, which freezes the execution environment
+  // as soon as the reply is sent — the application would sit at ANALYZING for
+  // ever. Without a queue (local dev) the long-lived server runs it inline.
+  async function dispatchAnalysis(applicationId: string, force: boolean): Promise<void> {
+    const queued = await enqueue({ type: 'ANALYSE_APPLICATION', applicationId, force });
     if (!queued) {
       // runAnalysis catches every internal failure and persists FAILED
       // rather than throwing; the `.catch` is a second net so a rejected
       // promise can never surface as an unhandled rejection.
-      await runAnalysis(id, { force }).catch(() => {});
+      await runAnalysis(applicationId, { force }).catch(() => {});
     }
+  }
+
+  // POST /api/applications/:id/blocker-disputes — the vendor marks an
+  // allowlisted blocking finding as "not used in production". The answer
+  // names the evidence the vendor saw; the forced re-analysis applies it only
+  // while the rules find that evidence (docs/ai-analysis.md#vendor-disputes).
+  app.post('/api/applications/:id/blocker-disputes', { preHandler: requireAuth }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const organizationId = requireSessionOrganizationId(request);
+    const body = blockerDisputeBodySchema.safeParse(request.body);
+    if (!body.success) throw new ApiError(400, 'VALIDATION_ERROR', 'Send the finding id and its evidence.');
+    const { findingId, reason } = body.data;
+    if (!isDisputableFinding(findingId)) {
+      throw new ApiError(422, 'FINDING_NOT_DISPUTABLE', 'Deployz cannot remove this item. Change the application instead.');
+    }
+    await loadOwnedApplication(db, id, organizationId);
+    await db.transaction(async (tx) => {
+      const [row] = await tx.select().from(schema.applications).where(eq(schema.applications.id, id)).limit(1).for('update');
+      if (!row) throw new NotFoundError('Application not found');
+      requireDisputeAnalysisComplete(row.analysisStatus);
+      const finding = readReadinessReport(row.detectedMetadata)?.findings.find(
+        (candidate) => candidate.id === findingId && candidate.blocking && candidate.technicalEvidence === reason,
+      );
+      if (!finding) throw new ApiError(409, 'FINDING_CHANGED', 'The analysis changed. Review the item again.');
+      const entries = [
+        ...readVendorDismissedRejections(row.detectedMetadata).filter((entry) => entry.findingId !== findingId),
+        { findingId, reason, dismissedAt: new Date().toISOString(), dismissedBy: request.user!.id },
+      ].slice(-MAX_VENDOR_DISMISSED_REJECTIONS);
+      await tx
+        .update(schema.applications)
+        .set({
+          detectedMetadata: { ...row.detectedMetadata, vendorDismissedRejections: entries },
+          analysisStatus: 'ANALYZING',
+          updatedBy: request.user!.id,
+        })
+        .where(eq(schema.applications.id, id));
+      await recordEvent(tx, {
+        organizationId,
+        eventType: 'application.analysis_disputed',
+        actorType: 'user',
+        actorId: request.user!.id,
+        payload: {
+          schemaVersion: 1,
+          applicationId: id,
+          findingId,
+          analysisVersion: row.detectedMetadata?.['analysisVersion'] ?? null,
+          analysisEngine: row.detectedMetadata?.['analysisEngine'] ?? 'rules',
+          ...(typeof row.detectedMetadata?.['analysisCommitSha'] === 'string'
+            ? { analysisCommitSha: row.detectedMetadata['analysisCommitSha'] }
+            : {}),
+        },
+      });
+    });
+    await dispatchAnalysis(id, true);
+    return reply.code(202).send({ status: 'ANALYZING' });
+  });
+
+  // DELETE /api/applications/:id/blocker-disputes/:findingId — undo an
+  // answer; the forced re-analysis shows the blocker again.
+  app.delete('/api/applications/:id/blocker-disputes/:findingId', { preHandler: requireAuth }, async (request, reply) => {
+    const { id, findingId } = request.params as { id: string; findingId: string };
+    const organizationId = requireSessionOrganizationId(request);
+    await loadOwnedApplication(db, id, organizationId);
+    await db.transaction(async (tx) => {
+      const [row] = await tx.select().from(schema.applications).where(eq(schema.applications.id, id)).limit(1).for('update');
+      if (!row) throw new NotFoundError('Application not found');
+      requireDisputeAnalysisComplete(row.analysisStatus);
+      const entries = readVendorDismissedRejections(row.detectedMetadata);
+      const removed = entries.find((entry) => entry.findingId === findingId);
+      if (!removed) throw new NotFoundError('No answer for this item');
+      const { vendorDismissedRejections: _previous, ...metadata } = row.detectedMetadata ?? {};
+      const remaining = entries.filter((entry) => entry !== removed);
+      await tx
+        .update(schema.applications)
+        .set({
+          detectedMetadata: remaining.length > 0 ? { ...metadata, vendorDismissedRejections: remaining } : metadata,
+          analysisStatus: 'ANALYZING',
+          updatedBy: request.user!.id,
+        })
+        .where(eq(schema.applications.id, id));
+      await recordEvent(tx, {
+        organizationId,
+        eventType: 'application.analysis_dispute_withdrawn',
+        actorType: 'user',
+        actorId: request.user!.id,
+        payload: { schemaVersion: 1, applicationId: id, findingId, wasStale: removed.stale === true },
+      });
+    });
+    await dispatchAnalysis(id, true);
     return reply.code(202).send({ status: 'ANALYZING' });
   });
 
