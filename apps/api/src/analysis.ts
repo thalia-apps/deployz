@@ -415,7 +415,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 66 (env reads in more languages): the rules tree also holds C#,
 // Java, Kotlin, PHP, Rust and Elixir source and appsettings.json, and the
 // env-var model reads their variables. Stored v65 rows miss those variables.
-export const ANALYSIS_VERSION = 66;
+// Version 67 (AI startup-migration evidence): an AI startup migration stores
+// the rules' evidence shape, so the finding names the file and line. Stored
+// v66 rows read "Migrations run at startup: undefined (undefined)".
+export const ANALYSIS_VERSION = 67;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

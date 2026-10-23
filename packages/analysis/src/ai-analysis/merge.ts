@@ -15,7 +15,7 @@
  */
 import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../analyser.js';
 import { postgresSemantic } from '../bindings.js';
-import { isSecretName, type FileTree } from '../detectors.js';
+import { isSecretName, type FileTree, type MigrationStartupEvidence } from '../detectors.js';
 import { isGeneratableSecretName } from '../env-classification.js';
 import { combineOverrides } from '../vendor-disputes.js';
 import type { AnalystOutput, SupportedEngine } from './analyst.js';
@@ -260,7 +260,12 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
         const { mode, command } = value as MigrationValue;
         meta['migrationMode'] = mode;
         delete meta['migrationQuestion'];
-        if (mode === 'startup') meta['migrationStartupEvidence'] = answer.evidence.map((item) => ({ path: item.path, line: item.line, fromDockerCommand: false }));
+        if (mode === 'startup') {
+          // The rules' evidence shape, so the readiness report reads both the same way.
+          meta['migrationStartupEvidence'] = answer.evidence.map(
+            (item): MigrationStartupEvidence => ({ source: `${item.path}:${item.line}`, pattern: 'AI Analysis', fromDockerCommand: false }),
+          );
+        }
         if (mode === 'none') aiResolved.push('noMigration');
         if (command !== null) {
           meta['migrationCommands'] = [command];
