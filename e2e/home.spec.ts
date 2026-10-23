@@ -64,8 +64,12 @@ async function patchDeployments(
   patches: Record<string, Record<string, unknown>>,
 ): Promise<void> {
   await page.route(`${API_URL}/api/deployments*`, async (route) => {
-    const response = await route.fetch();
-    const body = (await response.json()) as { deployments: Record<string, unknown>[] };
+    // A navigation disposes the response of a request the page no longer needs.
+    const body = await route
+      .fetch()
+      .then((response) => response.json() as Promise<{ deployments: Record<string, unknown>[] }>)
+      .catch(() => null);
+    if (!body) return;
     for (const row of body.deployments) Object.assign(row, patches[row['id'] as string] ?? {});
     await route.fulfill({ json: body });
   });
