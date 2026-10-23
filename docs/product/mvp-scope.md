@@ -122,7 +122,10 @@ see [`user-flows.md#who-chooses-the-aws-region`](user-flows.md#who-chooses-the-a
   requirement overrides; per-variable environment-variable classification
   (managed by Deployz / set by vendor / set by customer / optional) with
   KMS-encrypted vendor and customer values
-  ([`../environment-variables.md`](../environment-variables.md)).
+  ([`../environment-variables.md`](../environment-variables.md)); vendor
+  disputes of allowlisted blocking findings ("not used in production"),
+  which the next analysis applies while the evidence stays the same
+  ([`../ai-analysis.md#vendor-disputes`](../ai-analysis.md#vendor-disputes)).
 - **Releases**: CodeBuild builds a commit from the application's branch into
   an immutable ECR image digest. Failed builds expose redacted log evidence
   and an on-request AI explanation.
@@ -275,6 +278,10 @@ Recorded so they are not mistaken for gaps:
   ([`../deploy-links.md`](../deploy-links.md)).
 - Customer-provided build-time values, Dockerfile `ARG` detection, format
   validation beyond `_URL`/`_EMAIL`/`_PORT` names.
+- Vendor-assisted analysis beyond blocker disputes: an external (vendor-hosted)
+  dependency for an engine Deployz does not provide, an "I'm not sure" answer
+  that starts an investigation of one finding, and setting proposals from a
+  failed build or TEST deployment.
 - Deployment notifications, ECR lifecycle policies, per-application ECR
   repositories, an `ANALYZING` sweeper, and a product exit for a DESTROY stuck
   in `DELETE_IN_PROGRESS`.

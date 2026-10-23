@@ -32,6 +32,7 @@
  */
 
 import type { AnalysisResult } from './analyser.js';
+import type { DetectorFinding } from './detectors.js';
 import type { RejectionFinding } from './rejection.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -432,6 +433,16 @@ function fixClassOf(finding: ReadinessFinding, metadata: Record<string, unknown>
   return fixClass;
 }
 
+/** The readiness finding id that a detected rejection becomes. */
+export function rejectionFindingId(dependency: string): string {
+  return rejectionCopy(dependency).id;
+}
+
+/** The `local-file-storage` finding's evidence text. */
+export function localFileStorageEvidence(finding: DetectorFinding): string {
+  return finding.details ?? `Persistent local filesystem operations detected: ${String(finding.value ?? '')}`;
+}
+
 function rejectionFinding(rejection: RejectionFinding): ReadinessFinding {
   const copy = rejectionCopy(rejection.dependency);
   return {
@@ -487,9 +498,7 @@ export function buildReadinessReport(
         'This app writes files to its own disk, but Deployz runs apps on disks that are wiped on every deploy.',
       whyItMatters:
         'Anything written to local disk disappears when the app restarts or updates, so uploads and generated files would be lost.',
-      technicalEvidence:
-        localFs.details ??
-        `Persistent local filesystem operations detected: ${String(localFs.value ?? '')}`,
+      technicalEvidence: localFileStorageEvidence(localFs),
       suggestedOutcome:
         'Store uploaded and persistent files in object storage instead of the local disk.',
       confidence: 'confirmed',

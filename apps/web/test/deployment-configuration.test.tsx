@@ -34,6 +34,8 @@ const mocks = vi.hoisted(() => ({
   updateApplicationSizes: vi.fn(),
   fetchApplicationPlan: vi.fn(),
   generateFixInstructions: vi.fn(),
+  disputeBlocker: vi.fn(),
+  withdrawBlockerDispute: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
@@ -52,7 +54,12 @@ vi.mock('@/lib/applications', async (importOriginal) => {
 
 vi.mock('@/lib/readiness', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/readiness')>();
-  return { ...actual, generateFixInstructions: mocks.generateFixInstructions };
+  return {
+    ...actual,
+    generateFixInstructions: mocks.generateFixInstructions,
+    disputeBlocker: mocks.disputeBlocker,
+    withdrawBlockerDispute: mocks.withdrawBlockerDispute,
+  };
 });
 
 function applicationFixture(overrides: Partial<Application> = {}): Application {
@@ -557,5 +564,93 @@ describe('Attention summary', () => {
     expect(byTestId('inventory-row-integration-0')?.textContent).not.toContain('Needs');
     expect(byTestId('inventory-row-integration-0')?.textContent).toContain('Billed separately');
     expect(byTestId('integration-variables-1')?.getAttribute('href')).toBe('#environment-variables');
+  });
+});
+
+describe('Vendor blocker disputes', () => {
+  const MONGO = finding({
+    id: 'unsupported-database-mongo',
+    category: 'database',
+    title: 'Your database needs a supported engine',
+    technicalEvidence: 'Unsupported database dependency: mongoose, and MONGO_URL is read in src/db.ts.',
+  });
+
+  it('offers "Not used in production" only on a disputable blocking row', async () => {
+    currentReadiness = readinessFixture({
+      findings: [MONGO, finding({ id: 'unsupported-gpu', category: 'architecture', title: 'Needs a GPU' })],
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(byTestId('readiness-finding-dispute-unsupported-database-mongo')?.textContent).toBe('Not used in production');
+    expect(byTestId('readiness-finding-dispute-unsupported-gpu')).toBeNull();
+  });
+
+  it('sends the evidence the vendor saw and refreshes the page', async () => {
+    currentReadiness = readinessFixture({ findings: [MONGO] });
+    mocks.disputeBlocker.mockResolvedValue(undefined);
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+    await click(byTestId('readiness-finding-dispute-unsupported-database-mongo'));
+
+    expect(byTestId('blocker-dispute-dialog')?.textContent).toContain('Mark MongoDB as not used in production?');
+    expect(byTestId('blocker-dispute-storage-warning')).toBeNull();
+    await click(byTestId('blocker-dispute-confirm'));
+
+    expect(mocks.disputeBlocker).toHaveBeenCalledWith('app-1', 'unsupported-database-mongo', MONGO.technicalEvidence);
+    expect(mocks.refresh).toHaveBeenCalled();
+    expect(byTestId('blocker-dispute-dialog')).toBeNull();
+  });
+
+  it('warns that files can be lost for the storage findings', async () => {
+    currentReadiness = readinessFixture({
+      findings: [finding({ id: 'local-file-storage', category: 'storage', title: 'Files stored on local disk' })],
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+    await click(byTestId('readiness-finding-dispute-local-file-storage'));
+
+    expect(byTestId('blocker-dispute-storage-warning')?.textContent).toContain('Files can be lost');
+  });
+
+  it('marks a row whose earlier answer no longer matches the evidence', async () => {
+    currentReadiness = readinessFixture({
+      findings: [MONGO],
+      vendorDismissedRejections: [
+        { findingId: MONGO.id, reason: 'old evidence', dismissedAt: '2026-10-23T00:00:00Z', dismissedBy: 'u', stale: true },
+      ],
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(document.body.textContent).toContain('The evidence changed after you marked this as not used.');
+    expect(byTestId(`vendor-answer-${MONGO.id}`)?.textContent).toContain('Evidence changed');
+  });
+
+  it('lists the answers and undoes one', async () => {
+    currentReadiness = readinessFixture({
+      findings: [],
+      vendorDismissedRejections: [
+        { findingId: MONGO.id, reason: MONGO.technicalEvidence, dismissedAt: '2026-10-23T00:00:00Z', dismissedBy: 'u' },
+      ],
+    });
+    mocks.withdrawBlockerDispute.mockResolvedValue(undefined);
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(byTestId(`vendor-answer-${MONGO.id}`)?.textContent).toContain('MongoDB: not used in production');
+    await click(byTestId(`vendor-answer-undo-${MONGO.id}`));
+    expect(mocks.withdrawBlockerDispute).toHaveBeenCalledWith('app-1', MONGO.id);
+    expect(mocks.refresh).toHaveBeenCalled();
   });
 });

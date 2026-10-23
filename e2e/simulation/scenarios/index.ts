@@ -30,6 +30,7 @@ import { staleInstallResurrect } from './stale-install-resurrect.js';
 import { transientAws } from './transient-aws.js';
 import { stateless } from './stateless.js';
 import { updateFailure } from './update-failure.js';
+import { vendorDispute } from './vendor-dispute.js';
 
 /**
  * Registry of implemented scenarios. Phase 1 D1 (provisioning-side failures)
@@ -78,6 +79,7 @@ const SCENARIOS: Readonly<Record<string, ScenarioDefinition>> = {
   [purgeFailure.id]: purgeFailure,
   [transientAws.id]: transientAws,
   [stateless.id]: stateless,
+  [vendorDispute.id]: vendorDispute,
 };
 
 export function getScenario(id: string): ScenarioDefinition {
@@ -122,4 +124,5 @@ export {
   transientAws,
   stateless,
   updateFailure,
+  vendorDispute,
 };

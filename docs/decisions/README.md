@@ -48,6 +48,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-21 | Without health evidence the health check probes `/` and accepts 200-399 | Active |
 | 2026-10-21 | A production deployment is billed only while it serves the customer | Active |
 | 2026-10-21 | The rules Analysis asks about an unusable migration script, and a start script with two background servers is a multi-process image | Active |
+| 2026-10-23 | A vendor can dispute an allowlisted blocker ("not used in production"); the TEST deployment proves the answer | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1325,3 +1326,35 @@ Each rule changes one repository of the 58 recipes and 10 fixtures.
 
 What would change it: a full exam shows a false problem from either rule,
 or Deployz runs several processes of one image as one service.
+
+## A vendor can dispute an allowlisted blocker (2026-10-23)
+
+Context: rules and AI analysis cannot be right for every repository. A false
+blocker (MongoDB in test fixtures, a development Compose service, a declared
+volume that holds no data) stopped the vendor with no product path forward.
+Only the AI could dismiss a blocker.
+
+Decision: the vendor can mark a blocking finding as "not used in
+production" when the finding is on a fixed allowlist
+(`DISPUTABLE_FINDING_IDS`). The answer is an input to `analyseRepo`, so the
+manifest, preflight and compiler see one result. It applies only while the
+analysis finds the same evidence text, and it is kept across re-analysis.
+Details: [`../ai-analysis.md#vendor-disputes`](../ai-analysis.md#vendor-disputes).
+
+- The allowlist rule: a wrong answer only fails the vendor's own TEST
+  deployment. GPU, architecture (Kubernetes, serverless, Terraform), no
+  buildable Dockerfile and a `.git` copy stay hard blockers.
+- The vendor answer and the AI dismissal have separate provenance. The AI
+  never writes the vendor list.
+- The storage findings are on the list with a "Files can be lost" warning,
+  because the AI can already dismiss local-disk state.
+
+Rejected: a conversational assistant (cost, prompt-injection exposure, and
+every useful result must still map to the same closed set of overrides); a
+new decision table with a proposal lifecycle (the dispute list on
+`detected_metadata` and the evidence text give persistence and staleness
+with no migration); a `deployz.yaml` repository file (post-MVP).
+
+What would change it: dispute counts show a hard blocker that is often false
+(add it to the list), a need for vendor-hosted external dependencies, or
+TEST failures after disputes that show a finding must not be disputable.

@@ -7,6 +7,7 @@
 // prices itself: sizes, resources and prices are the API's.
 
 import {
+  isDisputableFinding,
   type DeploymentPlan,
   type DeploymentPlanAwsResource,
   type FootprintCostEstimate,
@@ -60,6 +61,14 @@ export type InventoryAction =
   | { kind: 'fix'; label: string; testId: string }
   | { kind: 'link'; href: string; label: string; testId: string };
 
+/** A blocking finding on the row that the vendor can mark as "not used in production". */
+export interface BlockerDispute {
+  findingId: string;
+  /** The evidence the vendor sees; the API accepts the answer only for this evidence. */
+  reason: string;
+  testId: string;
+}
+
 export interface InventoryRow {
   /** Unique within the table; the row's anchor is `config-row-${id}`. */
   id: string;
@@ -79,6 +88,7 @@ export interface InventoryRow {
   action: InventoryAction | null;
   /** Fix instructions for a recommendation on a row whose own action edits the setting. */
   fixInstructions?: InventoryAction;
+  dispute?: BlockerDispute;
   testId: string;
   /** Readiness findings and architecture questions (by index) shown on this row — the attention summary links to it. */
   findingIds: string[];
@@ -275,6 +285,19 @@ function settingRow(row: ConfigurationRow, overrides: Partial<InventoryRow> = {}
     questionIndexes: [],
     ...overrides,
   };
+}
+
+const STALE_DISPUTE_TEXT = 'The evidence changed after you marked this as not used. Check it again.';
+
+/** The row's first disputable blocking finding, and a notice when the vendor's earlier answer no longer matches it. */
+function addBlockerDispute(row: InventoryRow, readiness: ApplicationReadiness): void {
+  const finding = row.findingIds
+    .map((id) => readiness.findings.find((candidate) => candidate.id === id))
+    .find((candidate) => candidate !== undefined && candidate.blocking && isDisputableFinding(candidate.id));
+  if (!finding) return;
+  row.dispute = { findingId: finding.id, reason: finding.technicalEvidence, testId: `readiness-finding-dispute-${finding.id}` };
+  const stale = readiness.vendorDismissedRejections?.some((entry) => entry.findingId === finding.id && entry.stale === true);
+  if (stale) row.issues.push({ label: 'Evidence changed', variant: 'warning', text: STALE_DISPUTE_TEXT });
 }
 
 function unresolvedIssue(item: ArchitectureUnresolved): InventoryIssue {
@@ -548,6 +571,8 @@ export function deriveServiceInventory(input: {
   )
     .filter(([, rows]) => rows.length > 0)
     .map(([id, rows]) => ({ id, label: INVENTORY_GROUP_LABELS[id], rows }));
+
+  for (const row of groups.flatMap((group) => group.rows)) addBlockerDispute(row, readiness);
 
   return { groups, externalServices, unestimatedWorkload };
 }

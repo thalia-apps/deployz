@@ -39,6 +39,8 @@ Added for the MVP funnel:
 | `application.analysis_failed` | analysis status → FAILED (tx) | `applicationId`, `failureCode`, `durationMs` |
 | `application.preflight_evaluated` | preflight gates a provisioning action only — deploy-link creation, install launch, deploy-link launch, relay register. Read endpoints never emit. | `applicationId`, `result: 'pass'\|'blocked'`, `blockingCount`, `warningCount` |
 | `application.configuration_saved` | successful config save | `applicationId`, `changedKeyCount` (count only — never keys or values) |
+| `application.analysis_disputed` | the vendor marks an allowlisted blocker as "not used in production" (tx) | `applicationId`, `findingId`, `analysisVersion`, `analysisEngine`, `analysisCommitSha?` (never the evidence text) |
+| `application.analysis_dispute_withdrawn` | the vendor undoes that answer (tx) | `applicationId`, `findingId`, `wasStale` |
 | `customer.created` | customer insert (tx) | `customerId` (also the `customer_id` column) |
 | `deployment.created` | deployment insert, every origin | `source: 'manual' \| 'deploy_link' \| 'public_link'` (mirrors `deployments.source`) |
 | `relay.connected` | first successful relay enrollment (inside the register tx) | — (`deployment_id` column is the join key) |

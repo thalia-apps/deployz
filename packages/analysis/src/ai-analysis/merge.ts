@@ -17,6 +17,7 @@ import { analyseRepo, type AnalysisResult, type ResourceOverrides } from '../ana
 import { postgresSemantic } from '../bindings.js';
 import { isSecretName, type FileTree } from '../detectors.js';
 import { isGeneratableSecretName } from '../env-classification.js';
+import { combineOverrides } from '../vendor-disputes.js';
 import type { AnalystOutput, SupportedEngine } from './analyst.js';
 import { databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
 import { isProductionFile, type EvidencePack } from './evidence-pack.js';
@@ -53,6 +54,8 @@ export interface MergeInput {
   readonly checks: readonly AnswerCheck[];
   /** The fetched evidence files (`evidenceFileRequests`) that the rules tree does not hold. */
   readonly evidenceFiles?: FileTree | undefined;
+  /** Vendor overrides already applied to `rules`: a re-run keeps them. */
+  readonly baseOverrides?: ResourceOverrides | undefined;
 }
 
 export interface MergeResult {
@@ -164,7 +167,7 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
   }
   if (dismissed.length > 0) overrides.dismissedRejections = dismissed;
 
-  const base = Object.keys(overrides).length > 0 ? analyseRepo(tree, overrides) : rules;
+  const base = Object.keys(overrides).length > 0 ? analyseRepo(tree, combineOverrides(input.baseOverrides, overrides)) : rules;
   const meta: Meta = { ...base.metadata };
   let findings = [...base.findings];
   const aiResolved: string[] = [];
