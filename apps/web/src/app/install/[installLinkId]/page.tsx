@@ -274,6 +274,7 @@ export default async function InstallPage({
           Deploy {data.applicationName} to your AWS account
         </h1>
         <p className="text-sm text-muted-foreground">Published by {data.publisherName}</p>
+        <DocsLink href={DOCS.customerInstall}>How the installation works</DocsLink>
       </header>
 
       <Card>

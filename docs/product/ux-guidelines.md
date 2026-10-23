@@ -361,6 +361,9 @@ The product documentation is at `https://deployz.dev/docs/`.
 - Customer pages (`/install`, `/deploy` and their security pages) link only
   to the Customer guide pages (`customers/*`). A component that both roles
   see picks the page by role, as `CustomDomainCard` does with `canManage`.
+  Every customer page has `CustomerPageHeader`, which shows the Customer
+  guide link at the top. The first screen of each install flow also shows
+  "How the installation works" under its title.
 - Admin pages, sign-in, sign-up and Home have no docs links. Home's only
   link is the current step's action (§4); the user menu's Documentation
   item is the general entry point.
