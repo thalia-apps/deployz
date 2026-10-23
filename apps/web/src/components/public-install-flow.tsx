@@ -194,6 +194,9 @@ export function PublicInstallFlow({ linkId, resolve, token, customerKnown = fals
         <p className="mt-2 text-sm text-muted-foreground">
           Published by {resolve.publisher.name} · Release {resolve.release.version}
         </p>
+        <DocsLink href={DOCS.customerInstall} className="mt-1">
+          How the installation works
+        </DocsLink>
       </div>
 
       <section aria-labelledby="public-region" className="flex flex-col gap-3">

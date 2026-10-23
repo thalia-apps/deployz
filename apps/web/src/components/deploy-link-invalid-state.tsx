@@ -39,15 +39,10 @@ export function DeployLinkInvalidState({ reason }: { reason: string }) {
 
 export function PoweredBy() {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <p className="text-xs text-muted-foreground">
-        Powered by{' '}
-        <DeployzIcon className="mr-1 inline size-3 align-[-0.125em]" />
-        Deployz
-      </p>
-      <DocsLink href={DOCS.customerGuide} className="text-xs">
-        Customer guide
-      </DocsLink>
-    </div>
+    <p className="text-xs text-muted-foreground">
+      Powered by{' '}
+      <DeployzIcon className="mr-1 inline size-3 align-[-0.125em]" />
+      Deployz
+    </p>
   );
 }

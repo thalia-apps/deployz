@@ -43,6 +43,7 @@ export const DOCS = {
   startupAndHealth: page('troubleshooting/startup-and-health'),
   awsResources: page('reference/aws-resources'),
   customerGuide: page('customers/overview'),
+  customerInstall: page('customers/install'),
   customerChooseRegion: page('customers/before-you-install#choose-a-region'),
   customerInstallFails: page('customers/install#if-the-deployment-fails'),
   customerLinkDoesNotOpen: page('customers/install#if-the-link-does-not-open'),

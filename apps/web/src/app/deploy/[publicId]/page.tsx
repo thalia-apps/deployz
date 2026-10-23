@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 
 import { CustomerInstallSections } from '@/components/customer-install-sections';
 import { DeployLinkInvalidState, PoweredBy } from '@/components/deploy-link-invalid-state';
+import { DocsLink } from '@/components/docs-link';
 import { ExistingConnectorUpdate } from '@/components/existing-connector-update';
 import { InstallLaunchButton } from '@/components/install-launch-button';
 import { InstallProgress } from '@/components/install-progress';
@@ -17,6 +18,7 @@ import {
 } from '@/lib/deploy-link-flow';
 import { cloudFormationStacksUrl } from '@/lib/aws-console';
 import { RELAY_STUCK_GUIDANCE } from '@/lib/deployment-vocabulary';
+import { DOCS } from '@/lib/docs-links';
 import { installPlanRegionLabel } from '@/lib/install-plan';
 import { LINK_TOKEN_COOKIE } from '@/lib/link-token-cookie';
 
@@ -160,6 +162,9 @@ export default async function DeployPage({ params }: { params: Promise<{ publicI
             Deploy {data.application.name} to your AWS account
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">Region: {regionLabel ?? data.region}</p>
+          <DocsLink href={DOCS.customerInstall} className="mt-1">
+            How the installation works
+          </DocsLink>
         </div>
 
         <CustomerInstallSections
