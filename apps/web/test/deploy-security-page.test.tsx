@@ -5,11 +5,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // The tokenized /deploy/:publicId/security page fails closed exactly like
 // the /deploy page (same resolve, same reason mapping) and renders the
 // shared SecurityDetailsContent on success. The token must never appear in
-// page content — only in the back link's query string, the convention the
-// /deploy page itself already uses.
+// page content. It comes from the cookie the /deploy page set.
 
 const mocks = vi.hoisted(() => ({
   fetchDeployLinkData: vi.fn(),
+  cookieToken: undefined as string | undefined,
+}));
+
+vi.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: () => (mocks.cookieToken === undefined ? undefined : { value: mocks.cookieToken }),
+  }),
 }));
 
 vi.mock('../src/lib/deploy-link-flow', () => ({
@@ -20,8 +26,7 @@ const DeploySecurityPage = (await import('../src/app/deploy/[publicId]/security/
 
 const PUBLIC_ID = 'b7e2a91c-1f3a-4c5d-8e9f-0a1b2c3d4e5f';
 const TOKEN = 'a'.repeat(64);
-const SECURITY_HREF = `/deploy/${PUBLIC_ID}/security?token=${TOKEN}`;
-const BACK_HREF = `/deploy/${PUBLIC_ID}?token=${TOKEN}`;
+const BACK_HREF = `/deploy/${PUBLIC_ID}`;
 
 function resolvedData(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -71,11 +76,11 @@ function resolvedData(overrides: Record<string, unknown> = {}): Record<string, u
 }
 
 async function renderPage(search?: string): Promise<Document> {
+  mocks.cookieToken = search === undefined ? TOKEN : undefined;
   // DeploySecurityPage is an async server component: await it to the
   // resolved JSX tree first — renderToString cannot suspend.
   const element = await DeploySecurityPage({
     params: Promise.resolve({ publicId: PUBLIC_ID }),
-    searchParams: Promise.resolve(search === undefined ? { token: TOKEN } : {}),
   });
   const { window } = new JSDOM(renderToString(element));
   return window.document;
@@ -96,7 +101,7 @@ describe('DeploySecurityPage', () => {
     expect(mocks.fetchDeployLinkData).toHaveBeenCalledWith(PUBLIC_ID, TOKEN);
   });
 
-  it('links back to the deploy page, carrying the token in the query string', async () => {
+  it('links back to the deploy page without the token in the URL', async () => {
     mocks.fetchDeployLinkData.mockResolvedValue({ ok: true, data: resolvedData() });
     const doc = await renderPage();
 
@@ -165,6 +170,5 @@ describe('DeploySecurityPage', () => {
         expect(label).not.toContain(TOKEN);
       }
     }
-    expect(doc.querySelector(`a[href="${SECURITY_HREF}"]`)).toBeNull();
   });
 });

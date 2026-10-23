@@ -31,7 +31,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // `paramTaskFamilySuffix`) and the 300 s web health-check grace, and the
 // small-v2 profile (db.t3.micro + gp3), and the IAM role boundary
 // (`paramRoleBoundaryArn`), each changed every template.
-const POSTGRES_TEMPLATE_HASH_GOLDEN = '880d46f9c816576bb8aa979035561682b930c93d4e92a1dcf128baa773141277';
+const POSTGRES_TEMPLATE_HASH_GOLDEN = '82904b5b7ab8699b90cceebb8974c4bdf9e67529484a933222d2168fbc3f5e77';
 
 /** Evaluates the compiled `Family` join for one stack's suffix parameter value. */
 function familyFor(family: unknown, suffix: string): string {

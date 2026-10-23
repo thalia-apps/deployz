@@ -8,6 +8,9 @@ build:
   dockerfile: docker/dockerfile
   context: .
   target: release
+outcomePatch:
+  environment: {}
+  reason: "server/server.js stops with 'Cannot find dist/index.html' (full run log): docker/dockerfile copies the repository (COPY . ., line 22) but never runs npm run build (package.json build: vite build), and dist is not in git. Repository change: run the build in the build stage. Version 2 takes MariaDB from UPTIME_KUMA_DB_TYPE=mariadb and UPTIME_KUMA_DB_* (server/setup-database.js:98-108), so SQLite is not the only database."
 notes:
   - The root has no Dockerfile. docker/dockerfile has the app stage release (CMD node server/server.js). The last stage in the file is upload-artifact, so the recipe builds the target release.
-  - No vendor input. The Analysis must reject this application (SQLite only), and the observation records what the app does.
+  - No vendor input. SQLite is the default database; outcomePatch names the MariaDB settings.

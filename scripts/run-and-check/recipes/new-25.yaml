@@ -4,6 +4,9 @@ source:
   kind: git
   repository: btcpayserver/btcpayserver
   commit: 70c07d3bb1e0111c4976a9fbd5aa0ee33dae4bc2
+outcomePatch:
+  environment: {}
+  reason: "BTCPay reads its database only from BTCPAY_POSTGRES, an Npgsql connection string (docs/operators/configuration-reference.md:35), so the start fails with 'No database option was configured' (full run log). Deployz binds a URL or the parts, not this format. Repository change: Docker/docker-entrypoint.sh builds BTCPAY_POSTGRES from the bound parts before exec. NBXplorer is not required: --nodefaultchain gives no chain (configuration-reference.md:24)."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-17T01:59:10Z. ASP.NET Core payment server."
   - "Root Dockerfile builds from source: dotnet sdk 10.0 image, dotnet restore and dotnet publish of BTCPayServer/, then aspnet 10.0 runtime with Docker/docker-entrypoint.sh (exec dotnet BTCPayServer.dll). BTCPayServer.Tests/Dockerfile is for tests and is not used."

@@ -11,9 +11,12 @@ vendorInputs:
     source:
       kind: fixed
       value: "--default-user admin --language en --db-type pgsql --db-host ${DB_HOST} --db-base ${DB_NAME} --db-user ${DB_USER} --db-password ${DB_PASSWORD}"
+healthPath: /api/
+localState: "data/ keeps the configuration and each user's settings and password hash (data/config.php, data/users/<user>/config.php). Docker/README.md:45 saves it in the freshrss_data volume, and FRESHRSS_INSTALL runs only at the very first run (Docker/README.md:103)."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch edge, committed 2026-10-18T20:22:11Z. Plain PHP application without a framework."
   - "Source build confirmed: Docker/Dockerfile (debian 13 with Apache and mod_php). COPY . /var/www/FreshRSS copies the source from the repository root (Docker/Dockerfile:19). The Dockerfile is not at the root, so build.dockerfile names it. Docker/Dockerfile-Alpine and the other variants are not used. EXPOSE 80 (line 70)."
   - "The PHP packages are php-sqlite3, php-mysql and php-pgsql (Docker/Dockerfile:13)."
   - "Docker/entrypoint.sh runs cli/do-install.php only when FRESHRSS_INSTALL is set (lines 76-79). The code has no DATABASE_URL name."
   - "FRESHRSS_INSTALL is the vendor install string (Docker/entrypoint.sh:76-79 expands it with eval, so it names the database variables that Deployz injects). It installs FreshRSS on the managed PostgreSQL database."
+  - "healthPath /api/: the health question gets the path of the image's own check, cli/health.php:11 (http://localhost/api/, 200 expected at line 29). / answers 302."

@@ -122,7 +122,7 @@ describe('worker handler', () => {
   async function insertRelease(version: string) {
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId, version, gitSha: 'abc123' })
+      .values({ applicationId, version, gitSha: 'abc1230' })
       .returning();
     return release!;
   }
@@ -138,7 +138,7 @@ describe('worker handler', () => {
     await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release.id }, 'msg-2');
 
     expect(uploaded).toEqual([
-      { bucket: 'source-bucket', key: `build-source/${applicationId}/${release.id}/abc123.tar.gz` },
+      { bucket: 'source-bucket', key: `build-source/${applicationId}/${release.id}/abc1230.tar.gz` },
     ]);
     const build = started[0];
     expect(build?.projectName).toBe('deployz-build');
@@ -206,11 +206,11 @@ describe('worker handler', () => {
 
     const [release1] = await db
       .insert(schema.releases)
-      .values({ applicationId: app1!.id, version: '1.0.0', gitSha: 'abc201' })
+      .values({ applicationId: app1!.id, version: '1.0.0', gitSha: 'abc2010' })
       .returning();
     const [release2] = await db
       .insert(schema.releases)
-      .values({ applicationId: app2!.id, version: '1.0.0', gitSha: 'abc202' })
+      .values({ applicationId: app2!.id, version: '1.0.0', gitSha: 'abc2020' })
       .returning();
 
     const prevLength = started.length;
@@ -251,7 +251,7 @@ describe('worker handler', () => {
       .returning();
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId: application!.id, version: 'v1.1.0', gitSha: 'abc124' })
+      .values({ applicationId: application!.id, version: 'v1.1.0', gitSha: 'abc1240' })
       .returning();
 
     await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, 'msg-2b');
@@ -285,7 +285,7 @@ describe('worker handler', () => {
       .returning();
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId: application!.id, version: 'v1.2.0', gitSha: 'abc125' })
+      .values({ applicationId: application!.id, version: 'v1.2.0', gitSha: 'abc1250' })
       .returning();
 
     await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, 'msg-2c');
@@ -313,7 +313,7 @@ describe('worker handler', () => {
       .returning();
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId: application!.id, version: 'v1.3.0', gitSha: 'abc126' })
+      .values({ applicationId: application!.id, version: 'v1.3.0', gitSha: 'abc1260' })
       .returning();
 
     await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, 'msg-2d');
@@ -339,7 +339,7 @@ describe('worker handler', () => {
         .returning();
       const [release] = await db
         .insert(schema.releases)
-        .values({ applicationId: application!.id, version: 'v1.0.0', gitSha: `sha-${name}` })
+        .values({ applicationId: application!.id, version: 'v1.0.0', gitSha: 'abc1234' })
         .returning();
       await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, `msg-${name}`);
       return started[started.length - 1]?.environmentVariables ?? [];
@@ -372,7 +372,7 @@ describe('worker handler', () => {
       .returning();
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId: application!.id, version: 'v0.1.0', gitSha: 'def456' })
+      .values({ applicationId: application!.id, version: 'v0.1.0', gitSha: 'def4560' })
       .returning();
 
     await handleMessage(deps(), { type: 'BUILD_RELEASE', releaseId: release!.id }, 'msg-3');
@@ -423,7 +423,7 @@ describe('worker handler', () => {
 
     const [release] = await db
       .insert(schema.releases)
-      .values({ applicationId: application!.id, version: 'v1.0.0', gitSha: 'buildargsha' })
+      .values({ applicationId: application!.id, version: 'v1.0.0', gitSha: 'b0a1d2e' })
       .returning();
 
     const buildArgsDeps: WorkerDeps = {
@@ -1692,7 +1692,7 @@ describe('sweepStuckBuilds', () => {
       .values({
         applicationId,
         version,
-        gitSha: 'abc123',
+        gitSha: 'abc1230',
         currentBuildId: buildId,
         buildStatus: 'BUILDING',
         releaseStatus: 'BUILDING',

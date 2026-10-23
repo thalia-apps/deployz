@@ -441,6 +441,31 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(calls).toHaveLength(4);
   });
 
+  it('fetches C#, Java, Kotlin, PHP, Rust and Elixir source and appsettings.json for the env-var model', async () => {
+    const paths = [
+      'src/Api/Services/Mailer.cs',
+      'src/main/java/app/Config.java',
+      'src/main/kotlin/app/App.kt',
+      'app/constants.php',
+      'src/main.rs',
+      'config/runtime.exs',
+      'lib/app/repo.ex',
+      'src/Api/appsettings.json',
+    ];
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [...paths, 'src/Api/appsettings.Development.json'].map((path) => ({ path, type: 'blob', sha: `sha-${path}`, size: 10 })),
+        });
+      }
+      return makeFetchResponse(200, { content: Buffer.from('x').toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(Object.keys(tree).sort()).toEqual([...paths].sort());
+  });
+
   it('fetches the named evidence files of the AI Analysis: blobs within the size limit only', async () => {
     const calls: string[] = [];
     const fetchFn: FetchFn = async (url) => {

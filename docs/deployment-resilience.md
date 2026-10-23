@@ -166,9 +166,12 @@ watchdog, and the stack-event progress route's settlement backstop):
 
 The customer-facing retry (`POST /api/install/:id/retry`,
 `POST /api/deploy-links/:id/retry`) re-arms a first install with a fresh
-enrollment code and credential. It is refused after any successful install and
-outside NOT_INSTALLED, WAITING_FOR_RELAY and INSTALLING (for example while a
-DESTROY runs); a retry during INSTALLING is allowed on purpose. A FAILED
+enrollment code and credential. It needs the link token (`x-deployz-token`;
+the install link id alone gets a 404). It is refused after any successful
+install and outside NOT_INSTALLED, WAITING_FOR_RELAY and INSTALLING (for
+example while a DESTROY runs). A retry during INSTALLING is allowed on purpose
+when the customer abandoned the attempt, but not while a connected relay is
+running the INSTALL job (`409 INSTALL_IN_PROGRESS`). A FAILED
 install is the vendor's to retry (retry-install, or a relay reset when the
 connector is disconnected), so the customer pages show no retry for it and
 the route refuses it.
@@ -243,6 +246,11 @@ install / database ready
   on an existing deployment" below): the relay puts it only into the
   application container of a new revision of the named family, then runs
   that exact revision ARN. RunTask never carries a command override.
+- **Install and domain payload checks.** The relay refuses an INSTALL whose
+  `templateUrl` is not an `https` S3 bucket URL, and one whose `stackName`
+  is not the installation's own `deployz-app-<id>` stack. It deletes a
+  certificate only when the certificate carries this installation's tag.
+  Pinning the exact template bucket host is a post-MVP item.
 
 - **Analysis freezes only a safe command.** `selectMigrationScript`
   (`packages/analysis`) accepts only a script of the deployed app's own
@@ -537,6 +545,26 @@ still roll, and would hide a crash loop.
   force-complete cannot flip state twice or recompute release pointers. A
   result without a boolean `success` gets `400` and settles nothing; a
   malformed report is never a default success.
+  The result route settles only a job in `RUNNING`, so only a command the
+  relay claimed. A result for a `REQUESTED`, `QUEUED` or `WAITING` job gets
+  `409 COMMAND_NOT_CLAIMED` and settles nothing; the relay keeps its settled
+  marker and reports again after its next poll has claimed the job.
+- **A relay credential ends with the deployment's cleanup.** A `DELETED`
+  deployment gets `410` on `GET /api/relay/config` and `POST /api/relay/health`
+  (no vendor configuration, no health writes). Its command channel stays open
+  because a later PURGE needs it. A successful PURGE clears `relayTokenHash`
+  and `relayCredential`, so the token stops working. Registration needs an install
+  link that is neither revoked nor expired. The relay
+  reports `awsAccountId` as 12 digits only; the ECR pull grant uses it as the
+  principal, and a re-enrollment with a new installation id revokes the grant
+  of `previousInstallationId`.
+- **Relay input is bounded.** A heartbeat `observedState` larger than 256 KiB
+  gets `413`; stack-event rows are kept for at most 2,000 per job; a
+  configuration value is at most 64 KiB.
+- **A failed DESTROY is not deployable.** Billing stops when a DESTROY is
+  queued and does not resume. So `requireDeployableState` refuses deploy,
+  rollback and restart (`409 DEPLOYMENT_NOT_DEPLOYABLE`) for a `FAILED`
+  deployment whose newest job is a DESTROY; the vendor disconnects again.
 - AWS-side, every relay executor reads before it writes
   (describe-before-create/delete, running-digest short-circuit), so a
   re-delivered or re-offered command converges on real AWS state instead of

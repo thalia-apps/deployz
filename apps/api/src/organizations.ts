@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { BillingSubscriptionStatus } from '@deployz/contracts';
@@ -54,6 +54,19 @@ export interface Actor {
   readonly id: string;
   readonly name: string;
   readonly email: string;
+  readonly emailVerified: boolean;
+}
+
+/** Invitations are tied to an e-mail address, so only an address the caller
+ *  has proven to own may send, list or answer them. */
+export function requireVerifiedEmail(actor: Actor): void {
+  if (!actor.emailVerified) {
+    throw new ApiError(
+      403,
+      'EMAIL_NOT_VERIFIED',
+      'Verify your email address first. Open the verification link we sent to your inbox.',
+    );
+  }
 }
 
 export interface OrganizationDeps {
@@ -499,7 +512,11 @@ export async function deleteOrganization(
   }
 
   const deployments = await db
-    .select({ id: schema.deployments.id, state: schema.deployments.state })
+    .select({
+      id: schema.deployments.id,
+      state: schema.deployments.state,
+      cleanupState: schema.deployments.cleanupState,
+    })
     .from(schema.deployments)
     .where(eq(schema.deployments.organizationId, organizationId));
   const live = deployments.filter(
@@ -516,6 +533,20 @@ export async function deleteOrganization(
     );
   }
 
+  // A removed deployment keeps its database, files and secrets in the
+  // customer's account until a purge completes. Deleting the record now
+  // would leave nobody able to purge them.
+  const unpurged = deployments.filter(
+    (deployment) => deployment.state === 'DELETED' && deployment.cleanupState !== 'COMPLETE',
+  );
+  if (unpurged.length > 0) {
+    throw new ApiError(
+      409,
+      'ORGANIZATION_HAS_UNPURGED_RESOURCES',
+      `Purge the retained resources of ${unpurged.length} removed deployment${unpurged.length === 1 ? '' : 's'} before you delete this organization`,
+    );
+  }
+
   const members = await listMembers(db, organizationId);
   const applications = await db
     .select({ id: schema.applications.id })
@@ -524,57 +555,73 @@ export async function deleteOrganization(
   const applicationIds = applications.map((application) => application.id);
   const deploymentIds = deployments.map((deployment) => deployment.id);
 
-  // Leaf-first so no foreign key is ever left dangling. event_logs is
+  // Leaf-first so no foreign key is ever left dangling, all in one
+  // transaction so a failure leaves the organization whole. event_logs is
   // deliberately untouched: the audit stream outlives what it describes.
-  if (deploymentIds.length > 0) {
-    await db
-      .delete(schema.deploymentStackEvents)
-      .where(inArray(schema.deploymentStackEvents.deploymentId, deploymentIds));
-    await db
-      .delete(schema.deploymentJobs)
-      .where(inArray(schema.deploymentJobs.deploymentId, deploymentIds));
-  }
-  if (applicationIds.length > 0) {
-    await db
-      .delete(schema.applicationConfigs)
-      .where(inArray(schema.applicationConfigs.applicationId, applicationIds));
-  }
-  // Checkout intents FK to deployments (Paddle migration Phase 8) — they go
-  // leaf-first, before the deployments they point at.
-  await db
-    .delete(schema.billingCheckoutIntents)
-    .where(eq(schema.billingCheckoutIntents.organizationId, organizationId));
-  await db.delete(schema.deployments).where(eq(schema.deployments.organizationId, organizationId));
-  if (applicationIds.length > 0) {
-    await db.delete(schema.releases).where(inArray(schema.releases.applicationId, applicationIds));
-  }
-  await db
-    .delete(schema.applications)
-    .where(eq(schema.applications.organizationId, organizationId));
-  await db.delete(schema.customers).where(eq(schema.customers.organizationId, organizationId));
-  // Billing rows FK to organization — leaf-first before the org itself goes.
-  await db
-    .delete(schema.billingReconciliationEvents)
-    .where(eq(schema.billingReconciliationEvents.organizationId, organizationId));
-  await db
-    .delete(schema.billingProviderEvents)
-    .where(eq(schema.billingProviderEvents.organizationId, organizationId));
-  await db
-    .delete(schema.billingSubscriptions)
-    .where(eq(schema.billingSubscriptions.organizationId, organizationId));
-  await db.delete(schema.invitation).where(eq(schema.invitation.organizationId, organizationId));
-  await db.delete(schema.member).where(eq(schema.member.organizationId, organizationId));
-  // Sessions still pointing here must lose the pointer, or their next request
-  // would resolve a tenant that no longer exists.
-  await db
-    .update(schema.session)
-    .set({ activeOrganizationId: null })
-    .where(eq(schema.session.activeOrganizationId, organizationId));
-  await db
-    .update(schema.user)
-    .set({ lastActiveOrganizationId: null })
-    .where(eq(schema.user.lastActiveOrganizationId, organizationId));
-  await db.delete(schema.organization).where(eq(schema.organization.id, organizationId));
+  await db.transaction(async (tx) => {
+    if (deploymentIds.length > 0) {
+      await tx
+        .delete(schema.deploymentStackEvents)
+        .where(inArray(schema.deploymentStackEvents.deploymentId, deploymentIds));
+      await tx
+        .delete(schema.deploymentJobs)
+        .where(inArray(schema.deploymentJobs.deploymentId, deploymentIds));
+      await tx
+        .delete(schema.deploymentResources)
+        .where(inArray(schema.deploymentResources.deploymentId, deploymentIds));
+    }
+    if (applicationIds.length > 0) {
+      await tx
+        .delete(schema.applicationConfigs)
+        .where(inArray(schema.applicationConfigs.applicationId, applicationIds));
+      await tx
+        .delete(schema.jevShadowVerifications)
+        .where(inArray(schema.jevShadowVerifications.applicationId, applicationIds));
+    }
+    // These rows FK to deployments (and to applications and customers) — they
+    // go leaf-first, before the rows they point at.
+    await tx
+      .delete(schema.billingCheckoutIntents)
+      .where(eq(schema.billingCheckoutIntents.organizationId, organizationId));
+    await tx.delete(schema.customDomains).where(eq(schema.customDomains.organizationId, organizationId));
+    await tx.delete(schema.pendingSecrets).where(eq(schema.pendingSecrets.organizationId, organizationId));
+    await tx.delete(schema.deployLinks).where(eq(schema.deployLinks.organizationId, organizationId));
+    await tx.delete(schema.deployments).where(eq(schema.deployments.organizationId, organizationId));
+    await tx
+      .delete(schema.publicInstallLinks)
+      .where(eq(schema.publicInstallLinks.organizationId, organizationId));
+    if (applicationIds.length > 0) {
+      await tx.delete(schema.releases).where(inArray(schema.releases.applicationId, applicationIds));
+    }
+    await tx.delete(schema.applications).where(eq(schema.applications.organizationId, organizationId));
+    await tx.delete(schema.customers).where(eq(schema.customers.organizationId, organizationId));
+    await tx
+      .delete(schema.githubInstallations)
+      .where(eq(schema.githubInstallations.organizationId, organizationId));
+    // Billing rows FK to organization — leaf-first before the org itself goes.
+    await tx
+      .delete(schema.billingReconciliationEvents)
+      .where(eq(schema.billingReconciliationEvents.organizationId, organizationId));
+    await tx
+      .delete(schema.billingProviderEvents)
+      .where(eq(schema.billingProviderEvents.organizationId, organizationId));
+    await tx
+      .delete(schema.billingSubscriptions)
+      .where(eq(schema.billingSubscriptions.organizationId, organizationId));
+    await tx.delete(schema.invitation).where(eq(schema.invitation.organizationId, organizationId));
+    await tx.delete(schema.member).where(eq(schema.member.organizationId, organizationId));
+    // Sessions still pointing here must lose the pointer, or their next request
+    // would resolve a tenant that no longer exists.
+    await tx
+      .update(schema.session)
+      .set({ activeOrganizationId: null })
+      .where(eq(schema.session.activeOrganizationId, organizationId));
+    await tx
+      .update(schema.user)
+      .set({ lastActiveOrganizationId: null })
+      .where(eq(schema.user.lastActiveOrganizationId, organizationId));
+    await tx.delete(schema.organization).where(eq(schema.organization.id, organizationId));
+  });
 
   await recordAuditEvent(db, {
     organizationId,
@@ -841,16 +888,59 @@ export async function transferOwnership(
 
 // ── Invitations ─────────────────────────────────────────────────────────────
 
+const INVITATIONS_PER_DAY = 50;
+const MAX_MAIL_NAME_LENGTH = 80;
+
+/** User-chosen text that goes into an e-mail: no control characters (no
+ *  header or line injection) and a fixed maximum length. */
+function mailText(value: string): string {
+  return value
+    .replace(/[\p{Cc}\p{Cf}]+/gu, ' ')
+    .trim()
+    .slice(0, MAX_MAIL_NAME_LENGTH);
+}
+
+/** Invitation e-mails reach arbitrary addresses, so one organization or one
+ *  sender may only send a fixed number per day (create and resend count). */
+async function assertInvitationQuota(
+  db: RuntimeDb,
+  organizationId: string,
+  actorId: string,
+): Promise<void> {
+  const [sent] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.eventLogs)
+    .where(
+      and(
+        inArray(schema.eventLogs.eventType, ['member.invited', 'member.invitation.resent']),
+        or(
+          eq(schema.eventLogs.organizationId, organizationId),
+          eq(schema.eventLogs.actorId, actorId),
+        ),
+        gte(schema.eventLogs.occurredAt, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+      ),
+    );
+  if ((sent?.count ?? 0) >= INVITATIONS_PER_DAY) {
+    throw new ApiError(
+      429,
+      'INVITATION_LIMIT_REACHED',
+      'You sent too many invitations today. Try again tomorrow.',
+    );
+  }
+}
+
 function invitationEmail(
   deps: OrganizationDeps,
   args: { to: string; organizationName: string; inviterName: string; invitationId: string; role: string },
 ): { to: string; subject: string; body: string } {
   const link = `${deps.webUrl}/accept-invitation/${args.invitationId}`;
+  const inviterName = mailText(args.inviterName);
+  const organizationName = mailText(args.organizationName);
   return {
     to: args.to,
-    subject: `${args.inviterName} invited you to ${args.organizationName} on Deployz`,
+    subject: `${inviterName} invited you to ${organizationName} on Deployz`,
     body: [
-      `${args.inviterName} invited you to join "${args.organizationName}" on Deployz as a ${args.role}.`,
+      `${inviterName} invited you to join "${organizationName}" on Deployz as a ${args.role}.`,
       '',
       `Accept the invitation: ${link}`,
       '',
@@ -868,6 +958,8 @@ export async function createInvitation(
 ): Promise<InvitationView> {
   const { db } = deps;
   requireRole(role, ['owner', 'admin']);
+  requireVerifiedEmail(actor);
+  await assertInvitationQuota(db, organizationId, actor.id);
   const email = normalizeEmail(body.email);
 
   const existingMember = await db
@@ -969,6 +1061,8 @@ export async function resendInvitation(
 ): Promise<InvitationView> {
   const { db } = deps;
   requireRole(role, ['owner', 'admin']);
+  requireVerifiedEmail(actor);
+  await assertInvitationQuota(db, organizationId, actor.id);
   const existing = await loadOwnedInvitation(db, organizationId, invitationId);
   if (existing.status !== 'pending') {
     throw new ApiError(
@@ -1042,13 +1136,11 @@ export async function revokeInvitation(
 }
 
 export interface PublicInvitationView {
-  id: string;
   email: string;
   role: string;
   status: 'pending' | 'accepted' | 'rejected' | 'canceled' | 'expired';
   organizationName: string;
   inviterName: string;
-  expiresAt: Date;
 }
 
 /**
@@ -1062,7 +1154,6 @@ export async function getPublicInvitation(
 ): Promise<PublicInvitationView> {
   const rows = await db
     .select({
-      id: schema.invitation.id,
       email: schema.invitation.email,
       role: schema.invitation.role,
       status: schema.invitation.status,
@@ -1081,8 +1172,11 @@ export async function getPublicInvitation(
   }
   const expired = row.status === 'pending' && row.expiresAt.getTime() <= Date.now();
   return {
-    ...row,
+    email: row.email,
+    role: row.role,
     status: expired ? 'expired' : (row.status as PublicInvitationView['status']),
+    organizationName: row.organizationName,
+    inviterName: row.inviterName,
   };
 }
 
@@ -1093,6 +1187,7 @@ async function loadAnswerableInvitation(
   actor: Actor,
   invitationId: string,
 ): Promise<typeof schema.invitation.$inferSelect> {
+  requireVerifiedEmail(actor);
   const rows = await db
     .select()
     .from(schema.invitation)
@@ -1227,22 +1322,24 @@ export async function deleteAccount(
     );
   }
 
-  for (const organization of owned) {
-    await deleteOrganization(db, deps, actor, organization.id, 'owner', {
-      confirmName: organization.name,
+  await db.transaction(async (tx) => {
+    for (const organization of owned) {
+      await deleteOrganization(tx, deps, actor, organization.id, 'owner', {
+        confirmName: organization.name,
+      });
+    }
+
+    await recordAuditEvent(tx, {
+      organizationId: organizations[0]?.id ?? 'none',
+      actorId: actor.id,
+      eventType: 'account.deleted',
+      payload: { email: actor.email },
     });
-  }
 
-  await recordAuditEvent(db, {
-    organizationId: organizations[0]?.id ?? 'none',
-    actorId: actor.id,
-    eventType: 'account.deleted',
-    payload: { email: actor.email },
+    // member / session / account rows all cascade from user.
+    await tx.delete(schema.invitation).where(eq(schema.invitation.inviterId, actor.id));
+    await tx.delete(schema.user).where(eq(schema.user.id, actor.id));
   });
-
-  // member / session / account rows all cascade from user.
-  await db.delete(schema.invitation).where(eq(schema.invitation.inviterId, actor.id));
-  await db.delete(schema.user).where(eq(schema.user.id, actor.id));
 
   await sendQuietly(deps.emailSender, {
     to: actor.email,

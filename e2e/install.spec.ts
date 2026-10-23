@@ -10,6 +10,7 @@ import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { extractQuickCreateParam } from './simulation/relay-harness.js';
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
+import { installLinkHeaders, installLinkPath } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -86,7 +87,7 @@ test('install page renders the real application/publisher and the Connect AWS ac
 }) => {
   const { installLinkId, applicationName } = await seedInstall(request);
 
-  const response = await page.goto(`/install/${installLinkId}`);
+  const response = await page.goto(await installLinkPath(request, installLinkId));
   expect(response?.status()).toBe(200);
 
   await expect(
@@ -130,7 +131,7 @@ test('install page renders the real application/publisher and the Connect AWS ac
 
 test('install page top-level copy is jargon-free', async ({ page, request }) => {
   const { installLinkId } = await seedInstall(request);
-  await page.goto(`/install/${installLinkId}`);
+  await page.goto(await installLinkPath(request, installLinkId));
   // The prose around the decision is jargon-free; the infrastructure table
   // below it deliberately names the AWS services it creates (AWS Lambda, IAM
   // roles, ECS, VPC), which is the point of that table. "CloudFormation" is
@@ -236,7 +237,9 @@ test('a setup link that has already been used says so instead of leading to a de
   // console deep-link carries its parameters after the `#` fragment, not in
   // the URL query — `searchParams` alone would not see them.
   // DZ-AUDIT-013: the relay credential is also carried in the URL.
-  const install = await request.get(`${API_URL}/api/install/${installLinkId}`);
+  const install = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    });
   const { quickCreateUrl } = (await install.json()) as { quickCreateUrl: string };
   const enrollmentCode = extractQuickCreateParam(quickCreateUrl, 'EnrollmentCode');
   const relayCredential = extractQuickCreateParam(quickCreateUrl, 'RelayCredential');
@@ -274,10 +277,10 @@ test('two deployments of the same application in the same region prefill differe
   expect(secondDeployment.ok()).toBeTruthy();
   const second = (await secondDeployment.json()) as { installLinkId: string };
 
-  await page.goto(`/install/${seeded.installLinkId}`);
+  await page.goto(await installLinkPath(request, seeded.installLinkId));
   const firstHref = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
 
-  await page.goto(`/install/${second.installLinkId}`);
+  await page.goto(await installLinkPath(request, second.installLinkId));
   const secondHref = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
 
   expect(firstHref).toContain('stackName=deployz-bootstrap-analytics-cloud-');
@@ -307,14 +310,16 @@ test('pressing Deploy to AWS reports the launch and the page then waits for the 
     await route.abort();
   });
 
-  await page.goto(`/install/${installLinkId}`);
+  await page.goto(await installLinkPath(request, installLinkId));
   await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
   await page.getByRole('link', { name: 'Connect AWS account' }).click();
   await expect
     .poll(async () => launched, { timeout: 10_000 })
     .toBe(true);
 
-  const install = (await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) =>
+  const install = (await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) =>
     r.json(),
   )) as { waitingForRelay: boolean; relayStuck: boolean; deploymentState: string };
   expect(install.waitingForRelay).toBe(true);
@@ -348,11 +353,16 @@ test('a customer retry starts a fresh attempt with a fresh stack name and code',
   const { installLinkId } = await seedInstall(request);
 
   await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
-  const before = (await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) =>
+  const before = (await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) =>
     r.json(),
   )) as { bootstrapStackName: string; quickCreateUrl: string | null };
 
-  const retry = await request.post(`${API_URL}/api/install/${installLinkId}/retry`, { data: {} });
+  const retry = await request.post(`${API_URL}/api/install/${installLinkId}/retry`, {
+      data: {},
+      headers: await installLinkHeaders(request, installLinkId),
+    });
   expect(retry.status()).toBe(200);
   const attempt = (await retry.json()) as {
     state: string;
@@ -366,7 +376,7 @@ test('a customer retry starts a fresh attempt with a fresh stack name and code',
 
   // The install page hands the customer the fresh link, prefilled with the
   // new stack name no leftover from the first attempt can block.
-  await page.goto(`/install/${installLinkId}`);
+  await page.goto(await installLinkPath(request, installLinkId));
   const href = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
   expect(href).toContain(`stackName=${encodeURIComponent(attempt.bootstrapStackName)}`);
 });

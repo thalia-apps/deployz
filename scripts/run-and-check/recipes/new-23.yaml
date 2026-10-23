@@ -4,6 +4,11 @@ source:
   kind: git
   repository: hapifhir/hapi-fhir-jpaserver-starter
   commit: 377e6eba316920082e6a90551b488e4599a71eb8
+outcomePatch:
+  environment:
+    SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+    HIBERNATE_DIALECT: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+  reason: "application.yaml:113 sets driver-class-name org.h2.Driver and line 126 the H2 dialect, so the PostgreSQL JDBC URL fails ('Driver org.h2.Driver claims to not accept jdbcUrl', full run log). The repository's docker-compose.yml sets these two values with PostgreSQL. The PostgreSQL driver is in pom.xml:102."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-02T19:06:11Z. Java FHIR server (Spring Boot)."
   - "Root Dockerfile builds from source with Maven inside the image (stage build-hapi runs mvn clean install, stage build-distroless repackages the war). The default target is distroless and starts PropertiesLauncher on /app/main.war. Target tomcat is not used."

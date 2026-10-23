@@ -87,6 +87,8 @@ export function publicInstallErrorMessage(code: string): string {
       return 'That size is not available for this application. Select a different size.';
     case 'SUBSCRIPTION_REQUIRED':
       return 'Your software provider must fix their Deployz subscription before this application can be installed. Contact your software provider.';
+    case 'PUBLIC_INSTALL_LIMIT_REACHED':
+      return 'This installation link has reached its daily limit. Try again tomorrow or contact your software provider.';
     case 'VALIDATION_ERROR':
       return 'The submitted information is not valid. Check the fields and try again.';
     default:

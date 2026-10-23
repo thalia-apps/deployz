@@ -6,6 +6,9 @@ source:
   commit: 84b2c17e24e7e0268830557b58c5d5958ad7ac6a
 build:
   dockerfile: docker/Dockerfile
+outcomePatch:
+  environment: {}
+  reason: "docker/geneweb-launch.sh:69 starts gwd with '-plugins -unsafe <plugins dir>'. The gwd of this commit makes -unsafe a no-op and -plugins a flag, so it stops with 'too many arguments' (full run log) and nothing listens. Repository change: the gwd options that the log names. The genealogy database is a set of files in the VOLUME (docker/Dockerfile:86): local state, a change too."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch master, committed 2026-10-17T13:37:13Z. OCaml genealogy server."
   - "Source build confirmed: docker/Dockerfile. The builder stage uses the ocaml/opam image, installs the opam dependencies and runs make distrib (docker/Dockerfile:5-35). The last stage, container, is the default target (lines 48-88). The Dockerfile is not at the root, so build.dockerfile names it. The COPY . . line takes the repository root as context. EXPOSE 2316-2317."

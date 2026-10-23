@@ -28,6 +28,9 @@ vendorInputs:
     source:
       kind: fixed
       value: "1"
+outcomePatch:
+  environment: {}
+  reason: "The runner stage is node:26.3.0-slim (Dockerfile:9). buffer-equal-constant-time 1.0.1 (yarn.lock:8560) reads SlowBuffer.prototype, which Node 26 does not have, so the start stops (full run log). Repository change: a Node 24 runner image, which package.json engines allows (line 45)."
 notes:
   - Root Dockerfile. It starts from the floating image outlinewiki/outline-base (ARG BASE_IMAGE), so the built code can differ from the pinned commit. Dockerfile.base builds that base image but is not used here.
   - SECRET_KEY must be 64 hex characters, and UTILS_SECRET must not be empty (server/env.ts:67-81).

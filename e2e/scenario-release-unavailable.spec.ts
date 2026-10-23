@@ -1,6 +1,7 @@
 import type { APIRequestContext } from '@playwright/test';
 
 import { API_URL, expect, test, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { fixtureSha } from './fixture-sha.js';
 
 /**
  * P0: a READY release whose image no longer exists in the registry is not a
@@ -21,7 +22,7 @@ interface ReleaseRow {
 
 async function createRelease(request: APIRequestContext, applicationId: string, version: string): Promise<string> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version, gitSha: `sha-${version}` },
+    data: { version, gitSha: fixtureSha(version) },
   });
   if (!response.ok()) {
     throw new Error(`create release ${version} failed: ${response.status()} ${await response.text()}`);

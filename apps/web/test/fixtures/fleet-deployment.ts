@@ -46,6 +46,7 @@ export function fleetDeployment(
     bootstrapStackName: null,
     installStartedAt: null,
     installLinkId: 'link-1',
+    installLinkToken: 'token-1',
     installLinkExpiresAt: null,
     deploymentStatus: {
       stage: 'READY',

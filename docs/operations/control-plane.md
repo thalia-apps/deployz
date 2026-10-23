@@ -163,7 +163,7 @@ API reads is validated in `apps/api/src/env.ts`.
 | Deploy identity | `AWS_DEPLOY_ROLE_ARN` (variable) | The IAM role GitHub Actions assumes with OIDC; one role for each Environment (see *Deploy identity*). A variable and not a secret: a role ARN is no credential, and a masked value would hide which role a run assumed. |
 | Public URLs | `API_URL`, `WEB_URL`, `MARKETING_URL`, `COOKIE_DOMAIN`, `COOKIE_PREFIX`, `BETTER_AUTH_URL`, `EMAIL_FROM` | Variables on the GitHub Environment. `COOKIE_PREFIX` is optional. It changes the session-cookie name. A different name keeps a second control plane in the same cookie domain out of this one's session. Production leaves the variable empty, so it keeps Better Auth's default cookie name. Build the web image with the same value as the `NEXT_PUBLIC_COOKIE_PREFIX` build argument, or the dashboard looks for a cookie name the API never sets. |
 | API domain | `API_DOMAIN_NAME`, `API_CERTIFICATE_ARN` | Both required or the `api.deployz.dev` mapping is removed. The certificate is requested out of band; the Cloudflare `api` CNAME must be DNS-only or TLS fails with 525. |
-| Auth and GitHub | `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_INSTALL_URL` | The GitHub App's **Setup URL** must be `<WEB_URL>/github/setup` with "Redirect on update" enabled; that page binds the installation to the vendor's organisation and offers sign-in when needed. An installation already bound to another organisation is never rebound (the vendor lands on `?github=failed`); restoring a wrong binding is an operator DB edit. |
+| Auth and GitHub | `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_INSTALL_URL` | The GitHub App's **Setup URL** must be `<WEB_URL>/github/setup` with "Redirect on update" enabled; that page binds the installation to the vendor's organisation and offers sign-in when needed. The dashboard's Connect link goes through `GET /api/github/connect`, which adds a signed 10-minute `state` (organisation id, HMAC with `BETTER_AUTH_SECRET`) to `GITHUB_APP_INSTALL_URL`; the setup callback creates a binding only when that `state` matches the session's organisation, otherwise the vendor lands on `?github=failed`. A request that carries the session cookie and changes data must send an `Origin` (or `Referer`) from `WEB_URL` or `MARKETING_URL`; otherwise it gets 403 `ORIGIN_NOT_ALLOWED`. Rate limits use the right-most `X-Forwarded-For` hop (the one API Gateway appends). An installation already bound to another organisation is never rebound (the vendor lands on `?github=failed`); restoring a wrong binding is an operator DB edit. |
 | Email | `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY` | Organisation membership email only |
 | Default HTTPS | `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ZONE_NAME`, `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX`, `CLOUDFLARE_ZONE_EDIT_API_TOKEN` | [`../networking-and-https.md`](../networking-and-https.md) |
 | AI | `AI_GATEWAY_BASE_URL`, `AI_PROVIDER_API_KEY`, `AI_MODEL` (optional), `AI_GATEWAY_TOKEN` (only for an authenticated gateway) | Unset is safe: deterministic copy is served |
@@ -449,7 +449,17 @@ ECR repository `deployz-images`, tagged `<applicationId>-<version>`, and
 pins the digest on the release. Docker Hub pulls are anonymous unless
 `DOCKERHUB_SECRET_NAME` is set; rate-limit failures are retried three times
 (60 s, 180 s, 480 s) and classified `build_registry_rate_limited`. Builds
-that stay `BUILDING` for 30 minutes are settled by the worker's sweep.
+that stay `BUILDING` for 30 minutes are settled by the worker's sweep,
+with or without a build id. No bare git-SHA tag is pushed. The release
+route accepts only a version of `[A-Za-z0-9_][A-Za-z0-9_.-]{0,100}` and a
+7-40 character hex `gitSha`, resolves a short sha to the full commit sha
+through the GitHub commit API, and returns `409 RELEASE_BUILD_IN_PROGRESS`
+while another release of the application is `BUILDING`. The worker checks
+the same values, rejects Dockerfile paths and build contexts that are
+absolute, contain `..` or a backslash, and fails a release whose repository
+tarball is over 256 MB. The CodeBuild project allows five builds at once.
+Build variable names `DOCKERHUB_*`, `LD_*`, `PATH`, `HOME`, `ENV`, `BASH_ENV`,
+`DOCKER_CONFIG`, `DOCKER_HOST` and the pipeline's own names are reserved.
 Failed builds keep their CodeBuild log; the API serves the last 3000 lines,
 redacted, to the owning organisation. There is no ECR lifecycle policy, so
 image storage grows until images are removed by hand; a release whose image

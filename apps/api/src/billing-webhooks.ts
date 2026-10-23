@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { EventName, type EventEntity } from '@paddle/paddle-node-sdk';
 
@@ -70,6 +70,28 @@ function checkoutIntentIdFromCustomData(customData: unknown): string | undefined
   return typeof checkoutIntentId === 'string' ? checkoutIntentId : undefined;
 }
 
+async function isPendingCheckoutOf(
+  tx: RuntimeDb,
+  organizationId: string,
+  data: { customData?: unknown; transactionId?: string | null },
+): Promise<boolean> {
+  const checkoutIntentId = checkoutIntentIdFromCustomData(data.customData);
+  if (!checkoutIntentId) return false;
+  const [intent] = await tx
+    .select({ providerTransactionId: schema.billingCheckoutIntents.providerTransactionId })
+    .from(schema.billingCheckoutIntents)
+    .where(
+      and(
+        eq(schema.billingCheckoutIntents.id, checkoutIntentId),
+        eq(schema.billingCheckoutIntents.organizationId, organizationId),
+        eq(schema.billingCheckoutIntents.status, 'PENDING'),
+      ),
+    )
+    .limit(1);
+  if (!intent) return false;
+  return !data.transactionId || data.transactionId === intent.providerTransactionId;
+}
+
 /**
  * Resolves the organization an event belongs to: Deployz's own `customData`
  * first (set on the checkout transaction in Phase 8, copied by Paddle onto
@@ -77,14 +99,27 @@ function checkoutIntentIdFromCustomData(customData: unknown): string | undefined
  * `providerSubscriptionId`. `data.id` is the subscription id for every
  * subscription.* event; for transaction.* events it is the transaction id, so
  * this fallback only ever resolves those through `customData`.
+ *
+ * A checkout can be opened in the browser with client-chosen `customData`, so
+ * a subscription.created / activated event may bind a new subscription to an
+ * organization only when its `customData` names that organization's PENDING
+ * checkout intent (and, when the event carries one, that intent's transaction).
  */
 async function resolveOrganizationId(
   tx: RuntimeDb,
   event: EventEntity,
 ): Promise<string | undefined> {
-  const data = event.data as { id: string; customData?: unknown };
+  const data = event.data as { id: string; customData?: unknown; transactionId?: string | null };
   const fromCustomData = organizationIdFromCustomData(data.customData);
-  if (fromCustomData) return fromCustomData;
+  if (fromCustomData) {
+    if (
+      (event.eventType !== EventName.SubscriptionCreated &&
+        event.eventType !== EventName.SubscriptionActivated) ||
+      (await isPendingCheckoutOf(tx, fromCustomData, data))
+    ) {
+      return fromCustomData;
+    }
+  }
 
   const [existing] = await tx
     .select({ organizationId: schema.billingSubscriptions.organizationId })

@@ -7,6 +7,7 @@ export * from './regions.js';
 export * from './infrastructure.js';
 export * from './manifest.js';
 export * from './environment-setup.js';
+export * from './build-inputs.js';
 export * from './application-analysis.js';
 export * from './components.js';
 export * from './aws-resources.js';

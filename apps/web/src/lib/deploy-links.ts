@@ -64,7 +64,7 @@ export function regenerateDeployLink(linkId: string): Promise<DeployLinkMutation
 
 /** The customer-facing URL for a freshly minted secret. */
 export function deployLinkUrl(linkId: string, token: string, origin: string): string {
-  return `${origin}/deploy/${linkId}?token=${token}`;
+  return `${origin}/deploy/${linkId}#${token}`;
 }
 
 /** Badge label + shadcn variant for a link status. */

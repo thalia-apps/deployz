@@ -737,7 +737,7 @@ describe('createInstallExecutor', () => {
     payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 
@@ -961,14 +961,10 @@ describe('createInstallExecutor', () => {
     expect(result.failureCode).toBe('STACK_CREATE_FAILED');
   });
 
-  it('honours a stack name override from the payload', async () => {
-    const install = vi.fn(async () => ({
-      state: 'succeeded' as const,
-      status: 'CREATE_COMPLETE',
-      outputs: {},
-    }));
+  it('refuses a stack name that is not this installation\'s stack', async () => {
+    const install = vi.fn();
 
-    await createInstallExecutor(makeInstallDeps({ install }))({
+    const result = await createInstallExecutor(makeInstallDeps({ install }))({
       ...command,
       payload: {
         stackName: 'deployz-app-staging',
@@ -978,7 +974,28 @@ describe('createInstallExecutor', () => {
       },
     });
 
-    expect(install.mock.calls[0]![0]).toMatchObject({ stackName: 'deployz-app-staging' });
+    expect(install).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.failureCode).toBe('STACK_CREATE_FAILED');
+  });
+
+  it('refuses a templateUrl that is not an https S3 URL', async () => {
+    const install = vi.fn();
+
+    for (const templateUrl of [
+      'https://attacker.example.com/t.json',
+      'http://bucket.s3.us-east-1.amazonaws.com/t.json',
+      'https://s3.amazonaws.com.attacker.example.com/t.json',
+    ]) {
+      const result = await createInstallExecutor(makeInstallDeps({ install }))({
+        ...command,
+        payload: { redisRequired: false, databaseRequired: true, templateUrl },
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/templateUrl/i);
+    }
+
+    expect(install).not.toHaveBeenCalled();
   });
 
   it('fails closed when the payload carries no templateUrl', async () => {
@@ -1032,34 +1049,6 @@ describe('createInstallExecutor', () => {
     expect(fakeCollector.poll).toHaveBeenCalledWith('deployz-app');
   });
 
-  it('threads a payload stack-name override into the collector factory args', async () => {
-    const fakeCollector = { poll: vi.fn(async () => {}), lastEventAt: () => null };
-    const createStackEventCollector = vi.fn(() => fakeCollector);
-    const install = vi.fn(async () => ({
-      state: 'succeeded' as const,
-      status: 'CREATE_COMPLETE',
-      outputs: {},
-    }));
-
-    await createInstallExecutor(
-      makeInstallDeps({ install, createStackEventCollector }),
-    )({
-      ...command,
-      payload: {
-        stackName: 'deployz-app-staging',
-        redisRequired: false,
-        databaseRequired: true,
-        templateUrl: command.payload.templateUrl,
-      },
-    });
-
-    expect(createStackEventCollector).toHaveBeenCalledWith({
-      commandId: 'cmd-1',
-      operationStartedAt: '2026-08-26T12:00:00.000Z',
-      stackName: 'deployz-app-staging',
-    });
-  });
-
   it('writes the stack-events cursor into the pending marker when deferring, if the collector reported anything', async () => {
     const pending = memoryPendingStore();
     const fakeCollector = { poll: async () => {}, lastEventAt: () => '2026-08-26T12:00:03.000Z' };
@@ -1107,7 +1096,7 @@ describe('createInstallResumer', () => {
     payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 
@@ -1189,7 +1178,7 @@ describe('createInstallResumer', () => {
       payload: {
         redisRequired: true,
         databaseRequired: true,
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
       },
     });
     const verify = vi.fn(async () => ({ verified: true, checks: [] }));
@@ -1255,7 +1244,7 @@ describe('createInstallResumer', () => {
         recovery: { neverInstalled: true },
         redisRequired: false,
         databaseRequired: true,
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
       },
     });
     const recover = vi.fn(async () => ({
@@ -1294,7 +1283,7 @@ describe('createInstallResumer', () => {
         recovery: { neverInstalled: true },
         redisRequired: false,
         databaseRequired: true,
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
       },
     });
     const recover = vi.fn(async () => ({
@@ -1460,7 +1449,7 @@ describe('createInstallResumer', () => {
         recovery: { neverInstalled: true },
         redisRequired: false,
         databaseRequired: true,
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
       },
     });
     const recoveryInstall = vi.fn(async () => ({
@@ -1538,7 +1527,7 @@ describe('createInstallExecutor — authority and settled markers', () => {
     payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 
@@ -2129,7 +2118,7 @@ describe('readTemplateParameterNames', () => {
   it('reads the declared parameter names from the published template', async () => {
     const names = await readTemplateParameterNames(
       fetchTemplate(200, { Parameters: { paramContainerPort: { Type: 'String' }, BootstrapVersion: {} } }),
-      'https://example.com/t.json',
+      'https://bucket.s3.us-east-1.amazonaws.com/t.json',
     );
     expect([...(names ?? [])].sort()).toEqual(['BootstrapVersion', 'paramContainerPort']);
   });
@@ -2390,7 +2379,7 @@ describe('createInstallExecutor — recovery arc', () => {
       recovery: { neverInstalled: true },
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 
@@ -2440,7 +2429,7 @@ describe('createInstallExecutor — recovery arc', () => {
     )({ ...retryCommand, payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     } });
 
     expect(result.success).toBe(false);
@@ -2558,7 +2547,7 @@ describe('Stage B phase 2 — post-install binding-alias registration', () => {
     const result = await createInstallExecutor(makeAliasDeps({ applyBindingAliases }))({
       ...command,
       payload: {
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
         manifest: aliasManifest,
       },
     });
@@ -2585,7 +2574,7 @@ describe('Stage B phase 2 — post-install binding-alias registration', () => {
     const first = await createInstallExecutor(makeAliasDeps({ pending, install: firstInstall }))({
       ...command,
       payload: {
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
         manifest: aliasManifest,
       },
     });
@@ -2631,7 +2620,7 @@ describe('Stage B phase 2 — post-install binding-alias registration', () => {
     const result = await createInstallExecutor(makeAliasDeps({ applyBindingAliases }))({
       ...command,
       payload: {
-        templateUrl: 'https://example.com/application-template-v1.json',
+        templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
         manifest: aliasManifest,
       },
     });
@@ -2738,7 +2727,7 @@ describe('settleInstall AZ wiring', () => {
     payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 
@@ -2823,7 +2812,7 @@ describe('INSTALL settled markers — bounded and honest about an unreadable sto
     payload: {
       redisRequired: false,
       databaseRequired: true,
-      templateUrl: 'https://example.com/application-template-v1.json',
+      templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/application-template-v1.json',
     },
   };
 

@@ -19,6 +19,7 @@ import { expect, test, type Page } from '@playwright/test';
 const JARGON = /\b(CloudFormation|IAM|ECS|ALB|Lambda|VPC|CFN|RDS)\b/;
 import { extractQuickCreateParam } from './simulation/relay-harness.js';
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
+import { installLinkHeaders } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -69,7 +70,9 @@ async function seedDeployment(
     enrollmentCode: string;
   };
   // DZ-AUDIT-013: fetch the server-minted relay credential from the install page.
-  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`);
+  const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
+      headers: await installLinkHeaders(page.request, deployment.installLinkId),
+    });
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();

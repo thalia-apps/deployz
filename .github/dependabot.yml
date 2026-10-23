@@ -1,0 +1,33 @@
+version: 2
+# Version updates are paused (limit 0). Security updates, when enabled in the repository settings, are not affected.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    # The web image stays on the Node major that the API Lambdas use (22).
+    # node:25-alpine has no corepack, and the Dockerfile needs it.
+    ignore:
+      - dependency-name: node
+        update-types:
+          - version-update:semver-major

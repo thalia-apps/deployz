@@ -55,7 +55,7 @@ jobs:
       tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
@@ -172,7 +172,7 @@ jobs:
       EXPECTED_ENVIRONMENT: ${{ inputs.environment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.gate.outputs.sha }}
 
@@ -301,7 +301,7 @@ jobs:
       # credentials in the middle; MaxSessionDuration on the role is the same
       # value. It runs directly before the first AWS call.
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -590,10 +590,12 @@ jobs:
       # The gate job compares the next commit against this tag, which is the
       # tag for this environment.
       - name: Record the deployed commit
+        env:
+          DEPLOY_TAG: ${{ needs.gate.outputs.tag }}
         run: |
           set -euo pipefail
-          git tag -f "${{ needs.gate.outputs.tag }}" "$DEPLOY_SHA"
-          git push -f origin "refs/tags/${{ needs.gate.outputs.tag }}"
+          git tag -f "$DEPLOY_TAG" "$DEPLOY_SHA"
+          git push -f origin "refs/tags/$DEPLOY_TAG"
 
       - name: Report the service URL
         run: |

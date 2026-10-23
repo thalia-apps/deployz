@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext } from '@playwright/test';
+import { fixtureSha } from './fixture-sha';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -40,7 +41,7 @@ export async function createReadyRelease(
   applicationId: string,
 ): Promise<void> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version: '0.1.0', gitSha: 'sha-0.1.0' },
+    data: { version: '0.1.0', gitSha: fixtureSha('0.1.0') },
   });
   const body = await response.text();
   expect(

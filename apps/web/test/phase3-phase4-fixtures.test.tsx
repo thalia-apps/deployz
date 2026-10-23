@@ -45,6 +45,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
+vi.mock('next/headers', () => ({
+  cookies: async () => ({ get: () => undefined }),
+}));
+
 vi.mock('../src/lib/install-status', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/install-status')>();
   return {

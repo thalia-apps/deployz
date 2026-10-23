@@ -346,7 +346,7 @@ export async function createDeploymentAndInstall(canary: Canary): Promise<string
     evidence.run.installLinkId = deployment.installLinkId;
     evidence.save();
     details['deploymentId'] = deployment.id;
-    return launchInstall(canary, deployment.installLinkId, deployment.id, details);
+    return launchInstall(canary, deployment.installLinkId, deployment.installLinkToken, deployment.id, details);
   });
 
   await waitForInstallHealthy(canary, deploymentId);
@@ -358,23 +358,23 @@ export async function createDeploymentAndInstall(canary: Canary): Promise<string
  * customer's side of the public-link journey, where the confirmation (not the
  * vendor) created the deployment.
  */
-export async function continueInstallFromLink(canary: Canary, installLinkId: string): Promise<string> {
+export async function continueInstallFromLink(canary: Canary, installLinkId: string, installLinkToken: string): Promise<string> {
   const { evidence, api } = canary;
   const deploymentId = await evidence.step('Launch the install from the confirmed link', async (details) => {
-    const info = await api.getInstallInfo(installLinkId);
+    const info = await api.getInstallInfo(installLinkId, installLinkToken);
     evidence.run.deploymentId = info.deploymentId;
     evidence.run.installLinkId = installLinkId;
     evidence.save();
     details['deploymentId'] = info.deploymentId;
-    return launchInstall(canary, installLinkId, info.deploymentId, details);
+    return launchInstall(canary, installLinkId, installLinkToken, info.deploymentId, details);
   });
   await waitForInstallHealthy(canary, deploymentId);
   return deploymentId;
 }
 
-async function launchInstall(canary: Canary, installLinkId: string, deploymentId: string, details: Record<string, unknown>): Promise<string> {
+async function launchInstall(canary: Canary, installLinkId: string, installLinkToken: string, deploymentId: string, details: Record<string, unknown>): Promise<string> {
   const { config, evidence, api } = canary;
-  const info = await api.getInstallInfo(installLinkId);
+  const info = await api.getInstallInfo(installLinkId, installLinkToken);
   assert(info.quickCreateUrl, 'install link carries no Quick Create URL (bootstrap template unpublished?)');
   const quick = parseQuickCreateUrl(info.quickCreateUrl);
   details['quickCreate'] = { templateUrl: quick.templateUrl, stackName: quick.stackName, parameters: Object.keys(quick.parameters) };
@@ -1123,7 +1123,7 @@ export async function createJourneyInvitation(canary: Canary): Promise<JourneyIn
  * size, prove a plan approved for another size is refused, then confirm.
  * Returns the install link id the existing install flow continues from.
  */
-export async function customerConfirmsChosenSize(canary: Canary, invitation: JourneyInvitation, chosen: InfrastructureSizeTier): Promise<string> {
+export async function customerConfirmsChosenSize(canary: Canary, invitation: JourneyInvitation, chosen: InfrastructureSizeTier): Promise<{ installLinkId: string; installLinkToken: string }> {
   const { config, evidence, api } = canary;
   return evidence.step(`Customer reviews the invitation and confirms the ${chosen} size`, async (details) => {
     const view = await api.publicInstall(invitation.linkId, invitation.token);
@@ -1168,8 +1168,8 @@ export async function customerConfirmsChosenSize(canary: Canary, invitation: Jou
       invitation.token,
       journeyConfirmBody({ idempotencyKey: randomUUID(), region: config.region, sizeProfile: chosen, planFingerprint: plan.planFingerprint }),
     );
-    assert(confirmed.status === 201 && confirmed.body.installLinkId, `confirm -> ${confirmed.status}, expected 201 with an installLinkId`);
+    assert(confirmed.status === 201 && confirmed.body.installLinkId && confirmed.body.installLinkToken, `confirm -> ${confirmed.status}, expected 201 with an installLinkId and installLinkToken`);
     details['installLinkId'] = confirmed.body.installLinkId;
-    return confirmed.body.installLinkId;
+    return { installLinkId: confirmed.body.installLinkId, installLinkToken: confirmed.body.installLinkToken };
   });
 }

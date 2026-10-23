@@ -54,6 +54,8 @@ interface SubscriptionEventOptions {
   eventType: string;
   occurredAt: string;
   organizationId?: string;
+  checkoutIntentId?: string;
+  transactionId?: string;
   subscriptionId?: string;
   status: string;
   customerId?: string;
@@ -70,6 +72,7 @@ function subscriptionEvent(options: SubscriptionEventOptions): Record<string, un
     notification_id: `ntf_${options.eventId}`,
     data: {
       id: options.subscriptionId ?? 'sub_test_1',
+      transaction_id: options.transactionId,
       status: options.status,
       customer_id: options.customerId ?? 'ctm_test_1',
       address_id: 'add_test_1',
@@ -84,7 +87,9 @@ function subscriptionEvent(options: SubscriptionEventOptions): Record<string, un
           : options.currentBillingPeriod,
       scheduled_change: options.scheduledChange ?? null,
       items: [],
-      custom_data: options.organizationId ? { organizationId: options.organizationId } : null,
+      custom_data: options.organizationId
+        ? { organizationId: options.organizationId, checkoutIntentId: options.checkoutIntentId }
+        : null,
     },
   };
 }
@@ -181,6 +186,18 @@ async function getEventRow(db: Db, eventId: string) {
   return row ?? null;
 }
 
+/** The webhook binds a new subscription to an organization only through that
+ *  organization's PENDING checkout intent; this parks a fresh one (replacing any
+ *  earlier intent) and returns its id for the event's customData. */
+async function seedPendingIntent(db: Db, organizationId: string, providerTransactionId?: string): Promise<string> {
+  await db.delete(schema.billingCheckoutIntents).where(eq(schema.billingCheckoutIntents.organizationId, organizationId));
+  const [intent] = await db
+    .insert(schema.billingCheckoutIntents)
+    .values({ organizationId, providerTransactionId })
+    .returning();
+  return intent!.id;
+}
+
 let counter = 0;
 function nextEmail(): string {
   counter += 1;
@@ -213,6 +230,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: new Date().toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       status: 'active',
     });
     const { body, headers } = signedWebhook('whsec_wrong_secret', event);
@@ -231,6 +249,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: new Date().toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       status: 'active',
     });
 
@@ -251,6 +270,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: new Date().toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       status: 'active',
     });
     const staleTs = Math.floor(Date.now() / 1000) - 600;
@@ -270,6 +290,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt,
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_1',
       customerId: 'ctm_test_1',
       status: 'active',
@@ -301,6 +322,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt,
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_5',
       status: 'active',
     });
@@ -347,6 +369,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: t0.toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_6',
       status: 'active',
     });
@@ -443,6 +466,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: '2026-05-01T00:00:00.000Z',
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_9',
       status: 'active',
     });
@@ -456,6 +480,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: '2026-05-02T00:00:00.000Z',
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_9b',
       status: 'active',
     });
@@ -489,6 +514,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
         eventType: 'subscription.activated',
         occurredAt: '2026-01-02T00:00:00.000Z',
         organizationId: org.organizationId,
+        checkoutIntentId: await seedPendingIntent(db, org.organizationId),
         subscriptionId: `sub_test_b_${status}`,
         status: 'active',
       });
@@ -527,6 +553,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.activated',
       occurredAt: '2026-01-02T00:00:00.000Z',
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_new',
       status: 'active',
     });
@@ -592,6 +619,97 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     expect(rows).toHaveLength(0);
   });
 
+  describe('binding a new subscription to the organization in customData', () => {
+    async function send(event: Record<string, unknown>) {
+      const signed = signedWebhook(WEBHOOK_SECRET, event);
+      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
+      expect(response.statusCode).toBe(200);
+      return response.json() as { outcome: string };
+    }
+
+    it('ignores a subscription whose customData names an organization with no PENDING checkout intent', async () => {
+      const victim = await signUpAndGetOrg(auth, db, nextEmail());
+
+      const result = await send(
+        subscriptionEvent({
+          eventId: 'evt_bind_no_intent',
+          eventType: 'subscription.created',
+          occurredAt: new Date().toISOString(),
+          organizationId: victim.organizationId,
+          subscriptionId: 'sub_bind_no_intent',
+          status: 'active',
+        }),
+      );
+
+      expect(result.outcome).toBe('IGNORED');
+      expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+      expect((await getEventRow(db, 'evt_bind_no_intent'))?.error).toBe('organization not found');
+    });
+
+    it("ignores a subscription that names another organization's PENDING intent", async () => {
+      const victim = await signUpAndGetOrg(auth, db, nextEmail());
+      const attacker = await signUpAndGetOrg(auth, db, nextEmail());
+      const attackerIntentId = await seedPendingIntent(db, attacker.organizationId);
+
+      const result = await send(
+        subscriptionEvent({
+          eventId: 'evt_bind_other_org',
+          eventType: 'subscription.activated',
+          occurredAt: new Date().toISOString(),
+          organizationId: victim.organizationId,
+          checkoutIntentId: attackerIntentId,
+          subscriptionId: 'sub_bind_other_org',
+          status: 'active',
+        }),
+      );
+
+      expect(result.outcome).toBe('IGNORED');
+      expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+    });
+
+    it("ignores a subscription whose transaction is not the intent's transaction", async () => {
+      const org = await signUpAndGetOrg(auth, db, nextEmail());
+      const intentId = await seedPendingIntent(db, org.organizationId, 'txn_bind_expected');
+
+      const result = await send(
+        subscriptionEvent({
+          eventId: 'evt_bind_wrong_txn',
+          eventType: 'subscription.created',
+          occurredAt: new Date().toISOString(),
+          organizationId: org.organizationId,
+          checkoutIntentId: intentId,
+          transactionId: 'txn_bind_other',
+          subscriptionId: 'sub_bind_wrong_txn',
+          status: 'active',
+        }),
+      );
+
+      expect(result.outcome).toBe('IGNORED');
+      expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
+    });
+
+    it("binds a subscription whose transaction is the PENDING intent's transaction", async () => {
+      const org = await signUpAndGetOrg(auth, db, nextEmail());
+      const intentId = await seedPendingIntent(db, org.organizationId, 'txn_bind_ok');
+
+      const result = await send(
+        subscriptionEvent({
+          eventId: 'evt_bind_ok',
+          eventType: 'subscription.created',
+          occurredAt: new Date().toISOString(),
+          organizationId: org.organizationId,
+          checkoutIntentId: intentId,
+          transactionId: 'txn_bind_ok',
+          subscriptionId: 'sub_bind_ok',
+          status: 'active',
+        }),
+      );
+
+      expect(result.outcome).toBe('PROCESSED');
+      expect((await getSubscriptionRow(db, org.organizationId))?.providerSubscriptionId).toBe('sub_bind_ok');
+    });
+  });
+
   it('touches lastProviderEventAt on transaction.completed for a known subscription, status unchanged', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     const created = subscriptionEvent({
@@ -599,6 +717,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: '2026-06-01T00:00:00.000Z',
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_12',
       status: 'active',
     });
@@ -634,6 +753,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: new Date().toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
       subscriptionId: 'sub_test_13',
       status: 'active',
     });

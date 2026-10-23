@@ -35,6 +35,8 @@ import { createReadyRelease } from './seed-ready-manifest.js';
 import { extractQuickCreateParam, startSimulatedRelay } from './simulation/relay-harness.js';
 import { getScenario } from './simulation/scenarios/index.js';
 import { API_URL, buildApi, expectPlanMatchesInventory, waitForInstallAutoDeploy } from './simulation/fixtures.js';
+import { installLinkHeaders } from './install-link.js';
+import { fixtureSha } from './fixture-sha.js';
 
 interface DeploymentResponse {
   state: string;
@@ -103,7 +105,7 @@ async function createRelease(
   version: string,
 ): Promise<string> {
   const response = await request.post(`${API_URL}/api/applications/${applicationId}/releases`, {
-    data: { version, gitSha: `sha-${version}` },
+    data: { version, gitSha: fixtureSha(version) },
   });
   if (!response.ok()) {
     throw new Error(`create release ${version} failed: ${response.status()} ${await response.text()}`);
@@ -192,7 +194,9 @@ test.describe('lifecycle-sweep', () => {
 
     // ── Install — the real relay drives the lifecycle-sweep scenario. ───────
     // DZ-AUDIT-013: fetch the server-minted relay credential from the install page.
-    const installA = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+    const installA = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
       quickCreateUrl: string | null;
     };
     expect(installA.quickCreateUrl).not.toBeNull();
@@ -312,7 +316,9 @@ test.describe('lifecycle-sweep', () => {
       // The fresh single-use code and credential travel only in the existing
       // stack's update values, exactly as the install page hands them to a
       // reconnecting customer. DZ-AUDIT-013: the relay credential is also carried here.
-      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`).then((r) => r.json()) as {
+      const installInfo = await request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(request, installLinkId),
+    }).then((r) => r.json()) as {
         quickCreateUrl: string | null;
         existingStackUpdate: { enrollmentCode: string; relayCredential: string | null } | null;
       };

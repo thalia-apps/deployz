@@ -312,6 +312,10 @@ export const env = {
   // later phases use to drive past-due/canceled/evaluation UI scenarios.
   // Mirrors githubFixtureMode.
   billingFixtureMode: process.env.BILLING_FIXTURE_MODE === 'true',
+  // Simulated E2E only: every new user is created with a verified e-mail, so
+  // specs can invite and accept without an inbox. Never set in a deployed
+  // environment (scripts/production-safety.test.mjs guards it).
+  emailVerificationFixtureMode: process.env.EMAIL_VERIFICATION_FIXTURE_MODE === 'true',
   // Kill switch for the PRODUCTION-deployment subscription gate
   // (billing-entitlements.ts). BILLING_ENFORCEMENT=off lets every
   // organization deploy to production whatever its subscription status —

@@ -258,7 +258,7 @@ describe('an immediate INSTALL result whose report is lost', () => {
     deploymentId: 'dep-1',
     type: 'INSTALL' as const,
     idempotencyKey: 'dep-1:INSTALL',
-    payload: { redisRequired: false, databaseRequired: true, templateUrl: 'https://example.com/t.json' },
+    payload: { redisRequired: false, databaseRequired: true, templateUrl: 'https://bucket.s3.us-east-1.amazonaws.com/t.json' },
   };
 
   it.each([

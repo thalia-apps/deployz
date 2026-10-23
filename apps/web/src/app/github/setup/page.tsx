@@ -17,11 +17,11 @@ import { fetchMe } from '@/lib/me';
 export default async function GithubSetupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ installation_id?: string | undefined }>;
+  searchParams: Promise<{ installation_id?: string | undefined; state?: string | undefined }>;
 }) {
-  const { installation_id: installationId } = await searchParams;
+  const { installation_id: installationId, state } = await searchParams;
   const me = await fetchMe();
-  const route = resolveGithubSetupRoute({ installationId, signedIn: me !== null, apiUrl });
+  const route = resolveGithubSetupRoute({ installationId, state, signedIn: me !== null, apiUrl });
 
   // Binding needs the App's private key as well as the session, and only the
   // API holds the key — so the browser is handed straight to it.

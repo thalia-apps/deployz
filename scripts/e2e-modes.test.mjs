@@ -52,6 +52,13 @@ test('simulated mode dry-run scrubs AWS credentials from the child env', () => {
   assert.ok(parsed.scrubbedVars.includes('AWS_ACCESS_KEY_ID'));
 });
 
+test('scrubbing sets the variables to empty strings so a parent .env cannot fill them', async () => {
+  const { scrubEnv } = await import('./e2e-env.mjs');
+  const { env } = scrubEnv({ EMAIL_FROM: 'ops@example.com' });
+  assert.equal(env.EMAIL_FROM, '');
+  assert.equal(env.AWS_SES_SECRET_ACCESS_KEY, '');
+});
+
 test('an unknown mode exits non-zero', () => {
   const result = runCli(['--mode=bogus', '--dry-run']);
   assert.notEqual(result.status, 0);

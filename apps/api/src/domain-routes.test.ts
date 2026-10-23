@@ -743,6 +743,10 @@ describe('custom domain destroy cleanup', () => {
     // The domain's own REMOVE_DOMAIN job is left RUNNING/unfinished on
     // purpose — the point of this test is that DESTROY succeeding is enough
     // on its own, without waiting on that job.
+    await db
+      .update(schema.deploymentJobs)
+      .set({ state: 'RUNNING', startedAt: new Date() })
+      .where(eq(schema.deploymentJobs.id, jobId));
     const result = await postJson(
       app,
       `/api/relay/commands/${jobId}/result`,

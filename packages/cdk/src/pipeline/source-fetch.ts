@@ -31,7 +31,20 @@ export interface FetchFn {
     headers: { get(name: string): string | null };
     arrayBuffer(): Promise<ArrayBuffer>;
     text(): Promise<string>;
+    body?: { getReader(): { read(): Promise<{ done: boolean; value?: Uint8Array }>; cancel(): Promise<void> } } | null;
   }>;
+}
+
+/**
+ * Largest repository tarball the worker holds in memory. A bigger repository
+ * fails its release with a clear message instead of wedging the shared worker.
+ */
+export const MAX_SOURCE_TARBALL_BYTES = 256 * 1024 * 1024;
+
+function tarballTooLargeError(repoFullName: string): Error {
+  return new Error(
+    `The repository ${repoFullName} is larger than ${MAX_SOURCE_TARBALL_BYTES / (1024 * 1024)} MB. Remove large files from the repository and release again.`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -131,9 +144,42 @@ export async function fetchRepoArchive(
     );
   }
 
-  // Step 2: Read the tarball bytes.
-  const tarball = await tarballResponse.arrayBuffer();
-  const bytes = new Uint8Array(tarball);
+  // Step 2: Read the tarball bytes, within the size cap. The declared length
+  // is checked first; the bytes actually read are counted as well, because
+  // the header can be absent or wrong.
+  const declaredLength = Number(tarballResponse.headers.get('content-length'));
+  if (declaredLength > MAX_SOURCE_TARBALL_BYTES) {
+    throw tarballTooLargeError(repoFullName);
+  }
+  let bytes: Uint8Array;
+  const reader = tarballResponse.body?.getReader();
+  if (reader) {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        total += value.byteLength;
+        if (total > MAX_SOURCE_TARBALL_BYTES) {
+          await reader.cancel();
+          throw tarballTooLargeError(repoFullName);
+        }
+        chunks.push(value);
+      }
+    }
+    bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+  } else {
+    bytes = new Uint8Array(await tarballResponse.arrayBuffer());
+    if (bytes.byteLength > MAX_SOURCE_TARBALL_BYTES) {
+      throw tarballTooLargeError(repoFullName);
+    }
+  }
 
   // Step 3: Upload to S3.
   const s3Key = `${options.s3KeyPrefix}/${ref}.tar.gz`;

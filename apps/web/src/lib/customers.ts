@@ -230,7 +230,7 @@ export function singleDeploymentDestination(rollup: CustomerDeployment): FleetDe
  * one.
  */
 export function installLinkUrl(deployment: FleetDeployment, origin: string): string {
-  return `${origin}/install/${deployment.installLinkId}`;
+  return `${origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`;
 }
 
 /** The install link to offer for a customer: the one non-removed deployment's,

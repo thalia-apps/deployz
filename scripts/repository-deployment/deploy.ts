@@ -134,9 +134,9 @@ export interface ControlPlaneLike {
   createRelease(applicationId: string, input: { version: string; gitSha: string; migrationCommand?: string }): Promise<{ id: string; version: string }>;
   listReleases(applicationId: string): Promise<{ id: string; version: string; status: string; failureReason: string | null }[]>;
   createCustomer(input: { name: string; email: string }): Promise<{ id: string }>;
-  createDeployment(input: { applicationId: string; customerId: string; region: string }): Promise<{ id: string; installLinkId: string }>;
+  createDeployment(input: { applicationId: string; customerId: string; region: string }): Promise<{ id: string; installLinkId: string; installLinkToken: string }>;
   getDeployment(id: string): Promise<DeploymentDetail>;
-  getInstallInfo(installLinkId: string): Promise<{ quickCreateUrl: string | null; bootstrapStackName: string; deploymentId: string; alreadyInstalled: boolean }>;
+  getInstallInfo(installLinkId: string, installLinkToken: string): Promise<{ quickCreateUrl: string | null; bootstrapStackName: string; deploymentId: string; alreadyInstalled: boolean }>;
   markInstallLaunched(installLinkId: string): Promise<{ state: string }>;
   events(deploymentId: string): Promise<{ eventType: string; jobId?: string | null }[]>;
   diagnostics(deploymentId: string): Promise<Record<string, unknown>>;
@@ -531,7 +531,7 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
         });
         run.customerId = customer.id;
         evidence.save();
-        let deployment: { id: string; installLinkId: string };
+        let deployment: { id: string; installLinkId: string; installLinkToken: string };
         try {
           deployment = await deps.api.createDeployment({ applicationId, customerId: customer.id, region: deps.region });
         } catch (error) {
@@ -565,7 +565,7 @@ export async function runRepositoryAttempt(deps: DeployDeps, input: RepositoryAt
           details['appUrlKeys'] = urlKeys;
         }
 
-        const info = await deps.api.getInstallInfo(deployment.installLinkId);
+        const info = await deps.api.getInstallInfo(deployment.installLinkId, deployment.installLinkToken);
         assert(info.quickCreateUrl, 'harness', 'install link carries no Quick Create URL (bootstrap template unpublished?)');
         const quick = parseQuickCreateUrl(info.quickCreateUrl);
         details['quickCreate'] = { templateUrl: quick.templateUrl, stackName: quick.stackName, parameters: Object.keys(quick.parameters) };

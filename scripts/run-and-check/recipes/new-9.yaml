@@ -6,6 +6,9 @@ source:
   commit: 99e6255d386128bb16c2d57ddab33673bcb6a27c
 build:
   dockerfile: backend/Dockerfile
+outcomePatch:
+  environment: {}
+  reason: "application.properties:11 gives GEOPULSE_POSTGRES_URL to quarkus.datasource.jdbc.url, but the Analysis binds that name as a plain PostgreSQL URL, so the connection fails (full run log, Flyway at start). In Configuration the vendor binds it as the JDBC URL. The front end is a second image (frontend/Dockerfile): serving it is a repository change."
 notes:
   - "Pinned 2026-10-19: HEAD of the default branch main, committed 2026-10-18T15:36:58Z. Quarkus backend (Maven, Java 25). frontend/Dockerfile builds a separate front end."
   - "Source build confirmed: backend/Dockerfile runs mvn package in a maven stage and runs the quarkus-app in a JDK alpine stage (backend/Dockerfile:1-72). It copies pom.xml and backend/ from the repository root, so the context is the repository root. backend/Dockerfile.native is not used. EXPOSE 8080."

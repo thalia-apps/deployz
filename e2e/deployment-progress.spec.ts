@@ -12,6 +12,7 @@ import { fetchInstallCredentials } from './simulation/relay-harness.js';
 // app-url.spec.ts and fleet.spec.ts.
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
+import { installLinkPath, installLinkToken } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -195,7 +196,7 @@ test('happy path: WAITING_FOR_AWS -> CONNECTING -> PROVISIONING -> VERIFYING -> 
   );
   // DZ-AUDIT-013: the relay presents the server-minted credential from the
   // Quick Create URL (a real relay reads it from the stack's secret).
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   // ── 1. Freshly seeded: nothing has enrolled yet.
@@ -211,7 +212,7 @@ test('happy path: WAITING_FOR_AWS -> CONNECTING -> PROVISIONING -> VERIFYING -> 
     customerHeading: /^Deploy .* to your AWS account$/,
     vendorLabel: 'Waiting for your customer to install',
   });
-  await page.goto(`/install/${installLinkId}`);
+  await page.goto(await installLinkPath(page.request, installLinkId));
   await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
 
   // ── 2. Relay registers (spends the enrollment code, creates the INSTALL
@@ -455,7 +456,7 @@ test('failure path: a failed INSTALL shows a customer-safe message with no jargo
     page,
     suffix,
   );
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
@@ -522,7 +523,7 @@ test('refresh and reopen: a mid-flow stage renders identically from server truth
   const suffix = crypto.randomUUID().slice(0, 8);
   await signUp(page);
   const { installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
@@ -627,7 +628,7 @@ test('consistency under relay silence: a confirmed stage never regresses on relo
   const suffix = crypto.randomUUID().slice(0, 8);
   await signUp(page);
   const { installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {

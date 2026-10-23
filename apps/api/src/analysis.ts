@@ -412,7 +412,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // code and the named source files that the rules tree does not hold (C#,
 // Java, Elixir, PHP, Rust), and the AI names the variable the app reads its
 // database connection from. Stored v64 rows keep those questions open.
-export const ANALYSIS_VERSION = 65;
+// Version 66 (env reads in more languages): the rules tree also holds C#,
+// Java, Kotlin, PHP, Rust and Elixir source and appsettings.json, and the
+// env-var model reads their variables. Stored v65 rows miss those variables.
+export const ANALYSIS_VERSION = 66;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

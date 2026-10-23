@@ -12,6 +12,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { extractQuickCreateParam } from './simulation/relay-harness.js';
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
+import { installLinkHeaders } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -103,7 +104,9 @@ test('custom domain: add, verify DNS, connect, activate, appear on the dashboard
   // relay credential out of the CloudFormation Quick Create link, exactly as a
   // customer's bootstrap stack would receive them as template parameters.
   // DZ-AUDIT-013: the relay credential is also carried in the URL.
-  const installResponse = await page.request.get(`${API_URL}/api/install/${installLinkId}`);
+  const installResponse = await page.request.get(`${API_URL}/api/install/${installLinkId}`, {
+      headers: await installLinkHeaders(page.request, installLinkId),
+    });
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();

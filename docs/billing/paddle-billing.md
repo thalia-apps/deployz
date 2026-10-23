@@ -99,6 +99,14 @@ guarded by `WHERE status = 'PENDING'`, so a redelivered event can never
 create two deployments. Only now does a deployment row — and therefore an
 install link — exist.
 
+A checkout can be opened in the browser with client-chosen `customData`, so
+the handler trusts `customData.organizationId` for a new
+`subscription.created` / `subscription.activated` only when `customData.checkoutIntentId`
+names that organization's PENDING intent (and, when the event carries a
+transaction id, that intent's transaction). Otherwise the event falls back to
+the subscription-id lookup and is IGNORED (`organization not found`) when no
+row exists.
+
 ### 3. Going live → billing starts (Phases 2, 9)
 
 `billing_state` moves NOT_STARTED → ACTIVE on the first observed READY stage

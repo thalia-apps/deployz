@@ -22,6 +22,7 @@ const routerMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => routerMocks }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
 
 const confirmMocks = vi.hoisted(() => ({ confirmPublicInstall: vi.fn() }));
 vi.mock('../src/lib/public-install-confirm', () => ({
@@ -295,7 +296,7 @@ describe('InstallPage public resolution', () => {
     const doc = await renderServer();
 
     expect(doc.body.textContent).toContain('to your AWS account');
-    expect(pageMocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID);
+    expect(pageMocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, undefined);
   });
 });
 
@@ -559,7 +560,7 @@ describe('PublicInstallFlow', () => {
   });
 
   it('renders the invitation flow without customer fields and omits customer from the confirm body', async () => {
-    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id' });
+    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id', installLinkToken: 'new-link-token' });
     renderFlow(resolveFixture(), { customerKnown: true, token: 'one-time-token' });
 
     expect(document.querySelector('input#customer-name')).toBeNull();
@@ -593,7 +594,7 @@ describe('PublicInstallFlow', () => {
       ],
     });
     expect(confirmMocks.confirmPublicInstall.mock.calls[0]![2]).toBe('one-time-token');
-    expect(routerMocks.push).toHaveBeenCalledWith('/install/new-link-id');
+    expect(routerMocks.push).toHaveBeenCalledWith('/install/new-link-id#new-link-token');
   });
 
   it('disables deploy until all required values are filled and a region is chosen', async () => {
@@ -628,7 +629,7 @@ describe('PublicInstallFlow', () => {
   });
 
   it('posts the confirm body with a stable idempotency key and navigates on success', async () => {
-    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id' });
+    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id', installLinkToken: 'new-link-token' });
     renderFlow();
 
     await fillForm();
@@ -651,7 +652,7 @@ describe('PublicInstallFlow', () => {
         { key: 'ORG_NAME', value: 'Acme', isSecret: false },
       ],
     });
-    expect(routerMocks.push).toHaveBeenCalledWith('/install/new-link-id');
+    expect(routerMocks.push).toHaveBeenCalledWith('/install/new-link-id#new-link-token');
   });
 
   it('ignores a second click while pending and re-uses the same idempotency key on retry', async () => {
@@ -674,7 +675,7 @@ describe('PublicInstallFlow', () => {
     });
 
     // Retry after error.
-    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id' });
+    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id', installLinkToken: 'new-link-token' });
     const retryButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
     await act(async () => {
       click(retryButton);
@@ -719,7 +720,7 @@ describe('PublicInstallFlow', () => {
   });
 
   it('confirms the fingerprint of the plan for the chosen size', async () => {
-    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id' });
+    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id', installLinkToken: 'new-link-token' });
     renderFlow();
     await fillForm();
     await act(async () => {
@@ -778,7 +779,7 @@ describe('PublicInstallFlow', () => {
     expect((document.querySelector('input#API_KEY') as HTMLInputElement).value).toBe('secret-key');
     expect((document.querySelector('input#customer-name') as HTMLInputElement).value).toBe('Ada Lovelace');
 
-    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id' });
+    confirmMocks.confirmPublicInstall.mockResolvedValue({ ok: true, installLinkId: 'new-link-id', installLinkToken: 'new-link-token' });
     await act(async () => {
       click(document.querySelector('button[type="submit"]') as HTMLButtonElement);
     });

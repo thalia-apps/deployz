@@ -65,6 +65,8 @@ export interface FleetDeployment {
   components: HealthComponents | null;
   /** The public install link id — never the relay's installation id. */
   installLinkId: string;
+  /** The secret the customer's install URL carries as its fragment. */
+  installLinkToken: string;
   /** When the install link stops starting new installs; null = no limit. */
   installLinkExpiresAt: string | null;
   desiredState: Record<string, unknown>;
@@ -607,6 +609,8 @@ export interface DeploymentRecord {
   state: DeploymentState;
   /** The public install link id. The relay's own id is minted in the customer's account. */
   installLinkId: string;
+  /** The secret the customer's install URL carries as its fragment. */
+  installLinkToken: string;
   deploymentType: DeploymentType;
   createdAt: string;
 }
