@@ -229,11 +229,11 @@ not `ci.yml`'s risk classification — see
 [`../operations/control-plane.md`](../operations/control-plane.md)).
 
 Staging deploys only from a `workflow_dispatch` of `release.yml` with
-`environment: staging`, and `staging-verify` then polls the staging hosts. The
-two production jobs wait for a
-reviewer's approval when the `production` Environment has required
-reviewers. The deploy job re-checks the tip of `main` after the approval, so
-a commit that is no longer current fails instead of deploying. Each deploy
+`environment: staging`, and `staging-verify` then polls the staging hosts. Until
+public launch, the `production` Environment has no required reviewers, so
+the two production jobs deploy without an approval. The deploy job re-checks
+the tip of `main` before it deploys, so a commit that is no longer current
+fails instead of deploying. Each deploy
 holds a concurrency group for its own environment and service, so a staging
 deploy never waits for a production deploy. The deploy tag is `deployed/api`
 and `deployed/web` for production, and `deployed/staging/api` and

@@ -51,6 +51,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-23 | A vendor can dispute an allowlisted blocker ("not used in production"); the TEST deployment proves the answer | Active |
 | 2026-10-23 | Until public launch, a push to `main` deploys staging at once and production deploys after CI, without waiting for staging | Superseded 2026-10-23 (staging is skipped) |
 | 2026-10-23 | Until public launch, staging is skipped: production deploys after CI on `main`, and staging deploys only from a dispatch | Active |
+| 2026-10-23 | Until public launch, the `production` Environment has no required reviewers: production deploys without an approval | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1402,3 +1403,25 @@ works.
 What would change it: the public launch, or a need to test on staging before
 production. Then release staging first and production only after
 `staging-verify`, as the 2026-10-09 decision describes.
+
+## Production deploys without an approval until public launch (2026-10-23)
+
+Context: the production deploy jobs waited for a reviewer on the `production`
+Environment. An approval that came after a newer merge failed the tip-of-`main`
+check, so a release (#603) did not reach production until a later run.
+Deployz is not open to the public, so the approval only slowed development.
+
+Decision: the `production` Environment has no required reviewers. Its branch
+policy stays: only `main` can deploy to production. A successful CI run on
+`main` releases production at once. The tip-of-`main` check, the stage gate
+and the per-environment concurrency groups stay. This is a repository
+setting, not a workflow change.
+
+- No human checks a commit before it reaches production. A red CI run still
+  deploys nothing.
+- A bad deploy is rolled back with a `workflow_dispatch` of `deploy-api.yml`
+  or `deploy-web.yml` with an earlier `sha`.
+
+What would change it: the public launch, or the first real customer on
+production. Then set required reviewers on the `production` Environment
+again, as the 2026-10-08 and 2026-10-09 decisions describe.
