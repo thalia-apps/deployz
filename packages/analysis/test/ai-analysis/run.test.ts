@@ -5,6 +5,7 @@ import { SpendLimitExceededError, type AiGateway } from '../../src/ai-gateway.js
 import { ANALYST_PROMPT_VERSION, parseAnalysisEngine, runAiAnalysis } from '../../src/ai-analysis/index.js';
 import type { FileTree } from '../../src/detectors.js';
 import { databaseConnectionUnverified } from '../../src/manifest.js';
+import { buildReadinessReport } from '../../src/readiness-report.js';
 import { blocker, cite, ELIXIR_SOURCES, elixirPostgres, fact, fakeGateway, MONGO_OR_POSTGRES, toWire } from './helpers.js';
 
 const resolved: FileTree = {
@@ -62,6 +63,12 @@ describe('runAiAnalysis', () => {
     expect(analyst.prompts[0]).toContain('config/runtime.exs');
     expect(report.failedChecks).toBe(0);
     expect(merge.analysis.metadata['migrationMode']).toBe('startup');
+    // The rules' evidence shape, so the finding names the file and line (it read "undefined (undefined)").
+    expect(merge.analysis.metadata['migrationStartupEvidence']).toEqual([
+      { source: 'lib/app/application.ex:5', pattern: 'AI Analysis', fromDockerCommand: false },
+    ]);
+    const migrations = buildReadinessReport(merge.analysis).findings.find((finding) => finding.id === 'database-migrations');
+    expect(migrations?.technicalEvidence).toBe('Migrations run at startup: AI Analysis (lib/app/application.ex:5).');
     expect(merge.analysis.metadata['infrastructureBindings']).toContainEqual({ resource: 'postgres', semantic: 'url', applicationVariable: 'DB_URL', source: 'ai', confidence: 'high' });
     expect(databaseConnectionUnverified(merge.analysis.metadata)).toBe(false);
     expect(databaseConnectionUnverified(analyseRepo(tree).metadata)).toBe(true);
