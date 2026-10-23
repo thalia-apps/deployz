@@ -653,4 +653,61 @@ describe('Vendor blocker disputes', () => {
     expect(mocks.withdrawBlockerDispute).toHaveBeenCalledWith('app-1', MONGO.id);
     expect(mocks.refresh).toHaveBeenCalled();
   });
+
+  // Production check 2026-10-23: the unsupported reason also reached the
+  // table as a "Supported architecture" question row without the dispute.
+  it('shows a blocker once, on the row with the dispute, when the architecture repeats it', async () => {
+    currentReadiness = readinessFixture({
+      findings: [MONGO],
+      architecture: {
+        groups: [],
+        unresolved: [{ kind: 'compatibility', question: MONGO.technicalEvidence, blocking: true }],
+        externalServices: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(byTestId('inventory-row-question-0')).toBeNull();
+    expect(byTestId('readiness-finding-dispute-unsupported-database-mongo')).not.toBeNull();
+    expect(byTestId('attention-summary-resources')?.textContent).toContain('1 item needs attention');
+  });
+
+  it('matches the fixed local-storage reason to its finding', async () => {
+    currentReadiness = readinessFixture({
+      findings: [finding({ id: 'local-file-storage', category: 'storage', title: 'Files stored on local disk' })],
+      architecture: {
+        groups: [],
+        unresolved: [{ kind: 'compatibility', question: 'Persistent local filesystem storage is not supported', blocking: true }],
+        externalServices: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(byTestId('inventory-row-question-0')).toBeNull();
+    expect(byTestId('attention-summary-resources')?.textContent).toContain('1 item needs attention');
+  });
+
+  it('keeps an architecture question that no finding shows', async () => {
+    currentReadiness = readinessFixture({
+      findings: [MONGO],
+      architecture: {
+        groups: [],
+        unresolved: [{ kind: 'compatibility', question: 'An unsupported database was detected — Deployz hosts PostgreSQL and MySQL', blocking: true }],
+        externalServices: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<DeploymentConfiguration />);
+    });
+
+    expect(byTestId('inventory-row-question-0')).not.toBeNull();
+    expect(byTestId('attention-summary-resources')?.textContent).toContain('2 items need attention');
+  });
 });
