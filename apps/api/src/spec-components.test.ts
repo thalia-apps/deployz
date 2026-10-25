@@ -155,6 +155,16 @@ describe('specComponentsForStatus', () => {
 });
 
 describe('planComponentsFromSpec', () => {
+  it('names a worker by its own label, so the plan never lists "Application" twice', () => {
+    const { spec: workerSpec } = compileDeploymentIntent({
+      manifest: { ...POSTGRES_MANIFEST, worker: { command: 'node worker.js' } },
+      region: 'us-east-1',
+    });
+    const names = planComponentsFromSpec(workerSpec, 'destroy', false).map((entry) => entry.name);
+    expect(names.filter((name) => name === 'Application')).toHaveLength(1);
+    expect(names).toContain('Background worker');
+  });
+
   it('keeps the plan builder wording and actions for the catalog kinds, and adds componentId/group', () => {
     expect(planComponentsFromSpec(spec, 'install', false)).toEqual([
       { kind: 'application', name: 'Application', action: 'CREATE', lifecycle: 'delete', componentId: 'web', group: 'application' },
