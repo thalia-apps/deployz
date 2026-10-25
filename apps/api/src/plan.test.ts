@@ -3,11 +3,13 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { analyseRepo, normalizeDeploymentManifest } from '@deployz/analysis';
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 import {
   buildDestroyPlan,
   buildInstallPlan,
+  derivePlanComponentsFromSpec,
   estimateFootprintCost,
   MEDIUM_PROFILE,
   requiredAwsResources,
@@ -15,10 +17,12 @@ import {
   SMALL_V2_PROFILE,
   toPlanAwsResource,
   type DeploymentManifest,
+  type DeploymentPlan,
 } from '@deployz/contracts';
 
 import { createAuth, type Auth } from './auth.js';
 import { compileDeploymentIntent } from './compiler-artifact.js';
+import { getFileTreeForAnalysis } from './github.js';
 import { buildServer } from './server.js';
 
 // Phase 4 — GET /api/applications/:id/plan and GET /api/deployments/:id/plan,
@@ -174,6 +178,41 @@ describe('deployment plans (Phase 4)', () => {
     expect(plan.action).toBe('INSTALL');
     expect(plan.region).toBeNull();
     expect(plan.components).toContainEqual({ kind: 'cache', name: 'Cache', action: 'CREATE', lifecycle: 'delete' });
+  });
+
+  it('GET /api/applications/:id/plan lists the worker, queues, dead-letter queue and schedule the compiler provisions', async () => {
+    const analysis = analyseRepo(await getFileTreeForAnalysis('deployz-demo/async-app', { fixtureMode: true }));
+    const application = await insertApplication(db, org.organizationId, {
+      analysisStatus: 'COMPLETE',
+      detectedMetadata: analysis.metadata,
+    });
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/applications/${application.id}/plan?region=us-east-1`,
+      headers: { cookie: org.cookie },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const plan = response.json() as DeploymentPlan;
+
+    // The same ids and names as the components of the frozen spec the compiler produces.
+    const manifest = normalizeDeploymentManifest(analysis, {});
+    const spec = compileDeploymentIntent({ manifest, region: 'us-east-1' }).spec;
+    const provisioned = derivePlanComponentsFromSpec(spec).filter(
+      (entry) => entry.componentId !== 'web' && ['application', 'worker', 'queue', 'schedule'].includes(entry.kind),
+    );
+    expect(provisioned.map((entry) => entry.componentId)).toEqual(
+      expect.arrayContaining(['worker', 'cleanup', 'orders-queue', 'orders-queue-dlq', 'cleanup-schedule']),
+    );
+    const listed = plan.components.filter((component) => component.componentId !== undefined);
+    expect(listed.map((component) => [component.componentId, component.name]).sort()).toEqual(
+      provisioned.map((entry) => [entry.componentId, entry.name]).sort(),
+    );
+    expect(plan.awsResources.map((resource) => resource.id)).toEqual(
+      expect.arrayContaining(provisioned.map((entry) => entry.componentId!)),
+    );
+    expect(plan.costEstimate?.items.filter((item) => item.pricingStatus === 'usage_based').map((item) => item.resourceId)).toEqual(
+      expect.arrayContaining(['orders-queue', 'orders-queue-dlq', 'cleanup-schedule']),
+    );
   });
 
   it('GET /api/deployments/:id/plan?action=destroy: RETAINs Database and Storage, DELETEs Application and Secure endpoint', async () => {

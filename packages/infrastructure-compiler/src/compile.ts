@@ -148,6 +148,7 @@ interface ResInput {
   readonly retention?: Retention;
   readonly purgeStrategy?: PurgeStrategy;
   readonly verificationCheck?: string;
+  readonly conditional?: boolean;
   readonly properties: Record<string, unknown>;
   readonly dependsOn?: readonly string[];
 }
@@ -168,6 +169,7 @@ function res(input: ResInput): ResolvedResource {
     retention: input.retention ?? (stateful ? 'retain' : 'delete'),
     purgeStrategy: input.purgeStrategy ?? (stateful ? 'require_manual' : null),
     ...(input.verificationCheck !== undefined ? { verificationCheck: input.verificationCheck } : {}),
+    conditional: input.conditional ?? false,
     properties: input.properties,
     ...(input.dependsOn !== undefined ? { dependsOn: input.dependsOn } : {}),
   };
@@ -289,6 +291,7 @@ function compileDbSubnets(ids: NetIds): ResolvedResource[] {
       capability: 'aws.network',
       resourceRole: `db-subnet-${i}`,
       cfnType: 'AWS::EC2::Subnet',
+      conditional: true,
       properties: {
         AvailabilityZone: ref(`paramDbAz${i}`),
         CidrBlock: DB_SUBNET_CIDRS[i - 1],

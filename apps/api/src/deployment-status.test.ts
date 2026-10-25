@@ -389,6 +389,42 @@ describe('removed flag', () => {
     expect(status.removed).toEqual({ state: 'DELETED' });
   });
 
+  it('DELETING says it is removing, with no health or TLS activity', () => {
+    const status = derive({
+      deployment: makeDeployment({ state: 'DELETING', healthStatus: 'UNHEALTHY' }),
+      jobs: [makeJob({ state: 'SUCCEEDED' }), makeJob({ type: 'DESTROY', state: 'RUNNING' })],
+      appUrl: 'https://app.example.com',
+    });
+    expect(status.stage).toBe('VERIFYING');
+    expect(status.currentActivity).toBe('Removing the deployment.');
+    const waitingForTls = derive({
+      deployment: makeDeployment({ state: 'DELETING', healthStatus: 'HEALTHY' }),
+      jobs: [makeJob({ state: 'SUCCEEDED' })],
+      appUrl: 'http://alb.example.com',
+    });
+    expect(waitingForTls.currentActivity).toBe('Removing the deployment.');
+  });
+
+  it('DELETED says it was removed', () => {
+    const status = derive({ deployment: makeDeployment({ state: 'DELETED' }) });
+    expect(status.currentActivity).toBe('The deployment was removed.');
+  });
+
+  it('a removed deployment is never taking longer than usual', () => {
+    const startedAt = new Date(NOW.getTime() - 999_999_000);
+    const status = derive({
+      deployment: makeDeployment({
+        state: 'DELETING',
+        healthStatus: 'UNHEALTHY',
+        stepTimings: { HEALTH_CHECK: { startedAt: startedAt.toISOString() } },
+      }),
+      jobs: [makeJob({ state: 'SUCCEEDED' })],
+      appUrl: 'https://app.example.com',
+      now: NOW,
+    });
+    expect(status.takingLongerThanUsual).toBe(false);
+  });
+
   it('a live deployment has no removed field at all', () => {
     const status = derive({ deployment: makeDeployment({ state: 'HEALTHY', healthStatus: 'HEALTHY' }) });
     expect(status.removed).toBeUndefined();

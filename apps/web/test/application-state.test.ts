@@ -18,7 +18,6 @@ import {
   type SetupLifecycleStepState,
 } from '../src/lib/application-state';
 import { requiredChangeLabel } from '../src/lib/application-configuration';
-import { deploymentDisplayStatus } from '../src/lib/deployment-status-groups';
 import type { FleetDeployment } from '../src/lib/deployments';
 import type { PublicInstallLinkStatus, PublicInstallLinkView } from '../src/lib/public-install-links';
 import type { ApplicationReadiness, ReadinessFinding } from '../src/lib/readiness';
@@ -717,13 +716,34 @@ describe('install link derivation', () => {
     expect(result.installLinkPlacement).toBe('none');
   });
 
-  it('the unknown state also hides the install link, ignoring whatever links exist', () => {
-    const result = deriveApplicationPresentation(
-      makeInput({ readiness: { analysisStatus: 'QUEUED' as ApplicationReadiness['analysisStatus'] }, installLinks: [link()] }),
-    );
-    expect(result.state).toBe('unknown');
-    expect(result.installLink).toEqual({ kind: 'hidden' });
-    expect(result.installLinkPlacement).toBe('none');
+  it('the unknown state hides the install link when there is none, and shows a live one', () => {
+    const unknown = { analysisStatus: 'QUEUED' as ApplicationReadiness['analysisStatus'] };
+    const none = deriveApplicationPresentation(makeInput({ readiness: unknown, installLinks: [link({ status: 'revoked' })] }));
+    expect(none.state).toBe('unknown');
+    expect(none.installLink).toEqual({ kind: 'hidden' });
+    expect(none.installLinkPlacement).toBe('none');
+
+    const live = deriveApplicationPresentation(makeInput({ readiness: unknown, installLinks: [link()] }));
+    expect(live.state).toBe('unknown');
+    expect(live.installLink).toMatchObject({ kind: 'live', status: 'active' });
+    expect(live.installLinkPlacement).toBe('card');
+  });
+
+  it('a live link gets its own card in every state that has loaded the application', () => {
+    const removedTest = deployment({ state: 'DELETED', deletedAt: '2026-10-20T00:00:00.000Z' });
+    for (const status of ['active', 'disabled'] as const) {
+      for (const input of [
+        makeInput({ readiness: { analysisStatus: 'ANALYZING', state: 'ANALYSIS_INCOMPLETE' }, installLinks: [link({ status })] }),
+        makeInput({ readiness: { state: 'NEEDS_CHANGES', findings: [requiredFinding()], requiredCount: 1 }, installLinks: [link({ status })] }),
+        makeInput({ deployments: [removedTest], installLinks: [link({ status })] }),
+        makeInput({ deployments: [deployment({ state: 'FAILED' })], installLinks: [link({ status })] }),
+        makeInput({ deployments: [deployment({ state: 'NOT_INSTALLED' })], installLinks: [link({ status })] }),
+      ]) {
+        const result = deriveApplicationPresentation(input);
+        expect(result.installLink.kind, result.state).toBe('live');
+        expect(result.installLinkPlacement, result.state).toBe('card');
+      }
+    }
   });
 
   it('customers-active places the install link as its own card, not primary', () => {
@@ -746,6 +766,61 @@ describe('install link derivation', () => {
       expect(result.installLink.kind, result.state).toBe('unavailable');
       expect(result.installLinkPlacement, result.state).toBe('none');
     }
+  });
+});
+
+// ── Removed test deployment ───────────────────────────────────────────────────
+
+describe('a removed test deployment that ran its release live', () => {
+  const removed = (overrides: Partial<FleetDeployment> = {}) =>
+    deployment({
+      state: 'DELETED',
+      deletedAt: '2026-10-20T00:00:00.000Z',
+      currentReleaseConfirmedAt: '2026-10-19T00:00:00.000Z',
+      ...overrides,
+    });
+
+  it('keeps the application ready to share', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({ deployments: [removed()], releases: [release()] }),
+    );
+    expect(result.state).toBe('ready-to-share');
+    expect(result.badge).toEqual({ label: 'Ready to share', variant: 'success' });
+    expect(result.lifecycle).toBeNull();
+    expect(result.polling).toBeNull();
+    expect(result.secondaryActions.map((a) => a.id)).not.toContain('view-test-deployment');
+    expect(result.installLinkPlacement).toBe('primary');
+    expect(result.installLink).toEqual({ kind: 'create', note: null });
+  });
+
+  it('shows the live install link as the primary action', () => {
+    const activeLink = link({ status: 'active' });
+    const result = deriveApplicationPresentation(
+      makeInput({ deployments: [removed()], installLinks: [activeLink] }),
+    );
+    expect(result.state).toBe('ready-to-share');
+    expect(result.installLink).toEqual({ kind: 'live', link: activeLink, status: 'active', warning: null });
+    expect(result.primaryAction?.id).toBe('copy-install-link');
+  });
+
+  it('goes back to ready to test when the removed test never ran its release', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({ deployments: [removed({ currentReleaseConfirmedAt: null })] }),
+    );
+    expect(result.state).toBe('ready-to-test');
+  });
+
+  it('gives way to a newer test deployment', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({ deployments: [removed(), deployment({ id: 'dep-2', state: 'INSTALLING', createdAt: '2026-10-21T00:00:00.000Z' })] }),
+    );
+    expect(result.state).toBe('test-deploying');
+  });
+
+  it('gives the applications list the same badge', () => {
+    expect(
+      applicationListBadge({ id: 'app-1', name: 'My App', defaultBranch: 'main' }, readiness(), [removed()]),
+    ).toEqual({ label: 'Ready to share', variant: 'success' });
   });
 });
 

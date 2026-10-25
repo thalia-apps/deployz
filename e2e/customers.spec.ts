@@ -390,3 +390,24 @@ test('Invite customer from the customer page preselects the customer and creates
   };
   expect(deployments.filter((d) => d.customerId === customer.id)).toHaveLength(1);
 });
+
+test('a revoked invitation shows no expiry date', async ({ page }) => {
+  await signUp(page);
+  const customer = await seedCustomer(page);
+  const applicationId = await seedApplication(page);
+  const created = await page.request.post(`${API_URL}/api/customers/${customer.id}/invitations`, {
+    data: { applicationId },
+  });
+  expect(created.ok()).toBeTruthy();
+  const invitation = (await created.json()) as { id: string };
+
+  await page.goto(`/dashboard/customers/${customer.id}`);
+  await expect(page.getByText('Expires')).toBeVisible();
+
+  const revoked = await page.request.post(`${API_URL}/api/public-install-links/${invitation.id}/revoke`);
+  expect(revoked.ok()).toBeTruthy();
+  await page.reload();
+
+  await expect(page.getByText('Revoked', { exact: true })).toBeVisible();
+  await expect(page.getByText('Expires')).toHaveCount(0);
+});

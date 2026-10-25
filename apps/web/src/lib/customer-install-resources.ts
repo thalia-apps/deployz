@@ -65,7 +65,7 @@ export function buildCostLookup(estimate: FootprintCostEstimate | null | undefin
 
 /** The cost estimate prices footprint ids; an AWS resource row maps to one or more of them. */
 const FOOTPRINT_COST_IDS: Record<string, readonly string[]> = {
-  ecs_service: ['web', 'worker'],
+  ecs_service: ['web'],
   load_balancer: ['endpoint'],
   storage_bucket: ['storage'],
   nat_gateway: ['nat-gateway'],
@@ -165,7 +165,7 @@ export function buildAwsResourceSections(
   return sections;
 }
 
-export type ResourceCategory = 'application' | 'database' | 'storage' | 'network_security';
+export type ResourceCategory = 'application' | 'database' | 'storage' | 'messaging' | 'network_security';
 
 /** One card of the customer's compact "What will be deployed" summary. */
 export interface ResourceCategorySummary {
@@ -179,6 +179,7 @@ const RESOURCE_CATEGORY_ORDER: readonly ResourceCategory[] = [
   'application',
   'database',
   'storage',
+  'messaging',
   'network_security',
 ];
 
@@ -192,6 +193,9 @@ function resourceCategory(resource: DeploymentPlanAwsResource): ResourceCategory
       return 'database';
     case 'storage':
       return 'storage';
+    case 'queue':
+    case 'schedule':
+      return 'messaging';
     case 'network':
       return 'network_security';
     default:
@@ -228,7 +232,9 @@ export function buildResourceCategories(plan: DeploymentPlan | null): ResourceCa
           ? databaseCategoryLabel(resources)
           : category === 'storage'
             ? 'File storage'
-            : 'Network & security';
+            : category === 'messaging'
+              ? 'Queues & schedules'
+              : 'Network & security';
     return [{ category, label, names: resources.map((resource) => resource.name) }];
   });
 }

@@ -105,8 +105,10 @@ describe('ExistingConnectorUpdate', () => {
 
 describe('runningReleaseDisplay', () => {
   it('shows the release as running only when confirmed', () => {
-    expect(runningReleaseDisplay('1.2.0', true)).toEqual({ text: 'v1.2.0', note: null });
-    expect(runningReleaseDisplay('1.2.0', false)).toEqual({ text: 'Last confirmed v1.2.0', note: 'Verifying…' });
-    expect(runningReleaseDisplay(null, false)).toEqual({ text: 'Not deployed yet', note: null });
+    expect(runningReleaseDisplay('1.2.0', true, true)).toEqual({ text: 'v1.2.0', note: null });
+    expect(runningReleaseDisplay('1.2.0', false, true)).toEqual({ text: 'Last confirmed v1.2.0', note: 'Verifying…' });
+    expect(runningReleaseDisplay('1.2.0', false, false)).toEqual({ text: 'Last confirmed v1.2.0', note: null });
+    expect(runningReleaseDisplay('1.2.0', true, false)).toEqual({ text: 'Last confirmed v1.2.0', note: null });
+    expect(runningReleaseDisplay(null, false, true)).toEqual({ text: 'Not deployed yet', note: null });
   });
 });

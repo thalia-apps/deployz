@@ -9,13 +9,15 @@ export function formatReleaseVersion(version: string): string {
 /**
  * The "Running release" value. A release is shown as running only once relay
  * evidence confirms it; until then it is the last confirmed one, still being
- * verified.
+ * verified. While the connector is not reporting (`live` false) nothing is
+ * being verified, so a release is only ever the last confirmed one.
  */
 export function runningReleaseDisplay(
   version: string | null,
   confirmed: boolean,
+  live: boolean,
 ): { text: string; note: string | null } {
   if (version === null) return { text: 'Not deployed yet', note: null };
-  if (confirmed) return { text: formatReleaseVersion(version), note: null };
-  return { text: `Last confirmed ${formatReleaseVersion(version)}`, note: 'Verifying…' };
+  if (confirmed && live) return { text: formatReleaseVersion(version), note: null };
+  return { text: `Last confirmed ${formatReleaseVersion(version)}`, note: live ? 'Verifying…' : null };
 }

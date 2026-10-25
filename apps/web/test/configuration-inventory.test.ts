@@ -375,6 +375,36 @@ describe('multiple workloads and detected questions', () => {
     expect(row(inventory, 'worker-command')).toMatchObject({ configuration: 'node worker.js', indent: true, command: true });
   });
 
+  it('gives each worker, queue and schedule its own AWS resources instead of the web row', () => {
+    const plan = buildInstallPlan({
+      manifest: manifestWith({
+        worker: { command: 'node worker.js' },
+        queues: [
+          {
+            id: 'orders-queue',
+            envBindings: [{ name: 'ORDERS_QUEUE_URL', kind: 'url' }],
+            producers: ['web'],
+            consumers: ['worker'],
+            source: 'compose.yaml',
+          },
+        ],
+        scheduledJobs: [
+          { id: 'tick', command: 'node tick.js', schedule: { type: 'cron', cron: '0 3 * * *' }, timezone: null, source: 'compose.yaml' },
+        ],
+      }),
+      region: null,
+    });
+    const inventory = inventoryFor(plan, {}, application({ workerCommand: 'node worker.js' }));
+    const resourceIds = (id: string) => row(inventory, id).resources.map((resource) => resource.id);
+
+    expect(resourceIds('web')).not.toContain('worker');
+    expect(resourceIds('worker')).toEqual(['worker']);
+    expect(resourceIds('tick')).toEqual(['tick']);
+    expect(resourceIds('orders-queue')).toEqual(['orders-queue']);
+    expect(resourceIds('tick-schedule')).toEqual(['tick-schedule']);
+    expect(row(inventory, 'orders-queue').cost).toEqual({ min: null, max: null, usageBased: true, unpriced: false });
+  });
+
   it('keeps the saved worker command, and its findings, when the workers have their own names', () => {
     const inventory = deriveServiceInventory({
       application: application({ workerCommand: 'node worker.js' }),

@@ -77,6 +77,7 @@ function resolveComponentGroup(component: DeploymentPlan['components'][number]):
 }
 
 function componentPurpose(component: DeploymentPlan['components'][number]): string {
+  if (component.kind === 'worker') return 'Runs background work for your application';
   return (
     INFRASTRUCTURE_COMPONENT_DISPLAY[component.kind as keyof typeof INFRASTRUCTURE_COMPONENT_DISPLAY]?.purpose ??
     component.name

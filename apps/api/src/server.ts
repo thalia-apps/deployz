@@ -9066,7 +9066,13 @@ export async function buildServer({
       if (job.type === 'PURGE' && state === 'SUCCEEDED') {
         await tx
           .update(schema.deployments)
-          .set({ cleanupState: 'COMPLETE', relayCredential: null, relayTokenHash: null })
+          .set({
+            cleanupState: 'COMPLETE',
+            relayCredential: null,
+            relayTokenHash: null,
+            // The credential is revoked: the connector can no longer reach us.
+            relayStatus: 'DISCONNECTED',
+          })
           .where(eq(schema.deployments.id, deployment.id));
       }
       // A failed PURGE must NOT resurrect the deployment (never back to

@@ -240,11 +240,52 @@ function resourceLifecycle(handler: FootprintResourceHandler, profile: Infrastru
   return { persistent: retain, retainOnDelete: retain };
 }
 
+/** One part of a manifest's declared async topology, as the application graph and compiler name it. */
+export interface DeclaredPart {
+  readonly kind: 'worker' | 'scheduled-job' | 'queue' | 'dead-letter-queue' | 'schedule';
+  /** The footprint and plan component id. */
+  readonly id: string;
+  readonly name: string;
+}
+
+/** 'orders-queue' -> 'Orders queue' (the application graph's queue wording). */
+function humanize(id: string): string {
+  const words = id.split('-').filter(Boolean).join(' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /**
- * The manifest's declared workers, normalizing manifests written before the
- * `workers` list existed: the legacy single `worker` slot becomes one `worker`
- * entry.
+ * The manifest's declared workers, scheduled jobs, queues (with dead-letter
+ * queues) and schedules, in the ids and wording the application graph and the
+ * compiler use. The `workers` list falls back to the legacy single `worker`
+ * slot for manifests written before the list existed. Empty for an
+ * application without any of them.
  */
+export function declaredParts(manifest: DeploymentManifest): DeclaredPart[] {
+  const workers = manifest.workers ?? legacyManifestWorkers(manifest);
+  const jobs = manifest.scheduledJobs ?? [];
+  return [
+    ...workers.map((worker): DeclaredPart => ({
+      kind: 'worker',
+      id: worker.id,
+      name: worker.id === 'worker' ? 'Background worker' : `Worker ${worker.id}`,
+    })),
+    ...jobs.map((job): DeclaredPart => ({ kind: 'scheduled-job', id: job.id, name: `Scheduled job ${job.id}` })),
+    ...(manifest.queues ?? []).flatMap((queue): DeclaredPart[] => [
+      { kind: 'queue', id: queue.id, name: humanize(queue.id) },
+      ...(queue.deadLetter === undefined
+        ? []
+        : [{ kind: 'dead-letter-queue' as const, id: `${queue.id}-dlq`, name: `${humanize(queue.id)} dead-letter queue` }]),
+    ]),
+    ...jobs.flatMap((job): DeclaredPart[] => [
+      { kind: 'schedule', id: `${job.id}-schedule`, name: `Schedule for ${job.id}` },
+      ...(job.deadLetter === true
+        ? [{ kind: 'dead-letter-queue' as const, id: `${job.id}-schedule-dlq`, name: `Scheduled job ${job.id} dead-letter queue` }]
+        : []),
+    ]),
+  ];
+}
+
 function legacyManifestWorkers(manifest: DeploymentManifest): { id: string; command: string }[] {
   return manifest.worker.command !== null ? [{ id: 'worker', command: manifest.worker.command }] : [];
 }
@@ -275,15 +316,32 @@ export function resolveDeploymentFootprint(input: {
   const workloads: FootprintWorkload[] = [workloadFrom('web', 'web', 'Web application', workloadSizing)];
   // Phase 4A: every declared worker becomes its own footprint workload; the
   // legacy single `worker` slot normalizes to one `worker` entry.
-  const workers = input.manifest.workers ?? legacyManifestWorkers(input.manifest);
-  for (const worker of workers) {
-    workloads.push(workloadFrom(worker.id, 'worker', worker.id === 'worker' ? 'Background worker' : `Worker ${worker.id}`, workloadSizing));
+  const parts = declaredParts(input.manifest);
+  for (const part of parts.filter((entry) => entry.kind === 'worker')) {
+    workloads.push(workloadFrom(part.id, 'worker', part.name, workloadSizing));
+  }
+  for (const part of parts.filter((entry) => entry.kind === 'scheduled-job')) {
+    workloads.push(workloadFrom(part.id, 'scheduled-job', part.name, workloadSizing));
   }
   // Phase 4B — the engine comes from the manifest (absent = postgres); the
   // catalog row stays the engine-generic "database" component, with the
   // service key and configuration naming the actual engine.
   const engine = input.manifest.database.engine === 'mysql' ? 'mysql' : DATABASE_ENGINE;
   const engineVersion = input.manifest.database.engine === 'mysql' ? '8.0' : DATABASE_ENGINE_VERSION;
+  // Phase 5 — queues and schedules are usage-billed and removed with the deployment.
+  const asyncResources = parts
+    .filter((part) => part.kind === 'queue' || part.kind === 'dead-letter-queue' || part.kind === 'schedule')
+    .map((part): FootprintResource => ({
+      id: part.id,
+      category: part.kind === 'schedule' ? 'other' : 'queue',
+      provider: 'aws',
+      service: part.kind === 'schedule' ? 'eventbridge-scheduler' : 'sqs',
+      role: part.kind === 'schedule' ? 'schedule' : 'queue',
+      label: part.name,
+      quantity: 1,
+      configuration: {},
+      lifecycle: { persistent: false, retainOnDelete: false },
+    }));
   return {
     version: FOOTPRINT_SCHEMA_VERSION,
     region: input.region,
@@ -308,7 +366,7 @@ export function resolveDeploymentFootprint(input: {
             }
           : handler.configuration(sizeProfile),
       lifecycle: resourceLifecycle(handler, graphProfile),
-    })),
+    })).concat(asyncResources),
     generatedFrom: { infraVersion: input.infraVersion ?? null },
   };
 }

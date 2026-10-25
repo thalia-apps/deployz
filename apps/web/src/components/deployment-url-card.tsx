@@ -37,7 +37,8 @@ interface DeploymentUrlCardProps {
  * shows the application's address, its Open/Copy actions, whether HTTPS
  * serves, and the custom domain. "HTTPS active" appears only when the
  * server's HTTPS component is READY — a successful HTTPS probe of the
- * address shown — never inferred from the URL scheme alone.
+ * address shown — never inferred from the URL scheme alone, and never while
+ * the connector is not reporting or the latest HTTP probe failed.
  */
 export function DeploymentUrlCard({ detail }: DeploymentUrlCardProps) {
   const custom = detail.customDomain;
@@ -48,7 +49,12 @@ export function DeploymentUrlCard({ detail }: DeploymentUrlCardProps) {
   const httpsReady =
     detail.deploymentStatus.components.find((component) => component.key === 'https')?.status ===
     'READY';
-  const httpsActive = url.startsWith('https://') && httpsReady;
+  const { statusUpdatesUnavailable, health } = detail.deploymentStatus;
+  const httpsActive =
+    url.startsWith('https://') &&
+    httpsReady &&
+    !statusUpdatesUnavailable &&
+    health.layers.http?.ok !== false;
   const [copied, setCopied] = useState(false);
 
   async function copy(): Promise<void> {

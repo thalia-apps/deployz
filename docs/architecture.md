@@ -338,7 +338,12 @@ A plan (`packages/contracts/src/plan.ts`) states what INSTALL, UPDATE or
 DESTROY does to a deployment's infrastructure. It is derived through the
 graph → planner chain from the frozen spec (the compiler footprint when
 present), never from AWS or an LLM, and is deterministic. INSTALL: every
-required component is CREATE. UPDATE: only
+required component is CREATE, and so is each
+declared worker, scheduled-job task, queue, dead-letter queue and schedule:
+the manifest names them (`declaredParts`) with the ids and wording the
+application graph and the compiler use, so the plan lists them as components
+and as `awsResources` before any Region is chosen, and queues and schedules
+read as usage-based in the estimate. UPDATE: only
 the application component is UPDATE; the topology never changes, and a
 difference between the deployed and current requirements is reported as
 `requirementDrift`, never as a CREATE or DELETE. DESTROY: each component is

@@ -97,6 +97,75 @@ describe('buildInstallPlan', () => {
     expect(a).toEqual(b);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
+
+  describe('workers, queues and schedules', () => {
+    const ASYNC: DeploymentManifest = {
+      ...STATELESS,
+      worker: { command: 'node worker.js' },
+      workers: [{ id: 'worker', command: 'node worker.js', source: 'Procfile' }],
+      queues: [
+        {
+          id: 'orders-queue',
+          envBindings: [{ name: 'ORDERS_QUEUE_URL', kind: 'url' }],
+          producers: ['web'],
+          consumers: ['worker'],
+          deadLetter: { maxReceiveCount: 3, envBindings: [], producers: [], consumers: [] },
+          source: 'compose.yaml',
+        },
+      ],
+      scheduledJobs: [
+        {
+          id: 'canary-tick',
+          command: 'node tick.js',
+          schedule: { type: 'cron', cron: '0 3 * * *' },
+          timezone: null,
+          deadLetter: true,
+          source: 'compose.yaml',
+        },
+      ],
+    };
+
+    it('lists the worker, each queue and dead-letter queue, and each schedule as components', () => {
+      const plan = buildInstallPlan({ manifest: ASYNC, region: 'us-east-1' });
+      expect(deploymentPlanSchema.parse(plan)).toEqual(plan);
+      expect(plan.components.map((c) => [c.kind, c.name, c.componentId, c.group, c.action])).toEqual([
+        ['application', 'Application', undefined, undefined, 'CREATE'],
+        ['endpoint', 'Secure endpoint', undefined, undefined, 'CREATE'],
+        ['storage', 'Storage', undefined, undefined, 'CREATE'],
+        ['worker', 'Background worker', 'worker', 'application', 'CREATE'],
+        ['worker', 'Scheduled job canary-tick', 'canary-tick', 'application', 'CREATE'],
+        ['queue', 'Orders queue', 'orders-queue', 'messaging', 'CREATE'],
+        ['queue', 'Orders queue dead-letter queue', 'orders-queue-dlq', 'messaging', 'CREATE'],
+        ['schedule', 'Schedule for canary-tick', 'canary-tick-schedule', 'messaging', 'CREATE'],
+        ['queue', 'Scheduled job canary-tick dead-letter queue', 'canary-tick-schedule-dlq', 'messaging', 'CREATE'],
+      ]);
+    });
+
+    it('lists the same resources in the AWS resources with plain purposes, after the catalog rows', () => {
+      const plan = buildInstallPlan({ manifest: ASYNC, region: 'us-east-1' });
+      const catalog = planAwsResources({ postgres: false, redis: false });
+      expect(plan.awsResources.slice(0, catalog.length)).toEqual(catalog);
+      expect(plan.awsResources.slice(catalog.length).map((r) => [r.id, r.name, r.group, r.componentKind])).toEqual([
+        ['worker', 'Background worker (ECS Fargate)', 'compute_networking', 'application'],
+        ['canary-tick', 'Scheduled job canary-tick (ECS Fargate task)', 'compute_networking', 'application'],
+        ['orders-queue', 'Orders queue (SQS)', 'data', 'queue'],
+        ['orders-queue-dlq', 'Orders queue dead-letter queue (SQS)', 'data', 'queue'],
+        ['canary-tick-schedule', 'Schedule for canary-tick (EventBridge Scheduler)', 'compute_networking', 'schedule'],
+        ['canary-tick-schedule-dlq', 'Scheduled job canary-tick dead-letter queue (SQS)', 'data', 'queue'],
+      ]);
+      expect(plan.awsResources.every((r) => r.purpose.length > 0)).toBe(true);
+    });
+
+    it('a legacy single worker slot is listed as the background worker', () => {
+      const plan = buildInstallPlan({ manifest: { ...STATELESS, worker: { command: 'node worker.js' } }, region: null });
+      expect(plan.components.map((c) => c.name)).toContain('Background worker');
+    });
+
+    it('is deterministic', () => {
+      const a = buildInstallPlan({ manifest: ASYNC, region: 'us-east-1' });
+      expect(JSON.stringify(a)).toBe(JSON.stringify(buildInstallPlan({ manifest: ASYNC, region: 'us-east-1' })));
+    });
+  });
 });
 
 describe('buildDestroyPlan', () => {

@@ -46,6 +46,7 @@ function detail(overrides: Partial<FleetDeploymentDetail> = {}): FleetDeployment
     awsAccountId: '1234••••••••',
     currentReleaseId: 'rel-1',
     previousReleaseId: null,
+    currentReleaseConfirmedAt: null,
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY' as HealthStatus,
     components: null,
@@ -131,6 +132,25 @@ describe('DeploymentUrlCard', () => {
       deploymentStatus: withHttps('READY'),
     });
     expect(text(render(http))).not.toContain('HTTPS active');
+  });
+
+  it('drops the HTTPS claim when the connector is not reporting or the latest probe failed', () => {
+    const base = withHttps('READY') as unknown as Record<string, unknown> & {
+      health: { layers: Record<string, unknown> };
+    };
+    const lostContact = { ...base, statusUpdatesUnavailable: true };
+    expect(text(render(detail({ deploymentStatus: lostContact as never })))).not.toContain('HTTPS active');
+    const probeFailed = {
+      ...base,
+      health: {
+        ...base.health,
+        layers: {
+          ...base.health.layers,
+          http: { ok: false, statusCode: 530, latencyMs: null, checkedAt: '2026-09-01T00:00:00.000Z' },
+        },
+      },
+    };
+    expect(text(render(detail({ deploymentStatus: probeFailed as never })))).not.toContain('HTTPS active');
   });
 
   it('renders the API-provided defaultUrl rather than a client-minted hostname', () => {

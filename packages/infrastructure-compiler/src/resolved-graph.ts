@@ -43,6 +43,8 @@ export interface ResolvedResource {
   readonly purgeStrategy: PurgeStrategy;
   /** Verification check name when this resource is a component's primary proof. */
   readonly verificationCheck?: string;
+  /** True when the resource may not exist in a stack (a slot the region cannot fill). */
+  readonly conditional?: boolean;
   /** CloudFormation properties (Fn::Ref/GetAtt tokens are plain JSON). */
   readonly properties: Record<string, unknown>;
   /** Logical ids this resource depends on (in dependency order). */
@@ -107,6 +109,8 @@ export interface OwnershipRecord {
   readonly stateful: boolean;
   readonly retention: Retention;
   readonly purgeStrategy: PurgeStrategy;
+  /** True when the stack may not create the resource. Absent on specs frozen before the flag existed. */
+  readonly conditional?: boolean;
 }
 
 /** Immutable artifact metadata — the compiler-versioned hashes the spec freezes. */
