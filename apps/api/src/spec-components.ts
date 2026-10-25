@@ -206,14 +206,9 @@ function aggregateEvents(
         latestByResource.set(event.logicalResourceId, event);
       }
     }
-    // A resource AWS has not started yet has no event, so every resource the
-    // component owns must have one before the component counts as complete.
-    const ownsUnstartedResource = [...index.componentIdByLogicalId].some(
-      ([logicalId, owner]) => owner === componentId && !latestByResource.has(logicalId),
+    const allComplete = [...latestByResource.values()].every(
+      (event) => eventState(event.resourceStatus) === 'COMPLETE',
     );
-    const allComplete =
-      !ownsUnstartedResource &&
-      [...latestByResource.values()].every((event) => eventState(event.resourceStatus) === 'COMPLETE');
     states.set(componentId, failed ? 'FAILED' : allComplete ? 'COMPLETE' : 'IN_PROGRESS');
   }
   return states;
