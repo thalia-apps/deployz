@@ -188,6 +188,24 @@ describe('estimateFootprintCost', () => {
     expect(estimate.usageDependent.length).toBeGreaterThan(0);
   });
 
+  it('prices only service workloads; migration and scheduled-job tasks are usage based', () => {
+    const base = resolveDeploymentFootprint({ manifest: STATELESS, region: 'us-east-1' });
+    const web = base.workloads[0]!;
+    const oneShot = (id: string, role: string, label: string) => ({ ...web, id, role, label });
+    const withTasks = {
+      ...base,
+      workloads: [web, oneShot('migration', 'migration', 'Database migration'), oneShot('job', 'scheduled-job', 'Scheduled job')],
+    };
+    const estimate = estimateFootprintCost(withTasks);
+    const baseline = estimateFootprintCost(base);
+    expect(estimate.monthlyMin).toBe(baseline.monthlyMin);
+    expect(estimate.monthlyMax).toBe(baseline.monthlyMax);
+    const usageBased = (items: typeof estimate.items) =>
+      items.filter((item) => item.pricingStatus === 'usage_based').map((item) => item.resourceId);
+    expect(usageBased(estimate.items)).toEqual(['migration', 'job', ...usageBased(baseline.items)]);
+    expect(estimate.usageDependent).toContain('One-off tasks such as migrations and scheduled jobs');
+  });
+
   it('never throws, whatever the footprint contains', () => {
     expect(() =>
       estimateFootprintCost({

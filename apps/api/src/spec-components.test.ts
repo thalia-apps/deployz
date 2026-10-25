@@ -77,6 +77,30 @@ describe('specComponentsForStatus', () => {
     }
   });
 
+  it('a resource whose latest event is COMPLETE is complete, despite its earlier IN_PROGRESS event', () => {
+    const entries = specComponentsForStatus(
+      specRow,
+      [],
+      [
+        event({
+          logicalResourceId: 'PrimaryDbInstance',
+          resourceType: 'AWS::RDS::DBInstance',
+          resourceStatus: 'CREATE_COMPLETE',
+          eventAt: new Date('2026-09-18T10:05:00.000Z'),
+        }),
+        event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_IN_PROGRESS' }),
+        event({
+          logicalResourceId: 'PrimaryDbInstance',
+          resourceType: 'AWS::RDS::DBInstance',
+          resourceStatus: 'CREATE_IN_PROGRESS',
+          eventAt: new Date('2026-09-18T10:01:00.000Z'),
+        }),
+      ],
+    );
+    expect(entries?.find((entry) => entry.componentId === 'primary-db')?.state).toBe('COMPLETE');
+    expect(entries?.find((entry) => entry.componentId === 'web')?.state).toBe('IN_PROGRESS');
+  });
+
   it('a genuine failure wins FAILED; cancellation debris never does', () => {
     const failed = specComponentsForStatus(
       specRow,
@@ -131,6 +155,16 @@ describe('specComponentsForStatus', () => {
 });
 
 describe('planComponentsFromSpec', () => {
+  it('names a worker by its own label, so the plan never lists "Application" twice', () => {
+    const { spec: workerSpec } = compileDeploymentIntent({
+      manifest: { ...POSTGRES_MANIFEST, worker: { command: 'node worker.js' } },
+      region: 'us-east-1',
+    });
+    const names = planComponentsFromSpec(workerSpec, 'destroy', false).map((entry) => entry.name);
+    expect(names.filter((name) => name === 'Application')).toHaveLength(1);
+    expect(names).toContain('Background worker');
+  });
+
   it('keeps the plan builder wording and actions for the catalog kinds, and adds componentId/group', () => {
     expect(planComponentsFromSpec(spec, 'install', false)).toEqual([
       { kind: 'application', name: 'Application', action: 'CREATE', lifecycle: 'delete', componentId: 'web', group: 'application' },

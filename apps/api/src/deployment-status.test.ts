@@ -1826,6 +1826,46 @@ describe('deriveDeploymentStatus — release evidence', () => {
     }
   });
 
+  it('a confirmed live deployment stays READY while a day-2 operation rolls out', () => {
+    const liveDuringRollout = {
+      ...healthy,
+      currentReleaseId: 'rel-1',
+      currentReleaseConfirmedAt: NOW,
+      observedState: verdict(false, 'PROBE_FAILED'),
+      stepTimings: { HEALTH_CHECK: { startedAt: new Date(NOW.getTime() - 25 * 60_000).toISOString() } },
+    };
+    for (const type of ['DEPLOY_RELEASE', 'ROLLBACK', 'RESTART', 'CONFIG_UPDATE'] as const) {
+      for (const state of ['QUEUED', 'RUNNING'] as const) {
+        const status = derive({
+          deployment: makeDeployment({ ...liveDuringRollout, state: 'UPDATING' }),
+          jobs: [makeJob(), makeJob({ type, state })],
+          appUrl: 'https://app.example.com',
+          now: NOW,
+        });
+        expect(status.stage).toBe('READY');
+        expect(status.takingLongerThanUsual).toBe(false);
+        expect(toCustomerDeploymentStatus(status).stage).toBe('READY');
+      }
+    }
+  });
+
+  it('a day-2 operation does not mask failing evidence once it settles, before confirmation, or when unhealthy', () => {
+    const base = { ...healthy, currentReleaseId: 'rel-1', observedState: verdict(false, 'PROBE_FAILED') };
+    const cases = [
+      { deployment: { ...base, currentReleaseConfirmedAt: NOW }, job: makeJob({ type: 'DEPLOY_RELEASE', state: 'FAILED' }) },
+      { deployment: { ...base, currentReleaseConfirmedAt: null }, job: makeJob({ type: 'DEPLOY_RELEASE', state: 'RUNNING' }) },
+      { deployment: { ...base, currentReleaseConfirmedAt: NOW, healthStatus: 'UNHEALTHY' as const }, job: makeJob({ type: 'ROLLBACK', state: 'RUNNING' }) },
+    ];
+    for (const { deployment, job } of cases) {
+      const status = derive({
+        deployment: makeDeployment(deployment),
+        jobs: [makeJob(), job],
+        appUrl: 'https://app.example.com',
+      });
+      expect(status.stage).toBe('VERIFYING');
+    }
+  });
+
   it('flags a connector whose heartbeat carries no release evidence', () => {
     const missing = derive({
       deployment: makeDeployment({ ...healthy, observedState: verdict(false, 'EVIDENCE_MISSING') }),

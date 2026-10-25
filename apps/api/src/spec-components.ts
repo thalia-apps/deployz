@@ -121,16 +121,22 @@ export function planComponentsFromSpec(
     if (action === 'destroy') return lifecycle === 'retain' ? 'RETAIN' : 'DELETE';
     return kind === 'application' && newRelease ? 'UPDATE' : 'UNCHANGED';
   };
-  return derivePlanComponentsFromSpec(spec).map((entry) => ({
-    kind: entry.kind,
-    name: CATALOG_PLAN_KINDS.has(entry.kind)
-      ? (PLAN_COMPONENT_KIND_DISPLAY[entry.kind] ?? entry.name)
-      : entry.name,
-    action: actionFor(entry.kind, entry.lifecycle),
-    lifecycle: entry.lifecycle,
-    componentId: entry.componentId,
-    group: entry.group,
-  }));
+  // Only the first entry of a catalog kind takes the catalog name: a worker is
+  // also an 'application' workload, and keeps its own label ("Background
+  // worker") so a plan never lists "Application" twice.
+  const named = new Set<PlanComponentKind>();
+  return derivePlanComponentsFromSpec(spec).map((entry) => {
+    const catalogName = CATALOG_PLAN_KINDS.has(entry.kind) && !named.has(entry.kind);
+    named.add(entry.kind);
+    return {
+      kind: entry.kind,
+      name: catalogName ? (PLAN_COMPONENT_KIND_DISPLAY[entry.kind] ?? entry.name) : entry.name,
+      action: actionFor(entry.kind, entry.lifecycle),
+      lifecycle: entry.lifecycle,
+      componentId: entry.componentId,
+      group: entry.group,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -188,13 +194,21 @@ function aggregateEvents(
 
   const states = new Map<string, SpecDerivedComponent['state']>();
   for (const [componentId, componentEvents] of byComponent) {
+    // A failure anywhere in the history wins; completion is judged on each
+    // resource's latest event, because its history also holds the IN_PROGRESS
+    // event that preceded the COMPLETE one.
     let failed = false;
-    let allComplete = true;
+    const latestByResource = new Map<string, StackEventLike>();
     for (const event of componentEvents) {
-      const state = eventState(event.resourceStatus);
-      if (state === 'FAILED') failed = true;
-      if (state !== 'COMPLETE') allComplete = false;
+      if (eventState(event.resourceStatus) === 'FAILED') failed = true;
+      const latest = latestByResource.get(event.logicalResourceId);
+      if (!latest || event.eventAt.getTime() > latest.eventAt.getTime()) {
+        latestByResource.set(event.logicalResourceId, event);
+      }
     }
+    const allComplete = [...latestByResource.values()].every(
+      (event) => eventState(event.resourceStatus) === 'COMPLETE',
+    );
     states.set(componentId, failed ? 'FAILED' : allComplete ? 'COMPLETE' : 'IN_PROGRESS');
   }
   return states;

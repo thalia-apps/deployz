@@ -135,6 +135,8 @@ function itemLabel(entry: { label: string; configuration: Record<string, unknown
   return engine ?? entry.label;
 }
 
+const ONE_SHOT_WORKLOAD_ROLES: ReadonlySet<string> = new Set(['migration', 'scheduled-job']);
+
 /**
  * The baseline monthly estimate for a footprint. Sums every workload and
  * resource item, applies the region bucket, rounds items to whole dollars
@@ -178,6 +180,11 @@ export function estimateFootprintCost(footprint: DeploymentFootprint): Footprint
   };
 
   for (const workload of footprint.workloads) {
+    if (ONE_SHOT_WORKLOAD_ROLES.has(workload.role)) {
+      items.push({ resourceId: workload.id, label: workload.label, pricingStatus: 'usage_based' });
+      usageDependent.add('One-off tasks such as migrations and scheduled jobs');
+      continue;
+    }
     price({
       id: workload.id,
       label: workload.label,

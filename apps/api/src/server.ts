@@ -4608,6 +4608,11 @@ export async function buildServer({
       await tx
         .delete(schema.applicationConfigs)
         .where(eq(schema.applicationConfigs.customerId, id));
+      // Its invitations go too: a used one would have a deployment (refused
+      // above), and an unused one must not outlive its customer.
+      await tx
+        .delete(schema.publicInstallLinks)
+        .where(eq(schema.publicInstallLinks.customerId, id));
       await tx
         .delete(schema.customers)
         .where(and(eq(schema.customers.id, id), eq(schema.customers.organizationId, organizationId)));

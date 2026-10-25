@@ -229,12 +229,21 @@ export function evaluatePreflight(input: PreflightInput): PreflightResult {
       id: 'migrations',
       label: 'Database migrations',
       status: migrationMissing ? 'warning' : 'passed',
-      detail: migrationMissing ? 'No migration command — schema updates will not run on deploy' : manifest.migration.command,
+      detail: migrationMissing
+        ? 'No migration command — schema updates will not run on deploy'
+        : (manifest.migration.command ??
+          (manifest.migration.mode === 'startup' ? 'The application runs its migrations when it starts' : null)),
     });
   }
 
   for (const warning of readinessWarnings(input.readiness)) {
-    checks.push({ id: warning.id, label: warning.message.split(' — ')[0] ?? warning.id, status: 'warning', detail: warning.message });
+    const [label, ...explanation] = warning.message.split(' — ');
+    checks.push({
+      id: warning.id,
+      label: label ?? warning.id,
+      status: 'warning',
+      detail: explanation.length > 0 ? explanation.join(' — ') : warning.message,
+    });
   }
 
   const state: PreflightState =

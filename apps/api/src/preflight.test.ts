@@ -149,6 +149,20 @@ describe('evaluatePreflight', () => {
     });
   });
 
+  it('names a readiness warning once: the title is the label and the explanation is the detail', () => {
+    const result = evaluatePreflight({
+      manifest: manifest({ migration: { command: null, mode: 'startup' } }),
+      providedEnvKeys: ['STRIPE_SECRET_KEY'],
+      readiness: readiness([localhostFinding]),
+    });
+    const row = result.checks.find((check) => check.id === 'localhost-binding')!;
+    expect(row.detail).toBe(localhostFinding.plainEnglishExplanation);
+    expect(result.checks.find((check) => check.id === 'migrations')).toMatchObject({
+      status: 'passed',
+      detail: 'The application runs its migrations when it starts',
+    });
+  });
+
   it('shows no health warning once the vendor has set the health path', () => {
     const run = (healthPathDecided: boolean) =>
       evaluatePreflight({

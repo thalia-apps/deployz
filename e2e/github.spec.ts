@@ -29,6 +29,16 @@ test('applications page lists the fixture installation and its repositories', as
   await expect(page.getByText('legacy-redis', { exact: true })).toBeVisible();
 });
 
+test('says so when the GitHub App setup did not link an installation', async ({ page }) => {
+  await signUp(page);
+  await page.goto('/dashboard/applications?github=failed');
+  await expect(page.getByText('GitHub was not connected')).toBeVisible();
+
+  await page.goto('/dashboard/applications?github=connected');
+  await expect(page.getByRole('heading', { name: 'Applications', exact: true })).toBeVisible();
+  await expect(page.getByText('GitHub was not connected')).toHaveCount(0);
+});
+
 test('shows the Connect GitHub empty state when there are no installations', async ({ page }) => {
   await signUp(page);
 
