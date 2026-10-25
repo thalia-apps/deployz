@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  deploymentOwnershipRecordSchema,
   deployzTaskFamily,
   migrationTaskFromSpec,
   oneShotContainerCommand,
@@ -175,5 +176,13 @@ describe('container commands', () => {
   it('a one-shot command replaces the image ENTRYPOINT with sh -c, and a worker command stays an argument list', () => {
     expect(oneShotContainerCommand('npm run db:migrate')).toEqual({ entryPoint: ['sh', '-c'], command: ['npm run db:migrate'] });
     expect(workloadContainerCommand('node worker.js')).toEqual(['sh', '-c', 'node worker.js']);
+  });
+});
+
+describe('deploymentOwnershipRecordSchema', () => {
+  it('parses a record frozen before the conditional flag, and one that carries it', () => {
+    const legacy = taskRecord('web', 'WebService');
+    expect(deploymentOwnershipRecordSchema.parse(legacy)).toEqual(legacy);
+    expect(deploymentOwnershipRecordSchema.parse({ ...legacy, conditional: true }).conditional).toBe(true);
   });
 });

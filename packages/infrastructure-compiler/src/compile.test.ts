@@ -205,6 +205,13 @@ describe('stable logical identity', () => {
       expect(record.logicalResourceId).toBeTruthy();
     }
   });
+
+  it('flags only the DB-only subnet slots as conditional', () => {
+    const { ownershipRecords } = compileDeployzInfrastructure({ ir: makeIr({ postgres: true, redis: true }), region: null });
+    const conditional = ownershipRecords.filter((record) => record.conditional === true).map((record) => record.logicalResourceId);
+    expect(conditional).toEqual(Array.from({ length: DB_AZ_SLOT_COUNT - 2 }, (_, i) => `NetworkDbSubnet${i + 3}`));
+    expect(ownershipRecords.every((record) => typeof record.conditional === 'boolean')).toBe(true);
+  });
 });
 
 describe('host-checked health check', () => {

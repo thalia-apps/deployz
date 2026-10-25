@@ -202,5 +202,6 @@ export function deriveOwnershipRecords(graph: ResolvedAwsGraph): readonly Owners
     stateful: r.stateful,
     retention: r.retention,
     purgeStrategy: r.purgeStrategy,
+    conditional: r.conditional ?? false,
   }));
 }

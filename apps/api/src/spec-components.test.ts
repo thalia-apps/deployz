@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CAPABILITY_KEYS, type DeploymentManifest, type IrWorkload } from '@deployz/contracts';
+import { CAPABILITY_KEYS, type DeploymentManifest, type DeploymentOwnershipRecord, type IrWorkload } from '@deployz/contracts';
 
 import { compileDeploymentIntent } from './compiler-artifact.js';
 import {
@@ -44,6 +44,17 @@ function event(overrides: Partial<StackEventLike> & Pick<StackEventLike, 'logica
   };
 }
 
+/** A COMPLETE event for each resource of one component the stack always creates. */
+function completeEventsFor(
+  records: readonly DeploymentOwnershipRecord[],
+  componentId: string,
+  except: string | null = null,
+): StackEventLike[] {
+  return records
+    .filter((record) => record.componentId === componentId && record.conditional === false && record.logicalResourceId !== except)
+    .map((record) => event({ logicalResourceId: record.logicalResourceId, resourceStatus: 'CREATE_COMPLETE' }));
+}
+
 describe('specComponentsForStatus', () => {
   it('is undefined without a spec, and for an uncompiled spec', () => {
     expect(specComponentsForStatus(null, [], [])).toBeUndefined();
@@ -55,6 +66,7 @@ describe('specComponentsForStatus', () => {
       specRow,
       [],
       [
+        ...completeEventsFor(spec.ownershipRecords ?? [], 'primary-db', 'PrimaryDbInstance'),
         event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_IN_PROGRESS' }),
         event({ logicalResourceId: 'PrimaryDbInstance', resourceType: 'AWS::RDS::DBInstance', resourceStatus: 'CREATE_COMPLETE' }),
         event({ logicalResourceId: 'MysteryResource', resourceType: 'AWS::IAM::Policy', resourceStatus: 'CREATE_IN_PROGRESS' }),
@@ -82,6 +94,7 @@ describe('specComponentsForStatus', () => {
       specRow,
       [],
       [
+        ...completeEventsFor(spec.ownershipRecords ?? [], 'primary-db', 'PrimaryDbInstance'),
         event({
           logicalResourceId: 'PrimaryDbInstance',
           resourceType: 'AWS::RDS::DBInstance',
@@ -101,6 +114,43 @@ describe('specComponentsForStatus', () => {
     expect(entries?.find((entry) => entry.componentId === 'web')?.state).toBe('IN_PROGRESS');
   });
 
+  it('stays in progress until every resource the stack always creates has completed', () => {
+    const records = spec.ownershipRecords ?? [];
+    const required = records.filter((record) => record.componentId === 'web' && record.conditional === false);
+    expect(required.length).toBeGreaterThan(1);
+    const started = completeEventsFor(records, 'web').slice(0, -1);
+    expect(specComponentsForStatus(specRow, [], started)?.find((entry) => entry.componentId === 'web')?.state).toBe(
+      'IN_PROGRESS',
+    );
+    expect(
+      specComponentsForStatus(specRow, [], completeEventsFor(records, 'web'))?.find((entry) => entry.componentId === 'web')
+        ?.state,
+    ).toBe('COMPLETE');
+  });
+
+  it('ignores conditional DB subnets that a 3-AZ region never creates', () => {
+    const records = spec.ownershipRecords ?? [];
+    const conditional = records.filter((record) => record.componentId === 'network' && record.conditional === true);
+    expect(conditional.map((record) => record.logicalResourceId)).toEqual(
+      Array.from({ length: 6 }, (_, i) => `NetworkDbSubnet${i + 3}`),
+    );
+    const entries = specComponentsForStatus(specRow, [], completeEventsFor(records, 'network'));
+    expect(entries?.find((entry) => entry.componentId === 'network')?.state).toBe('COMPLETE');
+  });
+
+  it('judges a spec frozen before the conditional flag on the events seen, as before', () => {
+    const legacyRow = {
+      ...specRow,
+      ownershipRecords: (spec.ownershipRecords ?? []).map(({ conditional: _conditional, ...record }) => record),
+    };
+    const events = [
+      event({ logicalResourceId: 'WebTaskDefinition', resourceStatus: 'CREATE_COMPLETE' }),
+    ];
+    expect(specComponentsForStatus(legacyRow, [], events)?.find((entry) => entry.componentId === 'web')?.state).toBe(
+      'COMPLETE',
+    );
+  });
+
   it('a genuine failure wins FAILED; cancellation debris never does', () => {
     const failed = specComponentsForStatus(
       specRow,
@@ -116,6 +166,7 @@ describe('specComponentsForStatus', () => {
       specRow,
       [],
       [
+        ...completeEventsFor(spec.ownershipRecords ?? [], 'web', 'WebService'),
         event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_COMPLETE' }),
         event({
           logicalResourceId: 'WebService',
@@ -148,7 +199,10 @@ describe('specComponentsForStatus', () => {
     const entries = specComponentsForStatus(
       specRow,
       [{ key: 'runtime', label: 'Application runtime', status: 'PENDING' }],
-      [event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_COMPLETE' })],
+      [
+        ...completeEventsFor(spec.ownershipRecords ?? [], 'web', 'WebService'),
+        event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_COMPLETE' }),
+      ],
     );
     expect(entries).toEqual([{ componentId: 'web', label: 'Web service', state: 'COMPLETE' }]);
   });

@@ -33,6 +33,12 @@ interface SpecComponentIndex {
   componentIdByLogicalId: ReadonlyMap<string, string>;
   labelByLogicalId: ReadonlyMap<string, string>;
   labelByComponentId: ReadonlyMap<string, string>;
+  /**
+   * componentId → logical ids the stack always creates. Only records flagged
+   * `conditional: false` count; a spec frozen before the flag has none, so its
+   * components are judged on the events seen.
+   */
+  requiredLogicalIdsByComponent: ReadonlyMap<string, readonly string[]>;
   /** Verification check name ('compute'/'database'/'cache'/'storage'/'ingress') → componentId. */
   componentIdByCheck: ReadonlyMap<string, string>;
 }
@@ -45,8 +51,14 @@ function buildIndex(spec: DeploymentSpecV2): SpecComponentIndex | null {
     labelByComponentId.set(entry.componentId!, entry.name);
   }
   const componentIdByLogicalId = new Map<string, string>();
+  const requiredLogicalIdsByComponent = new Map<string, string[]>();
   for (const record of spec.ownershipRecords) {
     componentIdByLogicalId.set(record.logicalResourceId, record.componentId);
+    if (record.conditional === false) {
+      const required = requiredLogicalIdsByComponent.get(record.componentId);
+      if (required) required.push(record.logicalResourceId);
+      else requiredLogicalIdsByComponent.set(record.componentId, [record.logicalResourceId]);
+    }
     // Supporting components (network, config secret, log group) have no plan
     // entry — their ownership kind's display name is the honest label.
     if (!labelByComponentId.has(record.componentId)) {
@@ -64,7 +76,7 @@ function buildIndex(spec: DeploymentSpecV2): SpecComponentIndex | null {
   const componentIdByCheck = new Map(
     (spec.verificationContract?.checks ?? []).map((check) => [check.check, check.componentId]),
   );
-  return { componentIdByLogicalId, labelByLogicalId, labelByComponentId, componentIdByCheck };
+  return { componentIdByLogicalId, labelByLogicalId, labelByComponentId, requiredLogicalIdsByComponent, componentIdByCheck };
 }
 
 function indexFor(specV2: Record<string, unknown> | null): SpecComponentIndex | null {
@@ -206,9 +218,11 @@ function aggregateEvents(
         latestByResource.set(event.logicalResourceId, event);
       }
     }
-    const allComplete = [...latestByResource.values()].every(
-      (event) => eventState(event.resourceStatus) === 'COMPLETE',
-    );
+    // A resource that has no event yet is not done: the component stays in
+    // progress until every resource the stack always creates has completed.
+    const allComplete =
+      [...latestByResource.values()].every((event) => eventState(event.resourceStatus) === 'COMPLETE') &&
+      (index.requiredLogicalIdsByComponent.get(componentId) ?? []).every((logicalId) => latestByResource.has(logicalId));
     states.set(componentId, failed ? 'FAILED' : allComplete ? 'COMPLETE' : 'IN_PROGRESS');
   }
   return states;

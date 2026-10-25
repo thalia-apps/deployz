@@ -55,6 +55,8 @@ export const deploymentOwnershipRecordSchema = z
     stateful: z.boolean(),
     retention: z.enum(['retain', 'delete']),
     purgeStrategy: z.enum(['delete', 'require_manual', 'skip']).nullable(),
+    /** True when the stack may not create the resource; absent on specs frozen before the flag existed. */
+    conditional: z.boolean().optional(),
   })
   .strict();
 export type DeploymentOwnershipRecord = z.infer<typeof deploymentOwnershipRecordSchema>;
