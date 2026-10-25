@@ -129,6 +129,18 @@ test('install page renders the real application/publisher and the Connect AWS ac
   await expect(page.getByText(installLinkId)).toBeVisible();
 });
 
+test('install page moves the link secret out of the address bar', async ({ page, request }) => {
+  const { installLinkId } = await seedInstall(request);
+
+  await page.goto(await installLinkPath(request, installLinkId));
+  await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('');
+
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
+  expect(await page.evaluate(() => window.location.hash)).toBe('');
+});
+
 test('install page top-level copy is jargon-free', async ({ page, request }) => {
   const { installLinkId } = await seedInstall(request);
   await page.goto(await installLinkPath(request, installLinkId));
