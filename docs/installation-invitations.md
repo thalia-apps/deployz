@@ -119,6 +119,10 @@ credential) and sets `credentialsWithheld`, and `POST
 confirm response return `installLinkToken` next to `installLinkId`, so every
 link the product shows or copies includes the fragment. A link copied before
 this change has no fragment: the customer asks the vendor to copy it again.
+Until a relay enrolls, the link stops new installs: `GET`, `launched`,
+`retry` and relay registration answer `410 INSTALL_LINK_EXPIRED` after the
+link expires, and `410 INSTALL_LINK_REVOKED` when the publisher revoked it or
+removed the deployment. A started install keeps its progress view.
 Copy actions on the vendor's customer page are
 attached to the deployment row and copy that deployment's own URL — there is
 no customer-level "the install link" and no helper that picks one deployment

@@ -2955,11 +2955,20 @@ export async function buildServer({
    * progress view for what already exists in their account.
    */
   function installLinkGate(row: {
+    state: DeploymentRow['state'];
     enrollmentUsedAt: Date | null;
     installLinkRevokedAt: Date | null;
     installLinkExpiresAt: Date | null;
   }): { code: 'INSTALL_LINK_REVOKED' | 'INSTALL_LINK_EXPIRED'; message: string } | null {
     if (row.enrollmentUsedAt !== null) return null;
+    // A deployment the vendor removed before it was ever installed must not
+    // lead the customer into creating a connector stack that nothing uses.
+    if (row.state === 'DELETING' || row.state === 'DELETED') {
+      return {
+        code: 'INSTALL_LINK_REVOKED',
+        message: 'This installation was removed by the publisher.',
+      };
+    }
     if (row.installLinkRevokedAt !== null) {
       return {
         code: 'INSTALL_LINK_REVOKED',
@@ -3027,7 +3036,7 @@ export async function buildServer({
     const alreadyInstalled = row.enrollmentUsedAt !== null;
     // Invitation lifecycle (DZ-AUDIT-013 follow-up): a revoked or expired
     // link stops new installs; a started one keeps its progress view.
-    const gate = installLinkGate(row);
+    const gate = installLinkGate({ ...row, state: row.deploymentState });
     if (gate) {
       throw new ApiError(410, gate.code, gate.message);
     }

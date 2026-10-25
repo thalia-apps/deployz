@@ -482,6 +482,42 @@ describe('targeted installation invitations', () => {
     expect(deployment!.region).toBe('eu-west-1');
   });
 
+  it('a deployment removed before it was installed no longer offers the customer a launch', async () => {
+    const { id, token } = (await createInvitation('us-east-1')).json() as { id: string; token: string };
+    const confirm = await app.inject({
+      method: 'POST',
+      url: `/api/public-install/${id}/confirm`,
+      headers: { 'content-type': 'application/json', 'x-deployz-token': token },
+      payload: JSON.stringify(await approvePlan(id, token, {
+        idempotencyKey: crypto.randomUUID(),
+        region: 'us-east-1',
+        config: [{ key: 'STRIPE_API_KEY', value: 'sk_removed_fixture', isSecret: true }],
+      })),
+    });
+    expect(confirm.statusCode, confirm.body).toBe(201);
+    const { installLinkId } = confirm.json() as { installLinkId: string };
+    await db
+      .update(schema.deployments)
+      .set({ state: 'DELETED', deletedAt: new Date() })
+      .where(eq(schema.deployments.installLinkId, installLinkId));
+    const linkHeaders = { 'content-type': 'application/json', 'x-deployz-token': installLinkToken(installLinkId) };
+
+    const page = await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkHeaders });
+    expect(page.statusCode).toBe(410);
+    expect(page.json()).toMatchObject({
+      error: { code: 'INSTALL_LINK_REVOKED', message: 'This installation was removed by the publisher.' },
+    });
+    for (const action of ['launched', 'retry']) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/install/${installLinkId}/${action}`,
+        headers: linkHeaders,
+        payload: '{}',
+      });
+      expect(response.statusCode, action).toBe(410);
+    }
+  });
+
   it('createDeploymentRecord itself refuses an undeployable Region (shared backstop)', async () => {
     // A confirmation first, so the target customer holds the config the
     // preflight needs; the count snapshot is taken after it.

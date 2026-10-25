@@ -4424,6 +4424,7 @@ describe('server — organization settings, public install page, and bulk deploy
       }),
       waitingForRelay: false,
       relayStuck: false,
+      retainedDataDeleted: false,
       // Invitation lifecycle: a link created by insertDeployment (not the
       // deploy-links creation path) has no expiry set.
       installLinkExpiresAt: null,
@@ -5386,8 +5387,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
   it('POST /api/install/:installLinkId/retry refuses a deployment that is being removed', async () => {
     const deleting = await seedWaiting({ state: 'DELETING', installationId: 'inst-removing' });
     const removing = await postJson(app, `/api/install/${deleting.installLinkId}/retry`, {}, linkTokenHeader(deleting.installLinkId));
-    expect(removing.statusCode, removing.body).toBe(409);
-    expect(removing.json()).toMatchObject({ error: { code: 'INSTALL_NOT_RETRYABLE' } });
+    expect(removing.statusCode, removing.body).toBe(410);
+    expect(removing.json()).toMatchObject({ error: { code: 'INSTALL_LINK_REVOKED' } });
     const [untouched] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deleting.deployment.id));
     expect(untouched!.state).toBe('DELETING');
     expect(untouched!.installationId).toBe('inst-removing');
