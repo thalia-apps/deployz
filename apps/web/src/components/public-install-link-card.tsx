@@ -384,8 +384,9 @@ export function InstallLinkControls({ applicationId, installLink, onChanged, pri
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke this install link?</AlertDialogTitle>
             <AlertDialogDescription>
-              The link stops working. Customers who open it see an invalid-link message. You can
-              create a new link. No AWS resources are destroyed.
+              The link stops working. Customers who open it see that it was revoked and are asked
+              to contact you for a new link. You can create a new link. No AWS resources are
+              destroyed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
