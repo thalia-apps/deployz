@@ -32,6 +32,14 @@ const SAMPLE_RESOURCES: DeploymentPlanAwsResource[] = [
     lifecycle: 'delete',
   },
   {
+    id: 'nat_gateway',
+    name: 'NAT gateway',
+    purpose: 'Lets the application reach the internet from the private network',
+    group: 'compute_networking',
+    componentKind: 'network',
+    lifecycle: 'delete',
+  },
+  {
     id: 'database',
     name: 'RDS PostgreSQL database',
     purpose: 'Stores persistent application data',
@@ -78,14 +86,21 @@ const PLAN: DeploymentPlan = {
     complete: true,
     items: [
       {
-        resourceId: 'ecs_service',
-        label: 'Fargate',
+        resourceId: 'web',
+        label: 'Web',
         monthlyMin: 8,
         monthlyMax: 11,
         pricingStatus: 'estimated',
       },
       {
-        resourceId: 'load_balancer',
+        resourceId: 'worker',
+        label: 'Worker',
+        monthlyMin: 4,
+        monthlyMax: 5,
+        pricingStatus: 'estimated',
+      },
+      {
+        resourceId: 'endpoint',
         label: 'ALB',
         monthlyMin: 15,
         monthlyMax: 25,
@@ -99,9 +114,16 @@ const PLAN: DeploymentPlan = {
         pricingStatus: 'estimated',
       },
       {
-        resourceId: 'storage_bucket',
+        resourceId: 'storage',
         label: 'S3',
         pricingStatus: 'usage_based',
+      },
+      {
+        resourceId: 'nat-gateway',
+        label: 'NAT',
+        monthlyMin: 33,
+        monthlyMax: 40,
+        pricingStatus: 'estimated',
       },
     ],
     usageDependent: ['Outbound data transfer'],
@@ -140,7 +162,9 @@ describe('buildAwsResourceSections', () => {
     const findRow = (id: string) =>
       sections.flatMap((section) => section.rows).find((row) => row.id === id);
     // estimated rows show ~$N–/mo
-    expect(findRow('ecs_service')?.cost?.kind).toBe('estimated');
+    expect(findRow('ecs_service')?.cost).toEqual({ kind: 'estimated', label: '~$12\u201316/mo' });
+    expect(findRow('load_balancer')?.cost).toEqual({ kind: 'estimated', label: '~$15\u201325/mo' });
+    expect(findRow('nat_gateway')?.cost).toEqual({ kind: 'estimated', label: '~$33\u201340/mo' });
     // usage-based rows show the literal label
     expect(findRow('storage_bucket')?.cost?.kind).toBe('usage_based');
     // rows the cost model never priced render as null ("—" in the table)
