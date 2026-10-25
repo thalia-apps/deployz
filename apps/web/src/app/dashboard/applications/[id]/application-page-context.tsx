@@ -10,6 +10,7 @@ import {
   type ApplicationPresentation,
   type InstallLinksInput,
 } from '@/lib/application-state';
+import { errorMessage } from '@/lib/api-client';
 import { fetchApplication, fetchApplicationPlan, triggerAnalysis, type Application } from '@/lib/applications';
 import { fetchDeploymentsForApplication, type FleetDeployment } from '@/lib/deployments';
 import { fetchPublicInstallLinks } from '@/lib/public-install-links';
@@ -125,8 +126,8 @@ export function ApplicationPageProvider({ id, children }: { id: string; children
       await triggerAnalysis(id, { force: true });
       setRestartCount((count) => count + 1);
       await refresh();
-    } catch {
-      toast.error("Couldn't start the analysis. Try again.");
+    } catch (caught) {
+      toast.error(errorMessage(caught, "Couldn't start the analysis. Try again."));
     } finally {
       setReanalysing(false);
     }

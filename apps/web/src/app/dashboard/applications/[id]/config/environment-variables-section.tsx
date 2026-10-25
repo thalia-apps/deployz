@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { errorMessage } from '@/lib/api-client';
 import { saveConfig, type ApplicationConfig, type ConfigEntry, type MaskedConfigEntry } from '@/lib/config';
 import { DOCS } from '@/lib/docs-links';
 import { TONE_TEXT } from '@/lib/status-tone';
@@ -236,6 +237,7 @@ function EnvironmentVariablesTable({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'partial' | 'error'>('idle');
   const [problems, setProblems] = useState<string[]>([]);
+  const [valuesError, setValuesError] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [filter, setFilter] = useState<EnvFilter>('inputs');
   const [query, setQuery] = useState('');
@@ -437,6 +439,7 @@ function EnvironmentVariablesTable({
     }
     setSaveState('saving');
     setProblems([]);
+    setValuesError(null);
 
     // Entering a value accepts the decision the row displays: without this,
     // a suggested "Set by vendor" row saves its value but never its
@@ -495,7 +498,8 @@ function EnvironmentVariablesTable({
     if (entries.length > 0 || removed.size > 0) {
       try {
         onValuesSaved(await saveConfig(applicationId, null, entries, Array.from(removed)));
-      } catch {
+      } catch (error) {
+        setValuesError(errorMessage(error, ''));
         setSaveState(settingsSaved ? 'partial' : 'error');
         return;
       }
@@ -820,12 +824,12 @@ function EnvironmentVariablesTable({
           ) : null}
           {saveState === 'partial' ? (
             <p role="alert" className="text-sm text-destructive" data-testid="environment-variables-partial-save">
-              Decisions saved, values not. Save again to retry the values.
+              Decisions saved, values not. {valuesError} Save again to retry the values.
             </p>
           ) : null}
           {saveState === 'error' && problems.length === 0 ? (
             <p role="alert" className="text-sm text-destructive">
-              Couldn&apos;t save. Nothing was saved. Try again.
+              {valuesError || "Couldn't save. Nothing was saved. Try again."}
             </p>
           ) : null}
           {dirty && saveState !== 'saving' ? <p className="text-xs text-muted-foreground">Unsaved changes.</p> : null}

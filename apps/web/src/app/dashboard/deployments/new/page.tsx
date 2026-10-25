@@ -123,7 +123,7 @@ function NewDeploymentScreen() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [regionsError, setRegionsError] = useState(false);
   // Test mode only: the created deployment's install link.
-  const [installLink, setInstallLink] = useState<string | null>(null);
+  const [installLink, setInstallLink] = useState<{ url: string; deploymentId: string } | null>(null);
   // Customer mode: the created invitation's one-time reveal — the URL carries
   // the token as its fragment, plus the token shown separately.
   const [invitation, setInvitation] = useState<{ url: string; token: string } | null>(null);
@@ -397,7 +397,10 @@ function NewDeploymentScreen() {
         });
         setCreatedCustomerId(customerId);
         setCreatedApplicationId(applicationId);
-        setInstallLink(`${origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`);
+        setInstallLink({
+          url: `${origin}/install/${deployment.installLinkId}#${deployment.installLinkToken}`,
+          deploymentId: deployment.id,
+        });
       } else {
         // The invitation-first path: no deployment row and no entitlement
         // use here — the customer confirms later, and billing is checked at
@@ -526,7 +529,8 @@ function NewDeploymentScreen() {
         />
       ) : installLink ? (
         <InstallLinkCard
-          link={installLink}
+          link={installLink.url}
+          deploymentId={installLink.deploymentId}
           customerId={createdCustomerId}
           applicationId={createdApplicationId}
           onReset={() => {
@@ -795,7 +799,7 @@ function ReleaseRequirement({
   const [state, setState] = useState<ReleaseCheck>({ kind: 'loading' });
   const [lastFailed, setLastFailed] = useState(false);
   const [building, setBuilding] = useState(false);
-  const [buildError, setBuildError] = useState(false);
+  const [buildError, setBuildError] = useState<string | null>(null);
   const [missingBuildKeys, setMissingBuildKeys] = useState<string[] | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const firstRelease = firstReleaseInput(application.detectedMetadata);
@@ -829,18 +833,23 @@ function ReleaseRequirement({
   }, [state]);
 
   async function onBuild(): Promise<void> {
-    if (!firstRelease) return;
     setBuilding(true);
-    setBuildError(false);
+    setBuildError(null);
     setMissingBuildKeys(null);
     try {
-      const release = await createRelease(application.id, firstRelease);
+      const existing = await fetchReleases(application.id);
+      const input = firstReleaseInput(
+        application.detectedMetadata,
+        existing.map((r) => r.version),
+      );
+      if (!input) return;
+      const release = await createRelease(application.id, input);
       setState(installReleaseState([release]));
     } catch (err) {
       if (err instanceof BuildConfigurationMissingError) {
         setMissingBuildKeys(err.keys);
       } else {
-        setBuildError(true);
+        setBuildError(errorMessage(err, "Couldn't start the build. Try again or use the Releases page."));
       }
     } finally {
       setBuilding(false);
@@ -909,7 +918,7 @@ function ReleaseRequirement({
       </p>
       {buildError ? (
         <p className="text-destructive">
-          Couldn&apos;t start the build. Try again or use the Releases page.
+          {buildError}
         </p>
       ) : null}
       {missingBuildKeys ? (
@@ -1008,11 +1017,13 @@ function InvitationLinkCard({
 
 function InstallLinkCard({
   link,
+  deploymentId,
   customerId,
   applicationId,
   onReset,
 }: {
   link: string;
+  deploymentId: string;
   customerId: string | null;
   applicationId: string | null;
   onReset: () => void;
@@ -1025,7 +1036,8 @@ function InstallLinkCard({
           <CardTitle>Deployment created</CardTitle>
         </div>
         <CardDescription>
-          Send this install link to your customer. Their AWS credentials never touch Deployz.
+          Open this install link and connect your own AWS account to run the test. Your AWS credentials never touch
+          Deployz.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -1044,7 +1056,7 @@ function InstallLinkCard({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/deployments">Back to deployments</Link>
+            <Link href={`/dashboard/deployments/${deploymentId}`}>View deployment</Link>
           </Button>
           {applicationId && customerId ? (
             <Button asChild variant="outline" size="sm">

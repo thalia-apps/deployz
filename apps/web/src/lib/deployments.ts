@@ -318,12 +318,13 @@ export async function fetchDeployments(
   return body.deployments ?? [];
 }
 
-/** Fetch one application's deployments (used to check for a test deployment, §25 bulk deploy). */
+/** Fetch one application's deployments (used to check for a test deployment, §25 bulk deploy).
+ *  Removed ones are included: the API refuses to remove an application while any row exists. */
 export async function fetchDeploymentsForApplication(
   applicationId: string,
 ): Promise<FleetDeployment[]> {
   const body = await getJson<{ deployments?: FleetDeployment[] }>(
-    `/api/deployments?applicationId=${encodeURIComponent(applicationId)}`,
+    `/api/deployments?applicationId=${encodeURIComponent(applicationId)}&includeDeleted=true`,
   );
   return body.deployments ?? [];
 }
@@ -376,6 +377,8 @@ export class DeploymentActionError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    /** The API's own message (§65, jargon-free), when the response carried one. */
+    readonly serverMessage?: string,
   ) {
     super(`Deployment action failed (${status})`);
     this.name = 'DeploymentActionError';
@@ -412,6 +415,9 @@ export function actionErrorMessage(caught: unknown, fallback: string): string {
   if (caught instanceof DeploymentActionError && caught.code === 'INFRASTRUCTURE_CHANGE_REQUIRED') {
     return "This application's infrastructure changed (database, cache, database engine, workers, queues or schedules), and an existing deployment cannot get these changes. Create a new deployment for this customer, or change the requirements back.";
   }
+  if (caught instanceof DeploymentActionError && caught.serverMessage) {
+    return caught.serverMessage;
+  }
   return fallback;
 }
 
@@ -424,8 +430,12 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   });
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);
-    const envelope = payload as { error?: { code?: string } } | null;
-    throw new DeploymentActionError(response.status, envelope?.error?.code ?? 'REQUEST_FAILED');
+    const envelope = payload as { error?: { code?: string; message?: string } } | null;
+    throw new DeploymentActionError(
+      response.status,
+      envelope?.error?.code ?? 'REQUEST_FAILED',
+      envelope?.error?.message,
+    );
   }
   return (await response.json()) as T;
 }

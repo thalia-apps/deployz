@@ -273,6 +273,16 @@ describe('evaluateManifestReadiness', () => {
     );
   });
 
+  it('does not warn about a missing migration command when the app migrates itself at startup', () => {
+    const manifest = normalizeDeploymentManifest(
+      { metadata: { hasDockerfile: true, dockerfilePath: 'Dockerfile', startupCommands: ['node index.js'], port: '3000', databaseState: 'postgres', postgres: { detected: true, required: true }, migrationMode: 'startup' } },
+      {},
+    );
+    expect(manifest.database.postgres).toBe(true);
+    expect(manifest.migration.mode).toBe('startup');
+    expect(evaluateManifestReadiness(manifest).findings.map((f) => f.id)).not.toContain('migration-command-missing');
+  });
+
   it('the missing-migration warning names MySQL for a MySQL database', () => {
     const manifest = normalizeDeploymentManifest(
       { metadata: { hasDockerfile: true, dockerfilePath: 'Dockerfile', startupCommands: ['node index.js'], port: '3000', databaseState: 'mysql', mysql: { detected: true, required: true } } },

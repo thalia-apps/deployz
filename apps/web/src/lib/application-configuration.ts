@@ -134,15 +134,17 @@ function buildRuntimeRow(facts: Map<string, DetectedFactRow>): ConfigurationRow 
   };
 }
 
+// A build step is optional (many apps build entirely in their Dockerfile),
+// and it has no UI setting, so a missing one is never a warning.
 function buildFactRow(id: 'build' | 'start', label: string, facts: Map<string, DetectedFactRow>): ConfigurationRow {
   const fact = facts.get(id);
   const found = fact?.found === true;
   return {
     id,
     label,
-    value: found ? fact.value : 'Not detected',
+    value: found ? fact.value : id === 'build' ? 'None' : 'Not detected',
     detail: null,
-    result: coreFactRow(found),
+    result: id === 'build' ? optionalRow(found) : coreFactRow(found),
     action: null,
     blocking: false,
     help: null,

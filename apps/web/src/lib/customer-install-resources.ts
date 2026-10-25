@@ -63,6 +63,14 @@ export function buildCostLookup(estimate: FootprintCostEstimate | null | undefin
   return { byId, hasUsageBased };
 }
 
+/** The cost estimate prices footprint ids; an AWS resource row maps to one or more of them. */
+const FOOTPRINT_COST_IDS: Record<string, readonly string[]> = {
+  ecs_service: ['web', 'worker'],
+  load_balancer: ['endpoint'],
+  storage_bucket: ['storage'],
+  nat_gateway: ['nat-gateway'],
+};
+
 /**
  * One row's resource-level cost. Mirrors `formatRowCost` from the
  * configuration inventory (apps/web/src/lib/configuration-inventory.ts)
@@ -71,18 +79,22 @@ export function buildCostLookup(estimate: FootprintCostEstimate | null | undefin
  * `null` means "no meaningful direct cost" — the table renders "—" then.
  */
 export function rowCost(rowId: string, lookup: CostItemLookup): ResourceCostStatus | null {
-  const item = lookup.byId.get(rowId);
-  if (!item) return null;
-  if (item.pricingStatus === 'usage_based') {
+  const items = (FOOTPRINT_COST_IDS[rowId] ?? [rowId]).flatMap((id) => lookup.byId.get(id) ?? []);
+  if (items.length === 0) return null;
+  if (items.some((entry) => entry.pricingStatus === 'usage_based')) {
     return { kind: 'usage_based', label: 'Usage-based' };
   }
-  if (item.pricingStatus === 'unavailable') {
+  if (items.some((entry) => entry.pricingStatus === 'unavailable')) {
     return { kind: 'unpriced', label: 'Pricing unavailable' };
   }
-  if (item.monthlyMin === undefined || item.monthlyMax === undefined) {
-    return null;
+  let min = 0;
+  let max = 0;
+  for (const entry of items) {
+    if (entry.monthlyMin === undefined || entry.monthlyMax === undefined) return null;
+    min += entry.monthlyMin;
+    max += entry.monthlyMax;
   }
-  return { kind: 'estimated', label: formatRange(item.monthlyMin, item.monthlyMax) };
+  return { kind: 'estimated', label: formatRange(min, max) };
 }
 
 /**

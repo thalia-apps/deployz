@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiRequestError } from '../src/lib/api-client';
 import {
+  BuildConfigurationMissingError,
+  createRelease,
   deployableReleases,
   firstReleaseInput,
   installReleaseState,
@@ -174,5 +177,38 @@ describe('firstReleaseInput', () => {
   it('is null when the analysis recorded no commit', () => {
     expect(firstReleaseInput(null)).toBeNull();
     expect(firstReleaseInput({})).toBeNull();
+  });
+
+  it('numbers the version when an earlier build of the same commit holds it', () => {
+    const sha = 'b2806f9010820a5659899cd0ce0b98d31561041d';
+    expect(firstReleaseInput({ analysisCommitSha: sha }, ['other', 'b2806f901082'])?.version).toBe('b2806f901082-2');
+    expect(firstReleaseInput({ analysisCommitSha: sha }, ['b2806f901082', 'b2806f901082-2'])?.version).toBe(
+      'b2806f901082-3',
+    );
+  });
+});
+
+describe('createRelease errors', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubResponse(status: number, body: unknown): void {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
+  }
+
+  it('carries the API message for a duplicate version', async () => {
+    const message = 'Version v1 already exists for this application. Use a different version number.';
+    stubResponse(409, { error: { code: 'RELEASE_VERSION_EXISTS', message } });
+    const error = await createRelease('app-1', { version: 'v1', gitSha: 'a'.repeat(40) }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect(error).toMatchObject({ code: 'RELEASE_VERSION_EXISTS', message });
+  });
+
+  it('still names the missing build values', async () => {
+    stubResponse(422, { error: { code: 'BUILD_CONFIGURATION_MISSING', message: 'x', details: { keys: ['A', 'B'] } } });
+    const error = await createRelease('app-1', { version: 'v1', gitSha: 'a'.repeat(40) }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(BuildConfigurationMissingError);
+    expect((error as BuildConfigurationMissingError).keys).toEqual(['A', 'B']);
   });
 });

@@ -24,7 +24,7 @@ export function ConnectorUpdateAlert({
           ? 'Connector update required to verify releases'
           : 'Connector update available'}
       </AlertTitle>
-      <AlertDescription className="flex flex-col gap-2">
+      <AlertDescription className="flex min-w-0 flex-col gap-2">
         <p>
           {customerName} updates the connector in their AWS account. Open the connector stack, select
           Update, then Replace existing template

@@ -6,7 +6,7 @@
 // config — or reporting a failed save as a success — would be misleading.
 // §65: copy is jargon-free.
 
-import { apiUrl } from '@/lib/api-url';
+import { apiRequest } from '@/lib/api-client';
 
 // ── Wire shapes ────────────────────────────────────────────────────────────
 
@@ -49,37 +49,13 @@ export interface ApplicationConfig {
 
 // ── Fetch helpers ──────────────────────────────────────────────────────────
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
-    credentials: 'include',
-    cache: 'no-store',
-  });
-  if (!response.ok) {
-    throw new Error(`Config request failed (${response.status})`);
-  }
-  return (await response.json()) as T;
-}
-
-async function putJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(`Config request failed (${response.status})`);
-  }
-  return (await response.json()) as T;
-}
-
 /** Fetch an application's config. A 404 propagates to the caller. */
 export async function fetchConfig(
   applicationId: string,
   customerId?: string,
 ): Promise<ApplicationConfig> {
   const query = customerId ? `?customerId=${encodeURIComponent(customerId)}` : '';
-  return getJson<ApplicationConfig>(
+  return apiRequest<ApplicationConfig>(
     `/api/applications/${encodeURIComponent(applicationId)}/config${query}`,
   );
 }
@@ -96,10 +72,10 @@ export async function saveConfig(
   entries: readonly ConfigEntry[],
   deletes: readonly string[] = [],
 ): Promise<ApplicationConfig> {
-  return putJson<ApplicationConfig>(
-    `/api/applications/${encodeURIComponent(applicationId)}/config`,
-    { customerId, entries, deletes },
-  );
+  return apiRequest<ApplicationConfig>(`/api/applications/${encodeURIComponent(applicationId)}/config`, {
+    method: 'PUT',
+    body: { customerId, entries, deletes },
+  });
 }
 
 // ── Vendor/customer merge (pure) ───────────────────────────────────────────

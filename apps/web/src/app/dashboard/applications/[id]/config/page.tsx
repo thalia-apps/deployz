@@ -22,6 +22,7 @@ import {
   type ConfigEntry,
   type MaskedConfigEntry,
 } from '@/lib/config';
+import { errorMessage } from '@/lib/api-client';
 import { DOCS } from '@/lib/docs-links';
 import { fetchEnvironmentSettings } from '@/lib/environment-settings';
 import { TONE_TEXT } from '@/lib/status-tone';
@@ -72,11 +73,11 @@ function ConfigScreen() {
         const data = await fetchConfig(id, customerId ?? undefined);
         if (cancelled) return;
         setState({ status: 'loaded', data });
-      } catch {
+      } catch (caught) {
         if (!cancelled) {
           setState({
             status: 'error',
-            message: "Couldn't load the configuration. Try again.",
+            message: errorMessage(caught, "Couldn't load the configuration. Try again."),
           });
         }
       }
@@ -189,7 +190,10 @@ function ConfigurationTabs({
   const [tab, setTab] = useState<ConfigTab>('resources');
 
   useEffect(() => {
-    const initial = tabForHash(window.location.hash) ?? readStoredTab(applicationId);
+    // Customer overrides live on Variables, so a customer-scoped link opens it.
+    const customerScoped = new URLSearchParams(window.location.search).has('customer');
+    const initial =
+      tabForHash(window.location.hash) ?? (customerScoped ? 'variables' : readStoredTab(applicationId));
     if (initial) setTab(initial);
     function followHash(): void {
       const next = tabForHash(window.location.hash);
@@ -375,6 +379,7 @@ function ConfigSection({
   onSaved: (next: ApplicationConfig) => void;
 }) {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState("Couldn't save. Try again.");
   const [drafts, setDrafts] = useState<DraftEntry[]>([]);
   const [nextDraftId, setNextDraftId] = useState(0);
   const [draftError, setDraftError] = useState<string | null>(null);
@@ -435,7 +440,8 @@ function ConfigSection({
       setRemoved([]);
       setVersion((current) => current + 1);
       setSaveState('saved');
-    } catch {
+    } catch (caught) {
+      setSaveError(errorMessage(caught, "Couldn't save. Try again."));
       setSaveState('error');
     }
   }
@@ -543,7 +549,7 @@ function ConfigSection({
                   ) : null}
                   {saveState === 'error' ? (
                     <p role="alert" className="text-sm text-destructive">
-                      Couldn&apos;t save. Try again.
+                      {saveError}
                     </p>
                   ) : null}
                 </div>

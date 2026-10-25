@@ -1,8 +1,9 @@
-// Release versions are vendor-chosen strings. The UI shows them with a "v"
-// prefix, but a vendor who already names a release "v1.3.0" must not see
-// "vv1.3.0".
+// Release versions are vendor-chosen strings. The UI shows a numeric version
+// with a "v" prefix, but a vendor who already names a release "v1.3.0" must
+// not see "vv1.3.0", and a commit-named release ("8b69e5d109cb") is no
+// version number at all.
 export function formatReleaseVersion(version: string): string {
-  return /^v/i.test(version) ? version : `v${version}`;
+  return /^\d+(\.\d+)*([-+].*)?$/.test(version) ? `v${version}` : version;
 }
 
 /**

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { errorMessage } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { releaseBuildFailureSummary, RELEASE_INFRASTRUCTURE_COPY } from '@deployz/copy-map';
 
@@ -222,7 +223,7 @@ function CreateReleaseForm({
         setError(`Set these build values before you build a release: ${err.keys.join(', ')}.`);
         setMissingBuildKeys(err.keys);
       } else {
-        setError("Couldn't create this release. Try again.");
+        setError(errorMessage(err, "Couldn't create this release. Try again."));
       }
     } finally {
       setPending(false);

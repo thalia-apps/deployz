@@ -504,6 +504,11 @@ test('waiting for the customer: the hero says what to do next and offers no day-
   await expect(actions.getByRole('link', { name: 'View Diagnostics' })).toHaveCount(0);
   await expect(infrastructure).toContainText('Not installed yet.');
   await expect(activity).toContainText('No activity yet.');
+  // Nothing was installed and no relay ever connected, so the deployment can
+  // still be removed (the API deletes it without a relay job).
+  await actions.getByRole('button', { name: 'More actions' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Remove deployment' })).toBeEnabled();
+  await page.keyboard.press('Escape');
   await shoot(page, 'not-installed');
 });
 
@@ -1030,10 +1035,17 @@ test('destructive and rare actions live behind the overflow menu', async ({ page
   // the same terms as the customer's removed page.
   await expect(willBeRetained.getByText(/Delete retained data removes them later/)).toBeVisible();
   await expect(disconnectPanel.getByText(/connector stays in your customer's AWS account until they delete its stack/)).toBeVisible();
+  await disconnectPanel.getByRole('textbox').fill('Acme Corp');
   await page.keyboard.press('Escape');
   // A dialog opened from the menu hands focus back to the menu button, so a
   // keyboard user keeps their place.
   await expect(actions.getByRole('button', { name: 'More actions' })).toBeFocused();
+  // A cancelled confirmation is not kept: reopening asks for the name again.
+  await actions.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Remove deployment' }).click();
+  await expect(disconnectPanel.getByRole('textbox')).toHaveValue('');
+  await expect(disconnectPanel.getByRole('button', { name: 'Remove deployment' })).toBeDisabled();
+  await page.keyboard.press('Escape');
 });
 
 test('AWS identifiers and the raw event feed stay inside Technical details', async ({ page }) => {

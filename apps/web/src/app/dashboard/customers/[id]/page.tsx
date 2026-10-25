@@ -205,7 +205,7 @@ export default function CustomerDetailPage() {
                     <span className="text-sm font-medium">{deployment.applicationName}</span>
                     <span className="text-xs text-muted-foreground">{deployment.region}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge deployment={deployment} />
                     <Button
                       size="sm"
