@@ -263,3 +263,38 @@ describe('InstallPage per-deployment flow', () => {
   });
 
 });
+
+describe('InstallPage removed deployment', () => {
+  it('names what can remain after a removal whose data was not deleted', async () => {
+    mocks.fetchPublicInstallData.mockResolvedValue(null);
+    mocks.fetchInstallData.mockResolvedValue({
+      status: 'ok',
+      data: resolvedData({ alreadyInstalled: true, deploymentState: 'DELETED', retainedDataDeleted: false }),
+    });
+
+    const text = (await renderPage()).body.textContent ?? '';
+
+    expect(text).toContain('What can remain in your AWS account');
+    expect(text).toContain('Database');
+    expect(text).toContain('Kept resources can keep costing money');
+  });
+
+  it('after a verified purge, says only the connector stack remains', async () => {
+    mocks.fetchPublicInstallData.mockResolvedValue(null);
+    mocks.fetchInstallData.mockResolvedValue({
+      status: 'ok',
+      data: resolvedData({ alreadyInstalled: true, deploymentState: 'DELETED', retainedDataDeleted: true }),
+    });
+
+    const doc = await renderPage();
+    const text = doc.body.textContent ?? '';
+
+    expect(text).toContain('What remains in your AWS account');
+    expect(text).not.toContain('What can remain');
+    expect(text).not.toContain('Kept resources can keep costing money');
+    expect([...doc.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
+      'The Deployz connector (stack deployz-bootstrap-acme-app-dep-1)',
+    ]);
+    expect(text).toContain('Acme Inc deleted the data that was kept after removal');
+  });
+});

@@ -389,9 +389,14 @@ Recorded, not implemented. Each needs separate approval.
 - **Minimal change**: Add `UNVERIFIED` to the customer `cleanup` enum, set
   from `SKIPPED_RELAY_OFFLINE` and `PURGE_FAILED`.
 - **Priority**: P1 / pre-MVP (removal truthfulness is UX correctness).
+- **Partly done (2026-10-25)**: `GET /api/install/:installLinkId` returns
+  `retainedDataDeleted` (true only for `cleanupState: COMPLETE`), so after a
+  completed **Delete retained data** the removed page says that only the
+  connector remains. `SKIPPED_RELAY_OFFLINE` and `PURGE_FAILED` are still
+  invisible to the customer.
 - **Found in UX-B**: the customer removed page reads the install-page data,
-  which has no cleanup state for a removed deployment. After a completed
-  **Delete retained data** it cannot say that only the connector remains, so
+  which had no cleanup state for a removed deployment. After a completed
+  **Delete retained data** it could not say that only the connector remains, so
   it states what can remain. The same `cleanup` value must reach that page.
 
 ### UX-BACKEND-002 — Infrastructure check freshness

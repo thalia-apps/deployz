@@ -4424,6 +4424,8 @@ describe('server — organization settings, public install page, and bulk deploy
       }),
       waitingForRelay: false,
       relayStuck: false,
+      // Nothing was removed, so no retained data was deleted.
+      retainedDataDeleted: false,
       // Invitation lifecycle: a link created by insertDeployment (not the
       // deploy-links creation path) has no expiry set.
       installLinkExpiresAt: null,

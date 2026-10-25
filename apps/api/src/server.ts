@@ -3007,6 +3007,7 @@ export async function buildServer({
         relayCredential: schema.deployments.relayCredential,
         desiredState: schema.deployments.desiredState,
         specV2: schema.deployments.specV2,
+        cleanupState: schema.deployments.cleanupState,
         releaseVersion: schema.releases.version,
       })
       .from(schema.deployments)
@@ -3114,6 +3115,10 @@ export async function buildServer({
       bootstrapStackName: stackName,
       waitingForRelay,
       relayStuck,
+      // True only after a purge the relay verified, so the removed page can
+      // say that only the connector stack remains. A forced or failed purge
+      // keeps the "can remain" copy.
+      retainedDataDeleted: row.cleanupState === 'COMPLETE',
       // The invitation's own expiry, so the page can state it above the fold.
       installLinkExpiresAt: row.installLinkExpiresAt,
       // The Quick Create link is built HERE, not in the web app: only the
