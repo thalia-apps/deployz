@@ -507,7 +507,10 @@ test('waiting for the customer: the hero says what to do next and offers no day-
   // Nothing was installed and no relay ever connected, so the deployment can
   // still be removed (the API deletes it without a relay job).
   await actions.getByRole('button', { name: 'More actions' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Remove deployment' })).toBeEnabled();
+  await page.getByRole('menuitem', { name: 'Remove deployment' }).click();
+  const removePanel = page.getByTestId('disconnect-panel');
+  await expect(removePanel).toContainText('Nothing is installed yet');
+  await expect(removePanel).not.toContainText('Will be retained');
   await page.keyboard.press('Escape');
   await shoot(page, 'not-installed');
 });

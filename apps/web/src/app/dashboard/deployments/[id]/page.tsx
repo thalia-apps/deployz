@@ -1181,6 +1181,7 @@ function DeploymentActions({
         applicationName={detail.applicationName}
         customerName={detail.customerName}
         counted={detail.deploymentType === 'PRODUCTION' && detail.billingState === 'ACTIVE'}
+        neverConnected={neverConnected}
         returnFocusRef={moreActionsRef}
         onDone={() => {
           setOpen(null);
@@ -1921,6 +1922,7 @@ function DisconnectDialog({
   applicationName,
   customerName,
   counted,
+  neverConnected,
   returnFocusRef,
   onDone,
   onCancel,
@@ -1931,6 +1933,8 @@ function DisconnectDialog({
   customerName: string;
   /** Whether this deployment counts toward the production deployment total. */
   counted: boolean;
+  /** No relay ever connected: Deployz created nothing in the customer's account. */
+  neverConnected: boolean;
   returnFocusRef: FocusTarget;
   onDone: () => void;
   onCancel: () => void;
@@ -1996,12 +2000,14 @@ function DisconnectDialog({
             Remove {applicationName} for {customerName}?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Removing the deployment takes down the running application and its networking.
+            {neverConnected
+              ? "Nothing is installed yet, so nothing is removed from your customer's AWS account. The install link stops working."
+              : 'Removing the deployment takes down the running application and its networking.'}
           </AlertDialogDescription>
           <DocsLink href={DOCS.removeDeployment}>What removal deletes and keeps</DocsLink>
         </AlertDialogHeader>
         <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-          {loading ? (
+          {neverConnected ? null : loading ? (
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-foreground">
               <Loader2 aria-hidden className="size-4 animate-spin" />
               <span>Preparing the removal plan…</span>
@@ -2045,8 +2051,9 @@ function DisconnectDialog({
             </>
           )}
           <p>
-            The Deployz connector stays in your customer&apos;s AWS account until they delete its
-            stack.
+            {neverConnected
+              ? "If your customer already created the Deployz connector stack, it stays in their AWS account until they delete it."
+              : "The Deployz connector stays in your customer's AWS account until they delete its stack."}
           </p>
           {/* Only for a live production deployment: a test deployment is
               free, and one that never went live never counted. The allowance
