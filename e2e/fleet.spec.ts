@@ -224,14 +224,14 @@ test('deployment detail page renders the §24 overview, infrastructure rows, and
 
   // Actions are contextual: day-2 actions (deploy/rollback/restart/config)
   // act on a running application, so they are not offered before an
-  // install. Remove deployment lives behind the overflow menu and is
-  // capability-gated (a deployment with no relay ever connected has no
-  // reported capabilities, so it is disabled).
+  // install. Remove deployment lives behind the overflow menu and stays
+  // available: a deployment with no relay ever connected is removed by the
+  // API directly, without a relay job.
   await expect(page.getByRole('button', { name: 'Deploy Update' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Configuration' })).toHaveCount(0);
   await page.getByRole('button', { name: 'More actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Rollback' })).toHaveCount(0);
-  await expect(page.getByRole('menuitem', { name: 'Remove deployment' })).toBeDisabled();
+  await expect(page.getByRole('menuitem', { name: 'Remove deployment' })).toBeEnabled();
   await page.keyboard.press('Escape');
 
   // §24 infrastructure. A deployment nobody has installed has no observed
