@@ -5,6 +5,7 @@ import { InvitationTokenGate } from '@/components/invitation-token-gate';
 import { SecurityDetailsContent } from '@/components/security-details-content';
 import { fetchInstallData } from '@/lib/install-data';
 import { fetchPublicInstallData } from '@/lib/public-install-data';
+import { publicInstallErrorMessage } from '@/lib/public-install-types';
 
 export const metadata: Metadata = {
   title: 'Security & AWS access',
@@ -38,6 +39,14 @@ export default async function SecurityDetailsPage({
       );
     }
     if (publicLookup?.status === 'error') return <InstallLoadError href={securityHref} />;
+    if (publicLookup?.status === 'gone') {
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">This application cannot be installed</h1>
+          <p className="max-w-md text-sm text-muted-foreground">{publicInstallErrorMessage(publicLookup.code)}</p>
+        </div>
+      );
+    }
     if (publicLookup === null) {
       return <InvitationTokenGate installLinkId={installLinkId} view="security" />;
     }

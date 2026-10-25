@@ -188,13 +188,21 @@ function aggregateEvents(
 
   const states = new Map<string, SpecDerivedComponent['state']>();
   for (const [componentId, componentEvents] of byComponent) {
+    // A failure anywhere in the history wins; completion is judged on each
+    // resource's latest event, because its history also holds the IN_PROGRESS
+    // event that preceded the COMPLETE one.
     let failed = false;
-    let allComplete = true;
+    const latestByResource = new Map<string, StackEventLike>();
     for (const event of componentEvents) {
-      const state = eventState(event.resourceStatus);
-      if (state === 'FAILED') failed = true;
-      if (state !== 'COMPLETE') allComplete = false;
+      if (eventState(event.resourceStatus) === 'FAILED') failed = true;
+      const latest = latestByResource.get(event.logicalResourceId);
+      if (!latest || event.eventAt.getTime() > latest.eventAt.getTime()) {
+        latestByResource.set(event.logicalResourceId, event);
+      }
     }
+    const allComplete = [...latestByResource.values()].every(
+      (event) => eventState(event.resourceStatus) === 'COMPLETE',
+    );
     states.set(componentId, failed ? 'FAILED' : allComplete ? 'COMPLETE' : 'IN_PROGRESS');
   }
   return states;
