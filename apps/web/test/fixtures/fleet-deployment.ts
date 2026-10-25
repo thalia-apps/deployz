@@ -17,6 +17,7 @@ export function fleetDeployment(
     awsAccountId: '1234••••••',
     currentReleaseId: null,
     previousReleaseId: null,
+    currentReleaseConfirmedAt: null,
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY',
     components: null,

@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiRequestError } from '../src/lib/api-client';
 import { TEST_DEPLOYMENT_POLL_MS } from '../src/lib/application-state';
 import type { ApplicationArchitecture, ApplicationReadiness, ReadinessFinding } from '../src/lib/readiness';
 import { fleetDeployment } from './fixtures/fleet-deployment';
@@ -477,6 +478,67 @@ describe('ready-to-share with a live link', () => {
     );
     const menuButton = container.querySelector('[data-testid="public-install-link-menu"]');
     expect(menuButton?.textContent).toContain('Manage');
+  });
+});
+
+describe('application that does not exist', () => {
+  it('shows a not-found page and neither retries nor polls', async () => {
+    vi.useFakeTimers();
+    mocks.fetchApplication.mockRejectedValue(new ApiRequestError('NOT_FOUND', 'Application not found'));
+
+    await act(async () => {
+      renderPage();
+    });
+    await act(async () => Promise.resolve());
+
+    const notFound = container.querySelector('[data-testid="application-not-found"]');
+    expect(notFound?.textContent).toContain('Application not found');
+    expect(notFound?.textContent).toContain("Not found, or you don't have access.");
+    expect(container.querySelector('[data-testid="application-status-badge"]')).toBeNull();
+    expect(container.querySelector('[role="tab"]')).toBeNull();
+    expect(container.textContent).not.toContain('Try again');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(mocks.fetchApplication).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchReadiness).not.toHaveBeenCalled();
+    expect(mocks.fetchReleases).not.toHaveBeenCalled();
+    expect(mocks.fetchPublicInstallLinks).not.toHaveBeenCalled();
+  });
+});
+
+describe('live install link after the test deployment is removed', () => {
+  it('keeps the install link and its Manage menu on the Overview', async () => {
+    CASES.find((c) => c.name === 'ready-to-test')!.arrange();
+    mocks.fetchDeploymentsForApplication.mockResolvedValue([
+      fleetDeployment({
+        deploymentType: 'TEST',
+        state: 'DELETED',
+        deletedAt: '2026-10-20T00:00:00.000Z',
+        currentReleaseConfirmedAt: '2026-10-19T00:00:00.000Z',
+      }),
+    ]);
+    mocks.fetchPublicInstallLinks.mockResolvedValue([
+      {
+        id: 'link-1',
+        url: 'https://deployz.dev/i/abc123',
+        status: 'active',
+        createdAt: '2026-08-01T00:00:00.000Z',
+        revokedAt: null,
+        recommendedSizeProfile: null,
+        minimumSizeProfile: null,
+      },
+    ]);
+
+    await act(async () => {
+      renderPage();
+    });
+    await waitForHeading();
+
+    expect(container.querySelector('[data-testid="application-status-badge"]')?.textContent).toBe('Ready to share');
+    expect(container.querySelector('[data-testid="public-install-link-menu"]')?.textContent).toContain('Manage');
   });
 });
 

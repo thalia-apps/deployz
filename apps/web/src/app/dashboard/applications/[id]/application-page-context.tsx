@@ -10,7 +10,7 @@ import {
   type ApplicationPresentation,
   type InstallLinksInput,
 } from '@/lib/application-state';
-import { errorMessage } from '@/lib/api-client';
+import { ApiRequestError, errorMessage } from '@/lib/api-client';
 import { fetchApplication, fetchApplicationPlan, triggerAnalysis, type Application } from '@/lib/applications';
 import { fetchDeploymentsForApplication, type FleetDeployment } from '@/lib/deployments';
 import { fetchPublicInstallLinks } from '@/lib/public-install-links';
@@ -37,6 +37,8 @@ export interface ApplicationPageContextValue {
   data: ApplicationPageData | null;
   /** True only while the first load is in flight. */
   loading: boolean;
+  /** True when the API says this application does not exist for the viewer. */
+  notFound: boolean;
   /** The one derived state every section of the page renders from. */
   presentation: ApplicationPresentation;
   /** Re-fetch everything now. Keeps the content on screen if it fails. */
@@ -55,8 +57,10 @@ export function useApplicationPage(): ApplicationPageContextValue {
 }
 
 async function loadApplicationPage(id: string): Promise<ApplicationPageData> {
-  const [application, readiness, deployments, installLinks, releases] = await Promise.all([
-    fetchApplication(id),
+  // First, alone: an application that does not exist makes every other
+  // request for it fail too.
+  const application = await fetchApplication(id);
+  const [readiness, deployments, installLinks, releases] = await Promise.all([
     fetchReadiness(id),
     fetchDeploymentsForApplication(id),
     // The link is one card on the page: its failure must not take the page down.
@@ -87,13 +91,23 @@ function present(
 
 export function ApplicationPageProvider({ id, children }: { id: string; children: ReactNode }) {
   const [reanalysing, setReanalysing] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [restartCount, setRestartCount] = useState(0);
   const [takingLonger, setTakingLonger] = useState(false);
   const [intervalMs, setIntervalMs] = useState(TEST_DEPLOYMENT_POLL_MS);
 
-  const fetcher = useCallback(() => loadApplicationPage(id), [id]);
+  const fetcher = useCallback(async () => {
+    try {
+      return await loadApplicationPage(id);
+    } catch (caught) {
+      if (caught instanceof ApiRequestError && caught.code === 'NOT_FOUND') setNotFound(true);
+      throw caught;
+    }
+  }, [id]);
   const poll = useStatusPoll<ApplicationPageData>({
     fetcher,
+    // A missing application stays missing: stop polling and retrying.
+    enabled: !notFound,
     intervalMs,
     // A settled state arms no timer: loaders and polling stop at once. A
     // return to the tab, `refresh()` or `reanalyse()` starts the loop again.
@@ -134,8 +148,8 @@ export function ApplicationPageProvider({ id, children }: { id: string; children
   }, [id, refresh]);
 
   const value = useMemo<ApplicationPageContextValue>(
-    () => ({ id, data: poll.data, loading: poll.loading, presentation, refresh, reanalyse, reanalysing }),
-    [id, poll.data, poll.loading, presentation, refresh, reanalyse, reanalysing],
+    () => ({ id, data: poll.data, loading: poll.loading, notFound, presentation, refresh, reanalyse, reanalysing }),
+    [id, poll.data, poll.loading, notFound, presentation, refresh, reanalyse, reanalysing],
   );
 
   return <ApplicationPageContext.Provider value={value}>{children}</ApplicationPageContext.Provider>;

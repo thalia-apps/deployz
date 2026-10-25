@@ -334,9 +334,11 @@ function InvitationsCard({
                 </div>
                 <div className="flex items-center gap-2">
                   <InvitationStatusBadge status={invitation.status} />
-                  <span className="text-xs text-muted-foreground">
-                    Expires {invitation.expiresAt ? formatDate(invitation.expiresAt) : '—'}
-                  </span>
+                  {invitation.status === 'active' || invitation.status === 'expired' ? (
+                    <span className="text-xs text-muted-foreground">
+                      Expires {invitation.expiresAt ? formatDate(invitation.expiresAt) : '—'}
+                    </span>
+                  ) : null}
                   {invitation.status === 'active' ? (
                     <Button
                       size="sm"
