@@ -44,6 +44,15 @@ function event(overrides: Partial<StackEventLike> & Pick<StackEventLike, 'logica
   };
 }
 
+/** CREATE_COMPLETE for every resource the spec gives one component. */
+function completed(componentId: string, eventAt?: Date): StackEventLike[] {
+  return (spec.ownershipRecords ?? [])
+    .filter((record) => record.componentId === componentId)
+    .map((record) =>
+      event({ logicalResourceId: record.logicalResourceId, resourceStatus: 'CREATE_COMPLETE', ...(eventAt ? { eventAt } : {}) }),
+    );
+}
+
 describe('specComponentsForStatus', () => {
   it('is undefined without a spec, and for an uncompiled spec', () => {
     expect(specComponentsForStatus(null, [], [])).toBeUndefined();
@@ -56,7 +65,7 @@ describe('specComponentsForStatus', () => {
       [],
       [
         event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_IN_PROGRESS' }),
-        event({ logicalResourceId: 'PrimaryDbInstance', resourceType: 'AWS::RDS::DBInstance', resourceStatus: 'CREATE_COMPLETE' }),
+        ...completed('primary-db'),
         event({ logicalResourceId: 'MysteryResource', resourceType: 'AWS::IAM::Policy', resourceStatus: 'CREATE_IN_PROGRESS' }),
       ],
     );
@@ -82,12 +91,7 @@ describe('specComponentsForStatus', () => {
       specRow,
       [],
       [
-        event({
-          logicalResourceId: 'PrimaryDbInstance',
-          resourceType: 'AWS::RDS::DBInstance',
-          resourceStatus: 'CREATE_COMPLETE',
-          eventAt: new Date('2026-09-18T10:05:00.000Z'),
-        }),
+        ...completed('primary-db', new Date('2026-09-18T10:05:00.000Z')),
         event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_IN_PROGRESS' }),
         event({
           logicalResourceId: 'PrimaryDbInstance',
@@ -98,6 +102,15 @@ describe('specComponentsForStatus', () => {
       ],
     );
     expect(entries?.find((entry) => entry.componentId === 'primary-db')?.state).toBe('COMPLETE');
+    expect(entries?.find((entry) => entry.componentId === 'web')?.state).toBe('IN_PROGRESS');
+  });
+
+  it('a component is not complete while one of its resources has not started', () => {
+    const entries = specComponentsForStatus(
+      specRow,
+      [],
+      completed('web').filter((entry) => entry.logicalResourceId !== 'WebService'),
+    );
     expect(entries?.find((entry) => entry.componentId === 'web')?.state).toBe('IN_PROGRESS');
   });
 
@@ -116,7 +129,7 @@ describe('specComponentsForStatus', () => {
       specRow,
       [],
       [
-        event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_COMPLETE' }),
+        ...completed('web'),
         event({
           logicalResourceId: 'WebService',
           resourceType: 'AWS::ECS::Service',
@@ -148,7 +161,7 @@ describe('specComponentsForStatus', () => {
     const entries = specComponentsForStatus(
       specRow,
       [{ key: 'runtime', label: 'Application runtime', status: 'PENDING' }],
-      [event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_COMPLETE' })],
+      completed('web'),
     );
     expect(entries).toEqual([{ componentId: 'web', label: 'Web service', state: 'COMPLETE' }]);
   });
