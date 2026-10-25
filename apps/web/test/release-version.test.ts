@@ -14,4 +14,9 @@ describe('formatReleaseVersion', () => {
   it('leaves a version that already starts with V unchanged', () => {
     expect(formatReleaseVersion('V2.0.0')).toBe('V2.0.0');
   });
+
+  it('leaves a commit-named release unchanged', () => {
+    expect(formatReleaseVersion('8b69e5d109cb')).toBe('8b69e5d109cb');
+    expect(formatReleaseVersion('8b69e5d109cb-2')).toBe('8b69e5d109cb-2');
+  });
 });

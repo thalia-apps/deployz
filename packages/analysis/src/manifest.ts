@@ -825,7 +825,8 @@ export function evaluateManifestReadiness(
       message:
         'Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose "No separate migration" in the application settings before deploying.',
     });
-  } else if (manifest.database.postgres && !manifest.migration.command) {
+  } else if (manifest.database.postgres && !manifest.migration.command && manifest.migration.mode !== 'startup') {
+    // An app that migrates itself at boot does run its schema updates on deploy.
     warnings.push({
       id: 'migration-command-missing',
       category: 'database',

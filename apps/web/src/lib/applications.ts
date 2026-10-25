@@ -91,19 +91,10 @@ export function createApplication(input: CreateApplicationInput): Promise<Applic
  * after application creation, which should benefit from the cache.
  */
 export async function triggerAnalysis(applicationId: string, options?: { force?: boolean }): Promise<void> {
-  const response = await fetch(
-    `${apiUrl}/api/applications/${encodeURIComponent(applicationId)}/analyse`,
-    {
-      method: 'POST',
-      credentials: 'include',
-      ...(options?.force
-        ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ force: true }) }
-        : {}),
-    },
-  );
-  if (!response.ok) {
-    throw new Error(`Trigger analysis failed (${response.status})`);
-  }
+  await apiRequest<unknown>(`/api/applications/${encodeURIComponent(applicationId)}/analyse`, {
+    method: 'POST',
+    ...(options?.force ? { body: { force: true } } : {}),
+  });
 }
 
 export interface UpdateApplicationInput {
@@ -118,16 +109,7 @@ export interface UpdateApplicationInput {
 }
 
 export async function updateApplication(id: string, input: UpdateApplicationInput): Promise<Application> {
-  const response = await fetch(`${apiUrl}/api/applications/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  if (!response.ok) {
-    throw new Error(`Update application failed (${response.status})`);
-  }
-  return (await response.json()) as Application;
+  return apiRequest<Application>(`/api/applications/${encodeURIComponent(id)}`, { method: 'PATCH', body: input });
 }
 
 /** Save the recommended and the minimum deployment size. The server refuses a
@@ -157,14 +139,7 @@ export async function deleteApplication(id: string): Promise<void> {
  *  plan for that tier; without it the application default is used. */
 export async function fetchApplicationPlan(id: string, profile?: InfrastructureSizeTier): Promise<DeploymentPlan> {
   const query = profile ? `?profile=${encodeURIComponent(profile)}` : '';
-  const response = await fetch(`${apiUrl}/api/applications/${encodeURIComponent(id)}/plan${query}`, {
-    credentials: 'include',
-    cache: 'no-store',
-  });
-  if (!response.ok) {
-    throw new Error(`Application plan request failed (${response.status})`);
-  }
-  return (await response.json()) as DeploymentPlan;
+  return apiRequest<DeploymentPlan>(`/api/applications/${encodeURIComponent(id)}/plan${query}`);
 }
 
 /** The application the invite form preselects: the first that can be shared

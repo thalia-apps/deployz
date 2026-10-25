@@ -369,6 +369,32 @@ describe('Create release form', () => {
     const link = container.querySelector('a[href="/dashboard/applications/app-1/config#environment-variables"]');
     expect(link?.textContent).toBe('Review configuration');
   });
+
+  it('shows the API message when the version already exists', async () => {
+    const { ApiRequestError } = await import('../src/lib/api-client');
+    mocks.createRelease.mockRejectedValue(
+      new ApiRequestError('RELEASE_VERSION_EXISTS', 'Version v1.0.0 already exists for this application. Use a different version number.'),
+    );
+
+    await openForm();
+
+    const form = container.querySelector('[data-testid="create-release-form"]') as HTMLElement;
+    const versionInput = form.querySelector('#version') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    setter.call(versionInput, 'v1.0.0');
+    versionInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const submitButton = Array.from(form.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Create release',
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      submitButton.click();
+    });
+
+    expect(container.textContent).toContain('Version v1.0.0 already exists for this application.');
+    expect(container.textContent).not.toContain("Couldn't create this release");
+  });
 });
 
 function makeUpdatePlan(infrastructureChange: DeploymentPlan['infrastructureChange']): DeploymentPlan {

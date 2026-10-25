@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { errorMessage } from '@/lib/api-client';
 import { deleteApplication, updateApplication, type Application } from '@/lib/applications';
 
 import { useApplicationPage } from '../application-page-context';
@@ -94,8 +95,8 @@ function ApplicationNameField({
       await updateApplication(application.id, { name: trimmed });
       toast.success('Application renamed.');
       await onRenamed();
-    } catch {
-      toast.error("Couldn't rename the application. Try again.");
+    } catch (caught) {
+      toast.error(errorMessage(caught, "Couldn't rename the application. Try again."));
     } finally {
       setSaving(false);
     }

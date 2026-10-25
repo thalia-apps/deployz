@@ -295,6 +295,20 @@ function factHint(fact: { source: FactSource; confidence: FindingConfidence }): 
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
+/** A Dockerfile exec-form command (`["node", "server.js"]`) reads as the
+ *  shell line it runs. Any other value is shown as detected. */
+function displayCommand(value: string): string {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((part) => typeof part === 'string')) {
+      return parsed.join(' ');
+    }
+  } catch {
+    // Not JSON: a shell-form command.
+  }
+  return value;
+}
+
 /**
  * The detected facts as display rows, in reading order. Every value is
  * plain words or a short code value — never a percentage, never AWS
@@ -304,7 +318,7 @@ export function detectedFactRows(detected: DetectedApplication): DetectedFactRow
   const command = (id: string, label: string, fact: DetectedFact<string | null>): DetectedFactRow => ({
     id,
     label,
-    value: fact.value ?? 'Not found',
+    value: fact.value !== null ? displayCommand(fact.value) : 'Not found',
     found: fact.value !== null,
     hint: fact.value !== null ? factHint(fact) : null,
     code: fact.value !== null,

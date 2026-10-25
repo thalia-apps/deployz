@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  fetchConfig,
   FIXTURE_CONFIG_CUSTOMER_ID,
   fixtureConfig,
   mergeConfig,
@@ -43,5 +44,26 @@ describe('mergeConfig (§31 precedence)', () => {
       [{ key: 'DATABASE_URL', isSecret: true, value: null }],
     );
     expect(merged[0]).toMatchObject({ source: 'customer', value: null, vendorValue: null });
+  });
+});
+
+describe('config request errors', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('carries the API message when the connector is offline', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: { code: 'RELAY_DISCONNECTED', message: 'The connector is offline.' } }), {
+          status: 409,
+        }),
+      ),
+    );
+    await expect(fetchConfig('app-1')).rejects.toMatchObject({
+      code: 'RELAY_DISCONNECTED',
+      message: 'The connector is offline.',
+    });
   });
 });

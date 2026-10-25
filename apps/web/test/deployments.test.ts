@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiRequestError } from '../src/lib/api-client';
 import {
@@ -6,6 +6,8 @@ import {
   actionErrorMessage,
   createDeploymentErrorMessage,
   existingTestDeploymentId,
+  fetchDeploymentsForApplication,
+  forceCompleteDisconnect,
   matchesRememberedCustomer,
   readinessFindingMessages,
   type RememberedCustomer,
@@ -89,6 +91,21 @@ describe('actionErrorMessage', () => {
     );
   });
 
+  it('shows the API message for a refused action with no special copy', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({ error: { code: 'INSUFFICIENT_ROLE', message: 'Only an owner or admin can do this.' } }),
+          { status: 403 },
+        ),
+      ),
+    );
+    const caught = await forceCompleteDisconnect('dep-1').catch((error: unknown) => error);
+    expect(actionErrorMessage(caught, 'fallback')).toBe('Only an owner or admin can do this.');
+    vi.unstubAllGlobals();
+  });
+
   it('falls back for any other error', () => {
     expect(actionErrorMessage(new DeploymentActionError(500, 'REQUEST_FAILED'), 'fallback')).toBe(
       'fallback',
@@ -139,5 +156,18 @@ describe('existingTestDeploymentId', () => {
       existingTestDeploymentId(new ApiRequestError('SUBSCRIPTION_REQUIRED', 'blocked', { subscriptionStatus: null })),
     ).toBeNull();
     expect(existingTestDeploymentId(new Error('nope'))).toBeNull();
+  });
+});
+
+describe('fetchDeploymentsForApplication', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('includes removed deployments, which still block removing the application', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"deployments":[]}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchDeploymentsForApplication('app-1');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/deployments?applicationId=app-1&includeDeleted=true');
   });
 });

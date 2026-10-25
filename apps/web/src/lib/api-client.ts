@@ -58,8 +58,9 @@ export async function apiRequest<T>(
 
 /** The message to show a person. Server messages are already jargon-free
  *  (§65), so they are used as-is; anything else falls back to plain copy. */
-export function errorMessage(error: unknown): string {
-  return error instanceof ApiRequestError
-    ? error.message
-    : 'Something went wrong. Try again in a moment.';
+export function errorMessage(
+  error: unknown,
+  fallback = 'Something went wrong. Try again in a moment.',
+): string {
+  return error instanceof ApiRequestError ? error.message : fallback;
 }

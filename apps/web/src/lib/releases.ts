@@ -3,7 +3,7 @@
 // never swallowed into look-alike placeholder data. §65: copy is jargon-free.
 
 import { apiUrl } from '@/lib/api-url';
-import { readSignal } from '@/lib/api-client';
+import { ApiRequestError, apiRequest, readSignal } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/list-view';
 
 export type ReleaseStatus = 'BUILDING' | 'READY' | 'FAILED' | 'UNAVAILABLE';
@@ -60,30 +60,7 @@ export async function createRelease(
   applicationId: string,
   input: CreateReleaseInput,
 ): Promise<Release> {
-  const response = await fetch(
-    `${apiUrl}/api/applications/${encodeURIComponent(applicationId)}/releases`,
-    {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        version: input.version,
-        gitSha: input.gitSha,
-      }),
-    },
-  );
-  if (!response.ok) {
-    if (response.status === 422) {
-      const body = (await response.json().catch(() => null)) as {
-        error?: { code?: string; details?: { keys?: string[] } };
-      } | null;
-      if (body?.error?.code === 'BUILD_CONFIGURATION_MISSING') {
-        throw new BuildConfigurationMissingError(body.error.details?.keys ?? []);
-      }
-    }
-    throw new Error(`Create release failed (${response.status})`);
-  }
-  const row = (await response.json()) as {
+  let row: {
     id: string;
     version: string;
     releaseStatus: ReleaseStatus;
@@ -91,6 +68,17 @@ export async function createRelease(
     gitSha: string;
     createdAt: string;
   };
+  try {
+    row = await apiRequest<typeof row>(`/api/applications/${encodeURIComponent(applicationId)}/releases`, {
+      method: 'POST',
+      body: { version: input.version, gitSha: input.gitSha },
+    });
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.code === 'BUILD_CONFIGURATION_MISSING') {
+      throw new BuildConfigurationMissingError((error.details as { keys?: string[] } | undefined)?.keys ?? []);
+    }
+    throw error;
+  }
   return {
     id: row.id,
     version: row.version,
@@ -160,12 +148,23 @@ export function installReleaseState(releases: readonly Release[]): InstallReleas
 /**
  * The first release of an application, built from the commit its analysis
  * read — the same version scheme the public install link uses (the first 12
- * characters of the SHA). Null when the analysis recorded no commit.
+ * characters of the SHA). A version is unique per application, so after a
+ * failed build of the same commit the retry gets a numbered suffix (`-2`,
+ * `-3`, …) that avoids every version in `takenVersions`. Null when the
+ * analysis recorded no commit.
  */
-export function firstReleaseInput(detectedMetadata: Record<string, unknown> | null): CreateReleaseInput | null {
+export function firstReleaseInput(
+  detectedMetadata: Record<string, unknown> | null,
+  takenVersions: readonly string[] = [],
+): CreateReleaseInput | null {
   const sha = detectedMetadata?.analysisCommitSha;
   if (typeof sha !== 'string' || sha.length === 0) return null;
-  return { version: sha.slice(0, 12), gitSha: sha };
+  const base = sha.slice(0, 12);
+  let version = base;
+  for (let attempt = 2; takenVersions.includes(version); attempt += 1) {
+    version = `${base}-${attempt}`;
+  }
+  return { version, gitSha: sha };
 }
 
 /**

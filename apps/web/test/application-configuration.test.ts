@@ -198,6 +198,20 @@ describe('Vocabulary', () => {
     });
   }
 
+  it('shows a Dockerfile exec-form start command as the command line it runs', () => {
+    const rows = detectedFactRows({ ...nothingDetected(), start: fact('["node", "server.js"]') });
+    expect(rows.find((row) => row.id === 'start')!.value).toBe('node server.js');
+  });
+
+  it('shows a missing build command as not used, but a missing start command as Needs review', () => {
+    const rows = deriveConfigurationRows(applicationFixture(), readinessFixture({ detected: nothingDetected() }));
+    const build = rows.find((row) => row.id === 'build')!;
+    const start = rows.find((row) => row.id === 'start')!;
+    expect(build.value).toBe('None');
+    expect(build.result).toEqual({ label: 'Not used', variant: 'secondary' });
+    expect(start.result).toEqual({ label: 'Needs review', variant: 'warning' });
+  });
+
   it('reports Needs review when the API sent no requirements', () => {
     const rows = deriveConfigurationRows(applicationFixture(), readinessFixture({ requirements: null }));
     const database = rows.find((row) => row.id === 'database')!;

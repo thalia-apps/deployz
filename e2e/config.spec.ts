@@ -131,6 +131,16 @@ test('config screen renders vendor defaults and customer overrides', async ({ pa
   expect(text).not.toMatch(/\b(CloudFormation|IAM|ECS|ALB|Lambda|VPC|CFN)\b/i);
 });
 
+test('a customer-scoped link opens the customer overrides, whatever tab was used last', async ({ page }) => {
+  await signUp(page);
+  const { applicationId, customerId } = await seedAppWithConfig(page);
+  await page.goto(`/dashboard/applications/${applicationId}/config`);
+  await page.getByRole('tab', { name: 'Settings' }).click();
+
+  await page.goto(`/dashboard/applications/${applicationId}/config?customer=${customerId}`);
+  await expect(page.getByTestId('config-customer-overrides')).toBeVisible();
+});
+
 test('secrets render masked — empty password inputs, never plaintext', async ({ page }) => {
   await signUp(page);
   const { applicationId, customerId } = await seedAppWithConfig(page);

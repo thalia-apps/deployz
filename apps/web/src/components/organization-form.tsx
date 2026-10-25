@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { apiUrl } from '@/lib/api-url';
 // for real (previously had no handler at all). §65: plain confirmation text,
 // no raw API vocabulary.
 export function OrganizationForm({ organization }: { organization: OrganizationInfo }) {
+  const router = useRouter();
   const [name, setName] = useState(organization.name);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -30,6 +32,7 @@ export function OrganizationForm({ organization }: { organization: OrganizationI
       const updated = (await response.json()) as OrganizationInfo;
       setName(updated.name);
       setStatus('saved');
+      router.refresh();
     } catch {
       setStatus('error');
     }

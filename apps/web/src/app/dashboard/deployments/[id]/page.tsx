@@ -976,8 +976,14 @@ function DeploymentActions({
   const canRollback = available && actionSupported(capabilities, 'rollback');
   const canRestart = available && actionSupported(capabilities, 'restart');
   const canConfig = available && actionSupported(capabilities, 'configUpdate');
+  // A deployment that never connected a relay has no capabilities yet; the
+  // API removes it directly, without a relay job.
+  const neverConnected = detail.state === 'NOT_INSTALLED' || detail.state === 'WAITING_FOR_RELAY';
   const canDisconnect =
-    !disconnecting && !removed && !busy && actionSupported(capabilities, 'disconnect');
+    !disconnecting &&
+    !removed &&
+    !busy &&
+    (neverConnected || actionSupported(capabilities, 'disconnect'));
   // Recovery for a failed FIRST install: the API refuses it once any install
   // has succeeded, so it is offered exactly where the day-2 actions are not.
   const canRetryInstall = canRetryFirstInstall(detail.state, everRan, inFlightOperation);
@@ -1561,8 +1567,8 @@ function RetryInstallDialog({
     try {
       await resetRelay(deploymentId);
       window.location.reload();
-    } catch {
-      setError("Couldn't issue a new install link. Try again.");
+    } catch (caught) {
+      setError(actionErrorMessage(caught, "Couldn't issue a new install link. Try again."));
       setAction(null);
     }
   }
@@ -1657,8 +1663,8 @@ function DisconnectStatusPanel({
       await forceCompleteDisconnect(detail.id);
       toast.success('Removal completed');
       onChanged();
-    } catch {
-      setError("Couldn't complete this removal. Try again.");
+    } catch (caught) {
+      setError(actionErrorMessage(caught, "Couldn't complete this removal. Try again."));
     } finally {
       setPending(false);
     }
@@ -1844,7 +1850,11 @@ function PurgeRetainedResources({
         size="sm"
         variant="destructive"
         className="self-start"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setConfirmText('');
+          setError(null);
+          setOpen(true);
+        }}
       >
         Delete retained data
       </Button>
@@ -1938,6 +1948,8 @@ function DisconnectDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setConfirmText('');
+    setError(null);
     setPlan({ status: 'loading' });
     fetchDeploymentPlan(deploymentId, 'destroy')
       .then((data) => {
@@ -1965,8 +1977,8 @@ function DisconnectDialog({
       await destroyDeployment(deploymentId);
       toast.success('Removal requested');
       onDone();
-    } catch {
-      setError("Couldn't remove this deployment. Try again.");
+    } catch (caught) {
+      setError(actionErrorMessage(caught, "Couldn't remove this deployment. Try again."));
     } finally {
       setPending(false);
     }
