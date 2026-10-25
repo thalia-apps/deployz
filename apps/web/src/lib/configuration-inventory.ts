@@ -216,15 +216,24 @@ interface Pools {
 
 const UNPRICED: CostSummary = { min: null, max: null, usageBased: false, unpriced: true };
 
-function takeResources(pools: Pools, kinds: readonly string[]): InventoryResource[] {
-  const taken = pools.resources.filter((resource) => kinds.includes(resource.componentKind));
-  pools.resources = pools.resources.filter((resource) => !kinds.includes(resource.componentKind));
+function takeResourcesWhere(pools: Pools, matches: (resource: DeploymentPlanAwsResource) => boolean): InventoryResource[] {
+  const taken = pools.resources.filter(matches);
+  pools.resources = pools.resources.filter((resource) => !matches(resource));
   return taken.map((resource) => ({
     id: resource.id,
     name: resource.name,
     purpose: resource.purpose,
     afterRemoval: resource.lifecycle === 'retain' ? 'Kept' : 'Removed',
   }));
+}
+
+function takeResources(pools: Pools, kinds: readonly string[]): InventoryResource[] {
+  return takeResourcesWhere(pools, (resource) => kinds.includes(resource.componentKind));
+}
+
+/** A workload's or resource's own AWS resources: the plan names them by the footprint id. */
+function takeResourcesById(pools: Pools, id: string): InventoryResource[] {
+  return takeResourcesWhere(pools, (resource) => resource.id === id);
 }
 
 /** A planned row with no cost item (no estimate, or an item missing) is unpriced, never free. */
@@ -413,6 +422,9 @@ export function deriveServiceInventory(input: {
   // each further workload.
   const workloads = footprint?.workloads ?? [];
   const web = workloads.find((workload) => workload.role === 'web') ?? null;
+  const otherWorkloads = workloads.filter((workload) => workload !== web);
+  // Taken first: a worker's service is an 'application' resource the web row would otherwise absorb.
+  const workloadResources = new Map(otherWorkloads.map((workload) => [workload.id, takeResourcesById(pools, workload.id)]));
   const webResources = takeResources(pools, WEB_RESOURCE_KINDS);
   applicationRows.push(
     emptyRow('web', components.get(web?.id ?? 'web')?.component ?? 'Web application', {
@@ -429,10 +441,10 @@ export function deriveServiceInventory(input: {
   attachUnresolved(applicationRows.find((row) => row.id === 'port'), unresolved, 'port', consumed);
 
   const workerCommand = setting('worker');
-  const otherWorkloads = workloads.filter((workload) => workload !== web);
   for (const workload of otherWorkloads) {
     const row = emptyRow(workload.id, components.get(workload.id)?.component ?? workload.label, {
       configuration: sizingText(components.get(workload.id), workload.compute.sizeLabel),
+      resources: workloadResources.get(workload.id) ?? [],
       cost: takeCost(pools, [workload.id], true),
       afterRemoval: 'Removed',
     });
@@ -505,8 +517,7 @@ export function deriveServiceInventory(input: {
 
   for (const resource of footprintResources) {
     if (handledResourceIds.has(resource.id) || resource.category === 'network') continue;
-    // 'other' is no component kind of its own — its AWS resources stay shared.
-    const resources = resource.category === 'other' ? [] : takeResources(pools, [resource.category]);
+    const resources = takeResourcesById(pools, resource.id);
     dataRows.push(
       emptyRow(resource.id, resource.label, {
         configuration: sizingText(components.get(resource.id), null),

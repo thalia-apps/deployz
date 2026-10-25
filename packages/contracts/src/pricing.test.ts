@@ -206,6 +206,32 @@ describe('estimateFootprintCost', () => {
     expect(estimate.usageDependent).toContain('One-off tasks such as migrations and scheduled jobs');
   });
 
+  it('queues and schedules are usage based and keep the estimate complete', () => {
+    const base = resolveDeploymentFootprint({ manifest: STATELESS, region: 'us-east-1' });
+    const resource = (id: string, role: string, service: string) => ({
+      id,
+      category: 'queue' as const,
+      provider: 'aws' as const,
+      service,
+      role,
+      label: id,
+      quantity: 1,
+      configuration: {},
+      lifecycle: { persistent: false, retainOnDelete: false },
+    });
+    const estimate = estimateFootprintCost({
+      ...base,
+      resources: [...base.resources, resource('orders-queue', 'queue', 'sqs'), resource('tick-schedule', 'schedule', 'eventbridge-scheduler')],
+    });
+    const baseline = estimateFootprintCost(base);
+    expect(estimate.complete).toBe(baseline.complete);
+    expect(estimate.monthlyMin).toBe(baseline.monthlyMin);
+    expect(estimate.monthlyMax).toBe(baseline.monthlyMax);
+    expect(
+      estimate.items.filter((item) => ['orders-queue', 'tick-schedule'].includes(item.resourceId)).map((item) => item.pricingStatus),
+    ).toEqual(['usage_based', 'usage_based']);
+  });
+
   it('never throws, whatever the footprint contains', () => {
     expect(() =>
       estimateFootprintCost({

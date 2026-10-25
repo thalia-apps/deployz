@@ -60,6 +60,8 @@ const BASELINE_PRICING: Readonly<Record<string, PricingAdapter>> = {
   alb: { monthly: { min: 15, max: 25 }, usageNote: 'Load balancer capacity (LCUs)' },
   'nat-gateway': { monthly: { min: 30, max: 40 }, usageNote: 'Data processed by the NAT gateway' },
   s3: { monthly: null, usageNote: 'Files stored in S3 and data transfer' },
+  sqs: { monthly: null, usageNote: 'Messages sent to and received from queues' },
+  'eventbridge-scheduler': { monthly: null, usageNote: 'Scheduled invocations' },
 };
 
 const RDS_PRICING: Readonly<Record<string, { readonly min: number; readonly max: number }>> = {

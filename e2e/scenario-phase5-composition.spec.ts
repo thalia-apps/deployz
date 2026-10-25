@@ -170,8 +170,8 @@ test.describe('phase5-composition', () => {
 
     // ── The frozen plan proves the composition: web + worker + the cleanup
     // scheduled job, an SQS queue + its DLQ, and a schedule — grouped under
-    // 'messaging', priced 'unavailable' so the estimate is honestly
-    // incomplete rather than inventing SQS/Scheduler usage. ─────────────────
+    // 'messaging', priced 'usage_based' rather than inventing SQS/Scheduler
+    // usage. ─────────────────
     const plan = (await buildApi(request).getPlan(deploymentId, 'install')) as unknown as PlanResponse;
     const workloadRoles = plan.footprint.workloads.map((workload) => ({ id: workload.id, role: workload.role }));
     expect(workloadRoles).toHaveLength(3);
@@ -191,12 +191,12 @@ test.describe('phase5-composition', () => {
     const database = plan.footprint.resources.find((resource) => resource.id === 'database')!;
     expect(database.configuration).toMatchObject({ engine: 'mysql', engineVersion: '8.0' });
 
-    expect(plan.costEstimate.complete).toBe(false);
+    expect(plan.costEstimate.complete).toBe(true);
     const costItemStatus = (resourceId: string): string | undefined =>
       plan.costEstimate.items.find((item) => item.resourceId === resourceId)?.pricingStatus;
-    expect(costItemStatus('orders-queue')).toBe('unavailable');
-    expect(costItemStatus('orders-queue-dlq')).toBe('unavailable');
-    expect(costItemStatus('cleanup-schedule')).toBe('unavailable');
+    expect(costItemStatus('orders-queue')).toBe('usage_based');
+    expect(costItemStatus('orders-queue-dlq')).toBe('usage_based');
+    expect(costItemStatus('cleanup-schedule')).toBe('usage_based');
 
     const messagingComponents = plan.components.filter((c) => c.group === 'messaging');
     expect(messagingComponents.map((c) => c.componentId).sort()).toEqual(
