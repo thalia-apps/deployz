@@ -427,6 +427,32 @@ describe('DELETE /api/customers/:id — safety guards', () => {
     expect(rows).toHaveLength(0);
   });
 
+  it('removes a customer that holds unused invitations, and the invitations with it', async () => {
+    const application = await insertApplication(db, orgA.organizationId, { repoFullName: 'acme/invited-app' });
+    const customer = await insertCustomer(db, orgA.organizationId);
+    for (const revokedAt of [null, new Date()]) {
+      await db.insert(schema.publicInstallLinks).values({
+        organizationId: orgA.organizationId,
+        applicationId: application.id,
+        customerId: customer.id,
+        tokenHash: crypto.randomUUID(),
+        enabled: true,
+        revokedAt,
+      });
+    }
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/customers/${customer.id}`,
+      headers: { cookie: orgA.cookie },
+    });
+    expect(response.statusCode).toBe(204);
+    const links = await db
+      .select()
+      .from(schema.publicInstallLinks)
+      .where(eq(schema.publicInstallLinks.customerId, customer.id));
+    expect(links).toHaveLength(0);
+  });
+
   it('refuses a customer that has a HEALTHY deployment (409 CUSTOMER_HAS_DEPLOYMENTS)', async () => {
     const application = await insertApplication(db, orgA.organizationId);
     const customer = await insertCustomer(db, orgA.organizationId);
