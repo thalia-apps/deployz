@@ -128,6 +128,43 @@ describe('resolveDeploymentFootprint', () => {
     expect(footprint.workloads[1]!.label).toBe('Worker email-worker');
   });
 
+  it('scheduled jobs, queues and schedules resolve usage-billed footprint entries (Phase 5)', () => {
+    const footprint = resolveDeploymentFootprint({
+      region: null,
+      manifest: manifestWith({
+        queues: [
+          {
+            id: 'orders-queue',
+            envBindings: [{ name: 'ORDERS_QUEUE_URL', kind: 'url' }],
+            producers: ['web'],
+            consumers: ['worker'],
+            deadLetter: { maxReceiveCount: 3, envBindings: [], producers: [], consumers: [] },
+            source: 'compose.yaml',
+          },
+        ],
+        scheduledJobs: [
+          {
+            id: 'cleanup',
+            command: 'node cleanup.js',
+            schedule: { type: 'cron', cron: '0 3 * * *' },
+            timezone: null,
+            source: 'compose.yaml',
+          },
+        ],
+      }),
+    });
+    expect(footprint.workloads.map((workload) => [workload.id, workload.role])).toEqual([
+      ['web', 'web'],
+      ['cleanup', 'scheduled-job'],
+    ]);
+    expect(footprint.resources.slice(-3).map((resource) => [resource.id, resource.service, resource.role])).toEqual([
+      ['orders-queue', 'sqs', 'queue'],
+      ['orders-queue-dlq', 'sqs', 'queue'],
+      ['cleanup-schedule', 'eventbridge-scheduler', 'schedule'],
+    ]);
+    expect(deploymentFootprintSchema.parse(footprint)).toEqual(footprint);
+  });
+
   it('a manifest database engine of mysql resolves a real rds-mysql footprint row (Phase 4B)', () => {
     const WITH_MYSQL = manifestWith({
       database: { postgres: true, engine: 'mysql' },

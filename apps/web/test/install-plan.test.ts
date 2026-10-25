@@ -103,6 +103,25 @@ describe('installPlanRows', () => {
   });
 });
 
+describe('installPlanRows for workers, queues and schedules', () => {
+  it('presents them in their groups with a plain purpose', () => {
+    const rows = installPlanRows(
+      plan({
+        components: [
+          { kind: 'worker', name: 'Background worker', action: 'CREATE', lifecycle: 'delete', componentId: 'worker', group: 'application' },
+          { kind: 'queue', name: 'Orders queue', action: 'CREATE', lifecycle: 'delete', componentId: 'orders-queue', group: 'messaging' },
+          { kind: 'schedule', name: 'Schedule for tick', action: 'CREATE', lifecycle: 'delete', componentId: 'tick-schedule', group: 'messaging' },
+        ],
+      }),
+    );
+    expect(rows.map((row) => [row.name, row.group, row.whatHappens])).toEqual([
+      ['Background worker', 'application', 'Runs background work for your application'],
+      ['Orders queue', 'messaging', 'Passes work between application components'],
+      ['Schedule for tick', 'messaging', 'Starts scheduled jobs'],
+    ]);
+  });
+});
+
 describe('installPlanRetentionNote', () => {
   it('is null when the plan is unavailable', () => {
     expect(installPlanRetentionNote(null)).toBeNull();

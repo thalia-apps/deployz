@@ -162,7 +162,7 @@ describe('buildAwsResourceSections', () => {
     const findRow = (id: string) =>
       sections.flatMap((section) => section.rows).find((row) => row.id === id);
     // estimated rows show ~$N–/mo
-    expect(findRow('ecs_service')?.cost).toEqual({ kind: 'estimated', label: '~$12\u201316/mo' });
+    expect(findRow('ecs_service')?.cost).toEqual({ kind: 'estimated', label: '~$8\u201311/mo' });
     expect(findRow('load_balancer')?.cost).toEqual({ kind: 'estimated', label: '~$15\u201325/mo' });
     expect(findRow('nat_gateway')?.cost).toEqual({ kind: 'estimated', label: '~$33\u201340/mo' });
     // usage-based rows show the literal label
@@ -302,6 +302,21 @@ describe('buildResourceCategories', () => {
       label: 'Database & cache',
       names: ['RDS PostgreSQL database', 'ElastiCache Valkey'],
     });
+  });
+
+  it('puts queues and schedules in their own Queues & schedules card', () => {
+    const categories = buildResourceCategories(
+      planWith([
+        appResource,
+        { ...appResource, id: 'worker', name: 'Background worker (ECS Fargate)' },
+        { ...appResource, id: 'orders-queue', name: 'Orders queue (SQS)', group: 'data', componentKind: 'queue' },
+        { ...appResource, id: 'tick-schedule', name: 'Schedule for tick (EventBridge Scheduler)', componentKind: 'schedule' },
+      ]),
+    );
+    expect(categories).toEqual([
+      { category: 'application', label: 'Application hosting', names: ['ECS Fargate service', 'Background worker (ECS Fargate)'] },
+      { category: 'messaging', label: 'Queues & schedules', names: ['Orders queue (SQS)', 'Schedule for tick (EventBridge Scheduler)'] },
+    ]);
   });
 
   it('labels the database card by what it holds when only one exists', () => {

@@ -1,5 +1,5 @@
 import type { DeploymentPlan } from '@deployz/contracts';
-import { ChevronDown, Database, HardDrive, Server, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Database, HardDrive, ListChecks, Server, ShieldCheck, type LucideIcon } from 'lucide-react';
 
 import { AwsResourcesTable } from '@/components/aws-resources-table';
 import { BeforeYouDeploySection } from '@/components/before-you-deploy-section';
@@ -19,6 +19,7 @@ const CATEGORY_ICON: Record<ResourceCategory, LucideIcon> = {
   application: Server,
   database: Database,
   storage: HardDrive,
+  messaging: ListChecks,
   network_security: ShieldCheck,
 };
 

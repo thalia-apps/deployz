@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { INFRASTRUCTURE_COMPONENT_DISPLAY } from './infrastructure.js';
 import { INFRASTRUCTURE_COMPONENTS, requiredInfrastructureComponents } from './components.js';
 import { deploymentPlanAwsResourceSchema, requiredAwsResources, toPlanAwsResource } from './aws-resources.js';
-import { resolveDeploymentFootprint, deploymentFootprintSchema } from './footprint.js';
-import type { DeploymentFootprint } from './footprint.js';
+import type { DeploymentPlanAwsResource } from './aws-resources.js';
+import { declaredParts, resolveDeploymentFootprint, deploymentFootprintSchema } from './footprint.js';
+import type { DeclaredPart, DeploymentFootprint } from './footprint.js';
 import { estimateFootprintCost, footprintCostEstimateSchema } from './pricing.js';
 import type { FootprintCostEstimate } from './pricing.js';
 import type { InfrastructureComponentDefinition } from './components.js';
 import type { ApplicationGraph } from './application-graph.js';
+import { PLAN_COMPONENT_GROUP_BY_KIND } from './plan-components.js';
 import type { DeploymentManifest } from './manifest.js';
 // Value imports from './index.js' are used ONLY inside function bodies below
 // (never at this module's top level) — `plan.ts` is re-exported from
@@ -41,9 +43,9 @@ export type PlanAction = z.infer<typeof planActionSchema>;
 export const planComponentActionSchema = z.enum(['CREATE', 'UPDATE', 'UNCHANGED', 'DELETE', 'RETAIN']);
 export type PlanComponentAction = z.infer<typeof planComponentActionSchema>;
 
-// 'worker', 'queue' and 'schedule' are wire-level only for now: no builder
-// emits them yet, but Phase 4 presentation fixtures and the spec-derived
-// component builder (plan-components.ts) need them to be valid kinds.
+// 'worker', 'queue' and 'schedule' describe a manifest's declared workers,
+// queues and scheduled jobs (asyncPlanEntries) and the spec-derived
+// component builder (plan-components.ts).
 export const planComponentKindSchema = z.enum([
   'application',
   'endpoint',
@@ -260,6 +262,58 @@ function footprintFor(input: {
   return { footprint, costEstimate: estimateFootprintCost(footprint) };
 }
 
+const ASYNC_PART_PLAN: Readonly<
+  Record<DeclaredPart['kind'], { kind: 'worker' | 'queue' | 'schedule'; awsSuffix: string; purpose: string }>
+> = {
+  worker: { kind: 'worker', awsSuffix: 'ECS Fargate', purpose: 'Runs the background process and restarts it if it stops' },
+  'scheduled-job': {
+    kind: 'worker',
+    awsSuffix: 'ECS Fargate task',
+    purpose: 'Runs the scheduled job each time its schedule starts it',
+  },
+  queue: { kind: 'queue', awsSuffix: 'SQS', purpose: 'Holds messages for the application to process in the background' },
+  'dead-letter-queue': {
+    kind: 'queue',
+    awsSuffix: 'SQS',
+    purpose: 'Keeps messages that could not be processed so they can be inspected',
+  },
+  schedule: {
+    kind: 'schedule',
+    awsSuffix: 'EventBridge Scheduler',
+    purpose: 'Starts the scheduled job at the times the application declares',
+  },
+};
+
+/**
+ * The components and AWS resources of the manifest's declared workers,
+ * scheduled jobs, queues and schedules. Ids match the footprint, so a row
+ * finds its cost item. Empty for an application without any of them.
+ */
+function asyncPlanEntries(manifest: DeploymentManifest): {
+  components: DeploymentPlanComponent[];
+  awsResources: DeploymentPlanAwsResource[];
+} {
+  const parts = declaredParts(manifest).map((part) => ({ part, plan: ASYNC_PART_PLAN[part.kind] }));
+  return {
+    components: parts.map(({ part, plan }) => ({
+      kind: plan.kind,
+      name: part.name,
+      action: 'CREATE',
+      lifecycle: 'delete',
+      componentId: part.id,
+      group: PLAN_COMPONENT_GROUP_BY_KIND[plan.kind],
+    })),
+    awsResources: parts.map(({ part, plan }) => ({
+      id: part.id,
+      name: `${part.name} (${plan.awsSuffix})`,
+      purpose: plan.purpose,
+      group: plan.kind === 'queue' ? 'data' : 'compute_networking',
+      componentKind: plan.kind === 'worker' ? 'application' : plan.kind,
+      lifecycle: 'delete',
+    })),
+  };
+}
+
 /** INSTALL plan — every required component is CREATE. */
 export function buildInstallPlan(input: {
   manifest: DeploymentManifest;
@@ -270,12 +324,16 @@ export function buildInstallPlan(input: {
   compiledFootprint?: DeploymentFootprint;
 }): DeploymentPlan {
   const profile = manifestRequirements(input.manifest);
+  const asyncEntries = asyncPlanEntries(input.manifest);
   return {
     schemaVersion: DEPLOYMENT_PLAN_SCHEMA_VERSION,
     action: 'INSTALL',
     region: input.region,
-    components: requiredInfrastructureComponents(profile).map((component) => toPlanComponent(component, 'CREATE')),
-    awsResources: requiredAwsResources(profile).map(toPlanAwsResource),
+    components: [
+      ...requiredInfrastructureComponents(profile).map((component) => toPlanComponent(component, 'CREATE')),
+      ...asyncEntries.components,
+    ],
+    awsResources: [...requiredAwsResources(profile).map(toPlanAwsResource), ...asyncEntries.awsResources],
     ...footprintFor({
       manifest: input.manifest,
       region: input.region,
