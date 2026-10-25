@@ -77,6 +77,30 @@ describe('specComponentsForStatus', () => {
     }
   });
 
+  it('a resource whose latest event is COMPLETE is complete, despite its earlier IN_PROGRESS event', () => {
+    const entries = specComponentsForStatus(
+      specRow,
+      [],
+      [
+        event({
+          logicalResourceId: 'PrimaryDbInstance',
+          resourceType: 'AWS::RDS::DBInstance',
+          resourceStatus: 'CREATE_COMPLETE',
+          eventAt: new Date('2026-09-18T10:05:00.000Z'),
+        }),
+        event({ logicalResourceId: 'WebService', resourceType: 'AWS::ECS::Service', resourceStatus: 'CREATE_IN_PROGRESS' }),
+        event({
+          logicalResourceId: 'PrimaryDbInstance',
+          resourceType: 'AWS::RDS::DBInstance',
+          resourceStatus: 'CREATE_IN_PROGRESS',
+          eventAt: new Date('2026-09-18T10:01:00.000Z'),
+        }),
+      ],
+    );
+    expect(entries?.find((entry) => entry.componentId === 'primary-db')?.state).toBe('COMPLETE');
+    expect(entries?.find((entry) => entry.componentId === 'web')?.state).toBe('IN_PROGRESS');
+  });
+
   it('a genuine failure wins FAILED; cancellation debris never does', () => {
     const failed = specComponentsForStatus(
       specRow,
