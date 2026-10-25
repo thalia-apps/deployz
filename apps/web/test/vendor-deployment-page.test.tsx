@@ -9,6 +9,7 @@ import type {
   FleetDeploymentDetail,
   InfrastructureComponent,
   InfrastructureResource,
+  InfrastructureResponse,
 } from '../src/lib/deployments';
 import {
   operationalComponentStatus,
@@ -115,17 +116,23 @@ describe('operational infrastructure status', () => {
 });
 
 describe('InfrastructureSummary', () => {
-  function detail(state: string): FleetDeploymentDetail {
+  function detail(state: string, cleanupState: string | null = null): FleetDeploymentDetail {
     return {
       id: 'dep-1',
       state,
+      cleanupState,
+      jobs: [],
       currentReleaseId: 'rel-1',
       relayStatus: 'CONNECTED',
       lastHealthAt: null,
     } as unknown as FleetDeploymentDetail;
   }
 
-  function render(state: string): string {
+  function render(
+    state: string,
+    overrides: Partial<InfrastructureResponse> = {},
+    cleanupState: string | null = null,
+  ): string {
     const data = makeInfrastructureResponse({
       summary: { status: 'retained', componentCount: 1, technicalResourceCount: 3 },
       components: [storage(AFTER_RETRY)],
@@ -138,9 +145,10 @@ describe('InfrastructureSummary', () => {
         missing: [],
         unexpected: [],
       },
+      ...overrides,
     });
     const html = renderToString(
-      <InfrastructureSummary detail={detail(state)} infrastructure={data} infrastructureError={false} />,
+      <InfrastructureSummary detail={detail(state, cleanupState)} infrastructure={data} infrastructureError={false} />,
     );
     return new JSDOM(html).window.document.body.textContent ?? '';
   }
@@ -152,6 +160,22 @@ describe('InfrastructureSummary', () => {
     expect(text).toContain('Cache');
     expect(text).toContain('Not required');
     expect(text).toContain('View components and 2 AWS resources');
+  });
+
+  it('says the connector is disconnected, not online, once Delete retained data finished', () => {
+    const text = render('DELETED', {}, 'COMPLETE');
+    expect(text).toContain('Disconnected · access revoked');
+    expect(text).not.toContain('Online');
+  });
+
+  it('labels a snapshot from a disconnected relay as the last known state', () => {
+    const text = render('DELETING', {
+      connectionState: 'disconnected',
+      summary: { status: 'deleting', componentCount: 1, technicalResourceCount: 3 },
+      components: [{ ...storage(AFTER_RETRY), status: 'deleting' }],
+    });
+    expect(text).toContain('Last known: Services are being removed.');
+    expect(text).toContain('Showing the last verified state');
   });
 });
 

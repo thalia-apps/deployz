@@ -557,7 +557,12 @@ function DetailBody({
 function DeploymentMetadata({ detail }: { detail: FleetDeploymentDetail }) {
   const created = new Date(detail.createdAt);
   const regionName = REGION_LABELS[detail.region as Region];
-  const release = runningReleaseDisplay(detail.version, detail.deploymentStatus.servingRelease.confirmed);
+  const { servingRelease, statusUpdatesUnavailable, stage } = detail.deploymentStatus;
+  const release = runningReleaseDisplay(
+    detail.version,
+    servingRelease.confirmed,
+    !statusUpdatesUnavailable && stage !== 'FAILED',
+  );
 
   return (
     <section aria-labelledby="overview">

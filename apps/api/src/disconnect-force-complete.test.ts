@@ -468,6 +468,10 @@ describe('disconnect force-complete + persisted liveness', () => {
       .update(schema.deploymentJobs)
       .set({ state: 'RUNNING', startedAt: new Date() })
       .where(eq(schema.deploymentJobs.id, jobId));
+    await db
+      .update(schema.deployments)
+      .set({ relayStatus: 'CONNECTED' })
+      .where(eq(schema.deployments.id, eligible.id));
     const result = await app.inject({
       method: 'POST',
       url: `/api/relay/commands/${jobId}/result`,
@@ -485,6 +489,7 @@ describe('disconnect force-complete + persisted liveness', () => {
     const [deployment] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, eligible.id));
     expect(deployment?.state).toBe('DELETED');
     expect(deployment?.cleanupState).toBe('COMPLETE');
+    expect(deployment?.relayStatus).toBe('DISCONNECTED');
 
     const events = await db
       .select({ eventType: schema.eventLogs.eventType })

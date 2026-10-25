@@ -923,7 +923,7 @@ test('removed with retained resources: the outcome, the warning, and the purge a
 test('relay gone quiet: lost contact, not failure, with the last confirmed state', async ({
   page,
 }) => {
-  const { headline, hero, infrastructure } = await open(page, {
+  const { headline, hero, overview, infrastructure } = await open(page, {
     detail: detail({
       relayStatus: 'DISCONNECTED',
       healthStatus: 'UNKNOWN',
@@ -943,6 +943,10 @@ test('relay gone quiet: lost contact, not failure, with the last confirmed state
   await expect(hero).toContainText('Your application may still be running');
   await expect(hero).toContainText('Status updates unavailable');
   await expect(infrastructure).toContainText('Showing the last verified state');
+  await expect(infrastructure).toContainText('Last known:');
+  await expect(hero.getByText('HTTPS active', { exact: true })).toHaveCount(0);
+  await expect(overview).toContainText('Last confirmed v1.14.2');
+  await expect(overview).not.toContainText('Verifying…');
   await shoot(page, 'lost-contact');
 });
 
