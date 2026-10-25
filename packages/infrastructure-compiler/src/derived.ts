@@ -43,7 +43,7 @@ export function deriveFootprint(input: {
   const hasRedis = ir.resources.some((r) => r.capabilityKey === CAPABILITY_KEYS.ELASTICACHE_VALKEY);
 
   const workloadLabel = (kind: string): string =>
-    kind === 'web' ? 'Web application' : kind === 'worker' ? 'Background worker' : kind === 'scheduled-job' ? 'Scheduled job' : kind;
+    kind === 'web' ? 'Web application' : kind === 'worker' ? 'Background worker' : kind === 'scheduled-job' ? 'Scheduled job' : kind === 'migration' ? 'Database migration' : kind;
 
   const workloads: FootprintWorkload[] = ir.workloads.map((w) => ({
     id: w.componentId,

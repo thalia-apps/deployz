@@ -127,6 +127,17 @@ describe('InvitationDialog', () => {
     expect(submitButton().disabled).toBe(false);
   });
 
+  it('points the Application and Region labels at their select triggers', async () => {
+    await renderDialog();
+
+    for (const text of ['Application', 'Recommended AWS region']) {
+      const label = Array.from(document.body.querySelectorAll('label')).find((l) =>
+        l.textContent?.startsWith(text),
+      ) as HTMLLabelElement;
+      expect(document.getElementById(label.htmlFor)?.getAttribute('role')).toBe('combobox');
+    }
+  });
+
   it('posts the invitation body and reveals one URL that carries the one-time token', async () => {
     await renderDialog();
     await selectApplication('Acme App');

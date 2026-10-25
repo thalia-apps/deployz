@@ -143,7 +143,7 @@ export function InvitationDialog({
               <div className="flex flex-col gap-2">
                 <Label htmlFor={appId}>Application</Label>
                 <Select value={applicationId} onValueChange={chooseApplication} required>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id={appId} className="w-full">
                     <SelectValue placeholder="Select an application" />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,7 +171,7 @@ export function InvitationDialog({
                   Recommended AWS region <span className="text-muted-foreground">(Optional)</span>
                 </Label>
                 <Select value={recommendedRegion} onValueChange={setRecommendedRegion}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id={regionId} className="w-full">
                     <SelectValue placeholder="No recommendation" />
                   </SelectTrigger>
                   <SelectContent>
