@@ -1068,6 +1068,8 @@ const EVER_INSTALLED_STATES = new Set<DeploymentState>(['HEALTHY', 'UPDATING', '
 const REMOVED_STATES = new Set<DeploymentState>(['DELETING', 'DELETED']);
 const PROVISIONING_JOB_STATES = new Set<JobState>(['RUNNING', 'WAITING']);
 const SUCCEEDED_JOB_STATES = new Set<JobState>(['SUCCEEDED', 'SUCCESS']);
+const IN_FLIGHT_JOB_STATES = new Set<JobState>(['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']);
+const DAY_TWO_JOB_TYPES = new Set<JobType>(['DEPLOY_RELEASE', 'ROLLBACK', 'RESTART', 'CONFIG_UPDATE']);
 
 // ---------------------------------------------------------------------------
 // §10.1 layered runtime health — read from the SAME observedState the relay's
@@ -1195,6 +1197,12 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
     jobs.some((job) => job.type === 'INSTALL' && SUCCEEDED_JOB_STATES.has(job.state));
   const httpsUrl = appUrl !== null && appUrl.startsWith('https://');
   const releaseVerdict = readReleaseVerdict(deployment.observedState);
+  // A rollout in progress fails every heartbeat's release evidence, but a
+  // release already confirmed serving keeps serving (a failed update keeps
+  // the previous release live), so a running day-2 job does not undo READY.
+  const dayTwoInFlight =
+    deployment.currentReleaseConfirmedAt !== null &&
+    jobs.some((job) => DAY_TWO_JOB_TYPES.has(job.type) && IN_FLIGHT_JOB_STATES.has(job.state));
   const statusUpdatesUnavailable = deployment.relayStatus === 'DISCONNECTED' || deployment.state === 'DISCONNECTED';
 
   let stage: DeploymentStage;
@@ -1226,7 +1234,7 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
     // was last confirmed — regressing a deployment's stage because the
     // relay went quiet would read as the deployment breaking, when nothing
     // about the deployment itself changed.
-    if (deployment.healthStatus === 'HEALTHY' && httpsUrl && releaseVerdict?.pass === true) {
+    if (deployment.healthStatus === 'HEALTHY' && httpsUrl && (releaseVerdict?.pass === true || dayTwoInFlight)) {
       stage = 'READY';
       currentActivity = STAGE_ACTIVITY.READY;
     } else {

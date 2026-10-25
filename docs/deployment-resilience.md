@@ -845,7 +845,11 @@ success leaves the deployment INSTALLING, and only the relay's runtime
 health verification (ECS running counts + ALB target health, reported via
 heartbeat) advances it to HEALTHY. The derived customer/vendor stage shows
 READY only with confirmed health, passing release evidence and an https
-URL. The INSTALLING to HEALTHY and FAILED to HEALTHY transitions need the
+URL. One exception: while a deploy, rollback, restart or configuration
+update runs on a deployment whose release was already confirmed serving,
+the rollout fails the release evidence, but the stage stays READY as long
+as health and the https URL hold, because the previous release keeps
+serving. When the job settles, the stage follows the evidence again. The INSTALLING to HEALTHY and FAILED to HEALTHY transitions need the
 same passing evidence; the relay's `healthStatus` alone never earns them. A
 connector that sends no `releaseEvidence` cannot promote or verify
 readiness, and the status reports `connector.upgradeRequired`. When every
