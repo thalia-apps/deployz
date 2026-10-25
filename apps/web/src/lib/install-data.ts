@@ -51,6 +51,8 @@ interface InstallData {
   installLinkExpiresAt: string | null;
   /** waitingForRelay past the relay-staleness window — guidance, never a failure. */
   relayStuck: boolean;
+  /** A verified purge deleted the retained data; only the connector stack remains. Absent from an older API. */
+  retainedDataDeleted?: boolean;
   /** §24 component view, same derivation the fleet row uses. Null until enrolled. */
   components: Record<string, string> | null;
 }

@@ -122,8 +122,11 @@ behind each step is in [`../architecture.md`](../architecture.md).
    the Deployz connector stack), says that retained resources can keep
    costing money, and explains how to delete them (ask the publisher to
    delete retained data, or use the AWS console; keep the connector until
-   then). The page has no cleanup state, so it never says what was actually
-   deleted (UX-BACKEND-001).
+   then). After the vendor's **Delete retained data** completes (a purge the
+   relay verified), the page says that only the connector stack remains and
+   that the customer deletes it. A forced or failed removal still shows the
+   "can remain" copy, because the page cannot tell it from a normal one
+   (UX-BACKEND-001).
 10. **What the customer must delete themselves**: always the bootstrap
     (connector) stack. If the vendor never purges: the retained RDS instance,
     its secrets, the bucket, and the network objects the retained database

@@ -231,6 +231,7 @@ export default async function InstallPage({
             retainedNames={installPlanRetainedComponents(data.plan).map((component) => component.name)}
             region={data.region}
             connectorStackName={data.bootstrapStackName}
+            retainedDataDeleted={data.retainedDataDeleted === true}
           />
         ) : (
           // CONNECTING through READY, plus a terminal FAILED, all live here:
@@ -366,11 +367,11 @@ function ReferenceRow({ label, value }: { label: string; value: string | null })
 }
 
 /**
- * The customer's removed page (ux-guidelines §7). This data carries no
- * cleanup state for a removed deployment (UX-BACKEND-001), so it cannot tell
- * a normal removal from one after the retained data was deleted, or from a
- * forced one. It names what CAN remain, from the deployment's plan, and never
- * claims a cleanup Deployz did not verify.
+ * The customer's removed page (ux-guidelines §7). After a purge the relay
+ * verified, only the connector stack remains. Otherwise it names what CAN
+ * remain, from the deployment's plan, and never claims a cleanup Deployz did
+ * not verify: a forced or failed removal looks like a normal one here
+ * (UX-BACKEND-001).
  */
 function RemovedDeployment({
   deleting,
@@ -378,12 +379,14 @@ function RemovedDeployment({
   retainedNames,
   region,
   connectorStackName,
+  retainedDataDeleted,
 }: {
   deleting: boolean;
   publisherName: string;
   retainedNames: string[];
   region: string;
   connectorStackName: string | null;
+  retainedDataDeleted: boolean;
 }) {
   if (deleting) {
     return (
@@ -409,9 +412,11 @@ function RemovedDeployment({
         unexpected.
       </p>
       <div className="flex flex-col gap-1.5">
-        <h3 className="text-sm font-medium">What can remain in your AWS account</h3>
+        <h3 className="text-sm font-medium">
+          {retainedDataDeleted ? 'What remains in your AWS account' : 'What can remain in your AWS account'}
+        </h3>
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-          {retainedNames.map((name) => (
+          {(retainedDataDeleted ? [] : retainedNames).map((name) => (
             <li key={name}>{name}</li>
           ))}
           <li>
@@ -429,12 +434,21 @@ function RemovedDeployment({
           </li>
         </ul>
       </div>
-      <p className="text-sm text-muted-foreground">{RETENTION_CHARGES_NOTE}</p>
-      <p className="text-sm text-muted-foreground">
-        To delete them, ask {publisherName} or use the AWS console. Keep the connector stack until
-        the retained data is deleted, because deletion runs through it. Then delete the connector
-        stack.
-      </p>
+      {retainedDataDeleted ? (
+        <p className="text-sm text-muted-foreground">
+          {publisherName} deleted the data that was kept after removal. To finish, delete the
+          connector stack in AWS CloudFormation.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">{RETENTION_CHARGES_NOTE}</p>
+          <p className="text-sm text-muted-foreground">
+            To delete them, ask {publisherName} or use the AWS console. Keep the connector stack
+            until the retained data is deleted, because deletion runs through it. Then delete the
+            connector stack.
+          </p>
+        </>
+      )}
       <DocsLink href={DOCS.customerRemove}>How to delete what remains</DocsLink>
       <Button asChild variant="outline" className="w-fit">
         <a
