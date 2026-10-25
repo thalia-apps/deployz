@@ -1226,16 +1226,16 @@ describe('footprint + pricing (phase 5)', () => {
     expect(scheduledJobWorkload.label).toBe('Scheduled job');
   });
 
-  it('never invents SQS/EventBridge Scheduler usage volume — the estimate is marked incomplete', () => {
+  it('never invents SQS/EventBridge Scheduler usage volume — they are usage-based, like S3', () => {
     const { footprint } = compileDeployzInfrastructure({ ir: makePhase5Ir(), region: null });
     const estimate = estimateFootprintCost(footprint);
-    expect(estimate.complete).toBe(false);
+    expect(estimate.complete).toBe(true);
     const sqsItems = estimate.items.filter((i) => footprint.resources.some((r) => r.service === 'sqs' && r.id === i.resourceId));
     const schedulerItems = estimate.items.filter((i) => footprint.resources.some((r) => r.service === 'eventbridge-scheduler' && r.id === i.resourceId));
     expect(sqsItems.length).toBeGreaterThan(0);
     expect(schedulerItems.length).toBeGreaterThan(0);
     for (const item of [...sqsItems, ...schedulerItems]) {
-      expect(item.pricingStatus).toBe('unavailable');
+      expect(item.pricingStatus).toBe('usage_based');
       expect(item.monthlyMin).toBeUndefined();
       expect(item.monthlyMax).toBeUndefined();
     }
