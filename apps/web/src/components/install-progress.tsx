@@ -185,7 +185,10 @@ export function InstallProgress({
     !failed && !ready && !waitingOnInput
       ? {
           currentActivity: status.currentActivity,
-          takingLongerThanUsual: status.takingLongerThanUsual,
+          // Before the connector reports in, Deployz cannot see AWS, so it
+          // cannot promise that AWS is still working; the page's "Still
+          // connecting" guidance covers the slow case instead.
+          takingLongerThanUsual: status.takingLongerThanUsual && status.stage !== 'WAITING_FOR_AWS',
           typicalDurationSeconds: status.typicalDurationSeconds,
           stepStartedAt: status.stepStartedAt ?? null,
           checkedAt: poll.checkedAt,

@@ -323,6 +323,24 @@ describe('InstallProgress — long-running flow', () => {
     expect(container!.textContent ?? '').toContain(TAKING_LONGER_MESSAGE);
   });
 
+  it('does not promise that AWS is still working before the connector has connected', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-18T00:00:00.000Z'));
+    const status = baseStatus({
+      stage: 'WAITING_FOR_AWS',
+      step: 'AWS_SETUP',
+      currentActivity: 'AWS is creating the Deployz connector in your account.',
+      takingLongerThanUsual: true,
+      stepStartedAt: new Date().toISOString(),
+    });
+    mocks.fetchInstallStatus.mockResolvedValue(status);
+
+    mount(baseProps({ initialStatus: status }));
+    await flush();
+
+    expect(container!.textContent ?? '').not.toContain('No action needed');
+  });
+
   it('the HTTPS step waiting on the customer keeps its fixed copy — no elapsed counter, no "still working" nudge', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-18T00:00:00.000Z'));
