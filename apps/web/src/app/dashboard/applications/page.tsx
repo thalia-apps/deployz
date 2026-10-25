@@ -8,21 +8,16 @@ import { useEffect, useState } from 'react';
 import { DocsLink } from '@/components/docs-link';
 import { RepositoryPicker } from '@/components/repository-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchApplications, type Application } from '@/lib/applications';
-import { applicationListBadge, type ApplicationPresentation } from '@/lib/application-state';
+import { applicationListBadge, STATUS_UNKNOWN_BADGE, type ApplicationPresentation } from '@/lib/application-state';
 import { fetchDeployments } from '@/lib/deployments';
 import { DOCS } from '@/lib/docs-links';
-import {
-  READINESS_STATE_PRESENTATION,
-  fetchReadiness,
-  readinessBadgeVariant,
-  readinessStateFromVerdict,
-} from '@/lib/readiness';
+import { fetchReadiness } from '@/lib/readiness';
 import { mapWithConcurrency } from '@/lib/map-with-concurrency';
 
 // Where the GitHub App setup callback sends the vendor back to
@@ -150,38 +145,37 @@ export default function ApplicationsPage() {
   );
 }
 
-// The list's own verdict ignores env decisions and deployments, so it could
-// read "Ready" for an application the page calls "Needs input" or "Test
-// failed". The page's derivation is reused, best effort: a failed fetch keeps
-// the list's own badge.
+// Each analysed application shows the badge the application page derives from
+// the same readiness and deployments. A row has no badge of its own to fall
+// back to: it shows a skeleton while loading and "Status unknown" when the
+// reads fail, never a different status.
 function ApplicationList({ applications }: { applications: Application[] }) {
   const [badges, setBadges] = useState<ReadonlyMap<string, ApplicationPresentation['badge']>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
+    const analysed = applications.filter((app) => app.analysisStatus === 'COMPLETE');
+    const show = (id: string, badge: ApplicationPresentation['badge']) => {
+      if (!cancelled) setBadges((current) => new Map(current).set(id, badge));
+    };
     void (async () => {
-      const deployments = await fetchDeployments().catch(() => null);
-      if (deployments === null) return;
-      const entries = await mapWithConcurrency(
-        applications.filter((app) => app.analysisStatus === 'COMPLETE'),
-        READINESS_FETCH_CONCURRENCY,
-        async (app) => {
-          try {
-            const readiness = await fetchReadiness(app.id);
-            const badge = applicationListBadge(
+      const deployments = await fetchDeployments({ includeDeleted: true }).catch(() => null);
+      await mapWithConcurrency(analysed, READINESS_FETCH_CONCURRENCY, async (app) => {
+        if (deployments === null) return show(app.id, STATUS_UNKNOWN_BADGE);
+        try {
+          const readiness = await fetchReadiness(app.id);
+          show(
+            app.id,
+            applicationListBadge(
               { id: app.id, name: app.name, defaultBranch: app.defaultBranch },
               readiness,
               deployments.filter((d) => d.applicationId === app.id),
-            );
-            return [app.id, badge] as const;
-          } catch {
-            return null;
-          }
-        },
-      );
-      if (!cancelled) {
-        setBadges(new Map(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null)));
-      }
+            ),
+          );
+        } catch {
+          show(app.id, STATUS_UNKNOWN_BADGE);
+        }
+      });
     })();
     return () => {
       cancelled = true;
@@ -225,7 +219,7 @@ function ApplicationRow({
 }) {
   const router = useRouter();
   const href = `/dashboard/applications/${application.id}`;
-  const label = badge?.label ?? applicationBadgeLabel(application);
+  const shown = application.analysisStatus === 'COMPLETE' ? badge : analysisBadge(application);
   return (
     <TableRow
       data-testid={`app-card-${application.id}`}
@@ -244,9 +238,13 @@ function ApplicationRow({
       </TableCell>
       <TableCell className="text-muted-foreground">{application.repoFullName}</TableCell>
       <TableCell>
-        <Badge variant={badge?.variant ?? applicationBadgeVariant(application)} data-testid={`app-card-badge-${application.id}`}>
-          {label}
-        </Badge>
+        {shown ? (
+          <Badge variant={shown.variant} data-testid={`app-card-badge-${application.id}`}>
+            {shown.label}
+          </Badge>
+        ) : (
+          <Skeleton className="h-5 w-20" />
+        )}
       </TableCell>
       <TableCell className="text-right">
         <span
@@ -261,18 +259,9 @@ function ApplicationRow({
   );
 }
 
-function applicationBadgeLabel(app: Application): string {
-  if (app.compatibilityStatus) {
-    return READINESS_STATE_PRESENTATION[readinessStateFromVerdict(app.compatibilityStatus)].label;
-  }
-  if (app.analysisStatus === 'FAILED') return 'Analysis failed';
-  return 'Analysing';
-}
-
-function applicationBadgeVariant(app: Application): BadgeVariant {
-  if (app.compatibilityStatus) {
-    return readinessBadgeVariant(readinessStateFromVerdict(app.compatibilityStatus));
-  }
-  if (app.analysisStatus === 'FAILED') return 'destructive';
-  return 'info';
+// The application page's badges for an analysis that has not completed.
+function analysisBadge(app: Application): ApplicationPresentation['badge'] {
+  if (app.analysisStatus === 'FAILED') return { label: 'Analysis failed', variant: 'destructive' };
+  if (app.analysisStatus === 'PENDING') return { label: 'Not analysed', variant: 'secondary' };
+  return { label: 'Analysing', variant: 'info' };
 }

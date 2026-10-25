@@ -39,6 +39,7 @@ function deployment(overrides: Partial<FleetDeployment> = {}): FleetDeployment {
     awsAccountId: '1234••••••',
     currentReleaseId: null,
     previousReleaseId: null,
+    currentReleaseConfirmedAt: null,
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY',
     desiredState: {},

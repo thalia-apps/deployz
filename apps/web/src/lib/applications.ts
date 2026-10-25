@@ -52,7 +52,7 @@ async function getJson<T>(path: string): Promise<T> {
 
 /** Fetch one application (§35). */
 export function fetchApplication(id: string): Promise<Application> {
-  return getJson<Application>(`/api/applications/${encodeURIComponent(id)}`);
+  return apiRequest<Application>(`/api/applications/${encodeURIComponent(id)}`);
 }
 
 /** List the org's applications (used to populate the "Application" picker
@@ -156,7 +156,7 @@ export function inviteApplicationLabel(
   app: Pick<Application, 'name' | 'analysisStatus' | 'compatibilityStatus'>,
 ): string {
   if (app.compatibilityStatus === 'READY') return app.name;
-  if (app.analysisStatus === 'COMPLETE') return `${app.name} (changes needed)`;
+  if (app.analysisStatus === 'COMPLETE') return `${app.name} (needs input)`;
   if (app.analysisStatus === 'FAILED') return `${app.name} (analysis failed)`;
   return `${app.name} (not analysed yet)`;
 }

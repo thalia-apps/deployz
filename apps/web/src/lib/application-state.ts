@@ -217,6 +217,17 @@ export function testDeploymentPhase(deployment: FleetDeployment | null): TestDep
   }
 }
 
+/** True when a test deployment that has since been removed ran its release
+ *  live: the relay observed it, so that release was verified. */
+function removedVerifiedTest(deployments: readonly FleetDeployment[]): boolean {
+  return deployments.some(
+    (d) =>
+      d.deploymentType === 'TEST' &&
+      (d.deletedAt !== null || d.state === 'DELETED') &&
+      d.currentReleaseConfirmedAt !== null,
+  );
+}
+
 /** Customer (non-test) deployments that still exist. */
 export function customerDeployments(deployments: readonly FleetDeployment[]): FleetDeployment[] {
   return deployments.filter(
@@ -268,6 +279,8 @@ const BADGES: Record<ApplicationState, { label: string; variant: ApplicationBadg
 
 // "Live" would hide a customer deployment that is failing or lost contact.
 const CUSTOMERS_NEED_ATTENTION_BADGE = { label: 'Needs attention', variant: 'warning' } as const;
+
+export const STATUS_UNKNOWN_BADGE = BADGES.unknown;
 
 const NOT_ANALYSED_BADGE = { label: 'Not analysed', variant: 'secondary' } as const;
 
@@ -448,11 +461,13 @@ function deriveInstallLink(
   unavailableReason: string | null,
   releases: Release[] | 'error',
 ): InstallLinkPresentation {
-  if (unavailableReason === null && !available) return { kind: 'hidden' };
+  // A live link is always shown: customers can still use it, so the vendor
+  // must be able to copy, disable or revoke it in every state.
+  const live = Array.isArray(links) ? (links.find((link) => (link.status as string) !== 'revoked') ?? null) : null;
+  if (unavailableReason === null && !available && live === null) return { kind: 'hidden' };
   if (links === null) return { kind: 'loading' };
   if (links === 'error') return { kind: 'error', message: INSTALL_LINK_LOAD_ERROR };
 
-  const live = links.find((link) => (link.status as string) !== 'revoked') ?? null;
   if (live) {
     const status: InstallLinkStatus =
       live.status === 'active' || live.status === 'disabled' ? live.status : 'unknown';
@@ -507,7 +522,7 @@ type Core = Pick<
  *  6. required changes are open            → configuration-required
  *  7. customer deployments exist           → customers-active
  *  8. the test deployment failed           → test-failed
- *  9. the test deployment is verified      → ready-to-share
+ *  9. the test deployment is verified, or a removed one was → ready-to-share
  * 10. no test deployment                   → ready-to-test (the card waits on
  *                                            a release that built)
  * 11. a test deployment state this build does not know → unknown
@@ -549,7 +564,8 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
   const test = latestTestDeployment(deployments);
   const phase = testDeploymentPhase(test);
   const customers = customerDeployments(deployments);
-  const setupComplete = phase === 'verified' || customers.length > 0;
+  const testedThenRemoved = test === null && removedVerifiedTest(deployments);
+  const setupComplete = phase === 'verified' || testedThenRemoved || customers.length > 0;
   const configurationHref = `/dashboard/applications/${application.id}/config`;
   const startTestHref = `/dashboard/deployments/new?applicationId=${application.id}&test=true`;
   const configureStep: SetupLifecycleStepState = required.length > 0 ? 'current' : 'done';
@@ -730,8 +746,8 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
       };
     }
 
-    if (test && phase === 'verified') {
-      const url = deploymentUrl(test);
+    if (phase === 'verified' || testedThenRemoved) {
+      const url = test ? deploymentUrl(test) : null;
       const shareInfo = describeReleaseForShare(releases, application.id);
       return {
         state: 'ready-to-share',
@@ -745,7 +761,7 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
         primaryAction: null,
         secondaryActions: [
           ...(url ? [action('open-application', 'Open test application', url, true)] : []),
-          action('view-test-deployment', 'View test deployment', deploymentHref(test)),
+          ...(test ? [action('view-test-deployment', 'View test deployment', deploymentHref(test))] : []),
           ...(shareInfo.action ? [shareInfo.action] : []),
         ],
         polling: null,

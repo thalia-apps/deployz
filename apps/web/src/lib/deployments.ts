@@ -59,6 +59,8 @@ export interface FleetDeployment {
   awsAccountId: string | null;
   currentReleaseId: string | null;
   previousReleaseId: string | null;
+  /** When the relay last observed the current release running; null until it has. */
+  currentReleaseConfirmedAt: string | null;
   relayStatus: RelayStatus;
   healthStatus: HealthStatus;
   /** Per-component health as last reported. Null until the relay reports. */

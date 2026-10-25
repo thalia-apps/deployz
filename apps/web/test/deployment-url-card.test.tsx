@@ -46,6 +46,7 @@ function detail(overrides: Partial<FleetDeploymentDetail> = {}): FleetDeployment
     awsAccountId: '1234••••••••',
     currentReleaseId: 'rel-1',
     previousReleaseId: null,
+    currentReleaseConfirmedAt: null,
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY' as HealthStatus,
     components: null,

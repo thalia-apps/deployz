@@ -70,6 +70,16 @@ test('the first application is added inline; later ones through Add application'
   await page.waitForURL('/dashboard/applications');
 });
 
+test('an application that does not exist shows a not-found page', async ({ page }) => {
+  await signUp(page);
+  await page.goto('/dashboard/applications/00000000-0000-4000-8000-000000000000');
+
+  await expect(page.getByRole('heading', { name: 'Application not found' })).toBeVisible();
+  await expect(page.getByText("Not found, or you don't have access.")).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
+  await expect(page.getByTestId('application-status-badge')).toHaveCount(0);
+});
+
 test('clicking an application row opens the application', async ({ page }) => {
   await signUp(page);
   await page.goto('/dashboard/applications');

@@ -21,7 +21,7 @@ describe('defaultInviteApplication', () => {
 describe('inviteApplicationLabel', () => {
   it('names why an application cannot be shared yet', () => {
     expect(inviteApplicationLabel(ready)).toBe('ready-app');
-    expect(inviteApplicationLabel(changes)).toBe('fix-app (changes needed)');
+    expect(inviteApplicationLabel(changes)).toBe('fix-app (needs input)');
     expect(
       inviteApplicationLabel({ name: 'x', analysisStatus: 'FAILED', compatibilityStatus: null }),
     ).toBe('x (analysis failed)');
