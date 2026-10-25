@@ -1162,7 +1162,9 @@ function buildHealthLayers(
  * `removed` is set separately (state DELETING/DELETED) and does not change
  * which of the above stages is computed — a removed deployment still carries
  * whatever stage it last earned, so both projections can render "removed"
- * chrome around a real last-known stage instead of a placeholder.
+ * chrome around a real last-known stage instead of a placeholder. Its
+ * currentActivity says the removal instead (no health or TLS activity), and
+ * takingLongerThanUsual is false.
  */
 function connectorStatus(
   upgradeRequired: boolean,
@@ -1204,6 +1206,7 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
     deployment.currentReleaseConfirmedAt !== null &&
     jobs.some((job) => DAY_TWO_JOB_TYPES.has(job.type) && IN_FLIGHT_JOB_STATES.has(job.state));
   const statusUpdatesUnavailable = deployment.relayStatus === 'DISCONNECTED' || deployment.state === 'DISCONNECTED';
+  const removed = REMOVED_STATES.has(deployment.state);
 
   let stage: DeploymentStage;
   let needsDomainSetup = false;
@@ -1382,7 +1385,8 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
     stage !== 'READY' &&
     stage !== 'FAILED' &&
     !snapshotRollingBack &&
-    !statusUpdatesUnavailable;
+    !statusUpdatesUnavailable &&
+    !removed;
   const stepTimings = buildStepTimings(deployment.stepTimings);
   const stepSnapshotCompletedAt: Partial<Record<DeploymentStep, string>> = {};
   for (const snapshotStep of ['NETWORK', 'DATABASE_STORAGE', 'REDIS', 'APPLICATION'] as const) {
@@ -1440,7 +1444,11 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
   return {
     stage,
     updatedAt: updatedAt.toISOString(),
-    currentActivity,
+    currentActivity: removed
+      ? deployment.state === 'DELETING'
+        ? 'Removing the deployment.'
+        : 'The deployment was removed.'
+      : currentActivity,
     step,
     steps,
     stepStartedAt,
@@ -1448,7 +1456,7 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
     takingLongerThanUsual,
     stepTimings,
     stepSnapshotCompletedAt,
-    ...(REMOVED_STATES.has(deployment.state) ? { removed: { state: deployment.state as 'DELETING' | 'DELETED' } } : {}),
+    ...(removed ? { removed: { state: deployment.state as 'DELETING' | 'DELETED' } } : {}),
     statusUpdatesUnavailable,
     needsDomainSetup,
     components,

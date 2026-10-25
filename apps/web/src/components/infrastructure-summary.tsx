@@ -71,6 +71,10 @@ const STATUS_ICON: Record<InfrastructureComponentStatus, ReactNode> = {
   unknown: <Circle aria-hidden className="size-4 shrink-0 text-muted-foreground/50" />,
 };
 
+// A transitional status read from a snapshot nothing is refreshing is history,
+// not activity: no spinner.
+const TRANSITIONAL_STATUSES = new Set<string>(['provisioning', 'updating', 'deleting']);
+
 const RELAY_DOT: Record<RelayStatus, string> = {
   CONNECTED: 'bg-primary',
   DISCONNECTED: 'bg-destructive',
@@ -90,7 +94,11 @@ export function InfrastructureSummary({
   const state = detail.state as DeploymentState;
   const listable = showInfrastructureRows(state, detail.currentReleaseId) || state === 'DELETED';
   const relay = (
-    <RelayLine status={detail.relayStatus} lastContact={relativeTime(detail.lastHealthAt)} />
+    <RelayLine
+      status={detail.relayStatus}
+      lastContact={relativeTime(detail.lastHealthAt)}
+      accessRevoked={state === 'DELETED' && detail.cleanupState === 'COMPLETE'}
+    />
   );
 
   if (!listable) {
@@ -146,6 +154,7 @@ export function InfrastructureSummary({
   );
   const purge = purgeProgress(detail);
   const summaryStatus = operationalSummaryStatus(infrastructure, state, purge);
+  const stale = infrastructure.connectionState === 'disconnected';
   const resourceCount = infrastructure.components.reduce(
     (total, component) => total + visibleResources(component.resources, state).length,
     0,
@@ -166,7 +175,8 @@ export function InfrastructureSummary({
           </p>
         ) : (
           <p className="flex items-center gap-2 text-sm font-medium">
-            {SUMMARY_ICON[summaryStatus]}
+            {stale && TRANSITIONAL_STATUSES.has(summaryStatus) ? SUMMARY_ICON.unknown : SUMMARY_ICON[summaryStatus]}
+            {stale ? 'Last known: ' : ''}
             {purge === 'complete' && summaryStatus === 'retained'
               ? 'Retained data was deleted.'
               : SUMMARY_LINE[summaryStatus]}
@@ -188,7 +198,7 @@ export function InfrastructureSummary({
               const label = infrastructureComponentStatusLabel({ ...component, status }, state);
               return (
                 <li key={component.kind} className="inline-flex min-w-0 items-center gap-1.5">
-                  {STATUS_ICON[status]}
+                  {stale && TRANSITIONAL_STATUSES.has(status) ? STATUS_ICON.unknown : STATUS_ICON[status]}
                   <span className="min-w-0 break-words">
                     {INFRASTRUCTURE_COMPONENT_NAME[component.kind] ?? component.name}
                   </span>
@@ -247,13 +257,29 @@ function SummaryCard({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-3 rounded-lg border px-3 py-3">{children}</div>;
 }
 
-function RelayLine({ status, lastContact }: { status: RelayStatus; lastContact: string | null }) {
+function RelayLine({
+  status,
+  lastContact,
+  accessRevoked,
+}: {
+  status: RelayStatus;
+  lastContact: string | null;
+  /** Delete retained data finished: Deployz's access to the connector is revoked. */
+  accessRevoked: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-3 text-sm first:border-t-0 first:pt-0">
-      <span className={`mx-1 size-2 shrink-0 rounded-full ${RELAY_DOT[status]}`} aria-hidden />
+      <span
+        className={`mx-1 size-2 shrink-0 rounded-full ${RELAY_DOT[accessRevoked ? 'DISCONNECTED' : status]}`}
+        aria-hidden
+      />
       <span className="font-medium">Deployz connector</span>
       <span className="ml-auto text-right text-muted-foreground" data-testid="status-updated">
-        {lastContact ? `${CONNECTOR_STATUS_LABEL[status]} · ${lastContact}` : CONNECTOR_STATUS_LABEL[status]}
+        {accessRevoked
+          ? 'Disconnected · access revoked'
+          : lastContact
+            ? `${CONNECTOR_STATUS_LABEL[status]} · ${lastContact}`
+            : CONNECTOR_STATUS_LABEL[status]}
       </span>
     </div>
   );
