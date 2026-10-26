@@ -86,7 +86,7 @@ vendor question).
 |---|---|---|
 | C# | `Environment.GetEnvironmentVariable("X") ?? throw` or `…("X")!`; `configuration["A:B"] ?? throw` (variable `A__B`); `GetConnectionString("X") ?? throw` (variable `ConnectionStrings__X`); `GetRequiredSection` | `?? default`, `GetValue<T>("A:B")`, a key with a non-empty value in `appsettings.json` / `appsettings.Production.json` |
 | Java, Kotlin | `@Value("${X}")`; `${X}` in `application.properties`/`.yml` for a secret or the app's own URL | `@Value("${X:default}")`, `System.getenv("X")` (also inside `Objects.requireNonNull`: a platform branch often holds it) |
-| PHP | `getenv`, `$_ENV`, `$_SERVER` behind `?: throw` / `?? throw`; Symfony `%env(X)%` for a secret or the app's own URL | every other read, Laravel `env('X')`, `%env(default:…:X)%`, an `env(X):` parameter. CGI names (`HTTP_*`, `REQUEST_*`, …) are not variables |
+| PHP | `getenv`, `$_ENV`, `$_SERVER` behind `?: throw` / `?? throw`; Symfony `%env(X)%` for a secret or the app's own URL | every other read, Laravel `env('X')`, `%env(default:…:X)%`, an `env(X):` parameter, each case of a backed enum read through `env($this->value)` (`case DB_DRIVER = 'DB_DRIVER'`; its `self::DB_DRIVER => 'sqlite'` arm is the default). CGI names (`HTTP_*`, `REQUEST_*`, …) are not variables |
 | Rust | `env::var("X")` with `.expect(…)`, `.unwrap()` or `?` | `unwrap_or…`, `ok()`, `var_os`; `env!` is build time |
 | Elixir | `System.fetch_env!("X")`, an app's own `fetch_env!("X", …)` wrapper, `System.get_env("X") \|\| raise`, in `config/*.exs` outside a `case`/`if`/`cond` branch (`if config_env() == :prod` counts as unconditional) | `System.get_env`, any read in `lib/` or inside a branch |
 
@@ -112,8 +112,7 @@ database and no standard or detected name has evidence of a read, the
 manifest has `database.connectionUnverified`. A standard name (`DATABASE_*`,
 or a `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` part that
 Deployz also sets) written in a runtime file is that evidence, also when the
-read shape is one that analysis does not parse (an enum
-`case DB_HOST = 'DB_HOST'` read through `env($this->value)`). The readiness gate then reports
+read shape is one that analysis does not parse. The readiness gate then reports
 `database-connection-unverified` and the state is **Needs configuration**.
 No deployment starts, because the app would connect to nothing or to an
 embedded default.
@@ -181,19 +180,30 @@ frozen manifest.
   for secret-looking names); the vendor enters the value. A Dockerfile `ARG`
   that no compose file sets, a value that compose only forwards from the
   environment (`${NAME}`), and an arg in a test or `e2e` compose file are not
-  required.
+  required. An `ARG NAME` with no default in a stage that the build runs is
+  also a required build variable when a `RUN` step of that stage stops without
+  it (`: "${VERSION:?Pass VERSION}"`).
 - **Sibling apps are out of scope.** When the Dockerfile sits in `apps/<name>/`,
   reads in another `apps/<other>/` directory do not count, unless a production
   compose file (`docker-compose.yml`, `compose.yml`) or a Procfile points at it,
   or the Dockerfile names it. A sibling with only its own Dockerfile is a
   separate image (a release has one image), so it does not count. Comment
-  lines and build-override compose variants are not references.
+  lines and build-override compose variants are not references. A root
+  Dockerfile whose production stage copies only named app directories (cal.com
+  copies `apps/web`, directly or from the stage it copies whole) holds only
+  those apps: reads, dependencies and Redis evidence in the other `apps/*`
+  directories do not count. A copy of the whole build context keeps every app.
 - **Boot guards make a key required.** A key that the code refuses to start
   without (`if (!env.KEY) throw`, or the same test limited only by "not in
   mode X", such as `env.DEPLOY_MODE !== "desktop" && !env.KEY`) is required,
   even when its zod schema says `.optional()`. A guard that applies only in a
   named mode (`env.CLOUD_MODE && !env.KEY`) or only outside production does
-  not count. Shared `packages/*` still count. A non-secret value
+  not count. Shared `packages/*` still count. `next.config.*` counts when the
+  image runs `next start`, which loads it at boot (not a standalone
+  `server.js`): its throw guards make the key required (cal.com
+  `NEXTAUTH_URL`). A Go viper key that a `log.Fatal` guard needs
+  (`if CorsEnable.GetBool() && ServicePublicURL.GetString() == ""`) is
+  required when every other condition is a flag whose default is true. A non-secret value
   passed alone to a named converter (`Boolean(...)`, `formatBaseUri(...)`) is
   not required; `Number(...)` and `String(...)` are not converters in this sense.
 - **Deployz-derived S3 values.** When Deployz provisions storage and the app
@@ -246,6 +256,11 @@ frozen manifest.
   of a debug or profiler tool (`DEBUGBAR_`, `TELESCOPE_`, `CLOCKWORK_`,
   `PROFILER_`, `DEBUG_` names) keeps the tool's own records, not the app's
   files, and is never a storage selector.
+- **Database TLS mode.** The managed PostgreSQL database accepts only TLS
+  connections (RDS `rds.force_ssl`). When Deployz provisions it and the app
+  reads a TLS mode variable (`PGSSLMODE`, `*_DB_SSLMODE`,
+  `*_DATABASE_SSL_MODE`) whose default is `disable`, the variable is
+  **required**, and the source line asks for `require`.
 - **S3 switched on by presence.** When the app builds its S3 client only if
   several variables are all set (`A && B && C ? new S3(…)`), each of them that
   Deployz does not bind or derive is required: otherwise the files go to the
@@ -255,7 +270,8 @@ frozen manifest.
   `PUBLIC_URL`, `APP_URL`, `BASE_URL`, `SITE_URL`, `ROOT_URL`, `WEB_URL`,
   `APP_BASE_URL`, `PUBLIC_ORIGIN`, `ORIGIN`, `NEXTAUTH_URL`, `AUTH_URL`,
   `SITE_ROOT`, and `<APP>_PUBLIC_URL`, `<APP>_BASE_URL`, `<APP>_APP_URL`,
-  `<APP>_SITE_URL`, `<APP>_ROOT_URL`, `<APP>_EXTERNAL_URL`.
+  `<APP>_SITE_URL`, `<APP>_ROOT_URL`, `<APP>_EXTERNAL_URL`, also written as
+  one word (`VIKUNJA_SERVICE_PUBLICURL`).
   `GET /api/relay/config` serves it as a `derived` plain value: the default
   HTTPS URL of the deployment, `https://d-<deploymentId>.deployz.dev`. A
   provider-prefixed name (`OPENAI_BASE_URL`, `S3_PUBLIC_URL`), a client

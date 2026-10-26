@@ -194,6 +194,27 @@ with the evidence in the field text or the notes:
   claim (`NOT_CHECKABLE`). Examples: new-11 (Oqtane serves its install
   wizard) and new-24 (nopCommerce redirects every path to its install page).
 
+### Ground truth
+
+Some recipes have a reviewed ground truth (`ground-truth/<id>.yaml`): the
+expected deployment facts, written from the repository only, never from a
+Deployz Analysis. A second reviewer checks every citation and records the
+changes under `crossReview`. A field can accept several answers. The
+ground truth also records the legitimate blockers, the vendor questions that
+are needed or not needed, and the misleading signals of the repository.
+
+```bash
+pnpm runcheck:truth --analysis scripts/run-and-check/analyses/<dir> [--repo <id>]
+```
+
+The command needs no Docker and no network. It prints each field that does
+not match: a critical `MISMATCH` (outcome, Dockerfile, port, start command,
+health path, database and its selector, migrations, Redis, workers, storage),
+an env `MISMATCH` (a required variable that the vendor is not asked for and
+Deployz does not supply), or a `QUESTION` (a vendor question for a fact that
+the repository answers). It exits 1 on a critical mismatch. The ground truth
+is a test input only; the Analysis never reads it.
+
 ### Known-answer fixtures
 
 `fixtures/F1` to `fixtures/F10` are ten small applications with known

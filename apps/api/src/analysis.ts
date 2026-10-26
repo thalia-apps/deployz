@@ -418,7 +418,13 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 67 (AI startup-migration evidence): an AI startup migration stores
 // the rules' evidence shape, so the finding names the file and line. Stored
 // v66 rows read "Migrations run at startup: undefined (undefined)".
-export const ANALYSIS_VERSION = 67;
+// Version 68 (2026-10 corpus): the start command is the production stage's
+// last CMD (never a HEALTHCHECK CMD); PHP env enums, `next.config` boot guards,
+// viper fatal guards and `${ARG:?}` build args are read; Redis evidence of an
+// app the image does not hold is ignored; a start path that runs the queue
+// consumer asks no worker question; a root HEALTHCHECK accepts redirects.
+// Stored v67 rows miss those variables and keep a strict `/` health check.
+export const ANALYSIS_VERSION = 68;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

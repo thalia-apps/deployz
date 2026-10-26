@@ -860,6 +860,8 @@ function relevancePriority(path: string, protectedPaths: ReadonlySet<string>): n
   if (DOCKERFILE_REGEX.test(path)) return 0;
   if (COMPOSE_REGEX.test(path)) return 0;
   if (ENV_SAMPLE_REGEX.test(path)) return 0;
+  // `next start` runs it at boot: its env guards stop the start (detectors.ts NEXT_CONFIG_FILE_REGEX).
+  if (/(?:^|\/)next\.config\.[cm]?[jt]s$/i.test(path)) return 3;
   if (!isRuntimeSourcePath(path)) return 7; // tests, specs, fixtures, scripts, docs, tool configs
   // One per runnable ASP.NET project, where it maps its endpoints: a module-heavy
   // repository has more `.csproj` manifests than the cap holds (OrchardCore).

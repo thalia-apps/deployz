@@ -631,8 +631,10 @@ const DEV_RUNTIME_REGEX =
   /--env[= ]dev\b|\bAPP_ENV=dev(?:elopment)?\b|\bNODE_ENV=development\b|\b(?:npm|yarn|pnpm|bun)(?: run)? (?:dev|start:dev)\b|\bnodemon\b|\bnext dev\b|--reload\b|\bsleep\W+infinity\b/i;
 
 /** A stage name that marks tooling, never the production runtime image. */
+// A trailing number names a variant of the same stage (`pr-test2`); a nightly
+// stage builds an unreleased channel of the app.
 const NON_RUNTIME_STAGE_NAME_REGEX =
-  /(?:^|[-_.])(?:dev|development|devel|test|tests|debug|local|e2e|ci|build|builder|deps|dependencies|base|fetch|prep|assets|plugins?)(?:[-_.]|$)/i;
+  /(?:^|[-_.])(?:dev|development|devel|test|tests|debug|local|e2e|ci|build|builder|deps|dependencies|base|fetch|prep|assets|plugins?|nightly)\d*(?:[-_.]|$)/i;
 
 /** Join continuation lines and drop comment lines, so one instruction is one line. */
 function normalizeDockerfile(content: string): string {
@@ -3927,6 +3929,29 @@ function viperEnvName(content: string, prefix: string, key: string): string | nu
   return `${prefix.toUpperCase().replace(/-/g, '_')}_${key.toUpperCase().replace(/[-.]/g, '_')}`;
 }
 
+/**
+ * Typed viper keys that a boot guard stops the process without
+ * (`if CorsEnable.GetBool() && ServicePublicURL.GetString() == "" { log.Fatalf(…) }`):
+ * every other condition is a flag whose default is true.
+ */
+function scanViperFatalEmptyKeys(content: string): string[] {
+  const prefix = /viper\.SetEnvPrefix\(\s*"([A-Za-z][A-Za-z0-9_-]*)"\s*\)/.exec(content)?.[1];
+  if (prefix === undefined || !/viper\.AutomaticEnv\s*\(/.test(content)) return [];
+  const typedKeys = viperTypedKeys(content);
+  const found: string[] = [];
+  for (const [, condition] of content.matchAll(/\bif\s+([^{}\n]+?)\s*\{\s*log\.Fatal\w*\(/g)) {
+    const parts = condition!.split('&&').map((part) => part.trim());
+    const empty = parts.map((part) => /^(\w+)\.GetString\(\)\s*==\s*""$/.exec(part)?.[1]).filter((name) => name !== undefined);
+    const flagsOn = parts.every(
+      (part) => /^\w+\.GetString\(\)\s*==\s*""$/.test(part) || new RegExp(`\\b${/^(\w+)\.GetBool\(\)$/.exec(part)?.[1] ?? '\\0'}\\.setDefault\\(true\\)`).test(content),
+    );
+    const key = empty.length === 1 ? typedKeys.get(empty[0]!) : undefined;
+    const name = key === undefined || !flagsOn ? null : viperEnvName(content, prefix, key);
+    if (name !== null) found.push(name);
+  }
+  return found;
+}
+
 /** Typed config keys (``DatabaseType Key = `database.type` ``) by identifier. */
 function viperTypedKeys(content: string): Map<string, string> {
   return new Map([...content.matchAll(/^[ \t]*(\w+)[ \t]+\w*Key[ \t]*=[ \t]*[`"]([a-z][\w.-]*)[`"]/gm)].map((m) => [m[1]!, m[2]!]));
@@ -4345,7 +4370,38 @@ function detectBaseImageBuildArgs(tree: FileTree): Map<string, string> {
     const referenced = baseImages.some((image) => new RegExp(`\\$(?:${name}\\b|\\{${name}\\})`).test(image));
     if (referenced) found.set(name!, `${dockerfile.path} build arg ${name} selects the base image; the build fails without it`);
   }
+  // A stage the build runs that declares an ARG with no default and stops
+  // without it (memos `: "${VERSION:?Pass VERSION …}"`).
+  const defaulted = new Set([...globalArgs.matchAll(/^\s*ARG\s+(.+)$/gim)].flatMap(([, list]) => list!.split(/\s+/).filter((arg) => arg.includes('=')).map((arg) => arg.split('=')[0]!)));
+  for (const index of builtStageIndexes(stages, productionStageIndex(stages))) {
+    const body = stages[index]!.body;
+    for (const [, list] of body.matchAll(/^\s*ARG\s+(.+)$/gim)) {
+      for (const name of list!.split(/\s+/)) {
+        if (!/^[A-Z][A-Z0-9_]*$/.test(name) || defaulted.has(name) || found.has(name)) continue;
+        if (new RegExp(`^\\s*RUN\\b.*\\$\\{${name}:?\\?`, 'im').test(body)) {
+          found.set(name, `${dockerfile.path} build arg ${name} has no default and a RUN step stops without it; the build fails without it`);
+        }
+      }
+    }
+  }
   return found;
+}
+
+/** The stages `docker build` runs for a target: its `FROM` lineage and every stage it copies or mounts from. */
+function builtStageIndexes(stages: DockerfileStage[], target: number): Set<number> {
+  const built = new Set<number>();
+  const visit = (index: number): void => {
+    for (const i of stageLineage(stages, index)) {
+      if (built.has(i)) continue;
+      built.add(i);
+      for (const [, ref] of stages[i]!.body.matchAll(/--(?:from|mount=[^\s]*\bfrom)=([^\s,]+)/g)) {
+        const source = resolveDockerfileStage(ref!, stages, i);
+        if (source !== undefined) visit(stages.indexOf(source));
+      }
+    }
+  };
+  visit(target);
+  return built;
 }
 
 /**
@@ -4390,6 +4446,8 @@ const DB_SELECTOR_NAME_REGEX =
 // A debug or profiler tool keeps its own records (`DEBUGBAR_STORAGE_DRIVER`), not the app's files.
 const STORAGE_SELECTOR_NAME_REGEX =
   /^(?!(?:DEBUGBAR|TELESCOPE|CLOCKWORK|PROFILER|DEBUG)_).*?(?:^|_)(?:FILE_)?STORAGE(?:_(?:TYPE|DRIVER|PROVIDER|BACKEND|SERVICE|MODE|LOCATIONS?))?$|(?:^|_)UPLOAD_PROVIDER$|_STORAGE_PROVIDER$|^ACTIVE_STORAGE_SERVICE$|(?:^|_)(?:FILES|UPLOADS?|ATTACHMENTS?)_(?:TYPE|DRIVER|PROVIDER|BACKEND)$|(?:^|_)DATASOURCE_TYPE$/;
+/** The TLS mode of the app's database connection: `VIKUNJA_DATABASE_SSLMODE`, `DB_SSL_MODE`, `PGSSLMODE`. */
+const DB_SSL_MODE_NAME_REGEX = /^(?:PGSSLMODE|(?:[A-Z0-9]+_)*(?:DB|DATABASE|POSTGRES|POSTGRESQL|PG)_SSL_?MODE)$/;
 // A database selector name that picks the engine; `REDIS_DB` and `DB_CONNECTION` do not.
 const DB_ENGINE_SELECTOR_NAME_REGEX = /(?:^|_)(?:DB|DATABASE)_(?:CLIENT|TYPE|DRIVER|ENGINE|DIALECT|BACKEND|ADAPTER|VENDOR|PROVIDER)$|DBENGINE$/;
 
@@ -4590,7 +4648,7 @@ function unresolvedSelectors(
   const literalReads = new Map<string, string>();
   const presenceChain: { name: string; file: string }[] = [];
   const add = (map: Map<string, Value[]>, name: string, value: string, file: string): void => {
-    if (!DB_SELECTOR_NAME_REGEX.test(name) && !STORAGE_SELECTOR_NAME_REGEX.test(name)) return;
+    if (!DB_SELECTOR_NAME_REGEX.test(name) && !STORAGE_SELECTOR_NAME_REGEX.test(name) && !DB_SSL_MODE_NAME_REGEX.test(name)) return;
     map.set(name, [...(map.get(name) ?? []), { value, file }]);
   };
   for (const [path, content] of Object.entries(tree)) {
@@ -4646,6 +4704,14 @@ function unresolvedSelectors(
     ...literalReads.keys(),
   ]);
   for (const name of names) {
+    // The managed PostgreSQL database accepts only TLS connections (RDS `rds.force_ssl`).
+    if (DB_SSL_MODE_NAME_REGEX.test(name)) {
+      const disabled = [...(imageDefaults.get(name) ?? codeDefaults.get(name) ?? [])].find(({ value }) => /^disable$/i.test(value));
+      if (engine === 'postgres' && disabled !== undefined) {
+        result.set(name, { evidence: `TLS setting: default "disable" cannot reach the managed PostgreSQL database, which accepts only TLS — set "require"`, files: [disabled.file] });
+      }
+      continue;
+    }
     const isStorage = provisioned.storage && STORAGE_SELECTOR_NAME_REGEX.test(name);
     const isDb = !isStorage && engine !== null && DB_SELECTOR_NAME_REGEX.test(name);
     if (!isDb && !isStorage) continue;
@@ -5081,6 +5147,10 @@ export function detectEnvVarModel(
       }
     } else if (GO_SOURCE.test(path)) {
       for (const key of scanViperEnvKeys(content)) recordRead(key, false, path);
+      for (const key of scanViperFatalEmptyKeys(content)) {
+        recordRead(key, true, path);
+        bootRequiredKeys.add(key);
+      }
       for (const entry of scanGoEnvReads(content)) {
         recordRead(entry.key, entry.needsValue, path);
       }
