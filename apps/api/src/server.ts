@@ -184,6 +184,24 @@ import {
   createJevShadowRunnerFromEnv,
   type JevFailureShadowRunner,
 } from './jev-shadow.js';
+import {
+  allowedOwnerEmail,
+  claimDeployment,
+  clearedFlowCookie,
+  clearedSessionCookie,
+  createCustomerSession,
+  customerCookieNames,
+  flowCookie,
+  newOpaqueToken,
+  readCookie,
+  requestCustomerCode,
+  resolveInstallViewer,
+  revokeCustomerSession,
+  sessionCookie,
+  verifyCustomerCode,
+  loadCustomerActivity,
+  type InstallViewer,
+} from './customer-access.js';
 import { createEmailSender, type EmailSender } from './email.js';
 import type { EcrClient } from './ecr-grants.js';
 import {
@@ -206,7 +224,7 @@ import { buildFailureContext, toStructuredEvent } from './failure-context.js';
 import { createDrizzlePendingSecretStore, createSecretCipherFromEnv } from './pending-secrets.js';
 import { retryEligibilityFor } from './retry-eligibility.js';
 import { buildInstallPayload, buildRelayConfigEntries, queuePostInstallConfig, requireTaskFamilySuffix } from './install-config.js';
-import { installLinkToken, verifyInstallLinkToken } from './install-link-token.js';
+import { installLinkToken } from './install-link-token.js';
 import { requirePreflightReady, runApplicationPreflight, runDeploymentPreflight } from './preflight.js';
 import {
   confirmPublicInstall,
@@ -2375,7 +2393,11 @@ export async function buildServer({
     }
   });
 
-  app.addHook('onSend', async (_request, reply) => {
+  app.addHook('onSend', async (request, reply) => {
+    // Customer page responses depend on who asks: no shared cache may keep one.
+    if (request.url.startsWith('/api/install/') || request.url.startsWith('/api/customer/')) {
+      reply.header('cache-control', 'no-store');
+    }
     reply.header('x-content-type-options', 'nosniff');
     reply.header('x-frame-options', 'DENY');
     reply.header('strict-transport-security', 'max-age=31536000; includeSubDomains');
@@ -2958,6 +2980,147 @@ export async function buildServer({
   // relay. The enrollment code it returns is single-use and is what the
   // customer's bootstrap stack carries.
 
+  // ── Customer page access (docs/customer-access.md) ──────────────────
+
+  /** The verified owner or a vendor member, else the same 404 as an unknown link. */
+  async function requireInstallViewer(
+    request: FastifyRequest,
+    deployment: { id: string; organizationId: string; customerId: string },
+  ): Promise<InstallViewer> {
+    const viewer = await resolveInstallViewer(db, auth, request.headers, deployment, new Date());
+    if (!viewer) throw new NotFoundError('Installation not found');
+    return viewer;
+  }
+
+  function viewerView(viewer: InstallViewer): { kind: 'customer'; email: string } | { kind: 'vendor' } {
+    return viewer.kind === 'customer' ? { kind: 'customer', email: viewer.email } : { kind: 'vendor' };
+  }
+
+  // Login CSRF: a browser always sends Origin on these POSTs; it must be ours.
+  function requireCustomerOrigin(request: FastifyRequest): void {
+    const origin = firstHeaderValue(request.headers.origin);
+    if (origin !== undefined && !env.webOrigins.includes(origin)) {
+      throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Request origin is not allowed');
+    }
+  }
+
+  async function loadInstallTarget(installLinkId: string) {
+    const [row] = await db
+      .select({
+        id: schema.deployments.id,
+        organizationId: schema.deployments.organizationId,
+        customerId: schema.deployments.customerId,
+        applicationName: schema.applications.name,
+        publisherName: schema.organization.name,
+      })
+      .from(schema.deployments)
+      .innerJoin(schema.applications, eq(schema.deployments.applicationId, schema.applications.id))
+      .innerJoin(schema.organization, eq(schema.deployments.organizationId, schema.organization.id))
+      .where(eq(schema.deployments.installLinkId, installLinkId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  const customerSignInCodeBodySchema = z.object({
+    installLinkId: z.uuid(),
+    email: z.string().trim().min(3).max(320),
+  });
+  const customerSignInVerifyBodySchema = z.object({
+    installLinkId: z.uuid(),
+    code: z.string().trim().regex(/^\d{8}$/),
+  });
+  const customerSignOutBodySchema = z.object({ installLinkId: z.uuid().optional() }).optional();
+
+  // Always the same answer, so the response never shows whether an email has access.
+  app.post(
+    '/api/customer/sign-in/code',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      requireCustomerOrigin(request);
+      const body = customerSignInCodeBodySchema.parse(request.body);
+      const flowToken =
+        readCookie(firstHeaderValue(request.headers.cookie), customerCookieNames().flow) ?? newOpaqueToken();
+      reply.header('set-cookie', flowCookie(flowToken));
+      const target = await loadInstallTarget(body.installLinkId);
+      const result = target
+        ? await requestCustomerCode(db, organizationDeps.emailSender, {
+            deployment: target,
+            applicationName: target.applicationName,
+            publisherName: target.publisherName,
+            email: body.email,
+            flowToken,
+            now: new Date(),
+          })
+        : { sent: false };
+      return reply.code(202).send({
+        accepted: true,
+        // Simulated E2E only (scripts/production-safety.test.mjs keeps it out of deployed stages).
+        ...(env.emailVerificationFixtureMode && 'code' in result && result.code ? { fixtureCode: result.code } : {}),
+      });
+    },
+  );
+
+  app.post(
+    '/api/customer/sign-in/verify',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      requireCustomerOrigin(request);
+      const body = customerSignInVerifyBodySchema.parse(request.body);
+      const flowToken = readCookie(firstHeaderValue(request.headers.cookie), customerCookieNames().flow);
+      const target = await loadInstallTarget(body.installLinkId);
+      if (!flowToken || !target) {
+        throw new ApiError(400, 'INVALID_CODE', 'The code is not correct or has expired. Request a new code.');
+      }
+      const now = new Date();
+      const result = await verifyCustomerCode(db, {
+        deploymentId: target.id,
+        code: body.code,
+        flowToken,
+        now,
+      });
+      if (!result.ok) {
+        throw result.reason === 'TOO_MANY_ATTEMPTS'
+          ? new ApiError(429, 'TOO_MANY_ATTEMPTS', 'Too many wrong codes. Wait one hour, then request a new code.')
+          : new ApiError(400, 'INVALID_CODE', 'The code is not correct or has expired. Request a new code.');
+      }
+      const session = await createCustomerSession(db, result.email, now);
+      // The allowed email can change between the code and its use: claim only when it still matches.
+      const allowed = await allowedOwnerEmail(db, target.id);
+      if (allowed && !allowed.claimed && allowed.email === result.email) {
+        await claimDeployment(db, target, result.email, session.id);
+      }
+      await recordEvent(db, {
+        organizationId: target.organizationId,
+        eventType: 'customer.signed_in',
+        actorType: 'customer',
+        actorId: `customer-session:${session.id}`,
+        deploymentId: target.id,
+        customerId: target.customerId,
+      });
+      reply.header('set-cookie', [sessionCookie(session.token), clearedFlowCookie()]);
+      return { signedIn: true };
+    },
+  );
+
+  app.post('/api/customer/sign-out', async (request, reply) => {
+    requireCustomerOrigin(request);
+    const body = customerSignOutBodySchema.parse(request.body ?? undefined);
+    const sessionId = await revokeCustomerSession(db, firstHeaderValue(request.headers.cookie), new Date());
+    const target = sessionId && body?.installLinkId ? await loadInstallTarget(body.installLinkId) : null;
+    if (sessionId && target) {
+      await recordEvent(db, {
+        organizationId: target.organizationId,
+        eventType: 'customer.signed_out',
+        actorType: 'customer',
+        actorId: `customer-session:${sessionId}`,
+        deploymentId: target.id,
+        customerId: target.customerId,
+      });
+    }
+    reply.header('set-cookie', clearedSessionCookie());
+    return reply.code(204).send();
+  });
+
   /**
    * Invitation lifecycle gate for the public install routes: a revoked or
    * expired link can no longer START an installation. A link whose install
@@ -3000,10 +3163,6 @@ export async function buildServer({
     async (request) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
-    const hasLinkToken = verifyInstallLinkToken(
-      installLinkId,
-      firstHeaderValue(request.headers['x-deployz-token']),
-    );
     const rows = await db
       .select({
         applicationName: schema.applications.name,
@@ -3077,6 +3236,23 @@ export async function buildServer({
         payload: { schemaVersion: 1, alreadyInstalled },
       });
     }
+    // The link id alone shows only who sent it. Everything else needs the
+    // verified owner or a member of the vendor organization
+    // (docs/customer-access.md).
+    const viewer = await resolveInstallViewer(
+      db,
+      auth,
+      request.headers,
+      { id: row.deploymentId, organizationId: row.organizationId, customerId: row.customerId },
+      new Date(),
+    );
+    if (!viewer) {
+      return {
+        signInRequired: true,
+        applicationName: row.applicationName,
+        publisherName: row.publisherName,
+      };
+    }
     // §16.1: the customer-visible "Deployz will create" table — same shape
     // `GET /api/deployments/:id/plan?action=install` serves once the
     // deployment exists. Null only when the stored manifest is missing or
@@ -3148,12 +3324,9 @@ export async function buildServer({
       //
       // DZ-AUDIT-013: the relayCredential is carried alongside the enrollment
       // code whenever one has been established. Spent codes get no link.
-      //
-      // The link id alone is not enough: both credential-bearing fields need
-      // the fragment-carried link token (x-deployz-token). Without it the
-      // page learns only that the credentials are withheld.
+      // Only a verified viewer reaches this point.
       quickCreateUrl:
-        hasLinkToken && !alreadyInstalled && existingStackUpdateFor(row) === null
+        !alreadyInstalled && existingStackUpdateFor(row) === null
           ? (() => {
               const templateUrl = resolveBootstrapTemplate(row.region, {
                 ...(env.bootstrapTemplateUrl
@@ -3173,9 +3346,9 @@ export async function buildServer({
                 : null;
             })()
           : null,
-      existingStackUpdate: hasLinkToken ? existingStackUpdateFor(row) : null,
-      credentialsWithheld: !hasLinkToken && !alreadyInstalled,
+      existingStackUpdate: existingStackUpdateFor(row),
       alreadyInstalled,
+      viewer: viewerView(viewer),
     };
     },
   );
@@ -3205,6 +3378,7 @@ export async function buildServer({
         throw new NotFoundError('Installation not found');
       }
       const row = rows[0]!;
+      await requireInstallViewer(request, row.deployment);
       const jobs = await db
         .select(JOB_DERIVATION_COLUMNS)
         .from(schema.deploymentJobs)
@@ -3244,6 +3418,70 @@ export async function buildServer({
     },
   );
 
+  // The customer page's connector, AWS location and activity sections
+  // (docs/customer-access.md). Same viewer rule as the status route. The
+  // connector block is the vendor derivation's `connector` object, so both
+  // pages read one model.
+  app.get(
+    '/api/install/:installLinkId/overview',
+    { config: { rateLimit: PUBLIC_INSTALL_RATE_LIMIT } },
+    async (request) => {
+      const { installLinkId } = request.params as { installLinkId: string };
+      requireUuidId(installLinkId);
+      const rows = await db
+        .select({
+          deployment: schema.deployments,
+          migrationCommand: schema.applications.migrationCommand,
+        })
+        .from(schema.deployments)
+        .innerJoin(schema.applications, eq(schema.deployments.applicationId, schema.applications.id))
+        .where(eq(schema.deployments.installLinkId, installLinkId))
+        .limit(1);
+      if (rows.length === 0) {
+        throw new NotFoundError('Installation not found');
+      }
+      const row = rows[0]!;
+      await requireInstallViewer(request, row.deployment);
+      const jobs = await db
+        .select(JOB_DERIVATION_COLUMNS)
+        .from(schema.deploymentJobs)
+        .where(eq(schema.deploymentJobs.deploymentId, row.deployment.id))
+        .orderBy(schema.deploymentJobs.createdAt);
+      const domain = await findActiveDomain(db, row.deployment.id);
+      const defaultHttps = parseDefaultHttps(row.deployment.defaultHttps);
+      const derived = deriveDeploymentStatus({
+        deployment: row.deployment,
+        application: derivationApplicationFor(row.deployment, row),
+        jobs,
+        domain,
+        defaultHttps,
+        connectorUpdate: connectorUpdateFor(row.deployment),
+        appUrl: resolveAppUrl(jobs, domain, defaultHttps),
+      });
+      const { deployment } = row;
+      return {
+        connector: {
+          ...derived.connector,
+          connectivity:
+            deployment.relayBoundAt === null
+              ? 'NEVER_CONNECTED'
+              : deployment.relayStatus === 'CONNECTED'
+                ? 'CONNECTED'
+                : deployment.relayStatus === 'DISCONNECTED'
+                  ? 'OFFLINE'
+                  : 'UNKNOWN',
+          lastContactAt: deployment.lastHealthAt?.toISOString() ?? null,
+          stackName: deployment.bootstrapStackName,
+        },
+        aws: {
+          accountId: deployment.awsAccountId,
+          region: deployment.region,
+        },
+        activity: await loadCustomerActivity(db, deployment.id),
+      };
+    },
+  );
+
   // Pre-relay launch signal: the install page reports the customer pressing
   // "Deploy to AWS" so the deployment can show an explicit waiting state
   // (and, if no relay ever enrolls, guidance instead of a false failure).
@@ -3271,6 +3509,7 @@ export async function buildServer({
     if (launchGate) {
       throw new ApiError(410, launchGate.code, launchGate.message);
     }
+    await requireInstallViewer(request, deployment);
     // Phase 3/5 gate: the install link is a second boundary where a
     // non-READY manifest — or a required value removed since creation — must
     // be stopped before any AWS provisioning.
@@ -3373,11 +3612,6 @@ export async function buildServer({
     async (request, reply) => {
     const { installLinkId } = request.params as { installLinkId: string };
     requireUuidId(installLinkId);
-    // The retry rotates the relay credential, so the link id alone is not
-    // enough: a wrong or missing token is the same 404 as an unknown id.
-    if (!verifyInstallLinkToken(installLinkId, firstHeaderValue(request.headers['x-deployz-token']))) {
-      throw new NotFoundError('Installation not found');
-    }
     const rows = await db
       .select({ deployment: schema.deployments, applicationName: schema.applications.name })
       .from(schema.deployments)
@@ -3393,6 +3627,8 @@ export async function buildServer({
     if (retryGate) {
       throw new ApiError(410, retryGate.code, retryGate.message);
     }
+    // The retry rotates the relay credential: only the owner or the vendor.
+    await requireInstallViewer(request, deployment);
     if (await hasSucceededInstall(db, deployment.id)) {
       throw new ApiError(
         409,
@@ -7136,6 +7372,7 @@ export async function buildServer({
         .limit(1);
       const deployment = rows[0];
       if (!deployment) throw new NotFoundError('Installation not found');
+      await requireInstallViewer(request, deployment);
       const domain = await findActiveDomain(db, deployment.id);
       if (!domain) throw new NotFoundError('Custom domain not found');
       const fresh = await runDomainCheck(db, deployment, domain, domainCheckDeps);

@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { customerSessionHeaders } from './customer-access-fixture.js';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { createHmac, generateKeyPairSync } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
@@ -246,6 +247,7 @@ function sendJson(
   });
 }
 
+/** The pre-session fragment token; tests prove it no longer grants anything. */
 function linkTokenHeader(installLinkId: string): Record<string, string> {
   return { 'x-deployz-token': installLinkToken(installLinkId) };
 }
@@ -4343,7 +4345,7 @@ describe('server — organization settings, public install page, and bulk deploy
     }
   });
 
-  it('GET /api/install/:installationId is public, unauthenticated, and returns only display fields (§12/§44)', async () => {
+  it('GET /api/install/:installationId returns only display fields to the verified owner (§12/§44)', async () => {
     const application = await insertApplication(db, org.organizationId, {
       name: 'Analytics Cloud',
       databaseRequired: true,
@@ -4358,7 +4360,7 @@ describe('server — organization settings, public install page, and bulk deploy
 
     // Keyed on the install-LINK id. The relay's installation id is minted in
     // the customer's account and must never be the value in a public URL.
-    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(response.statusCode).toBe(200);
     const body = response.json() as Record<string, unknown>;
     const footprint = resolveDeploymentFootprint({
@@ -4378,8 +4380,8 @@ describe('server — organization settings, public install page, and bulk deploy
       publisherName: orgRow!.name,
       customerName: 'Acme Analytics',
       region: 'eu-west-1',
-      credentialsWithheld: false,
       alreadyInstalled: false,
+      viewer: { kind: 'customer', email: customer.email.trim().toLowerCase() },
       // Phase 5: the install page's "Deployz will create" table renders
       // directly from this plan — same schema `GET /api/deployments/:id/plan`
       // serves — instead of a separate customer-name-mapped list.
@@ -4443,7 +4445,7 @@ describe('server — organization settings, public install page, and bulk deploy
     });
 
     for (let i = 0; i < 3; i += 1) {
-      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
       expect(response.statusCode).toBe(200);
     }
 
@@ -4465,7 +4467,7 @@ describe('server — organization settings, public install page, and bulk deploy
       currentReleaseId: release.id,
     });
 
-    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(response.statusCode).toBe(200);
     const body = response.json() as { releaseVersion: string | null };
     expect(body.releaseVersion).toBe(release.version);
@@ -4481,7 +4483,7 @@ describe('server — organization settings, public install page, and bulk deploy
       state: 'NOT_INSTALLED',
     });
 
-    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(response.statusCode).toBe(200);
     const body = response.json() as { releaseVersion: string | null };
     expect(body.releaseVersion).toBeNull();
@@ -4506,7 +4508,7 @@ describe('server — organization settings, public install page, and bulk deploy
     const planComponentNames = (body: unknown) =>
       (body as { plan: { components: { name: string }[] } }).plan.components.map((c) => c.name);
 
-    const withRedis = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const withRedis = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(planComponentNames(withRedis.json())).toEqual(['Application', 'Secure endpoint', 'Storage', 'Cache']);
 
     // Drift: the vendor turns Redis off on the LIVE application row after the
@@ -4516,7 +4518,7 @@ describe('server — organization settings, public install page, and bulk deploy
       .set({ redisRequired: false })
       .where(eq(schema.applications.id, application.id));
 
-    const stillWithRedis = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const stillWithRedis = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(planComponentNames(stillWithRedis.json())).toEqual(['Application', 'Secure endpoint', 'Storage', 'Cache']);
   });
 
@@ -4538,7 +4540,7 @@ describe('server — organization settings, public install page, and bulk deploy
 
     const componentsOf = (body: unknown) => (body as { components: Record<string, string> | null }).components;
 
-    const before = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const before = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(componentsOf(before.json())).toEqual({ application: 'HEALTHY', loadBalancer: 'UNKNOWN', database: 'UNKNOWN' });
 
     // Drift: the live application row changes after the deployment's
@@ -4548,7 +4550,7 @@ describe('server — organization settings, public install page, and bulk deploy
       .set({ databaseRequired: false, redisRequired: true })
       .where(eq(schema.applications.id, application.id));
 
-    const after = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    const after = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(componentsOf(after.json())).toEqual({ application: 'HEALTHY', loadBalancer: 'UNKNOWN', database: 'UNKNOWN' });
   });
 
@@ -4562,7 +4564,7 @@ describe('server — organization settings, public install page, and bulk deploy
     const previous = mutableEnv.bootstrapTemplateUrl;
     mutableEnv.bootstrapTemplateUrl = 'https://templates.example.com/bootstrap-v1.json';
     try {
-      const fresh = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+      const fresh = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
       const freshBody = fresh.json() as Record<string, unknown>;
       expect(freshBody['alreadyInstalled']).toBe(false);
       expect(String(freshBody['quickCreateUrl'])).toContain(deployment.enrollmentCode);
@@ -4574,7 +4576,7 @@ describe('server — organization settings, public install page, and bulk deploy
         .set({ enrollmentUsedAt: new Date() })
         .where(eq(schema.deployments.id, deployment.id));
 
-      const replayed = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+      const replayed = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
       const replayedBody = replayed.json() as Record<string, unknown>;
       expect(replayedBody['alreadyInstalled']).toBe(true);
       expect(replayedBody['quickCreateUrl']).toBeNull();
@@ -4603,7 +4605,7 @@ describe('server — organization settings, public install page, and bulk deploy
     mutableEnv.bootstrapTemplateUrl = 'https://legacy-bucket.s3.us-east-1.amazonaws.com/bootstrap/v1/bootstrap-template-v1.json';
     mutableEnv.deployableAwsRegions = ['us-east-1', 'us-east-2'];
     try {
-      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
       const body = response.json() as Record<string, unknown>;
       expect(response.statusCode).toBe(200);
       const url = String(body['quickCreateUrl']);
@@ -4629,7 +4631,7 @@ describe('server — organization settings, public install page, and bulk deploy
     const prev = mutableEnv.bootstrapTemplateUrl;
     mutableEnv.bootstrapTemplateUrl = 'https://legacy-bucket.s3.us-east-1.amazonaws.com/bootstrap/v1/bootstrap-template-v1.json';
     try {
-      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+      const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
       const body = response.json() as Record<string, unknown>;
       expect(body['quickCreateUrl']).toBeNull();
     } finally {
@@ -4825,7 +4827,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
 
   /** Component names of the public install page's "Deployz will create" plan. */
   async function installPlanNames(installLinkId: string): Promise<string[]> {
-    const body = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkTokenHeader(installLinkId) })).json() as {
+    const body = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: await customerSessionHeaders(db, installLinkId) })).json() as {
       plan: { components: { name: string }[] } | null;
     };
     return body.plan!.components.map((component) => component.name);
@@ -4867,10 +4869,10 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     const first = await seedWaiting();
     const second = await seedWaiting();
 
-    const firstBody = (await app.inject({ method: 'GET', url: `/api/install/${first.installLinkId}`, headers: linkTokenHeader(first.installLinkId) })).json() as {
+    const firstBody = (await app.inject({ method: 'GET', url: `/api/install/${first.installLinkId}`, headers: await customerSessionHeaders(db, first.installLinkId) })).json() as {
       bootstrapStackName: string;
     };
-    const secondBody = (await app.inject({ method: 'GET', url: `/api/install/${second.installLinkId}`, headers: linkTokenHeader(second.installLinkId) })).json() as {
+    const secondBody = (await app.inject({ method: 'GET', url: `/api/install/${second.installLinkId}`, headers: await customerSessionHeaders(db, second.installLinkId) })).json() as {
       bootstrapStackName: string;
     };
 
@@ -4886,7 +4888,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
   it('POST /api/install/:installLinkId/launched moves NOT_INSTALLED to WAITING_FOR_RELAY and records the launch', async () => {
     const { deployment, installLinkId } = await seedWaiting();
 
-    const response = await postJson(app, `/api/install/${installLinkId}/launched`, {});
+    const response = await postJson(app, `/api/install/${installLinkId}/launched`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(200);
     expect((response.json() as { state: string }).state).toBe('WAITING_FOR_RELAY');
 
@@ -4907,8 +4909,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
   it('POST /api/install/:installLinkId/launched is idempotent while waiting', async () => {
     const { installLinkId } = await seedWaiting();
 
-    const first = await postJson(app, `/api/install/${installLinkId}/launched`, {});
-    const second = await postJson(app, `/api/install/${installLinkId}/launched`, {});
+    const first = await postJson(app, `/api/install/${installLinkId}/launched`, {}, await customerSessionHeaders(db, installLinkId));
+    const second = await postJson(app, `/api/install/${installLinkId}/launched`, {}, await customerSessionHeaders(db, installLinkId));
     expect(first.statusCode).toBe(200);
     expect(second.statusCode).toBe(200);
   });
@@ -4916,11 +4918,12 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
   it('POST /api/install/:installLinkId/launched treats a browser body that tries to override requirements exactly like no body', async () => {
     const seeded = await seedWaiting();
 
-    const response = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {
-      databaseRequired: false,
-      redisRequired: false,
-      storageRequired: false,
-    });
+    const response = await postJson(
+      app,
+      `/api/install/${seeded.installLinkId}/launched`,
+      { databaseRequired: false, redisRequired: false, storageRequired: false },
+      await customerSessionHeaders(db, seeded.installLinkId),
+    );
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ state: 'WAITING_FOR_RELAY' });
 
@@ -4962,7 +4965,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
 
     expect(await installPlanNames(seeded.installLinkId)).toEqual(before);
 
-    const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {});
+    const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId));
     expect(launched.statusCode).toBe(200);
     expect((launched.json() as { state: string }).state).toBe('WAITING_FOR_RELAY');
 
@@ -5006,7 +5009,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       desiredState: { manifest: { ...READY_MANIFEST, schemaVersion: 2 } },
     });
 
-    const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {});
+    const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId));
     expect(launched.statusCode).toBe(422);
     expect(errorEnvelopeSchema.parse(launched.json()).error.code).toBe('MANIFEST_NEEDS_CONFIGURATION');
 
@@ -5034,13 +5037,13 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     // "malformed" is a manifest value the schema rejects.
     for (const desiredState of [{}, { manifest: { invalid: true } }]) {
       const seeded = await seedWaiting({ desiredState });
-      const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {});
+      const launched = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId));
       expect(launched.statusCode).toBe(422);
       const envelope = errorEnvelopeSchema.parse(launched.json());
       expect(envelope.error.code).toBe('MANIFEST_NEEDS_CONFIGURATION');
       expect(envelope.error.message).toContain('manifest');
 
-      const page = await app.inject({ method: 'GET', url: `/api/install/${seeded.installLinkId}`, headers: linkTokenHeader(seeded.installLinkId) });
+      const page = await app.inject({ method: 'GET', url: `/api/install/${seeded.installLinkId}`, headers: await customerSessionHeaders(db, seeded.installLinkId) });
       expect(page.statusCode).toBe(200);
       expect((page.json() as { plan: unknown }).plan).toBeNull();
     }
@@ -5072,7 +5075,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       mutableEnv.bootstrapTemplateUrl = 'https://templates.example.com/bootstrap/v1/bootstrap-template-v1.json';
       let quickCreateUrl: string | null = null;
       try {
-        const page = await app.inject({ method: 'GET', url: `/api/install/${seeded.installLinkId}`, headers: linkTokenHeader(seeded.installLinkId) });
+        const page = await app.inject({ method: 'GET', url: `/api/install/${seeded.installLinkId}`, headers: await customerSessionHeaders(db, seeded.installLinkId) });
         quickCreateUrl = (page.json() as { quickCreateUrl: string | null }).quickCreateUrl;
       } finally {
         mutableEnv.bootstrapTemplateUrl = previous;
@@ -5117,8 +5120,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
 
   it('a sequential double launch records the launch exactly once and never queues a job', async () => {
     const seeded = await seedWaiting();
-    const first = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {});
-    const second = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {});
+    const first = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId));
+    const second = await postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId));
     expect(first.statusCode).toBe(200);
     expect(second.statusCode).toBe(200);
     expect(second.json()).toEqual({ state: 'WAITING_FOR_RELAY' });
@@ -5147,8 +5150,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
   it('a double submit (two tabs racing) transitions exactly once', async () => {
     const seeded = await seedWaiting();
     const [first, second] = await Promise.all([
-      postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}),
-      postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}),
+      postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId)),
+      postJson(app, `/api/install/${seeded.installLinkId}/launched`, {}, await customerSessionHeaders(db, seeded.installLinkId)),
     ]);
     expect(first.statusCode).toBe(200);
     expect(second.statusCode).toBe(200);
@@ -5178,7 +5181,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     });
 
     const body = (
-      await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkTokenHeader(installLinkId) })
+      await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: await customerSessionHeaders(db, installLinkId) })
     ).json() as { deploymentState: string; waitingForRelay: boolean; relayStuck: boolean };
     expect(body.deploymentState).toBe('WAITING_FOR_RELAY');
     expect(body.waitingForRelay).toBe(true);
@@ -5241,7 +5244,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       .set({ bootstrapStackName: oldStackName, installStartedAt: new Date(Date.now() - 20 * 60 * 1000) })
       .where(eq(schema.deployments.id, deployment.id));
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(200);
     const body = response.json() as {
       state: string;
@@ -5276,7 +5279,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(events.some((row) => row.eventType === 'install.retry.requested')).toBe(true);
   });
 
-  it('the install link id alone gets no relay enrollment material and no retry', async () => {
+  it('the install link id alone shows only who sent it: no details, no enrollment material, no retry', async () => {
     const { deployment, installLinkId } = await seedWaiting({
       state: 'NOT_INSTALLED',
       relayCredential: 'withheld-relay-credential',
@@ -5285,35 +5288,31 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     const previous = mutableEnv.bootstrapTemplateUrl;
     mutableEnv.bootstrapTemplateUrl = 'https://templates.example.com/bootstrap-v1.json';
     try {
-      const bare = await app.inject({ method: 'GET', url: `/api/install/${installLinkId}` });
-      expect(bare.statusCode).toBe(200);
-      const bareBody = bare.json() as Record<string, unknown>;
-      expect(bareBody['quickCreateUrl']).toBeNull();
-      expect(bareBody['existingStackUpdate']).toBeNull();
-      expect(bareBody['credentialsWithheld']).toBe(true);
-      expect(JSON.stringify(bareBody)).not.toContain(deployment.enrollmentCode);
-      expect(JSON.stringify(bareBody)).not.toContain('withheld-relay-credential');
+      // The old fragment token is no longer a credential (docs/customer-access.md).
+      for (const headers of [{}, linkTokenHeader(installLinkId)]) {
+        const bare = await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers });
+        expect(bare.statusCode).toBe(200);
+        const bareBody = bare.json() as Record<string, unknown>;
+        expect(Object.keys(bareBody).sort()).toEqual(['applicationName', 'publisherName', 'signInRequired']);
+        expect(JSON.stringify(bareBody)).not.toContain(deployment.enrollmentCode);
+        expect(JSON.stringify(bareBody)).not.toContain('withheld-relay-credential');
+      }
 
-      const wrong = await app.inject({
+      const owner = await app.inject({
         method: 'GET',
         url: `/api/install/${installLinkId}`,
-        headers: { 'x-deployz-token': 'wrong' },
+        headers: await customerSessionHeaders(db, installLinkId),
       });
-      expect((wrong.json() as Record<string, unknown>)['quickCreateUrl']).toBeNull();
-
-      const withToken = await app.inject({
-        method: 'GET',
-        url: `/api/install/${installLinkId}`,
-        headers: linkTokenHeader(installLinkId),
-      });
-      const tokenBody = withToken.json() as Record<string, unknown>;
-      expect(String(tokenBody['quickCreateUrl'])).toContain(deployment.enrollmentCode);
-      expect(tokenBody['credentialsWithheld']).toBe(false);
+      expect(String((owner.json() as Record<string, unknown>)['quickCreateUrl'])).toContain(deployment.enrollmentCode);
     } finally {
       mutableEnv.bootstrapTemplateUrl = previous;
     }
 
-    for (const headers of [{}, { 'x-deployz-token': 'wrong' }]) {
+    for (const route of ['status', 'overview']) {
+      const read = await app.inject({ method: 'GET', url: `/api/install/${installLinkId}/${route}` });
+      expect(read.statusCode).toBe(404);
+    }
+    for (const headers of [{}, linkTokenHeader(installLinkId)]) {
       const retry = await postJson(app, `/api/install/${installLinkId}/retry`, {}, headers);
       expect(retry.statusCode).toBe(404);
     }
@@ -5338,7 +5337,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       requestedBy: null,
     });
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(409);
     expect(response.json()).toMatchObject({ error: { code: 'INSTALL_IN_PROGRESS' } });
     const [unchanged] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
@@ -5358,7 +5357,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       requestedBy: null,
     });
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(409);
     expect(response.json()).toMatchObject({ error: { code: 'INSTALL_ALREADY_SUCCEEDED' } });
   });
@@ -5387,7 +5386,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
 
   it('POST /api/install/:installLinkId/retry refuses a deployment that is being removed', async () => {
     const deleting = await seedWaiting({ state: 'DELETING', installationId: 'inst-removing' });
-    const removing = await postJson(app, `/api/install/${deleting.installLinkId}/retry`, {}, linkTokenHeader(deleting.installLinkId));
+    const removing = await postJson(app, `/api/install/${deleting.installLinkId}/retry`, {}, await customerSessionHeaders(db, deleting.installLinkId));
     expect(removing.statusCode, removing.body).toBe(410);
     expect(removing.json()).toMatchObject({ error: { code: 'INSTALL_LINK_REVOKED' } });
     const [untouched] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deleting.deployment.id));
@@ -5397,7 +5396,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
 
   it('POST /api/install/:installLinkId/retry refuses a failed install: the vendor owns that retry', async () => {
     const failed = await seedWaiting({ state: 'FAILED', installationId: 'inst-failed' });
-    const response = await postJson(app, `/api/install/${failed.installLinkId}/retry`, {}, linkTokenHeader(failed.installLinkId));
+    const response = await postJson(app, `/api/install/${failed.installLinkId}/retry`, {}, await customerSessionHeaders(db, failed.installLinkId));
     expect(response.statusCode, response.body).toBe(409);
     expect(response.json()).toMatchObject({ error: { code: 'INSTALL_NOT_RETRYABLE' } });
   });
@@ -5431,7 +5430,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       requestedBy: null,
     });
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(200);
 
     const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
@@ -5447,7 +5446,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       enrollmentUsedAt: null,
     });
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode).toBe(200);
 
     const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
@@ -5474,7 +5473,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       requestedBy: null,
     });
 
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode, response.body).toBe(200);
     const body = response.json() as {
       bootstrapStackName: string;
@@ -5516,7 +5515,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
       installationId: null,
       bootstrapStackName: stackName,
     });
-    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, linkTokenHeader(installLinkId));
+    const response = await postJson(app, `/api/install/${installLinkId}/retry`, {}, await customerSessionHeaders(db, installLinkId));
     expect(response.statusCode, response.body).toBe(200);
     const body = response.json() as {
       bootstrapStackName: string;
@@ -5527,7 +5526,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(body.existingStackUpdate).toBeNull();
 
     const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
-    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkTokenHeader(installLinkId) })).json() as {
+    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: await customerSessionHeaders(db, installLinkId) })).json() as {
       quickCreateUrl: string | null;
     };
     expect(page.quickCreateUrl).not.toBeNull();
@@ -5621,8 +5620,8 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     expect(reset.statusCode, reset.body).toBe(200);
 
     const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
-    expect(dep!.installLinkExpiresAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 24 * 60 * 60 * 1000);
-    const page = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) });
+    expect(dep!.installLinkExpiresAt!.getTime()).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
+    const page = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(page.statusCode, page.body).toBe(200);
   });
 
@@ -5650,7 +5649,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     const [dep] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deployment.id));
     expect(dep!.bootstrapStackName).toBe('deployz-update-reset-app-1');
 
-    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkTokenHeader(installLinkId) })).json() as {
+    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: await customerSessionHeaders(db, installLinkId) })).json() as {
       quickCreateUrl: string | null;
       existingStackUpdate: Record<string, unknown> | null;
     };
@@ -5738,7 +5737,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     });
     const reset = await postJson(app, `/api/deployments/${deployment.id}/relay/reset`, {}, { cookie: org.cookie });
     expect(reset.statusCode).toBe(200);
-    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: linkTokenHeader(installLinkId) })).json() as {
+    const page = (await app.inject({ method: 'GET', url: `/api/install/${installLinkId}`, headers: await customerSessionHeaders(db, installLinkId) })).json() as {
       quickCreateUrl: string | null;
       existingStackUpdate: unknown;
     };
@@ -5806,7 +5805,7 @@ describe('server — pre-relay install lifecycle (waiting-for-relay and retry)',
     });
 
     const installBody = (
-      await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: linkTokenHeader(deployment.installLinkId) })
+      await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) })
     ).json() as { components: Record<string, string> | null; alreadyInstalled: boolean };
     expect(installBody.alreadyInstalled).toBe(true);
 

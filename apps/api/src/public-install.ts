@@ -60,7 +60,7 @@ import { hashRelayToken, verifyRelayToken } from './relay-store.js';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** How long a freshly minted targeted invitation stays valid. */
-export const DEFAULT_INVITATION_TTL_DAYS = 30;
+export const DEFAULT_INVITATION_TTL_DAYS = 7;
 
 /**
  * How many deployments one reusable public link may create per day. The link
