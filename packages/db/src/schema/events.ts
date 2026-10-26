@@ -1,4 +1,5 @@
-import { bigserial, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { bigserial, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 // §40 EventLog — the APPEND-ONLY audit stream.
 //
@@ -31,4 +32,12 @@ export const eventLogs = pgTable('event_logs', {
   requestedState: text('requested_state'),
   result: text('result'),
   payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
-});
+},
+(t) => [
+  // A deployment's timeline (newest first) and the per-deployment throttle checks.
+  index('event_logs_deployment_occurred_idx')
+    .on(t.deploymentId, t.occurredAt.desc(), t.id.desc())
+    .where(sql`${t.deploymentId} IS NOT NULL`),
+  // Organization activity and the invitation rate limit.
+  index('event_logs_organization_occurred_idx').on(t.organizationId, t.occurredAt.desc()),
+]);

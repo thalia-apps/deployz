@@ -1330,6 +1330,16 @@ const JOB_LIST_COLUMNS = Object.fromEntries(
   Object.entries(getTableColumns(schema.deploymentJobs)).filter(([name]) => name !== 'payload'),
 ) as Omit<ReturnType<typeof getTableColumns<typeof schema.deploymentJobs>>, 'payload'>;
 
+/**
+ * JOB_LIST_COLUMNS plus the one payload field deriveDeploymentStatus reads
+ * (`startAfterConfig`). An INSTALL payload carries the whole manifest, and the
+ * heartbeat and the public status polls read every job of the deployment.
+ */
+const JOB_DERIVATION_COLUMNS = {
+  ...JOB_LIST_COLUMNS,
+  payload: sql<Record<string, unknown>>`jsonb_strip_nulls(jsonb_build_object('startAfterConfig', ${schema.deploymentJobs.payload} -> 'startAfterConfig'))`,
+};
+
 const SETTLED_JOB_STATES: ReadonlySet<string> = new Set(['SUCCEEDED', 'SUCCESS', 'FAILED', 'CANCELLED']);
 
 // maskAwsAccountId/toFleetRow live in ./fleet-row.js — shared with Team
@@ -1952,7 +1962,7 @@ async function advanceStepTimingsAfterWrite(
   const application = derivationApplicationFor(freshDeployment, applicationRows[0] ?? null);
 
   const jobs = await db
-    .select()
+    .select(JOB_DERIVATION_COLUMNS)
     .from(schema.deploymentJobs)
     .where(eq(schema.deploymentJobs.deploymentId, freshDeployment.id))
     .orderBy(schema.deploymentJobs.createdAt);
@@ -3196,7 +3206,7 @@ export async function buildServer({
       }
       const row = rows[0]!;
       const jobs = await db
-        .select()
+        .select(JOB_DERIVATION_COLUMNS)
         .from(schema.deploymentJobs)
         .where(eq(schema.deploymentJobs.deploymentId, row.deployment.id))
         .orderBy(schema.deploymentJobs.createdAt);
@@ -4939,7 +4949,7 @@ export async function buildServer({
       const token = firstHeaderValue(request.headers['x-deployz-token']);
       const { deployment, application } = await resolveDeployLink(db, publicId, token);
       const jobs = await db
-        .select()
+        .select(JOB_DERIVATION_COLUMNS)
         .from(schema.deploymentJobs)
         .where(eq(schema.deploymentJobs.deploymentId, deployment.id))
         .orderBy(schema.deploymentJobs.createdAt);
@@ -8662,11 +8672,17 @@ export async function buildServer({
     // §10.2 + Phase 11: the probe URL is where the app is ACTUALLY served —
     // the custom domain / default-HTTPS hostname once HTTPS is configured,
     // otherwise the successful INSTALL's ALB endpoint — plus the configured
-    // health path.
+    // health path. resolveAppUrl reads only successful INSTALL jobs.
     const installJobs = await db
       .select({ result: schema.deploymentJobs.result, state: schema.deploymentJobs.state, type: schema.deploymentJobs.type })
       .from(schema.deploymentJobs)
-      .where(eq(schema.deploymentJobs.deploymentId, deployment.id))
+      .where(
+        and(
+          eq(schema.deploymentJobs.deploymentId, deployment.id),
+          eq(schema.deploymentJobs.type, 'INSTALL'),
+          inArray(schema.deploymentJobs.state, ['SUCCEEDED', 'SUCCESS']),
+        ),
+      )
       .orderBy(schema.deploymentJobs.createdAt);
     const activeDomain = await findActiveDomain(db, deployment.id);
     const defaultHttps = parseDefaultHttps(deployment.defaultHttps);

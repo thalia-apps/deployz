@@ -71,6 +71,9 @@ export class WorkerLambda extends Construct {
       new SqsEventSource(props.queue, {
         batchSize: 5,
         reportBatchItemFailures: true,
+        // Bounds the worker's share of the database connection budget. A
+        // backlog waits in the queue; it does not use up receive attempts.
+        maxConcurrency: 10,
       }),
     );
 

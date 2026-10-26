@@ -80,6 +80,7 @@ import migration0050 from '../../../db/drizzle/0050_rds_az_capacity.sql';
 import migration0051 from '../../../db/drizzle/0051_release_confirmation.sql';
 import migration0052 from '../../../db/drizzle/0052_infrastructure_size_tiers.sql';
 import migration0053 from '../../../db/drizzle/0053_deployment_billing_paused.sql';
+import migration0054 from '../../../db/drizzle/0054_hot_path_indexes.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate } from './migration-check.js';
 
@@ -148,6 +149,7 @@ const MIGRATION_SQL: Record<string, string> = {
   '0051_release_confirmation': migration0051,
   '0052_infrastructure_size_tiers': migration0052,
   '0053_deployment_billing_paused': migration0053,
+  '0054_hot_path_indexes': migration0054,
 };
 
 interface RdsSecret {
@@ -215,7 +217,24 @@ export function connectDb(): Promise<LambdaDb> {
       const secret = await fetchDbSecret(secretArn);
       const databaseUrl = `postgres://${secret.username}:${secret.password}@${secret.host}:${secret.port}/${secret.dbname}?sslmode=require&uselibpqcompat=true`;
 
-      const pool = new Pool({ connectionString: databaseUrl });
+      // A container serves one request or SQS record at a time: one
+      // connection, two when code reads through `db` inside a transaction.
+      // The cap keeps every container inside the db.t4g.micro connection
+      // budget, and a starved pool fails fast instead of waiting for the
+      // Lambda timeout. A container that dies mid-transaction leaves its
+      // session holding locks until TCP keepalive notices; the server ends
+      // such a session after 60 seconds instead.
+      const pool = new Pool({
+        connectionString: databaseUrl,
+        max: 3,
+        connectionTimeoutMillis: 5_000,
+        options: '-c idle_in_transaction_session_timeout=60000',
+      });
+      // An idle client the server drops emits 'error' on the pool; without a
+      // listener that crashes the container. The pool replaces the client.
+      pool.on('error', (error) => {
+        console.error(JSON.stringify({ event: 'db:pool-error', error: String(error) }));
+      });
       const db = drizzle({ client: pool, schema });
       // Most cold starts find the schema already current: one query replaces
       // writing and re-checking every bundled migration. Any doubt runs the

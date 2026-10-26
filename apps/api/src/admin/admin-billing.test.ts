@@ -81,7 +81,8 @@ function auditRows(db: Db, organizationId: string) {
         eq(schema.eventLogs.organizationId, organizationId),
         eq(schema.eventLogs.eventType, 'admin.billing.reconcile_requested'),
       ),
-    );
+    )
+    .orderBy(schema.eventLogs.id);
 }
 
 describe('admin billing (Paddle migration Phase 14)', () => {
