@@ -60,6 +60,7 @@ const STATEMENT_LABELS: Record<string, string> = {
   RelayAccessCredential: 'Read and refresh its own Deployz credential secret',
   RelayVerifyInstallation: 'Verify its installation stack',
   RelayPendingCommandState: 'Record commands it has not finished',
+  RelayReadOwnStack: 'Read the status of its own connector stack',
   ProvisionerCreateStacks: 'Create and update the application stack',
   ProvisionerManageStacks: 'Read and delete the application stack',
   ProvisionerPassRole: 'Give the execution role to CloudFormation',
