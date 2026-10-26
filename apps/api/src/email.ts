@@ -50,15 +50,51 @@ export class SesEmailSender implements EmailSender {
   async send(message: EmailMessage): Promise<void> {
     await this.client.send(
       new SendEmailCommand({
-        Source: this.from,
+        Source: `Deployz <${this.from}>`,
         Destination: { ToAddresses: [message.to] },
         Message: {
           Subject: { Data: message.subject, Charset: 'UTF-8' },
-          Body: { Text: { Data: message.body, Charset: 'UTF-8' } },
+          Body: {
+            Text: { Data: message.body, Charset: 'UTF-8' },
+            Html: { Data: renderEmailHtml(message.body), Charset: 'UTF-8' },
+          },
         },
       }),
     );
   }
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Wraps the plain-text body in a branded HTML layout. The logo is a PNG on
+ *  the web app because many mail clients do not render SVG. */
+export function renderEmailHtml(body: string): string {
+  const logoUrl = `${env.webUrl}/brand/deployz/deployz-icon-512.png`;
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      escapeHtml(paragraph)
+        .replace(/https?:\/\/[^\s<]+/g, (url) => `<a href="${url}" style="color:#2563eb;word-break:break-all">${url}</a>`)
+        .replace(/\n/g, '<br>'),
+    )
+    .map((paragraph) => `<p style="margin:0 0 16px">${paragraph}</p>`)
+    .join('');
+  return [
+    '<!doctype html><html><body style="margin:0;padding:24px 16px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px">',
+    `<tr><td style="padding:24px 32px 0"><img src="${logoUrl}" width="32" height="32" alt="Deployz" style="display:inline-block;vertical-align:middle;border:0">`,
+    '<span style="margin-left:10px;vertical-align:middle;font-size:18px;font-weight:600;color:#09090b">Deployz</span></td></tr>',
+    `<tr><td style="padding:24px 32px 16px;font-size:15px;line-height:1.6;color:#09090b">${paragraphs}</td></tr>`,
+    '</table></td></tr></table></body></html>',
+  ].join('');
 }
 
 export function createEmailSender(): EmailSender {
