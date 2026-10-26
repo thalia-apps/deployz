@@ -752,6 +752,9 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   'health.unhealthy': 'Health critical',
   'health.recovered': 'Back to healthy',
   'ecs.rollout_failed': 'Deployment rollout failed',
+  'connector.update_verified': 'Connector updated',
+  'connector.update_rolled_back': 'Connector update rolled back',
+  'connector.update_failed': 'Connector update failed',
   'relay.reenrollment.requested': 'Reconnect requested',
 
   'config.validate': 'Configuration checked',

@@ -234,6 +234,10 @@ export const failureEvidenceSchema = z.object({
 });
 export type FailureEvidence = z.infer<typeof failureEvidenceSchema>;
 
+/** The connector (bootstrap) stack state, derived from its CloudFormation status. */
+export const connectorStackStateSchema = z.enum(['STABLE', 'UPDATING', 'ROLLED_BACK', 'FAILED', 'UNKNOWN']);
+export type ConnectorStackState = z.infer<typeof connectorStackStateSchema>;
+
 export const relayStatusSchema = z.enum(['CONNECTED', 'DISCONNECTED', 'UNKNOWN']);
 export type RelayStatus = z.infer<typeof relayStatusSchema>;
 
@@ -262,6 +266,9 @@ export const relayIdentitySchema = z
     relayVersion: z.string(),
     bootstrapVersion: z.string().nullable(),
     capabilities: relayCapabilitiesSchema,
+    // The CloudFormation StackStatus of the relay's own bootstrap stack, read
+    // once per heartbeat. Absent from old relays and from a failed read.
+    bootstrapStackStatus: z.string().optional(),
   })
   .strict();
 export type RelayIdentity = z.infer<typeof relayIdentitySchema>;
@@ -786,6 +793,14 @@ export const vendorDeploymentStatusSchema = z
         // to choose at "Replace existing template".
         updateUrl: z.string().nullable(),
         updateTemplateUrl: z.string().nullable(),
+        // Build id the connector reports, and the build id Deployz publishes.
+        installedBuildId: z.string().nullable(),
+        publishedBuildId: z.string().nullable(),
+        // The connector stack state, mapped from the CloudFormation status
+        // the relay reports. Raw CloudFormation states stay out of the UI.
+        stackState: connectorStackStateSchema,
+        // When the relay last reported the connector stack status.
+        observedAt: z.iso.datetime().nullable(),
       })
       .strict(),
     url: z.string().nullable(),

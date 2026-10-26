@@ -40,6 +40,10 @@ const connector = (
   updateAvailable: false,
   updateUrl: null,
   updateTemplateUrl: null,
+  installedBuildId: null,
+  publishedBuildId: null,
+  stackState: 'UNKNOWN',
+  observedAt: null,
   ...overrides,
 });
 
@@ -77,6 +81,32 @@ describe('ConnectorUpdateAlert', () => {
     );
     expect(view.textContent).toContain('Connector update available');
     expect(view.textContent).not.toContain('required');
+  });
+
+  it('says the update is in progress while the connector stack updates', () => {
+    const view = render(
+      <ConnectorUpdateAlert connector={connector({ stackState: 'UPDATING', updateAvailable: true })} customerName="Acme" />,
+    );
+    expect(view.textContent).toContain('Connector update in progress');
+    expect(view.textContent).not.toContain('Replace existing template');
+  });
+
+  it('says the update rolled back and offers it again', () => {
+    const view = render(
+      <ConnectorUpdateAlert
+        connector={connector({ stackState: 'ROLLED_BACK', updateAvailable: true, updateUrl: 'https://console.example/stacks' })}
+        customerName="Acme"
+      />,
+    );
+    expect(view.textContent).toContain('Connector update rolled back');
+    expect(view.textContent).toContain('Replace existing template');
+    expect(view.querySelector('a')?.getAttribute('href')).toBe('https://console.example/stacks');
+  });
+
+  it('says the update failed, without raw CloudFormation states', () => {
+    const view = render(<ConnectorUpdateAlert connector={connector({ stackState: 'FAILED' })} customerName="Acme" />);
+    expect(view.textContent).toContain('Connector update failed');
+    expect(view.textContent).not.toMatch(/[A-Z]+_[A-Z_]+/);
   });
 });
 

@@ -1910,7 +1910,17 @@ describe('deriveDeploymentStatus — release evidence', () => {
     const failing = derive({
       deployment: makeDeployment({ ...healthy, observedState: verdict(false, 'PROBE_FAILED') }),
     });
-    expect(failing.connector).toEqual({ upgradeRequired: false, reason: null, updateAvailable: false, updateUrl: null, updateTemplateUrl: null });
+    expect(failing.connector).toEqual({
+      upgradeRequired: false,
+      reason: null,
+      updateAvailable: false,
+      updateUrl: null,
+      updateTemplateUrl: null,
+      installedBuildId: null,
+      publishedBuildId: null,
+      stackState: 'UNKNOWN',
+      observedAt: null,
+    });
   });
 
   it('offers a connector update when the reported build differs from the published one', () => {
@@ -1922,6 +1932,10 @@ describe('deriveDeploymentStatus — release evidence', () => {
       updateAvailable: true,
       updateUrl: 'https://console/stacks',
       updateTemplateUrl: 'https://tpl/new.json',
+      installedBuildId: 'oldbuild0001',
+      publishedBuildId: 'newbuild0001',
+      stackState: 'UNKNOWN',
+      observedAt: null,
     });
     const unknownBuild = derive({ deployment: makeDeployment({ ...healthy, bootstrapVersion: null }), connectorUpdate: offer });
     expect(unknownBuild.connector.updateAvailable).toBe(true);
@@ -1932,6 +1946,26 @@ describe('deriveDeploymentStatus — release evidence', () => {
       connectorUpdate: { ...offer, publishedBuildId: null },
     });
     expect(unknownPublished.connector.updateAvailable).toBe(false);
+  });
+
+  it('derives the connector stack state from the last reported status, and UNKNOWN once it is stale', () => {
+    const now = new Date('2026-10-26T12:00:00.000Z');
+    const reported = (status: string, observedAt: string) =>
+      derive({
+        deployment: makeDeployment({ ...healthy, observedState: { bootstrapStack: { status, observedAt } } }),
+        now,
+      }).connector;
+    expect(reported('UPDATE_IN_PROGRESS', '2026-10-26T11:59:00.000Z')).toMatchObject({
+      stackState: 'UPDATING',
+      observedAt: '2026-10-26T11:59:00.000Z',
+    });
+    expect(reported('UPDATE_COMPLETE', '2026-10-26T11:59:00.000Z').stackState).toBe('STABLE');
+    expect(reported('UPDATE_ROLLBACK_COMPLETE', '2026-10-26T11:59:00.000Z').stackState).toBe('ROLLED_BACK');
+    expect(reported('UPDATE_ROLLBACK_FAILED', '2026-10-26T11:59:00.000Z').stackState).toBe('FAILED');
+    expect(reported('UPDATE_COMPLETE', '2026-10-26T11:30:00.000Z')).toMatchObject({
+      stackState: 'UNKNOWN',
+      observedAt: '2026-10-26T11:30:00.000Z',
+    });
   });
 
   it('reports an intentional zero-task state as not started', () => {

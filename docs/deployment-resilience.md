@@ -538,6 +538,11 @@ still roll, and would hide a crash loop.
   unexecuted (`POST /api/relay/commands/:id/release` → REQUESTED); a job
   whose claimed payload was redacted (INSTALL, CONFIG_UPDATE) is never
   handed back. Domain jobs are not affected.
+- While the customer updates the connector (bootstrap) stack, the relay
+  polls with `claim=0` and claims no new command; it still finishes the
+  commands it claimed and sends heartbeats, so the watchdog does not time
+  out the waiting jobs. The relay decides this from its own stack status
+  each invocation; overlapping invocations each read it.
 - `GET /api/relay/commands` claims jobs atomically (single
   UPDATE … RETURNING), so overlapping polls cannot hand the same command
   out twice; `POST /api/relay/commands/:id/result` ignores results for

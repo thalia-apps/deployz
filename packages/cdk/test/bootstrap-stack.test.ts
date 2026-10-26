@@ -765,6 +765,27 @@ describe('BootstrapStack', () => {
     });
   });
 
+  it('lets the relay read only the status of its own bootstrap stack', () => {
+    const { stack, template } = synth();
+    const ownStack = Match.objectLike({
+      Effect: 'Allow',
+      Action: 'cloudformation:DescribeStacks',
+      Resource: { Ref: 'AWS::StackId' },
+    });
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: { Statement: Match.arrayWith([Match.objectLike({ Sid: 'RelayReadOwnStack' })]) },
+    });
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: { Statement: Match.arrayWith([ownStack]) },
+    });
+    const boundary = stack.permissionsBoundary.document.toJSON()['Statement'] as Statement[];
+    expect(
+      boundary.some(
+        (s) => s.Resource === '*' && s.Condition === undefined && [s.Action].flat().includes('cloudformation:DescribeStacks'),
+      ),
+    ).toBe(true);
+  });
+
   it('matches the committed snapshot', () => {
     const { template } = synth();
     expect(withStableAssetHashes(template.toJSON())).toMatchSnapshot();
@@ -1409,6 +1430,8 @@ function resolveIntrinsics(node: unknown, env: IntrinsicEnv): unknown {
       'AWS::Partition': env.partition,
       'AWS::Region': env.region,
       'AWS::AccountId': env.account,
+      // A stack name is at most 128 characters.
+      'AWS::StackId': `arn:${env.partition}:cloudformation:${env.region}:${env.account}:stack/${'s'.repeat(128)}/11111111-1111-4111-8111-111111111111`,
       RelayCredentialFromParam: generatedSecretArn('RelayCredentialFromParam', env),
       RelayCredentialGenerated: generatedSecretArn('RelayCredentialGenerated', env),
     };
