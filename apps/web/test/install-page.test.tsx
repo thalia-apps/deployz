@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock('next/headers', () => ({
   cookies: async () => ({
-    get: () => (mocks.cookieToken === undefined ? undefined : { value: mocks.cookieToken }),
+    toString: () => mocks.cookieHeader,
   }),
 }));
 
@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   fetchPublicInstallData: vi.fn(),
   fetchInstallData: vi.fn(),
   fetchInstallStatusServer: vi.fn(),
-  cookieToken: undefined as string | undefined,
+  cookieHeader: '',
 }));
 
 vi.mock('../src/lib/public-install-data', () => ({
@@ -73,6 +73,7 @@ function resolvedData(overrides: Record<string, unknown> = {}): Record<string, u
     },
     quickCreateUrl: QUICK_CREATE,
     alreadyInstalled: false,
+    viewer: { kind: 'customer', email: 'owner@example.com' },
     deploymentId: 'dep-1',
     deploymentState: 'NOT_INSTALLED',
     domain: null,
@@ -113,7 +114,7 @@ async function renderPage(linkId: string = LINK_ID): Promise<Document> {
 }
 
 beforeEach(() => {
-  mocks.cookieToken = undefined;
+  mocks.cookieHeader = '';
   mocks.fetchPublicInstallData.mockReset();
   mocks.fetchInstallData.mockReset();
   mocks.fetchInstallStatusServer.mockReset().mockResolvedValue(null);
@@ -135,29 +136,43 @@ describe('InstallPage per-deployment flow', () => {
     expect(doc.body.textContent).toContain('RDS PostgreSQL database');
   });
 
-  it('sends the link token from the cookie to the control plane', async () => {
-    mocks.cookieToken = 'link-secret';
+  it('forwards the browser cookies to the control plane', async () => {
+    mocks.cookieHeader = 'deployz.customer_session_token=abc';
     mocks.fetchPublicInstallData.mockResolvedValue(null);
     mocks.fetchInstallData.mockResolvedValue({ status: 'ok', data: resolvedData() });
 
     await renderPage();
 
-    expect(mocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, 'link-secret');
+    expect(mocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, 'deployz.customer_session_token=abc');
+    expect(mocks.fetchInstallStatusServer).toHaveBeenCalledWith(LINK_ID, 'deployz.customer_session_token=abc');
   });
 
-  it('offers no AWS connection until the link token arrives', async () => {
+  it('asks for email verification, and offers no AWS connection, until the owner signs in', async () => {
     mocks.fetchPublicInstallData.mockResolvedValue(null);
     mocks.fetchInstallData.mockResolvedValue({
-      status: 'ok',
-      data: resolvedData({ quickCreateUrl: null, credentialsWithheld: true }),
+      status: 'sign_in',
+      applicationName: 'Acme App',
+      publisherName: 'Acme Inc',
     });
 
     const doc = await renderPage();
 
-    // The gate renders nothing on the server: the browser reads the URL fragment.
-    expect(doc.body.textContent).toContain('to your AWS account');
+    expect(doc.body.textContent).toContain('Verify your email');
+    expect(doc.body.textContent).toContain('Published by Acme Inc');
     expect(doc.body.textContent).not.toContain('Connect AWS account');
+    expect(doc.body.textContent).not.toContain('AWS resources');
     expect(doc.querySelector('a[href^="https://console.aws.amazon.com"]')).toBeNull();
+  });
+
+  it('shows who is signed in', async () => {
+    mocks.fetchPublicInstallData.mockResolvedValue(null);
+    mocks.fetchInstallData.mockResolvedValue({ status: 'ok', data: resolvedData() });
+
+    const doc = await renderPage();
+
+    expect(doc.querySelector('[data-testid="customer-session-bar"]')?.textContent).toContain(
+      'Signed in as owner@example.com',
+    );
   });
 
   it('delegates an unknown link to the invitation token gate', async () => {

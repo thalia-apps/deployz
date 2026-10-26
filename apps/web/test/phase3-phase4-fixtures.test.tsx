@@ -46,7 +46,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/headers', () => ({
-  cookies: async () => ({ get: () => undefined }),
+  cookies: async () => ({ get: () => undefined, toString: () => '' }),
 }));
 
 vi.mock('../src/lib/install-status', async (importOriginal) => {
@@ -366,6 +366,7 @@ describe('truthful degradation on the customer install page', () => {
       plan: webWorkersMysqlRedisPlan,
       quickCreateUrl: 'https://console.aws.amazon.com/cloudformation/quickcreate',
       alreadyInstalled: false,
+      viewer: { kind: 'customer', email: 'owner@example.com' },
       deploymentId: 'dep-1',
       deploymentState: 'NOT_INSTALLED',
       domain: null,

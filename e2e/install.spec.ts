@@ -1,16 +1,16 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-// §44 public install page + §45 trust page, against the REAL (public,
-// no-auth) `GET /api/install/:installLinkId` endpoint. Seeds a real
-// application/customer/deployment directly against the API (no browser
-// session needed — these routes are unauthenticated by design, §44) to get a
-// real installLinkId, then visits the public pages as an anonymous
-// customer. Unknown installation ids now get an honest not-found state
-// instead of fabricated content.
+// §44 customer install page + §45 trust page, against the REAL
+// `GET /api/install/:installLinkId` endpoint. Seeds a real
+// application/customer/deployment through the vendor's API session, signs
+// the browser in as the deployment's owner (docs/customer-access.md), then
+// visits the pages as that customer. Unknown installation ids get an honest
+// not-found state instead of fabricated content.
 
 import { extractQuickCreateParam } from './simulation/relay-harness.js';
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
-import { installLinkHeaders, installLinkPath } from './install-link.js';
+import { signInAsCustomer } from './customer-session.js';
+import { installLinkHeaders } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -27,6 +27,7 @@ async function seedInstall(
   customerId: string;
   applicationName: string;
   publisherName: string;
+  customerEmail: string;
 }> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-install-${suffix}@example.com`;
@@ -70,6 +71,7 @@ async function seedInstall(
     customerId: customer.id,
     applicationName: application.name,
     publisherName: `Install Vendor ${suffix}`,
+    customerEmail: `acme-${suffix}@example.com`,
   };
 }
 
@@ -85,9 +87,10 @@ test('install page renders the real application/publisher and the Connect AWS ac
   page,
   request,
 }) => {
-  const { installLinkId, applicationName } = await seedInstall(request);
+  const { installLinkId, applicationName, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
 
-  const response = await page.goto(await installLinkPath(request, installLinkId));
+  const response = await page.goto(`/install/${installLinkId}`);
   expect(response?.status()).toBe(200);
 
   await expect(
@@ -129,21 +132,10 @@ test('install page renders the real application/publisher and the Connect AWS ac
   await expect(page.getByText(installLinkId)).toBeVisible();
 });
 
-test('install page moves the link secret out of the address bar', async ({ page, request }) => {
-  const { installLinkId } = await seedInstall(request);
-
-  await page.goto(await installLinkPath(request, installLinkId));
-  await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('');
-
-  await page.reload();
-  await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
-  expect(await page.evaluate(() => window.location.hash)).toBe('');
-});
-
 test('install page top-level copy is jargon-free', async ({ page, request }) => {
-  const { installLinkId } = await seedInstall(request);
-  await page.goto(await installLinkPath(request, installLinkId));
+  const { installLinkId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
+  await page.goto(`/install/${installLinkId}`);
   // The prose around the decision is jargon-free; the infrastructure table
   // below it deliberately names the AWS services it creates (AWS Lambda, IAM
   // roles, ECS, VPC), which is the point of that table. "CloudFormation" is
@@ -163,7 +155,8 @@ test('security page overview is jargon-free and shows the access summary', async
 }) => {
   // A real install link. This page used to render the full security story for
   // ANY id, including ones the parent route had already called invalid.
-  const { installLinkId } = await seedInstall(request);
+  const { installLinkId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
   const response = await page.goto(`/install/${installLinkId}/security`);
   expect(response?.status()).toBe(200);
 
@@ -186,7 +179,8 @@ test('security page reveals the actual permissions only after expanding', async 
   page,
   request,
 }) => {
-  const { installLinkId } = await seedInstall(request);
+  const { installLinkId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
   await page.goto(`/install/${installLinkId}/security`);
 
   await page.getByRole('tab', { name: 'AWS permissions' }).click();
@@ -225,7 +219,8 @@ test('security page reveals the actual permissions only after expanding', async 
 });
 
 test('install page links to security details and back', async ({ page, request }) => {
-  const { installLinkId } = await seedInstall(request);
+  const { installLinkId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
   await page.goto(`/install/${installLinkId}`);
   await page.getByRole('button', { name: 'Technical details' }).click();
   await page.getByRole('link', { name: 'Security & permissions details' }).click();
@@ -241,7 +236,8 @@ test('a setup link that has already been used says so instead of leading to a de
   page,
   request,
 }) => {
-  const { installLinkId } = await seedInstall(request);
+  const { installLinkId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
 
   // Enrol a relay, which spends the single-use code. The code travels only
   // inside the Quick Create link (never as its own response field), so read
@@ -289,10 +285,12 @@ test('two deployments of the same application in the same region prefill differe
   expect(secondDeployment.ok()).toBeTruthy();
   const second = (await secondDeployment.json()) as { installLinkId: string };
 
-  await page.goto(await installLinkPath(request, seeded.installLinkId));
+  // Both deployments belong to the same customer, so one owner email opens both.
+  await signInAsCustomer(page.request, seeded.installLinkId, seeded.customerEmail);
+  await page.goto(`/install/${seeded.installLinkId}`);
   const firstHref = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
 
-  await page.goto(await installLinkPath(request, second.installLinkId));
+  await page.goto(`/install/${second.installLinkId}`);
   const secondHref = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
 
   expect(firstHref).toContain('stackName=deployz-bootstrap-analytics-cloud-');
@@ -309,7 +307,8 @@ test('pressing Deploy to AWS reports the launch and the page then waits for the 
   page,
   request,
 }) => {
-  const { installLinkId, deploymentId } = await seedInstall(request);
+  const { installLinkId, deploymentId, customerEmail } = await seedInstall(request);
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
 
   // Keep the browser off the real AWS console. The CTA opens the console in
   // a NEW tab (the install page stays behind it showing live progress), so
@@ -322,7 +321,7 @@ test('pressing Deploy to AWS reports the launch and the page then waits for the 
     await route.abort();
   });
 
-  await page.goto(await installLinkPath(request, installLinkId));
+  await page.goto(`/install/${installLinkId}`);
   await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
   await page.getByRole('link', { name: 'Connect AWS account' }).click();
   await expect
@@ -362,7 +361,7 @@ test('a customer retry starts a fresh attempt with a fresh stack name and code',
   page,
   request,
 }) => {
-  const { installLinkId } = await seedInstall(request);
+  const { installLinkId, customerEmail } = await seedInstall(request);
 
   await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
   const before = (await request.get(`${API_URL}/api/install/${installLinkId}`, {
@@ -388,7 +387,8 @@ test('a customer retry starts a fresh attempt with a fresh stack name and code',
 
   // The install page hands the customer the fresh link, prefilled with the
   // new stack name no leftover from the first attempt can block.
-  await page.goto(await installLinkPath(request, installLinkId));
+  await signInAsCustomer(page.request, installLinkId, customerEmail);
+  await page.goto(`/install/${installLinkId}`);
   const href = await page.getByRole('link', { name: 'Connect AWS account' }).getAttribute('href');
   expect(href).toContain(`stackName=${encodeURIComponent(attempt.bootstrapStackName)}`);
 });
