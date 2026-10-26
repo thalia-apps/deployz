@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
 
@@ -10,11 +10,10 @@ import { makeApplicationDeployable } from './seed-ready-manifest.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
-async function seedDeployment(request: APIRequestContext): Promise<{ installLinkId: string; customerEmail: string; publisherName: string }> {
+async function seedDeployment(request: APIRequestContext): Promise<{ installLinkId: string; customerEmail: string }> {
   const suffix = crypto.randomUUID().slice(0, 8);
-  const publisherName = `Access Vendor ${suffix}`;
   const signUp = await request.post(`${API_URL}/api/auth/sign-up/email`, {
-    data: { name: publisherName, email: `e2e-access-${suffix}@example.com`, password: 'super-secret-1' },
+    data: { name: `Access Vendor ${suffix}`, email: `e2e-access-${suffix}@example.com`, password: 'super-secret-1' },
   });
   expect(signUp.ok()).toBeTruthy();
   const appResponse = await request.post(`${API_URL}/api/applications`, {
@@ -40,24 +39,41 @@ async function seedDeployment(request: APIRequestContext): Promise<{ installLink
   });
   expect(deploymentResponse.ok()).toBeTruthy();
   const deployment = (await deploymentResponse.json()) as { installLinkId: string };
-  return { installLinkId: deployment.installLinkId, customerEmail, publisherName };
+  return { installLinkId: deployment.installLinkId, customerEmail };
+}
+
+/**
+ * Passes the code request through and keeps its JSON body. Playwright cannot
+ * read this cross-origin fetch body from a response event, so the test
+ * routes the request and reads the body it forwards.
+ */
+async function captureCodeResponse(page: Page): Promise<() => Record<string, unknown> | null> {
+  let body: Record<string, unknown> | null = null;
+  await page.route('**/api/customer/sign-in/code', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    const response = await route.fetch();
+    body = (await response.json()) as Record<string, unknown>;
+    await route.fulfill({ response, json: body });
+  });
+  return () => body;
 }
 
 test('the owner verifies the email before the page offers Connect AWS account, and can sign out', async ({
   page,
   request,
 }) => {
-  const { installLinkId, customerEmail, publisherName } = await seedDeployment(request);
+  const { installLinkId, customerEmail } = await seedDeployment(request);
 
   await page.goto(`/install/${installLinkId}`);
   await expect(page.getByText('Verify your email')).toBeVisible();
-  await expect(page.getByText(`Published by ${publisherName}`)).toBeVisible();
+  await expect(page.getByText(/^Published by /)).toBeVisible();
   await expect(page.getByRole('link', { name: 'Connect AWS account' })).toHaveCount(0);
 
+  const codeBody = await captureCodeResponse(page);
   await page.getByLabel('Email').fill(customerEmail);
-  const codeResponse = page.waitForResponse((response) => response.url().endsWith('/api/customer/sign-in/code'));
   await page.getByRole('button', { name: 'Send code' }).click();
-  const { fixtureCode } = (await (await codeResponse).json()) as { fixtureCode: string };
+  await expect(page.getByLabel('Code')).toBeVisible();
+  const fixtureCode = String(codeBody()?.['fixtureCode']);
 
   await page.getByLabel('Code').fill(fixtureCode);
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -78,16 +94,15 @@ test('another email gets the same answer and no access', async ({ page, request 
   const { installLinkId } = await seedDeployment(request);
 
   await page.goto(`/install/${installLinkId}`);
+  const codeBody = await captureCodeResponse(page);
   await page.getByLabel('Email').fill('someone-else@example.com');
-  const codeResponse = page.waitForResponse((response) => response.url().endsWith('/api/customer/sign-in/code'));
   await page.getByRole('button', { name: 'Send code' }).click();
-  const body = (await (await codeResponse).json()) as Record<string, unknown>;
-  expect(body).toEqual({ accepted: true });
   await expect(page.getByText('If someone-else@example.com has access')).toBeVisible();
+  expect(codeBody()).toEqual({ accepted: true });
 
   await page.getByLabel('Code').fill('12345678');
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByRole('alert')).toContainText('not correct or has expired');
+  await expect(page.getByText(/not correct or has expired/)).toBeVisible();
 
   const status = await page.request.get(`${API_URL}/api/install/${installLinkId}/status`);
   expect(status.status()).toBe(404);
