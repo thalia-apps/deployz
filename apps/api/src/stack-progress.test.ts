@@ -830,6 +830,32 @@ describe('POST /api/relay/commands/:id/progress', () => {
     expect(body.stage).toBe('READY');
     expect((body.specComponents ?? []).filter((component) => component.state === 'PENDING')).toEqual([]);
   });
+
+  // The status route reads jobs without their payload, except the
+  // startAfterConfig marker the derivation needs.
+  it('a zero-task install keeps the customer status on APPLICATION until the first start succeeds', async () => {
+    const deployment = await insertDeployment({ state: 'HEALTHY', healthStatus: 'UNKNOWN' });
+    await db.insert(schema.deploymentJobs).values({
+      deploymentId: deployment.id,
+      type: 'INSTALL',
+      state: 'SUCCEEDED',
+      idempotencyKey: `${deployment.id}:INSTALL:zero-task`,
+      payload: { manifest: READY_MANIFEST, startAfterConfig: true },
+    });
+    const step = async () =>
+      customerDeploymentStatusSchema.parse(
+        (await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` })).json(),
+      ).step;
+    expect(await step()).toBe('APPLICATION');
+
+    await db.insert(schema.deploymentJobs).values({
+      deploymentId: deployment.id,
+      type: 'DEPLOY_RELEASE',
+      state: 'SUCCEEDED',
+      idempotencyKey: `${deployment.id}:DEPLOY_RELEASE:first-start`,
+    });
+    expect(await step()).toBe('HEALTH_CHECK');
+  });
 });
 
 // Task 5: GET /api/deployments/:id/stack-events — the vendor diagnostics read

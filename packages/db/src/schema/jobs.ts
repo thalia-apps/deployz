@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import {
   aiExplanationStateEnum,
@@ -82,4 +82,11 @@ export const deploymentJobs = pgTable('deployment_jobs', {
     .where(
       sql`${t.state} IN ('REQUESTED', 'QUEUED', 'WAITING', 'RUNNING') AND ${t.type} IN ('INSTALL', 'DEPLOY_RELEASE', 'ROLLBACK', 'RESTART', 'DESTROY', 'MIGRATION', 'INFRA_UPGRADE', 'PURGE')`,
     ),
+  // A deployment's job history: the relay heartbeat and command poll, status
+  // and detail routes. Postgres does not index a foreign key by itself.
+  index('deployment_jobs_deployment_created_idx').on(t.deploymentId, t.createdAt),
+  // The watchdog sweep reads active jobs across every deployment.
+  index('deployment_jobs_active_state_idx')
+    .on(t.state)
+    .where(sql`${t.state} IN ('REQUESTED', 'QUEUED', 'WAITING', 'RUNNING')`),
 ]);

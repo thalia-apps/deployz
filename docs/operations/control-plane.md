@@ -296,6 +296,22 @@ migration that cannot apply kills Lambda initialization: `/health/ready`
 fails, the deploy workflow fails, and warm containers keep the cached
 failure until they are recycled.
 
+A migration that adds an index uses plain `CREATE INDEX IF NOT EXISTS`: the
+migrator runs each migration in a transaction, so `CONCURRENTLY` is not
+possible. The build blocks writes to that table while it runs. Measure the
+build time on a dataset larger than production before you merge it
+(`0054_hot_path_indexes` took about 2 seconds for 2.2 million rows).
+
+## Database connections
+
+The RDS instance (`db.t4g.micro`) has a small connection budget. Each Lambda
+container opens one pool (`db-connection.ts`) with at most 3 connections and
+a 5-second wait for a free connection. The pool sets
+`idle_in_transaction_session_timeout` to 60 seconds, so a container that dies
+mid-transaction does not hold locks. The worker's SQS event source has
+`maxConcurrency` 10. Do not add a second pool in a Lambda bundle, and do not
+hold a transaction open across a slow external call.
+
 ## Publishing customer templates
 
 The bootstrap template is published by hand after `pnpm build`; the

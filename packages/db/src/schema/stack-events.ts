@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { bigserial, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { deployments } from './deployments.js';
@@ -26,5 +27,8 @@ export const deploymentStackEvents = pgTable(
   (table) => [
     uniqueIndex('deployment_stack_events_dedupe_uidx').on(table.deploymentId, table.providerEventId),
     index('deployment_stack_events_deployment_idx').on(table.deploymentId, table.eventAt),
+    index('deployment_stack_events_job_idx')
+      .on(table.jobId, table.eventAt)
+      .where(sql`${table.jobId} IS NOT NULL`),
   ],
 );

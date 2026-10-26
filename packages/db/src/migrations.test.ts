@@ -60,6 +60,19 @@ describe('migrations', () => {
     await expect(client!.exec(sql.replaceAll('--> statement-breakpoint', ''))).resolves.toBeDefined();
   });
 
+  it('creates the hot-path indexes, and 0054 re-applies without error', async () => {
+    const { rows } = await client!.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname IN (
+         'deployment_jobs_deployment_created_idx', 'deployment_jobs_active_state_idx',
+         'deployment_stack_events_job_idx', 'event_logs_deployment_occurred_idx',
+         'event_logs_organization_occurred_idx')`,
+    );
+    expect(rows).toHaveLength(5);
+    const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'drizzle');
+    const sql = readFileSync(join(migrationsDir, '0054_hot_path_indexes.sql'), 'utf8');
+    await expect(client!.exec(sql.replaceAll('--> statement-breakpoint', ''))).resolves.toBeDefined();
+  });
+
   it('creates all 27 core tables', async () => {
     const { rows } = await client!.query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables
