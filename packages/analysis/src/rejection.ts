@@ -130,6 +130,9 @@ const SPRING_CONFIG_REGEX = /(?:^|\/)application(?:-[\w.]+)?\.(?:properties|ya?m
 const SPRING_MYSQL_URL_REGEX = /jdbc:mysql:/;
 const JS_SOURCE_REGEX = /\.(?:ts|js|mjs|cjs|tsx|jsx)$/;
 const MYSQL_ORM_DIALECT_REGEX = /\b(?:dialect|client)\s*:\s*['"]mysql2?['"]|drizzle-orm\/mysql(?:2|-core)/;
+// The production JSON config of an nconf or node-config app (Ghost `config.production.json`: `"client": "mysql"`).
+const PRODUCTION_JSON_CONFIG_REGEX = /(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/;
+const JSON_MYSQL_CLIENT_REGEX = /"(?:client|dialect)"\s*:\s*"mysql2?"/;
 // MariaDB-specific drivers speak a dialect Deployz does NOT host (RDS MySQL
 // only) — a lone MariaDB driver stays a rejection (Phase 4B).
 const MARIA_LANGUAGE_TOKENS = ['mariadb-java-client', 'myxql'] as const;
@@ -237,7 +240,8 @@ export function assessMysql(tree: FileTree): MySqlRequirement {
     const named =
       (path.endsWith('.py') && DJANGO_MYSQL_ENGINE_REGEX.test(content)) ||
       (SPRING_CONFIG_REGEX.test(path) && SPRING_MYSQL_URL_REGEX.test(content)) ||
-      (JS_SOURCE_REGEX.test(path) && MYSQL_ORM_DIALECT_REGEX.test(content));
+      (JS_SOURCE_REGEX.test(path) && MYSQL_ORM_DIALECT_REGEX.test(content)) ||
+      (PRODUCTION_JSON_CONFIG_REGEX.test(path) && JSON_MYSQL_CLIENT_REGEX.test(content));
     if (named) {
       hasDependency = true;
       hasIndependentEvidence = true;

@@ -4481,6 +4481,21 @@ const ENV_HELPER_CALL_REGEX = /(?<![\w.$])(assertEnv|requireEnv|mustGetEnv|getEn
 /** Env names listed for a boot check: `requiredEnvVars.push('DB_HOST', …)`, `validateEnv(['STORAGE_LOCATIONS'])`. */
 const ENV_NAME_LIST_REGEX = /\brequired\w*env\w*(?:\s*:[^=;\n]+)?\s*(?:=\s*\[|\.push\()([^\])]*)|\bvalidate\w*env\w*\(\s*\[([^\]]*)/gi;
 
+/**
+ * A mode setting whose default runs jobs in the web process while a `queue`
+ * value turns a Redis queue and its workers on (n8n `EXECUTIONS_MODE`:
+ * `'regular' | 'queue'`, default `regular`). Queue mode is then the vendor's option.
+ */
+export function optionalQueueMode(tree: FileTree): { name: string; value: string; path: string } | null {
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !isRuntimeSourcePath(path) || !SELECTOR_SOURCE_REGEX.test(path)) continue;
+    for (const [name, value] of scanDefaultedEnvReads(content)) {
+      if (/_MODE$/.test(name) && !/^queue$/i.test(value) && /['"`]queue['"`]/.test(content)) return { name, value, path };
+    }
+  }
+  return null;
+}
+
 /** Env reads with an inline default, in every language the tree carries: `[name, default]`. */
 function scanDefaultedEnvReads(content: string): [string, string][] {
   const found: [string, string][] = [];
@@ -4995,7 +5010,10 @@ export function detectEnvVarModel(
         // requirement; and a read handed to a parsing helper alongside a
         // default argument (`parseEnvVarNumber(process.env.PORT, 4242)`)
         // carries that default (Stage A COMP-017).
-        const isAlternative = /(?:\?\?|\|\|)\s*$/.test(head);
+        const isAlternative =
+          /(?:\?\?|\|\|)\s*$/.test(head) ||
+          // One candidate of a list the code picks from: `[args.port, process.env.UPTIME_KUMA_PORT, process.env.PORT, 3001]`.
+          (/\[[^[\](){};]*$/.test(head) && /^\s*,/.test(tail));
         const callee = /([A-Za-z_$][\w$]*)\s*\(\s*(?:[^()]*,\s*)?$/.exec(head)?.[1] ?? '';
         // The default must be a literal (a string, number, boolean, null or a
         // CONSTANT) — `axios.get(process.env.URL, { headers })` carries none.
@@ -5018,7 +5036,9 @@ export function detectEnvVarModel(
           // && process.env.B)`, `!!process.env.A`, `enabled = process.env.A && …`.
           /^\s*&&/.test(tail) ||
           /&&\s*$/.test(head) ||
-          /(?:Boolean\s*\(|!!)\s*$/.test(head) ||
+          /(?:Boolean\s*\(|!)\s*$/.test(head) ||
+          // A membership test compares the value: `['ce', 'ee'].includes(process.env.MIX_ENV)`.
+          /\.(?:includes|indexOf|has)\(\s*$/.test(head) ||
           // A predicate helper (`isEnabled(process.env.X)`, `toBool(process.env.X)`) reads a flag: unset is false.
           /\b(?:is[A-Z]\w*|(?:to|parse|as)Bool(?:ean)?)\s*\(\s*$/.test(head) ||
           inConditional;
@@ -5039,9 +5059,12 @@ export function detectEnvVarModel(
         // throwing tolerates its absence.
         const isSecretLocalAssignment =
           Boolean(assignedName) && isSecretName(key) && /^\s*(?:[;,)}\]]|$)/.test(tail);
+        // A getter that only returns a secret (`return process.env.HOMEPAGE_MCP_TOKEN;`)
+        // leaves the need to its caller: required only behind a throw guard.
+        const isReturnedSecret = isSecretName(key) && /\breturn\s*$/.test(head) && /^\s*(?:;|$)/.test(tail);
         let throwGuarded = false;
         let returnGuarded = false;
-        if (isBareAssignment || isBareChainAccess || isSecretLocalAssignment) {
+        if (isBareAssignment || isBareChainAccess || isSecretLocalAssignment || isReturnedSecret) {
           const guardTargets = [
             `process\\.env\\.${key}\\b`,
             `process\\.env\\[["']${key}["']\\]`,
@@ -5063,9 +5086,9 @@ export function detectEnvVarModel(
         const localTested =
           isSecretLocalAssignment &&
           new RegExp(
-            `if\\s*\\(\\s*!*\\s*${assignedName}\\b`,
+            `if\\s*\\([^)]*?\\b${assignedName}\\b`,
           ).test(content);
-        const bareNeedsValue = isBareAssignment
+        const bareNeedsValue = isBareAssignment || isReturnedSecret
           ? throwGuarded
           : isBareChainAccess
             ? !returnGuarded
@@ -6245,6 +6268,8 @@ const HOST_VALIDATION_PATTERNS: readonly { file: RegExp; pattern: RegExp; allows
   { file: /(?:^|\/)appsettings(?:\.Production)?\.json$/, pattern: /"AllowedHosts"\s*:\s*"[^"]*"/, allowsAll: /"AllowedHosts"\s*:\s*"\*"/ },
   // Laravel trusted hosts
   { file: /(?:^|\/)(?:bootstrap\/app|app\/Http\/Kernel)\.php$/, pattern: /->trustHosts\(|^\s*\\App\\Http\\Middleware\\TrustHosts::class/m, allowsAll: /$^/ },
+  // A JS server that checks the Host against an env list (homepage `HOMEPAGE_ALLOWED_HOSTS`)
+  { file: /\.[cm]?[jt]sx?$/, pattern: /process\.env\.[A-Z0-9_]*ALLOWED_HOSTS\b/, allowsAll: /$^/ },
 ];
 
 /**

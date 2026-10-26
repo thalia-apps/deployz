@@ -716,10 +716,11 @@ const COMPOSE_REGEX = /(?:^|\/)(?:docker-)?compose(?:\.[\w.-]+)?\.ya?ml$/i;
 const ENV_SAMPLE_REGEX = /(?:^|\/)\.env\.(?:example|template|sample)$/i;
 // Framework config files that read env vars under the app's own names: Rails
 // `config/*.yml` (ERB), Laravel `config/*.php`, Spring `application*.properties|yml`,
-// and the .NET `appsettings.json` values that an environment variable overrides.
+// the .NET `appsettings.json` values that an environment variable overrides,
+// and the production JSON config of an nconf or node-config app (its database client).
 // Direct children of `config/` only — `config/locales/` would flood the cap.
 const CONFIG_ENV_FILE_REGEX =
-  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$/i;
+  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$|(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/i;
 // File-based health routes — the same shape detectHealthEndpoint matches on
 // the path rather than on the file's contents — and a NestJS
 // `health.controller.ts`, whose `@Controller('health')` is the only evidence.
@@ -835,13 +836,14 @@ function isLockfilePath(path: string): boolean {
 const ENTRY_FILE_REGEX =
   /(?:^|\/)(?:main|server|app|index|routes?|router|handlers?|config|settings|urls|options|env)\.[a-z]+$|(?:^|\/)(?:routes?|server|config|http)\/|(?:^|\/)(?:init|initialize|bootstrap)\.go$|(?:^|\/)cmd\/(?:web|serve|server|start|run)\.go$/i;
 // Files that read the environment and name the datastore the app uses:
-// `environment.service.ts`, `env/GlobalValues.ts`, `configs/database.config.ts`. They are few
+// `environment.service.ts`, `env/GlobalValues.ts`, an env package's
+// `env/src/constants/defaults.ts` (directus), `configs/database.config.ts`. They are few
 // and small, and a deep one would otherwise lose its slot to hundreds of `index.ts`. A plain
 // `env.ts` stays with the entry files: front ends carry one too. A typed config class
 // (`config-variables.ts`) and a plugin or storage manager (`NcPluginMgrv2.ts`) hold the
 // app's storage env names the same way.
 const ENV_CONFIG_FILE_REGEX =
-  /(?:^|\/)(?:environment(?:\.(?:service|config))?|env\.(?:service|config)|[\w.-]*config-variables|[\w.-]*(?:plugin|storage)-?(?:mgr|manager)[\w.-]*)\.[a-z]+$|(?:^|\/)(?:env|environment)\/[^/]+\.(?:[cm]?[jt]s|py|rb|go)$|(?:^|\/)configs\/[\w.-]+\.config\.[cm]?[jt]s$/i;
+  /(?:^|\/)(?:environment(?:\.(?:service|config))?|env\.(?:service|config)|[\w.-]*config-variables|[\w.-]*(?:plugin|storage)-?(?:mgr|manager)[\w.-]*)\.[a-z]+$|(?:^|\/)(?:env|environment)\/(?:[^/]+\/)*[^/]+\.(?:[cm]?[jt]s|py|rb|go)$|(?:^|\/)configs\/[\w.-]+\.config\.[cm]?[jt]s$/i;
 
 //
 // Dockerfiles, Compose files and env samples come before package manifests:

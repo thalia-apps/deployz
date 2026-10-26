@@ -1,0 +1,148 @@
+id: new-41
+repository: directus/directus
+commit: b3ce03c18673230913bdfdf14907eb13e6865178
+summary: >
+  Directus headless CMS / data platform (Node.js, Express, pnpm monorepo, Vue admin app). Self-hosted via the
+  root Dockerfile image (entrypoint runs `directus bootstrap`, then pm2-runtime). The image defaults to SQLite
+  and local uploads, so a Deployz deploy must select PostgreSQL (or MySQL) and S3.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Needs DB_CLIENT=pg (or mysql) with DB_* parts, STORAGE_LOCATIONS=s3 with STORAGE_S3_* and a SECRET. Without these
+    the image uses SQLite and local disk, which are ephemeral. Redis is only needed for more than one instance.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.dhi, reason: "hardened runtime base dhi.io/node needs registry entitlement (ARG DHI_RUNTIME); not for general builds"}
+    - {path: packages/memory/test/docker-compose.yml, reason: "test compose, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 47, quote: "FROM node:${NODE_VERSION}-alpine AS runtime"}
+    - {path: Dockerfile, line: 82, quote: "CMD [\"node\", \"docker-entrypoint.cjs\"]"}
+    - {path: Dockerfile.dhi, line: 10, quote: "ARG DHI_RUNTIME=dhi.io/node:${NODE_VERSION}-alpine${ALPINE_VERSION}"}
+runtime: {accept: [node]}
+port:
+  accept: [8055]
+  evidence:
+    - {path: Dockerfile, line: 80, quote: "EXPOSE 8055"}
+    - {path: packages/env/src/constants/defaults.ts, line: 10, quote: "PORT: 8055,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/env/src/constants/defaults.ts, line: 9, quote: "HOST: '0.0.0.0',"}
+startCommand:
+  source: image
+  accept: ["node docker-entrypoint.cjs"]
+healthPath:
+  accept: ["/server/health", "/server/ping"]
+  # serverRouter is mounted at /server, so there is no bare /health. /server/health is unauthenticated (returns only status) and
+  # writes a test file to every storage location and checks the DB; /server/ping returns "pong" with no dependency check.
+  evidence:
+    - {path: api/src/controllers/server.ts, line: 80, quote: "'/health',"}
+    - {path: api/src/app.ts, line: 403, quote: "app.use('/server', serverRouter);"}
+    - {path: api/src/app.ts, line: 320, quote: "app.get('/server/ping', (_req, res) => res.send('pong'));"}
+    - {path: api/src/controllers/server.ts, line: 91, quote: "if (data['status'] === 'error') res.status(503);"}
+    - {path: api/src/services/server.ts, line: 252, quote: "testDatabase(), testRedis(), testStorage(), testEmail()"}
+    - {path: api/src/app.ts, line: 267, quote: "app.get('/', (_req, res, next) => {"}
+database:
+  status: required
+  engines: [sqlite3, pg, cockroachdb, mysql, mssql, oracledb]
+  default: sqlite3
+  deployzEngine: postgres
+  selectBy: {DB_CLIENT: pg}
+  connectionVars: [DB_CONNECTION_STRING, "DB_HOST/DB_PORT/DB_DATABASE/DB_USER/DB_PASSWORD"]
+  evidence:
+    - {path: Dockerfile, line: 65, quote: "DB_CLIENT=\"sqlite3\""}
+    - {path: Dockerfile, line: 66, quote: "DB_FILENAME=\"/directus/database/database.sqlite\""}
+    - {path: api/src/database/index.ts, line: 69, quote: "case 'cockroachdb':"}
+    - {path: api/src/database/index.ts, line: 74, quote: "requiredEnvVars.push('DB_CONNECTION_STRING');"}
+    - {path: api/src/database/index.ts, line: 78, quote: "case 'mysql':"}
+migrations:
+  mode: startup
+  accept: ["node cli.js bootstrap"]
+  evidence:
+    - {path: docker-entrypoint.cjs, line: 31, quote: "spawnSync(node, ['cli.js', 'bootstrap']"}
+    - {path: api/src/cli/commands/bootstrap/index.ts, line: 34, quote: "await runMigrations(database, 'latest');"}
+    - {path: api/src/cli/commands/bootstrap/index.ts, line: 70, quote: "logger.info('Running migrations...');"}
+redis:
+  status: conditional
+  selectBy: {REDIS: "redis://host:6379", CACHE_STORE: redis, CACHE_ENABLED: "true"}
+  evidence:
+    - {path: packages/env/src/constants/defaults.ts, line: 90, quote: "CACHE_STORE: 'memory',"}
+    - {path: packages/env/src/constants/defaults.ts, line: 32, quote: "RATE_LIMITER_STORE: 'memory',"}
+    - {path: api/src/redis/utils/redis-config-available.ts, line: 13, quote: "return 'REDIS' in env || Object.keys(env).some"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: ecosystem.config.cjs, line: 12, quote: "args: ['start'],"}
+    - {path: ecosystem.config.cjs, line: 15, quote: "instances: process.env.PM2_INSTANCES ?? 1,"}
+scheduledJobs:
+  status: embedded
+  items: [retention, oauth-cleanup, telemetry, tus cleanup, metrics, project]
+  evidence:
+    - {path: api/src/schedules/retention.ts, line: 171, quote: "scheduleSynchronizedJob('retention', cron,"}
+storage:
+  local: conditional
+  paths: [/directus/uploads, /directus/extensions, /directus/database]
+  s3: native
+  s3SelectBy: {STORAGE_LOCATIONS: s3, STORAGE_S3_DRIVER: s3}
+  evidence:
+    - {path: packages/env/src/constants/defaults.ts, line: 25, quote: "STORAGE_LOCATIONS: 'local',"}
+    - {path: packages/env/src/constants/defaults.ts, line: 27, quote: "STORAGE_LOCAL_ROOT: './uploads',"}
+    - {path: api/src/storage/get-storage-driver.ts, line: 5, quote: "s3: '@directus/storage-driver-s3',"}
+    - {path: Dockerfile, line: 41, quote: "mkdir -p database extensions uploads"}
+    - {path: packages/storage-driver-s3/src/index.ts, line: 109, quote: "if ((this.config.key && !this.config.secret)"}
+    - {path: packages/storage-driver-s3/src/index.ts, line: 113, quote: "if (this.config.key && this.config.secret) {"}
+    - {path: api/src/storage/register-locations.ts, line: 19, quote: "getConfigFromEnv(`STORAGE_${location.toUpperCase()}_`)"}
+env:
+  required:
+    - {name: DB_CLIENT, secret: false, buildTime: false, note: "set to pg; image default sqlite3 is ephemeral"}
+    - {name: "DB_HOST / DB_PORT / DB_DATABASE / DB_USER / DB_PASSWORD", secret: false, buildTime: false, note: "or DB_CONNECTION_STRING for pg; the password is secret"}
+    - {name: SECRET, secret: true, buildTime: false, note: "a random value is used if missing, so tokens break on restart or with several tasks; set 32+ bytes"}
+    - {name: STORAGE_LOCATIONS, secret: false, buildTime: false, note: "s3, with STORAGE_S3_DRIVER=s3, STORAGE_S3_BUCKET, STORAGE_S3_REGION; STORAGE_S3_KEY/SECRET are optional (set both or neither): when omitted the AWS SDK default credential chain is used, so the ECS task role works"}
+    - {name: ADMIN_EMAIL, secret: false, buildTime: false, note: "not needed to boot (without ADMIN_EMAIL and ADMIN_PASSWORD the UI onboarding creates the first admin), but then the first visitor to the public URL can claim the admin account, so set both"}
+    - {name: ADMIN_PASSWORD, secret: true, buildTime: false, note: "see ADMIN_EMAIL"}
+    - {name: PUBLIC_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for links and auth redirects (default '/')"}
+  optional: [STORAGE_S3_KEY, STORAGE_S3_SECRET, STORAGE_S3_ENDPOINT, STORAGE_S3_ROOT, PROJECT_NAME, PROJECT_OWNER, ADMIN_TOKEN, CORS_ENABLED, CORS_ORIGIN, REDIS, CACHE_ENABLED, CACHE_STORE, EMAIL_TRANSPORT, EMAIL_FROM, SESSION_COOKIE_SECURE, HEALTHCHECK_ENABLED, PM2_INSTANCES, WEBSOCKETS_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: api/src/app.ts, line: 110, quote: "if (!env['SECRET']) {"}
+    - {path: api/src/utils/create-admin.ts, line: 42, quote: "const adminEmail = admin?.email ?? env['ADMIN_EMAIL'];"}
+    - {path: api/src/utils/create-admin.ts, line: 45, quote: "Without credentials there's no admin user to create."}
+    - {path: packages/env/src/constants/defaults.ts, line: 11, quote: "PUBLIC_URL: '/',"}
+    - {path: packages/env/src/constants/defaults.ts, line: 69, quote: "SESSION_COOKIE_SECURE: false,"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: Postgres and MySQL are supported via DB_CLIENT"
+    - "uploads, database and extensions directories must not block: S3 storage is native and the DB is external"
+    - "Redis must not be required: memory stores are the default (needed only with several instances)"
+    - "pm2 must not count as several services: it is a process supervisor for one app in the same container"
+    - "MSSQL, Oracle and CockroachDB support must not be reported as an unsupported DB: Postgres and MySQL are available"
+vendorQuestions:
+  legitimate:
+    - "Extensions: custom extensions load from /directus/extensions (local disk); the repo does not say whether the user needs any"
+  unnecessary:
+    - "Which port? (8055 in image and defaults)"
+    - "Who runs migrations? (the entrypoint runs bootstrap on each start)"
+    - "Is a worker or scheduler process needed? (all embedded)"
+    - "Health path? (/server/health, or /server/ping)"
+traps:
+  - "Dockerfile.dhi -> hardened variant that needs a dhi.io base image; use Dockerfile (Dockerfile.dhi:9-10)"
+  - "docker-compose.yml lists many DBs, RustFS, MailDev, Keycloak -> debug only, not the production topology (docker-compose.yml:1-5)"
+  - "ENV DB_CLIENT=sqlite3 in the image -> a default to override, not the real storage choice (Dockerfile:65)"
+  - "builder stage is not the final stage -> last stage runtime is the app, no --target needed (Dockerfile:47)"
+  - "pm2 cluster mode in ecosystem.config.cjs -> one instance by default (PM2_INSTANCES ?? 1), so no Redis need (ecosystem.config.cjs:15)"
+  - "/ redirects (ROOT_REDIRECT) -> use /server/health (no bare /health; router mounted at /server), which returns 503 when DB, Redis or storage checks fail (api/src/app.ts:267, api/src/app.ts:403); /server/ping is a dependency-free alternative (api/src/app.ts:320)"
+  - "Build runs a full monorepo build with NODE_OPTIONS max-old-space-size=8192 -> build needs much memory (Dockerfile:23)"
+openQuestions:
+  - "Whether the first-visitor onboarding (no ADMIN_EMAIL/ADMIN_PASSWORD) is acceptable on a public URL: a vendor choice"
+crossReview:
+  - {field: healthPath, change: "/health -> /server/health (plus /server/ping); the health router is mounted under /server, a bare /health returns 404 (the SPA or ROOT_REDIRECT). Also fixed the trap and vendorQuestions text", evidence: "api/src/app.ts:403 app.use('/server', serverRouter); api/src/controllers/server.ts:80; api/src/app.ts:320 /server/ping; sdk/src/rest/commands/server/health.ts:20 path '/server/health'"}
+  - {field: storage / env (S3 credentials), change: "resolved the open question: STORAGE_S3_KEY and STORAGE_S3_SECRET are optional; when both are absent no credentials are passed and the AWS SDK default chain (ECS task role) is used; only one of the two throws. Added STORAGE_S3_KEY/SECRET/ENDPOINT/ROOT to optional, extended the STORAGE_LOCATIONS note, removed the open question", evidence: "packages/storage-driver-s3/src/index.ts:109-118; api/src/storage/register-locations.ts:19"}
+  - {field: env.required ADMIN_EMAIL/ADMIN_PASSWORD, change: "judgement kept as required: not needed to boot (bootstrap skips admin creation without both, onboarding UI creates it), but a public fresh instance lets the first visitor claim admin, so both stay listed with a clearer note; added an open question", evidence: "api/src/utils/create-admin.ts:42-46"}
+  - {field: evidence line numbers, change: "Dockerfile.dhi 8->10 (and trap ref 5-8 -> 9-10), redis-config-available.ts 11->13, create-admin.ts 46->45", evidence: "Dockerfile.dhi:10; api/src/redis/utils/redis-config-available.ts:13; api/src/utils/create-admin.ts:45"}
+  - {field: database.default, change: "none: DB_CLIENT default sqlite3 confirmed (Dockerfile:65 sets it; there is no earlier default); pg needs DB_HOST/PORT/DATABASE/USER or DB_CONNECTION_STRING", evidence: "Dockerfile:65; api/src/database/index.ts:68-76"}
+  - {field: all, change: verified, evidence: "37 citations checked"}

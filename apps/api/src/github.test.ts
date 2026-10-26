@@ -769,6 +769,34 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).toHaveProperty('nested/.env.example');
   });
 
+  // directus keeps `STORAGE_LOCATIONS: 'local'` in `packages/env/src/constants/defaults.ts`;
+  // Ghost names its MySQL client in `config/env/config.production.json`.
+  it('keeps an env package default file and a production JSON config inside the cap', async () => {
+    const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
+      path: `src/feature${i}.ts`,
+      type: 'blob' as const,
+      sha: `sha-src-${i}`,
+      size: 10,
+    }));
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [
+            ...sources,
+            { path: 'packages/env/src/constants/defaults.ts', type: 'blob', sha: 'sha-defaults', size: 10 },
+            { path: 'ghost/core/shared/config/env/config.production.json', type: 'blob', sha: 'sha-prod', size: 10 },
+          ],
+        });
+      }
+      return makeFetchResponse(200, { content: Buffer.from('x').toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(tree).toHaveProperty(['packages/env/src/constants/defaults.ts']);
+    expect(tree).toHaveProperty(['ghost/core/shared/config/env/config.production.json']);
+  });
+
   it('fetches framework config files that read env vars and keeps them above ordinary source', async () => {
     const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
       path: `src/feature${i}.ts`,

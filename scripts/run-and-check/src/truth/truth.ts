@@ -96,7 +96,15 @@ export function compareWithTruth(truth: GroundTruth, analysis: AnalysisResultFil
   if (analysis.outcome !== undefined) add('outcome', true, truth.outcome.accept.includes(analysis.outcome), truth.outcome.accept, analysis.outcome);
 
   const dockerfile = manifest.application.dockerfilePath;
-  add('dockerfile', true, dockerfile !== null && truth.dockerfile.accept.includes(dockerfile), truth.dockerfile.accept, dockerfile);
+  // No Dockerfile builds from the repository: the right answer names the missing sources or finds none.
+  const unbuildable = dockerfile === null || (manifest.build.missingSources?.length ?? 0) > 0;
+  add(
+    'dockerfile',
+    true,
+    truth.dockerfile.accept.length === 0 ? unbuildable : dockerfile !== null && truth.dockerfile.accept.includes(dockerfile),
+    truth.dockerfile.accept.length === 0 ? 'no buildable Dockerfile' : truth.dockerfile.accept,
+    unbuildable ? `${dockerfile ?? 'none'} (unbuildable)` : dockerfile,
+  );
 
   add('port', true, manifest.web.port !== null && truth.port.accept.includes(manifest.web.port), truth.port.accept, manifest.web.port);
 
@@ -105,7 +113,7 @@ export function compareWithTruth(truth: GroundTruth, analysis: AnalysisResultFil
   const startOk =
     command !== null &&
     (truth.startCommand.accept.some((accepted) => commandLine.includes(accepted)) ||
-      (truth.startCommand.accept.length === 0 && truth.startCommand.source === 'image' && /^(?:CMD|ENTRYPOINT): /.test(command)));
+      (truth.startCommand.source === 'image' && (truth.startCommand.accept.length === 0 ? /^(?:CMD|ENTRYPOINT): /.test(command) : /^ENTRYPOINT: /.test(command))));
   add('startCommand', true, startOk, truth.startCommand.accept.length > 0 ? truth.startCommand.accept : 'the image CMD/ENTRYPOINT', command);
 
   const health = manifest.health;

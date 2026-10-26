@@ -1,0 +1,151 @@
+id: new-42
+repository: TryGhost/Ghost
+commit: 64733fe1f575825fada7c934566d709591d1c96d
+summary: >-
+  Ghost publishing platform, Node.js (Express, Knex) in a pnpm monorepo. Self-hosting is meant to use the
+  published Docker image; this repo has a production Dockerfile (Dockerfile.production) that builds the server
+  from source, but the admin UI build (ghost/core/built/admin) is NOT built inside it - CI injects it.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >-
+    The default last stage (selfhost, which extends full) COPYs ghost/core/built/admin and built/embed-renderer.
+    Both are gitignored and absent from a source archive, so a plain docker build fails. --target core builds from
+    source and runs, but ships no admin UI (site cannot be managed) and listens on 127.0.0.1 unless server__host
+    is set. Needs target core + MySQL env + url + server__host=0.0.0.0. DEPLOYABLE_WITH_CHANGES is right only if
+    the analyser says the admin UI is missing; NOT_DEPLOYABLE is also acceptable.
+dockerfile:
+  accept: [Dockerfile.production]
+  reject:
+    - {path: docker/ghost-dev/Dockerfile, reason: dev image for the dev stack}
+    - {path: e2e/Dockerfile.e2e, reason: test harness}
+    - {path: e2e/Dockerfile.runner, reason: test runner}
+    - {path: docker/dev-gateway/Dockerfile, reason: dev gateway}
+    - {path: docker/fake-mailgun/Dockerfile, reason: dev fake service}
+    - {path: docker/fake-upgrades/Dockerfile, reason: dev fake service}
+    - {path: docker/tb-cli/Dockerfile, reason: Tinybird dev tooling}
+    - {path: docker/tinybird-local-slim/Dockerfile, reason: Tinybird dev tooling}
+  target: core   # full and selfhost need ghost/core/built/admin from CI; core is the only stage buildable from source alone
+  context: .
+  evidence:
+    - {path: Dockerfile.production, line: 3, quote: "# Production Dockerfile for Ghost"}
+    - {path: Dockerfile.production, line: 108, quote: "FROM node:$NODE_VERSION-bookworm-slim AS core"}
+    - {path: Dockerfile.production, line: 155, quote: "COPY --chown=nobody:nogroup ghost/core/built/admin core/built/admin"}
+    - {path: Dockerfile.production, line: 18, quote: "builds are injected into the context by CI under core/built"}
+    - {path: .gitignore, line: 131, quote: "/ghost/core/built"}
+    - {path: docker/selfhost/README.md, line: 60, quote: "`full` and `selfhost` COPY the admin build from the context, so build admin first"}
+runtime: {accept: [node]}
+port:
+  accept: [2368]
+  evidence:
+    - {path: Dockerfile.production, line: 142, quote: "EXPOSE 2368"}
+    - {path: ghost/core/shared/config/defaults.json, line: 5, quote: "\"port\": 2368"}
+bindAllInterfaces:
+  value: false   # default is 127.0.0.1; set server__host=0.0.0.0 for the core target
+  evidence:
+    - {path: ghost/core/shared/config/defaults.json, line: 4, quote: "\"host\": \"127.0.0.1\""}
+    - {path: docker/selfhost/config.production.json, line: 5, quote: "\"host\": \"::\""}
+startCommand:
+  source: image
+  accept: ["node index.js"]
+healthPath:
+  accept: ["/ghost/api/admin/site/"]
+  evidence:
+    - {path: ghost/core/server/web/api/endpoints/admin/routes.js, line: 21, quote: "router.get('/site', mw.publicAdminApi, http(api.site.read));"}
+    - {path: ghost/core/server/web/parent/backend.js, line: 15, quote: "backendApp.lazyUse(BASE_API_PATH, require('../api'));"}
+  evidence_redirect:
+    - {path: ghost/core/server/web/api/endpoints/admin/middleware.js, line: 143, quote: "shared.middleware.urlRedirects.adminSSLAndHostRedirect,"}
+    - {path: ghost/core/server/web/shared/middleware/url-redirects.js, line: 56, quote: "if (urlUtils.isSSL(adminUrl) && !secure) {"}
+    - {path: ghost/core/shared/express.js, line: 24, quote: "app.enable('trust proxy');"}
+  note: "Code-verified: /site runs adminSSLAndHostRedirect. With an https url and a request whose req.secure is false (ALB probes send no X-Forwarded-Proto) the route returns a 301 to the https url, so the probe needs a 301 matcher or the redirect is the health result. No other unauthenticated health route exists in Ghost. Not run."
+database:
+  status: required
+  engines: [mysql, sqlite]
+  default: mysql   # config.production.json (core image sets NODE_ENV=production); sqlite only for development
+  deployzEngine: mysql
+  selectBy: {database__client: mysql}
+  connectionVars: [database__connection__host, database__connection__port, database__connection__user, database__connection__password, database__connection__database]
+  evidence:
+    - {path: ghost/core/shared/config/env/config.production.json, line: 3, quote: "\"client\": \"mysql\""}
+    - {path: docker/selfhost/README.md, line: 50, quote: "-e database__client=mysql \\"}
+    - {path: ghost/package.json, line: 213, quote: "\"mysql2\": \"3.24.5\""}
+    - {path: docs/codebase/direction.md, line: 167, quote: "Ghost currently supports SQLite through `better-sqlite3`"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: ghost/core/boot.js, line: 82, quote: "await dbStateManager.makeReady();"}
+redis:
+  status: optional
+  selectBy: {adapters__cache__active: Redis, adapters__cache__Redis__host: "<host>"}   # cache adapter only; default MemoryCache
+  evidence:
+    - {path: ghost/core/shared/config/defaults.json, line: 49, quote: "\"active\": \"MemoryCache\""}
+    - {path: ghost/core/server/adapters/cache/Redis.js, line: 2, quote: "adapters.cache.active: \"Redis\""}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: ghost/core/shared/config/defaults.json, line: 68, quote: "\"active\": \"InMemoryJobsBackend\""}
+scheduledJobs:
+  status: embedded
+  items: [in-process scheduling adapter (scheduled posts, email jobs)]
+  evidence:
+    - {path: ghost/core/shared/config/defaults.json, line: 86, quote: "\"active\": \"scheduling-default\""}
+storage:
+  local: conditional
+  paths: [/home/ghost/content]   # images, media, files, themes, settings/routes.yaml
+  s3: native
+  s3SelectBy: {storage__active: S3Storage, storage__media__adapter: S3Storage, storage__files__adapter: S3Storage, storage__S3Storage__bucket: "<bucket>", storage__S3Storage__staticFileURLPrefix: "<prefix>", storage__S3Storage__cdnUrl: "<cdn>"}
+  evidence:
+    - {path: ghost/core/shared/config/defaults.json, line: 75, quote: "\"active\": \"LocalImagesStorage\""}
+    - {path: ghost/core/server/adapters/storage/S3Storage.ts, line: 32, quote: "missingBucket: 'S3Storage requires a bucket name'"}
+    - {path: ghost/core/server/services/adapter-manager/utils.ts, line: 270, quote: "`media: {adapter: 'S3Storage', bucket: '...'}`"}
+    - {path: Dockerfile.production, line: 134, quote: "chown -R ghost:ghost content log"}
+env:
+  required:
+    - {name: url, secret: false, buildTime: false, note: "public https URL of the site; Ghost builds links and redirects from it"}
+    - {name: database__client, secret: false, buildTime: false, note: "mysql (already the production default)"}
+    - {name: database__connection__host, secret: false, buildTime: false, note: "default 127.0.0.1"}
+    - {name: database__connection__user, secret: false, buildTime: false, note: "default root"}
+    - {name: database__connection__password, secret: true, buildTime: false, note: "default empty"}
+    - {name: database__connection__database, secret: false, buildTime: false, note: "default ghost"}
+    - {name: server__host, secret: false, buildTime: false, note: "0.0.0.0; default 127.0.0.1 is unreachable from the load balancer"}
+  optional: [mail__transport, mail__options__host, mail__options__auth__user, mail__options__auth__pass, mail__from, server__port, NODE_ENV, logging__level, logging__transports, adapters__cache__active, storage__active, database__connection__port, database__connection__ssl]
+  buildTime: [GHOST_BUILD_VERSION]
+  evidence:
+    - {path: ghost/core/shared/config/loader.ts, line: 36, quote: "separator: '__',"}
+    - {path: Dockerfile.production, line: 136, quote: "ARG GHOST_BUILD_VERSION=\"\""}
+blockers:
+  expected:
+    - "Admin UI is not built by the Dockerfile: ghost/core/built/admin is a CI-injected artifact. full and selfhost fail on COPY; core has no admin."
+  mustNot:
+    - "SQLite: not needed; MySQL is the production default and Deployz offers MySQL"
+    - "Redis: optional cache adapter only; MemoryCache is the default"
+    - "Persistent volume: content dir can move to the S3 storage adapter"
+    - "Workers and schedulers: embedded in the web process"
+    - "Dev Dockerfiles and compose.dev.*.yaml (Tinybird, Mailgun, Stripe tunnel): not production"
+vendorQuestions:
+  legitimate:
+    - "How to get the admin UI in a source-only build: needs a pre-step (pnpm nx run @tryghost/admin:build) outside the Dockerfile"
+    - "Health check: /ghost/api/admin/site/ answers 301 to an http probe when url is https; needs a 301 matcher"
+  unnecessary:
+    - "Which port, start command, database engine, who runs migrations, whether Redis or a worker is needed"
+    - "Which Dockerfile to use (Dockerfile.production)"
+traps:
+  - "selfhost also fails when --build-arg GHOST_BUILD_VERSION is omitted: ARG defaults to empty and a RUN exits 1 (Dockerfile.production:136,206-209)"
+  - "selfhost is a target of Dockerfile.production (not a separate Dockerfile) and is the last stage, so a default build uses it and fails without built/admin (Dockerfile.production:184)"
+  - "docker/ghost-dev/Dockerfile and compose.dev.yaml are the dev stack (MySQL, Redis, Tinybird, gateway) -> ignore"
+  - "Stages deploy and report are build-only, never shipped (Dockerfile.production:6-8)"
+  - "Selfhost baked config listens on :: and sets VOLUME; core does not, so set server__host (docker/selfhost/config.production.json:5)"
+  - "Development default is sqlite; core image sets NODE_ENV=production, so mysql (Dockerfile.production:110)"
+  - "Official image repo docker-library/ghost is separate and builds from the release tarball; not in this repo"
+openQuestions:
+  - "Exact SQLite config key not verified; not needed for the Deployz path"
+  - "Redirect on the probe is code-verified (url-redirects.js:56, no X-Forwarded-Proto on ALB probes); nothing was run"
+  - "Whether a core image without admin counts as DEPLOYABLE_WITH_CHANGES is a policy choice"
+crossReview:
+  - {field: dockerfile.evidence, change: "quote for the CI-injection comment is on line 18, not 17", evidence: "Dockerfile.production:18"}
+  - {field: redis/workers/scheduledJobs/storage evidence, change: "defaults.json lines corrected: MemoryCache 49, InMemoryJobsBackend 68, scheduling-default 86, LocalImagesStorage 75 (cited 38, 56, 74, 63 pointed at other content)", evidence: "ghost/core/shared/config/defaults.json:49,68,86,75"}
+  - {field: bindAllInterfaces.evidence, change: "selfhost baked config host line is 5, not 71 (file has 19 lines)", evidence: "docker/selfhost/config.production.json:5"}
+  - {field: healthPath, change: "redirect risk now code-verified, not open: probe without X-Forwarded-Proto gets a 301 when url is https; added evidence_redirect and a vendor question", evidence: "ghost/core/server/web/api/endpoints/admin/middleware.js:143; url-redirects.js:56; shared/express.js:24"}
+  - {field: traps, change: "added: selfhost also needs GHOST_BUILD_VERSION build arg (empty default fails the RUN)", evidence: "Dockerfile.production:136,206-209"}
+  - {field: all, change: "verified (core bind default 127.0.0.1 with no ENV server__host in Dockerfile.production; core target is real, MySQL production default; health route; commit matches)", evidence: "29 citations checked"}

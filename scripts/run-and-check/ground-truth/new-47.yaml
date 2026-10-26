@@ -1,0 +1,133 @@
+id: new-47
+repository: plausible/analytics
+commit: 9bc90b0063c87eb590d52fd08c852f2d304ff43a
+summary: >
+  Plausible Analytics Community Edition, an Elixir/Phoenix web analytics app. It stores general data in PostgreSQL
+  and all analytics events in ClickHouse; self-hosting is the CE Docker image with a separate Postgres and ClickHouse.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  # judgement call: NOT_DEPLOYABLE is primary (ClickHouse cannot be hosted by Deployz). DEPLOYABLE_WITH_CHANGES is accepted only for the reading "vendor supplies an external ClickHouse URL"; the app also needs the separate migrate step.
+  reason: >
+    ClickHouse is a hard requirement (events, sessions, stats queries, ClickHouse migrations) and Deployz does not host it.
+    Only an external ClickHouse (CLICKHOUSE_DATABASE_URL) could make it run, which Deployz cannot provision.
+    DEPLOYABLE_WITH_CHANGES only if the vendor supplies an external ClickHouse URL; there is no ClickHouse-free mode.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 66, quote: "FROM alpine:3.23.5@sha256:... (final runtime stage; builds release from source)"}
+    - {path: Dockerfile, line: 95, quote: 'CMD ["run"]'}
+runtime: {accept: [elixir]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 92, quote: "EXPOSE 8000"}
+    - {path: config/runtime.exs, line: 65, quote: 'get_int_from_path_or_env(config_dir, "PORT", 8000)  # HTTP_PORT checked first at line 64'}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 90, quote: "ENV LISTEN_IP=0.0.0.0"}
+    - {path: config/runtime.exs, line: 51, quote: 'get_var_from_path_or_env(config_dir, "LISTEN_IP") || "127.0.0.1"'}
+startCommand:
+  source: image
+  accept: []
+healthPath:
+  accept: ["/api/system/health/live"]
+  evidence:
+    - {path: lib/plausible_web/router.ex, line: 421, quote: 'get "/health/live", Api.SystemController, :liveness'}
+    - {path: lib/plausible_web/controllers/api/system_controller.ex, line: 20, quote: "json(conn, %{ok: true})"}
+# /api/health and /api/system/health/ready query ClickHouse and return non-2xx when it is down. "/" redirects to login/register.
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: config/runtime.exs, line: 504, quote: '"DATABASE_URL", "postgres://postgres:postgres@plausible_db:5432/plausible_db"'}
+migrations:
+  mode: command
+  accept:
+    - "/entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    - "/app/bin/plausible eval Plausible.Release.interweave_migrate"
+  evidence:
+    - {path: rel/docker-entrypoint.sh, line: 8, quote: 'exec /app/"$2".sh'}
+    - {path: rel/overlays/migrate.sh, line: 6, quote: "bin/plausible eval Plausible.Release.interweave_migrate"}
+    - {path: lib/plausible_release.ex, line: 63, quote: "def interweave_migrate(repos \\ repos())"}
+    # The app does not migrate at boot (no migrate call in lib/plausible/application.ex). The migrate command also needs ClickHouse (config/config.exs:4 ecto_repos: [Plausible.Repo, Plausible.IngestRepo]; IngestRepo is the ClickHouse repo).
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: config/runtime.exs, line: null, quote: "no REDIS env var read in config/runtime.exs; no redis dependency found in mix.exs"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: lib/plausible/application.ex, line: 213, quote: "{Oban, Application.get_env(:plausible, Oban)}"}
+    - {path: config/runtime.exs, line: 912, quote: "queues = if(is_selfhost, do: base_queues, ..."}
+scheduledJobs:
+  status: embedded
+  items: [Oban cron in the web process; DISABLE_CRON=true turns it off]
+  evidence:
+    - {path: config/runtime.exs, line: 322, quote: 'disable_cron = get_bool_from_path_or_env(config_dir, "DISABLE_CRON", false)'}
+storage:
+  local: ephemeral
+  paths: [/var/lib/plausible]
+  s3: native
+  s3SelectBy: {S3_DISABLED: "false"}
+  evidence:
+    - {path: Dockerfile, line: 94, quote: "VOLUME /var/lib/plausible"}
+    - {path: config/runtime.exs, line: 283, quote: 'data_dir || persistent_cache_dir || System.get_env("DEFAULT_DATA_DIR")'}
+    - {path: config/runtime.exs, line: 1066, quote: 'get_bool_from_path_or_env(config_dir, "S3_DISABLED", true)'}
+    # /var/lib/plausible holds caches (tzdata, ACME certs when HTTPS is on in-app); S3 is only for CSV import/export.
+env:
+  required:
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public https URL; app raises at boot if missing"}
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "at least 32 bytes (openssl rand -base64 48)"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres URL; default points to host plausible_db"}
+    - {name: CLICKHOUSE_DATABASE_URL, secret: true, buildTime: false, note: "http(s)://host:8123/db; default host plausible_events_db. Deployz cannot host it"}
+  optional: [TOTP_VAULT_KEY, DISABLE_REGISTRATION, MAILER_EMAIL, MAILER_ADAPTER, SMTP_HOST_ADDR, SMTP_HOST_PORT, SMTP_USER_NAME, SMTP_USER_PWD, SECURE_COOKIE, LOG_LEVEL, DISABLE_CRON, ENABLE_EMAIL_VERIFICATION, S3_DISABLED, MAXMIND_LICENSE_KEY, IP_GEOLOCATION_DB, ADMIN_USER_IDS]
+  buildTime: []
+  evidence:
+    - {path: config/runtime.exs, line: 72, quote: 'raise "BASE_URL configuration option is required.'}
+    - {path: config/runtime.exs, line: 85, quote: 'raise "SECRET_KEY_BASE configuration option is required.'}
+    - {path: config/runtime.exs, line: 120, quote: '"CLICKHOUSE_DATABASE_URL"  (default "http://plausible_events_db:8123/plausible_events_db" at line 121)'}
+blockers:
+  expected:
+    - "ClickHouse: unsupported datastore, required for all analytics data and for the migration command; no ClickHouse-free mode"
+  mustNot:
+    - "Redis: not used"
+    - "Persistent volume: /var/lib/plausible is only caches; do not report as a blocker"
+    - "Missing Dockerfile or build-time env: Dockerfile builds from source with no required build args"
+    - "Postgres: supported (DATABASE_URL)"
+vendorQuestions:
+  legitimate:
+    - "Is an external managed ClickHouse (ClickHouse Cloud) available? The repo cannot tell where it is hosted."
+  unnecessary:
+    - "Which port, bind address, start command: Dockerfile sets 8000, LISTEN_IP=0.0.0.0 and CMD run"
+    - "Which database engine: Postgres only"
+    - "Whether Redis is needed: it is not"
+    - "How to generate SECRET_KEY_BASE: the config error names the requirement (32+ bytes)"
+traps:
+  - "/api/health and /api/system/health/ready look like health checks -> they query ClickHouse, return 500 if it is down; use /api/system/health/live (router.ex:416-422)"
+  - "Default DATABASE_URL / CLICKHOUSE_DATABASE_URL point to compose host names -> not real values; must be set (config/runtime.exs:120,504)"
+  - "Image has no boot-time migration -> CMD run only starts the app; migrate needs a separate command (rel/docker-entrypoint.sh:4-8)"
+  - "Dockerfile ARG MIX_ENV=ce -> keep ce default; ee needs a license and is not the self-host build (Dockerfile:12)"
+  - "Port in docs/other envs may be 8000 or 80 -> HTTP_PORT overrides PORT, default 8000 (config/runtime.exs:64-65)"
+  - "SELFHOST default true -> no Paddle/cloud settings needed (config/runtime.exs:296)"
+openQuestions:
+  - "Whether the app boots when ClickHouse is unreachable (ClickhouseRepo connects lazily); not verified because running code is not allowed. Stats, ingest and the migrate command still need it."
+  - "Compose file for self-hosting lives in plausible/community-edition, not in this repo; the createdb/migrate/run command sequence is inferred from rel/overlays and docker-entrypoint.sh."
+crossReview:
+  - {field: port.evidence, change: "PORT line corrected 64 -> 65 (HTTP_PORT is checked first at line 64)", evidence: "config/runtime.exs:64-65"}
+  - {field: env.evidence, change: "BASE_URL raise line 70 -> 72; ClickHouse default URL is on line 121 (var name line 120)", evidence: "config/runtime.exs:72,117-122"}
+  - {field: migrations.evidence, change: "fixed wrong claim: ecto_repos is [Repo, IngestRepo] (ClickhouseRepo is not a migrated repo); migrate still needs ClickHouse via IngestRepo", evidence: "config/config.exs:4; lib/plausible_release.ex:63-75"}
+  - {field: outcome.accept, change: "added DEPLOYABLE_WITH_CHANGES as alternative reading (external ClickHouse supplied by vendor); NOT_DEPLOYABLE kept primary", evidence: "config/runtime.exs:117-122 (CLICKHOUSE_DATABASE_URL is a plain env var)"}
+  - {field: env.optional, change: "TOTP_VAULT_KEY confirmed optional: derived from SECRET_KEY_BASE when unset", evidence: "config/runtime.exs:188-190"}
+  - {field: healthPath, change: "verified: liveness route has no DB or ClickHouse query; readiness checks Postgres and caches (system_controller.ex:68), /api/health aliases readiness. force-SSL redirect only active when in-app HTTPS (site_encrypt) is on, so plain-HTTP probe is not redirected", evidence: "router.ex:416-422; endpoint.ex:140-165"}
+  - {field: openQuestions, change: "ClickHouse-at-boot still unverified (not run); ClickhouseRepo, IngestRepo, AsyncInsertRepo and write buffers are supervised at boot (application.ex:44-47,207-208), so boot may fail or retry if unreachable; stats, ingest, migrate definitely need it", evidence: "lib/plausible/application.ex:44-47,207-208"}
+  - {field: all, change: "verified", evidence: "30 citations checked"}

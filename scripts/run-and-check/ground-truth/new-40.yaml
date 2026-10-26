@@ -1,0 +1,124 @@
+id: new-40
+repository: umami-software/umami
+commit: 559e3c607c23d2c72d9bd4f6481bda428255323c
+summary: >-
+  Umami is a privacy-focused web analytics app (Next.js standalone, Node 22, pnpm, Prisma 7). It is
+  self-hosted from the root Dockerfile (or the published image) with a PostgreSQL database; the container
+  runs migrations at boot and then starts the Next.js server on port 3000.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >-
+    Single container, PostgreSQL only (Deployz can provide it), migrations run at startup, Redis and
+    ClickHouse/Kafka are optional. Vendor needs DATABASE_URL (from the managed DB) and APP_SECRET.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker-compose.test.yml, reason: "compose file for tests, not a Dockerfile"}
+    - {path: podman/, reason: "Podman/systemd units, not a production Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 104, quote: 'CMD ["sh", "scripts/start-docker.sh"]'}
+    - {path: Dockerfile, line: 45, quote: "RUN pnpm build:docker"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 99, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 102, quote: "ENV PORT=3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 101, quote: "ENV HOSTNAME=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["sh scripts/start-docker.sh"]
+healthPath:
+  accept: ["/api/heartbeat"]
+  evidence:
+    - {path: src/app/api/heartbeat/route.ts, line: 2, quote: "return Response.json({ ok: true })"}
+    - {path: docker-compose.yml, line: 18, quote: "curl http://localhost:3000/api/heartbeat"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: prisma/schema.prisma, line: 8, quote: 'provider     = "postgresql"'}
+    - {path: scripts/check-db.js, line: 35, quote: "DATABASE_URL is not defined."}
+    - {path: scripts/check-db.js, line: 8, quote: "const MIN_VERSION = '9.4.0'"}
+migrations:
+  mode: startup
+  accept: ["prisma migrate deploy"]
+  evidence:
+    - {path: scripts/start-docker.sh, line: 14, quote: "node scripts/check-db.js"}
+    - {path: scripts/check-db.js, line: 76, quote: "prisma migrate deploy"}
+    - {path: scripts/check-db.js, line: 73, quote: "if (!process.env.SKIP_DB_MIGRATION)"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://..."}
+  evidence:
+    - {path: src/lib/redis.ts, line: 106, quote: "const enabled = !!process.env.REDIS_URL;"}
+    - {path: scripts/check-db.js, line: 40, quote: "if (process.env.REDIS_URL) {"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: scripts/start-docker.sh, line: 16, quote: "exec node server.js"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: docker-compose.yml, line: 2, quote: "services:"}
+storage:
+  local: ephemeral
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 29, quote: "umami-db-data:/var/lib/postgresql/data (db only, app has no volume)"}
+    - {path: src/lib/crypto.ts, line: 57, quote: "hash(process.env.APP_SECRET || process.env.DATABASE_URL)"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql:// URL; build uses a dummy value"}
+    - {name: APP_SECRET, secret: true, buildTime: false, note: "salt/token secret; falls back to DATABASE_URL hash, so recommended rather than boot-fatal"}
+  optional: [TWO_FACTOR_ENCRYPTION_KEY, REDIS_URL, BASE_PATH, CLOUD_MODE, DISABLE_LOGIN, COLLECT_API_ENDPOINT, TRACKER_SCRIPT_NAME, TRACKER_SCRIPT_URL, SKIP_DB_MIGRATION, SKIP_DB_CHECK, DIRECT_DATABASE_URL, CLICKHOUSE_URL, GEOLITE_DB_PATH, CORS_MAX_AGE, NODE_OPTIONS]
+  buildTime: [BASE_PATH, SKIP_BUILD_GEO, NODE_OPTIONS]
+  evidence:
+    - {path: docker-compose.yml, line: 9, quote: "APP_SECRET: replace-me-with-a-random-string"}
+    - {path: src/lib/two-factor/crypto.ts, line: 12, quote: "const hex = process.env.TWO_FACTOR_ENCRYPTION_KEY;"}
+    - {path: src/app/api/auth/login/route.ts, line: 38, quote: "if (!isTwoFactorConfigured()) {"}
+    - {path: Dockerfile, line: 36, quote: "ARG BASE_PATH"}
+blockers:
+  expected: []
+  mustNot:
+    - "ClickHouse/Kafka: optional (CLICKHOUSE_URL), PostgreSQL alone is the default and supported"
+    - "Redis: optional, not required at boot"
+    - "GeoLite download at build: needs outbound internet at build, not a blocker; SKIP_BUILD_GEO skips it"
+    - "podman/ and docker-compose.test.yml: not deployment inputs"
+    - "docker/proxy.ts: copied into src by the Dockerfile, not a second service"
+vendorQuestions:
+  legitimate:
+    - "Whether to set TWO_FACTOR_ENCRYPTION_KEY: only needed if users enable 2FA (login returns 503 for them without it)"
+    - "Whether a BASE_PATH is wanted: it is baked at build time and the health path changes with it"
+  unnecessary:
+    - "Which port, host binding or start command (Dockerfile sets them)"
+    - "Whether to run migrations (start script runs them)"
+    - "Whether a worker, Redis or S3 is required (none is)"
+traps:
+  - "Compose healthcheck path /api/heartbeat is the correct probe; / redirects to the login UI -> use /api/heartbeat (docker-compose.yml:18)"
+  - "Dockerfile sets dummy DATABASE_URL at build -> not a real value, runtime must supply it (Dockerfile:40)"
+  - "package.json start/start:docker scripts (npm-run-all) -> image uses scripts/start-docker.sh instead (Dockerfile:104)"
+  - "Compose db service with volume -> Deployz RDS replaces it (docker-compose.yml:22)"
+  - "Compose image ghcr.io/umami-software/umami:latest -> build from the Dockerfile at commit (docker-compose.yml:4)"
+  - "Runtime user nextjs is non-root and the image has no npm; use sh scripts/start-docker.sh as-is (Dockerfile:104)"
+  - "Only PostgreSQL (>= 9.4) is supported; MySQL was removed from the schema (prisma/schema.prisma:8)"
+openQuestions:
+  - "Exact HTTP status of / without setup not verified; /api/heartbeat is used instead"
+  - "Build downloads the GeoLite2 DB from GitHub at docker build (scripts/build-geo.js:31); needs build egress or SKIP_BUILD_GEO=1; geo features then degrade"
+crossReview:
+  - {field: evidence line numbers, change: "re-pointed 9 drifted citations (heartbeat route 1->2, check-db.js 40->35 / 75->76 / 45->40, start-docker.sh 15->14 / 17->16, docker-compose.yml 31->29 / 8->9); replaced the prose quote on docker-compose.yml:1 with the real line 2 'services:'; fixed trap line refs docker-compose.yml:23->22 and :3->4", evidence: "scripts/check-db.js:35,40,76; scripts/start-docker.sh:14,16; docker-compose.yml:4,9,22,29"}
+  - {field: env.required APP_SECRET, change: "judgement kept: boot does not fail without it (src/lib/crypto.ts:57 falls back to a hash of DATABASE_URL), but the secret then derives from the DB credentials, so it stays required for security", evidence: "src/lib/crypto.ts:57"}
+  - {field: all, change: verified, evidence: "23 citations checked; Redis optional (src/lib/redis.ts:106), health route unauthenticated and DB-independent, one container, no workers"}

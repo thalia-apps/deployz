@@ -1,0 +1,288 @@
+{
+  "id": "new-28",
+  "commit": "9e3bda4bfe9f082736f54702c86b6c74c620e7a4",
+  "analyser": "rules@r2-after",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "modules/front-end",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "modules/front-end/Dockerfile"
+    },
+    "build": {
+      "command": "tsc -b && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"./docker-entrypoint.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ControlPlane__ConsistencyMode",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/evaluation-server/src/Api/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ControlPlane__DcId",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/evaluation-server/src/Api/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ControlPlane__Enabled",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/evaluation-server/src/Infrastructure/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ControlPlane__HeartbeatIntervalSeconds",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/evaluation-server/src/Api/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ControlPlane__Region",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/evaluation-server/src/Api/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_OPENTELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Api/Setup/ConfigureSerilog.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATBIT_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares FEATBIT_VERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Api/Setup/ConfigureSerilog.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Api/Setup/ConfigureSerilog.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "Postgres__ConnectionString",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Infrastructure/ConfigurationExtensions.cs",
+            "read in modules/evaluation-server/src/Infrastructure/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "Postgres__Password",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in modules/back-end/src/Infrastructure/ConfigurationExtensions.cs",
+            "read in modules/evaluation-server/src/Infrastructure/ConfigurationExtensions.cs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "Redis__ConnectionString",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Infrastructure/ConfigurationExtensions.cs",
+            "read in modules/evaluation-server/src/Infrastructure/ConfigurationExtensions.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "Redis__Password",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in modules/back-end/src/Infrastructure/ConfigurationExtensions.cs",
+            "read in modules/evaluation-server/src/Infrastructure/ConfigurationExtensions.cs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in modules/back-end/src/Api/Program.cs",
+            "read in modules/evaluation-server/src/Api/Program.cs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 3 application services (ui, api-server, evaluation-server). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 3 application services (ui, api-server, evaluation-server). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

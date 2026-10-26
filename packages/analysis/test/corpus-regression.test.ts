@@ -344,3 +344,102 @@ describe('a viper key that a boot guard requires (vikunja)', () => {
     expect(envVar(tree('false'), 'VIKUNJA_SERVICE_PUBLICURL')?.required ?? false).toBe(false);
   });
 });
+
+// Round 2 (umami, directus, Ghost, n8n, uptime-kuma, changedetection.io, homepage, formbricks, plausible, outline).
+
+describe('JS env reads that do not need a value', () => {
+  const read = (source: string, key: string) =>
+    detectEnvVarModel({ Dockerfile: 'FROM node:22\nCOPY . .\nCMD ["node", "server.js"]\n', 'src/server.js': source }).find((variable) => variable.key === key);
+
+  it('a negation is a presence test (umami `return !process.env.CLOUD_MODE`)', () => {
+    expect(read('export function enabled() {\n  return !process.env.CLOUD_MODE;\n}\n', 'CLOUD_MODE')?.required).toBe(false);
+  });
+
+  it('a membership test compares the value (plausible `.includes(process.env.MIX_ENV)`)', () => {
+    expect(read("const ce = ['ce', 'ce_dev'].includes(process.env.MIX_ENV);\n", 'MIX_ENV')?.required).toBe(false);
+  });
+
+  it('one candidate of a fallback list (uptime-kuma port list)', () => {
+    expect(read('const port = [args.port, process.env.UPTIME_KUMA_PORT, process.env.PORT, 3001].find((p) => p);\n', 'UPTIME_KUMA_PORT')?.required).toBe(false);
+  });
+
+  it('a secret whose local any condition tests, with no throw when absent (uptime-kuma initial admin)', () => {
+    const source = [
+      'const username = process.env.UK_INITIAL_ADMIN_USERNAME;',
+      'const password = process.env.UK_INITIAL_ADMIN_PASSWORD;',
+      'if (!username && !password) {',
+      '  return false;',
+      '}',
+    ].join('\n');
+    expect(read(source, 'UK_INITIAL_ADMIN_PASSWORD')?.required).toBe(false);
+  });
+
+  it('a secret that a getter only returns (homepage MCP token)', () => {
+    expect(read('export function mcpToken() {\n  return process.env.HOMEPAGE_MCP_TOKEN;\n}\n', 'HOMEPAGE_MCP_TOKEN')?.required).toBe(false);
+  });
+
+  it('keeps a secret required when a throw guards it', () => {
+    const source = 'export function key() {\n  return process.env.APP_SECRET_KEY;\n}\nif (!process.env.APP_SECRET_KEY) {\n  throw new Error("set it");\n}\n';
+    expect(read(source, 'APP_SECRET_KEY')?.required).toBe(true);
+  });
+
+  it('keeps a value passed to an ordinary call required', () => {
+    expect(read('const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);\n', 'STRIPE_SECRET_KEY')?.required).toBe(true);
+  });
+});
+
+describe('a JS server that checks the Host header (homepage)', () => {
+  const tree = (source: string): FileTree => ({
+    Dockerfile: 'FROM node:24\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n',
+    'src/utils/auth.js': source,
+  });
+
+  it('lets the ALB health check pass the 400 it gets', () => {
+    const health = normalizeDeploymentManifest(analyseRepo(tree('const allowed = (process.env.HOMEPAGE_ALLOWED_HOSTS ?? "").split(",");\n')), {}).health;
+    expect(health.hostChecked).toBe(true);
+  });
+
+  it('does not for a server without a host list', () => {
+    expect(normalizeDeploymentManifest(analyseRepo(tree('export const ok = true;\n')), {}).health).not.toHaveProperty('hostChecked');
+  });
+});
+
+describe('a Redis queue that only an optional mode turns on (n8n)', () => {
+  const tree = (mode: string): FileTree => ({
+    Dockerfile: 'FROM node:22\nCOPY . .\nCMD ["node", "bin/n8n"]\n',
+    'package.json': JSON.stringify({ name: 'n8n', scripts: { worker: './bin/n8n worker' }, dependencies: { bull: '^4.0.0', ioredis: '^5.0.0' } }),
+    'src/configs/executions.config.ts': [
+      "const executionModeSchema = z.enum(['regular', 'queue']);",
+      'export class ExecutionsConfig {',
+      "  @Env('EXECUTIONS_MODE', executionModeSchema)",
+      `  mode: ExecutionMode = '${mode}';`,
+      '}',
+    ].join('\n'),
+    'src/config/redis.config.ts': "export const host = process.env.QUEUE_BULL_REDIS_HOST ?? 'localhost';\n",
+  });
+
+  it('does not provision Redis when the default mode runs jobs in process', () => {
+    expect(assessRedis(tree('regular')).required).toBe(false);
+  });
+
+  it('provisions Redis when the queue is the default mode', () => {
+    expect(assessRedis(tree('queue')).required).toBe(true);
+  });
+});
+
+describe('a production JSON config that names the database client (Ghost)', () => {
+  const tree = (client: string): FileTree => ({
+    Dockerfile: 'FROM node:22\nCOPY . .\nCMD ["node", "index.js"]\n',
+    'package.json': JSON.stringify({ name: 'ghost', dependencies: { knex: '^3.0.0', mysql2: '^3.0.0', sqlite3: '^5.0.0' } }),
+    'core/shared/config/env/config.production.json': JSON.stringify({ database: { client, connection: { host: '127.0.0.1' } } }),
+  });
+
+  it('is MySQL, whose connection the vendor confirms', () => {
+    const manifest = normalizeDeploymentManifest(analyseRepo(tree('mysql')), {});
+    expect(manifest.database.engine).toBe('mysql');
+  });
+
+  it('is not MySQL when it names another client', () => {
+    expect(normalizeDeploymentManifest(analyseRepo(tree('sqlite3')), {}).database.engine).not.toBe('mysql');
+  });
+});

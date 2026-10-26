@@ -31,6 +31,7 @@ import {
   mainCommandRunsWorker,
   mergeAiAnalysis,
   migrationRunnerVerdict,
+  optionalQueueMode,
   redactSecrets,
   runAiAnalysis,
   selectAiContextFiles,
@@ -424,7 +425,13 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // app the image does not hold is ignored; a start path that runs the queue
 // consumer asks no worker question; a root HEALTHCHECK accepts redirects.
 // Stored v67 rows miss those variables and keep a strict `/` health check.
-export const ANALYSIS_VERSION = 68;
+// Version 69 (2026-10 corpus round 2): JS reads that are a negation, a
+// membership test, one candidate of a list, a tested secret local or a
+// returned secret are optional; a JS `*_ALLOWED_HOSTS` check is host
+// validation; an optional queue mode makes Redis and package.json workers
+// optional; a production JSON config naming `mysql` is MySQL; env package
+// defaults and production JSON configs stay inside the file cap.
+export const ANALYSIS_VERSION = 69;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -1270,7 +1277,9 @@ export function resolveWorkerCommands(tree: FileTree): ResolvedWorkerCommand[] {
     seen.add(declared.id);
     workers.push({ id: declared.id, command: declared.command, source: declared.source });
   }
-  if (workers.length === 0 && !mainCommandRunsWorker(tree)) {
+  // A worker script of an app whose queue runs only in an optional mode (n8n `EXECUTIONS_MODE=queue`)
+  // would start a worker that the default mode never feeds.
+  if (workers.length === 0 && !mainCommandRunsWorker(tree) && optionalQueueMode(tree) === null) {
     const match = collectScripts(tree).find(([key, command]) => WORKER_SCRIPT_KEY_REGEX.test(key) && !isDevToolCommand(command));
     if (match?.[1] !== undefined) {
       workers.push({ id: 'worker', command: match[1], source: 'package.json' });

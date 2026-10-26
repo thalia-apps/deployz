@@ -237,7 +237,8 @@ Repository (GitHub tree, bounded)
   present and PostgreSQL is not a runtime option. The independent signal
   is a `mysql://` or `mysql+pymysql://` URL, a `MYSQL_*` variable, a
   MySQL image in the production Compose file, a Prisma, Django, Spring
-  (`jdbc:mysql`), Sequelize or Knex setting, a Dockerfile that installs
+  (`jdbc:mysql`), Sequelize or Knex setting, a production JSON config that
+  names the client (Ghost `config/env/config.production.json`), a Dockerfile that installs
   `pdo_mysql`, or a Laravel default connection of `mysql`. A PostgreSQL
   driver that only a Python dev group or a dev requirements file declares
   does not count. A Laravel app that lists a `pgsql` connection keeps
@@ -258,7 +259,9 @@ Repository (GitHub tree, bounded)
   connection variable that an env sample comments out or calls optional,
   a connection variable that the code tests before it uses it, a backend
   selector whose default is not Redis (`CACHE_DRIVER=file`,
-  `JOBS_PROVIDER=local`), an image that installs its own Redis server, or
+  `JOBS_PROVIDER=local`), a `*_MODE` setting whose default is not `queue`
+  while the code offers `queue` (n8n `EXECUTIONS_MODE`; a package.json
+  worker script is then not provisioned either), an image that installs its own Redis server, or
   code that sets the connection itself. An env sample comment that says
   Redis is required overrides this evidence. The result is then
   `medium` confidence and the manifest does not request Redis. Evidence in
