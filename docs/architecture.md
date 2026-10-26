@@ -126,7 +126,9 @@ HTTPS probes to the application's public address.
    running release. Rollback and restart never run migrations.
 8. **Health and promotion** — the relay's heartbeat reports ECS counts,
    rollout state, ALB target health, the HTTP probe, the running digest, the
-   component verification and the stack inventory. Verification has one
+   component verification and the stack inventory. It also reports the
+   status of its own bootstrap stack (`identity.bootstrapStackStatus`), which
+   verifies a connector update. Verification has one
    `compute` check per workload: the web service verifies through its ALB
    target and the HTTP probe, a worker verifies through its service
    stability alone (it has no ALB target and no HTTP endpoint). The control
@@ -494,6 +496,10 @@ Notes:
   code restricts it to the installation's own suffixed task families, and a
   deregistered revision does not stop a running task. The bootstrap stack
   attaches the provisioner policies at install; nothing is attached later.
+  The relay reads the status of its own bootstrap stack
+  (`cloudformation:DescribeStacks` on `AWS::StackId`, statement
+  `RelayReadOwnStack`); it cannot change that stack. The boundary carries
+  this action without the stack ARN, because of the size quota.
   The relay reads and writes its own credential secret by that secret's ARN
   only. It reads and writes other secret values only on secrets that carry
   its `deployz:installation` tag (the application's configuration); it can

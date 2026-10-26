@@ -292,7 +292,13 @@ import {
   toDomainView,
   type CustomDomainRow,
 } from './domains.js';
-import { connectorUpdateLinks, connectorUpdateOffer, type ConnectorUpdateOffer } from './connector-update.js';
+import {
+  connectorUpdateEvent,
+  connectorUpdateLinks,
+  connectorUpdateOffer,
+  readObservedBootstrapStack,
+  type ConnectorUpdateOffer,
+} from './connector-update.js';
 import {
   deriveDeploymentStatus,
   endpointHttpsState,
@@ -8585,7 +8591,7 @@ export async function buildServer({
   // twice while it's in flight.
   app.get('/api/relay/commands', async (request) => {
     const token = requireBearerToken(request);
-    const { installationId } = request.query as { installationId?: string };
+    const { installationId, claim } = request.query as { installationId?: string; claim?: string };
     const deployment = await requireRelayDeployment(installationId, token);
 
     // Service mutations never overlap: while one is RUNNING (a rollout the
@@ -8612,7 +8618,9 @@ export async function buildServer({
     );
     const claimIds: string[] = [];
     let mutationClaimed = false;
-    for (const job of candidates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
+    // `claim=0`: the customer is updating the connector stack, so the relay
+    // asks for the deployment facts only and claims nothing.
+    for (const job of claim === '0' ? [] : candidates.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())) {
       if (job.state === 'RUNNING') continue;
       if (SERVICE_MUTATING_JOB_TYPES.has(job.type)) {
         if (mutationRunning || (job.type === 'CONFIG_UPDATE' && mutationClaimed)) continue;
@@ -9559,6 +9567,7 @@ export async function buildServer({
         relayVersion?: string;
         bootstrapVersion?: string;
         capabilities?: unknown;
+        bootstrapStackStatus?: string;
       };
     };
     const deployment = await requireRelayDeployment(
@@ -9643,6 +9652,33 @@ export async function buildServer({
         lastFailedAt: probeParsed.data.ok ? previousLastFailedAt : probeParsed.data.checkedAt,
       };
     }
+
+    // Connector stack status (identity.bootstrapStackStatus). A heartbeat
+    // without one (an old relay, a failed read) keeps the stored status and
+    // its observation time, so the derivation can tell it is stale; it never
+    // erases the last known value.
+    const previousBootstrapStack = readObservedBootstrapStack(deployment.observedState);
+    const reportedStackStatus =
+      typeof identity?.bootstrapStackStatus === 'string' && /^[A-Z_]{1,64}$/.test(identity.bootstrapStackStatus)
+        ? identity.bootstrapStackStatus
+        : null;
+    const nextBootstrapStack =
+      reportedStackStatus !== null
+        ? { status: reportedStackStatus, observedAt: new Date().toISOString() }
+        : previousBootstrapStack;
+    if (nextBootstrapStack) {
+      (observedState as Record<string, unknown>)['bootstrapStack'] = nextBootstrapStack;
+    }
+    const nextInstalledBuildId =
+      typeof identity?.bootstrapVersion === 'string' ? identity.bootstrapVersion : (deployment.bootstrapVersion ?? null);
+    const connectorEvent =
+      reportedStackStatus === null
+        ? null
+        : connectorUpdateEvent(
+            { installedBuildId: deployment.bootstrapVersion ?? null, status: previousBootstrapStack?.status ?? null },
+            { installedBuildId: nextInstalledBuildId, status: reportedStackStatus },
+            env.bootstrapBuildId ?? null,
+          );
 
     // Release evidence: only THIS heartbeat's own report counts, never the
     // state stored by an earlier one. The verdict is stamped into observedState
@@ -9749,6 +9785,22 @@ export async function buildServer({
           requestedState: 'HEALTHY',
           result: 'success',
           payload: {},
+        });
+      }
+
+      if (connectorEvent) {
+        await recordEvent(tx, {
+          organizationId: deployment.organizationId,
+          eventType: connectorEvent,
+          actorType: 'relay',
+          actorId: deployment.installationId ?? deployment.id,
+          deploymentId: deployment.id,
+          customerId: deployment.customerId,
+          result: connectorEvent === 'connector.update_verified' ? 'success' : 'failure',
+          payload: {
+            installedBuildId: nextInstalledBuildId,
+            publishedBuildId: env.bootstrapBuildId ?? null,
+          },
         });
       }
 

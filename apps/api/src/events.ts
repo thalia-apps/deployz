@@ -77,6 +77,12 @@ export type DeploymentEventType =
   | 'health.unhealthy'
   | 'health.recovered'
   | 'ecs.rollout_failed'
+  // connector family — a customer update of the connector (bootstrap) stack,
+  // seen by the heartbeat (apps/api/src/connector-update.ts). Payloads carry
+  // build ids only.
+  | 'connector.update_verified'
+  | 'connector.update_rolled_back'
+  | 'connector.update_failed'
   // The relay's first successful enrollment (written inside the register tx —
   // replays early-return before it). A re-enrollment after an admin relay
   // reset is a distinguishable new first connection and emits again.

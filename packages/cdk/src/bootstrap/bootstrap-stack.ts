@@ -957,6 +957,18 @@ export class BootstrapStack extends Stack {
       },
     });
 
+    // The relay reads its own bootstrap stack status for the heartbeat, so the
+    // control plane can verify a connector update. The bootstrap stack does
+    // not carry the installation tag (the id is minted inside it), so the
+    // grant names the stack ARN. Read only: the relay never changes its own
+    // stack.
+    const relayReadOwnStack = new PolicyStatement({
+      sid: 'RelayReadOwnStack',
+      effect: Effect.ALLOW,
+      actions: ['cloudformation:DescribeStacks'],
+      resources: [Fn.ref('AWS::StackId')],
+    });
+
     // Phase 2 — provisioner permissions, all constrained by the deployz: tag
     // boundary. Create/update requires the deployz:installation request tag;
     // manage/delete requires the resource already carries it.
@@ -1432,6 +1444,9 @@ export class BootstrapStack extends Stack {
             ...PHASE_4_DEPLOY_OBSERVE_ACTIONS,
             ...PHASE_4_TASK_RUN_ACTIONS,
             'ecs:DeregisterTaskDefinition',
+            // RelayReadOwnStack: its own statement with the stack ARN does
+            // not fit under the size quota.
+            'cloudformation:DescribeStacks',
           ],
           resources: ['*'],
         }),
@@ -1496,6 +1511,7 @@ export class BootstrapStack extends Stack {
     this.relayRole.addToPolicy(phase1SecretAccess);
     this.relayRole.addToPolicy(phase2VerifyStack);
     this.relayRole.addToPolicy(phase2RelayState);
+    this.relayRole.addToPolicy(relayReadOwnStack);
     this.relayRole.addToPolicy(phase4DeregisterRevisions);
 
     // The provisioner policy used to be created and attached to nothing, on

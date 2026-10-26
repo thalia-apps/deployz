@@ -138,6 +138,11 @@ export interface PollDependencies {
   readonly onResultReported?: (result: RelayCommandResult, reported: boolean) => Promise<void>;
   /** Reported at enrollment and on every heartbeat (see identity.ts). */
   identity?: Record<string, unknown>;
+  /**
+   * The customer is updating the bootstrap stack: fetch the deployment facts
+   * but claim no commands (`claim=0`). Resume and heartbeats continue.
+   */
+  pauseClaims?: boolean;
   /** Observes the image digest actually running in ECS; null = unknown. */
   observeImage?: () => Promise<string | null>;
   /**
@@ -316,7 +321,7 @@ export async function pollOnce(
 
   try {
     commandsResponse = await fetchFn(
-      `${controlPlaneUrl}/api/relay/commands?installationId=${encodeURIComponent(installationId)}`,
+      `${controlPlaneUrl}/api/relay/commands?installationId=${encodeURIComponent(installationId)}${deps.pauseClaims ? '&claim=0' : ''}`,
       { headers: authHeaders },
     );
   } catch (err) {

@@ -48,7 +48,7 @@ function vendorStatus(overrides: Record<string, unknown> = {}): Record<string, u
     job: { type: 'INSTALL', status: 'SUCCEEDED' },
     aws: { stackStatus: 'CREATE_COMPLETE' },
     servingRelease: { releaseId: null, confirmedAt: UPDATED_AT, confirmed: true },
-    connector: { upgradeRequired: false, reason: null, updateAvailable: false, updateUrl: null, updateTemplateUrl: null },
+    connector: { upgradeRequired: false, reason: null, updateAvailable: false, updateUrl: null, updateTemplateUrl: null, installedBuildId: null, publishedBuildId: null, stackState: 'UNKNOWN' as const, observedAt: null },
     url: 'https://docs.acme.example',
     failure: null,
     ...overrides,

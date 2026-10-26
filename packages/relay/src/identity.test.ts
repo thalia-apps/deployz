@@ -4,6 +4,8 @@ import {
   RELAY_CAPABILITIES,
   RELAY_VERSION,
   accountIdFromArn,
+  isBootstrapStackUpdating,
+  readBootstrapStackStatus,
   readRelayIdentity,
 } from './identity.js';
 
@@ -66,5 +68,42 @@ describe('RELAY_CAPABILITIES', () => {
     expect(RELAY_CAPABILITIES.restart).toBe(true);
     expect(RELAY_CAPABILITIES.configUpdate).toBe(true);
     expect(RELAY_CAPABILITIES.destroy).toBe(true);
+  });
+});
+
+describe('readBootstrapStackStatus', () => {
+  it('returns the status of the stack', async () => {
+    const cfn = {
+      describeStack: async (name: string) => ({
+        found: true as const,
+        stack: { stackName: name, status: 'UPDATE_IN_PROGRESS', tags: {} },
+      }),
+    };
+    await expect(readBootstrapStackStatus(cfn, 'deployz-bootstrap')).resolves.toBe('UPDATE_IN_PROGRESS');
+  });
+
+  it('returns null when the read fails or the stack is not found', async () => {
+    await expect(
+      readBootstrapStackStatus({ describeStack: async () => ({ found: false, errorCode: 'AccessDenied' }) }, 'x'),
+    ).resolves.toBeNull();
+    await expect(
+      readBootstrapStackStatus({ describeStack: async () => Promise.reject(new Error('throttled')) }, 'x'),
+    ).resolves.toBeNull();
+  });
+});
+
+describe('isBootstrapStackUpdating', () => {
+  it('is true only for update and update-rollback progress states', () => {
+    for (const status of [
+      'UPDATE_IN_PROGRESS',
+      'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS',
+      'UPDATE_ROLLBACK_IN_PROGRESS',
+      'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS',
+    ]) {
+      expect(isBootstrapStackUpdating(status)).toBe(true);
+    }
+    for (const status of [null, 'CREATE_IN_PROGRESS', 'DELETE_IN_PROGRESS', 'UPDATE_COMPLETE', 'UPDATE_ROLLBACK_COMPLETE']) {
+      expect(isBootstrapStackUpdating(status)).toBe(false);
+    }
   });
 });

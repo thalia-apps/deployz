@@ -1055,6 +1055,7 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 "ecs:RunTask",
                 "ecs:StopTask",
                 "ecs:DeregisterTaskDefinition",
+                "cloudformation:DescribeStacks",
               ],
               "Effect": "Allow",
               "Resource": "*",
@@ -2763,6 +2764,14 @@ exports[`BootstrapStack > matches the committed snapshot 1`] = `
                 ],
               },
               "Sid": "RelayPendingCommandState",
+            },
+            {
+              "Action": "cloudformation:DescribeStacks",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "AWS::StackId",
+              },
+              "Sid": "RelayReadOwnStack",
             },
             {
               "Action": "ecs:DeregisterTaskDefinition",

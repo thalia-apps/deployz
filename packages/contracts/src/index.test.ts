@@ -790,7 +790,7 @@ describe('vendorDeploymentStatusSchema', () => {
         confirmedAt: '2026-08-31T11:58:00.000Z',
         confirmed: true,
       },
-      connector: { upgradeRequired: false, reason: null, updateAvailable: false, updateUrl: null, updateTemplateUrl: null },
+      connector: { upgradeRequired: false, reason: null, updateAvailable: false, updateUrl: null, updateTemplateUrl: null, installedBuildId: null, publishedBuildId: null, stackState: 'UNKNOWN' as const, observedAt: null },
       url: null,
       failure: null,
     };
@@ -806,10 +806,15 @@ describe('vendorDeploymentStatusSchema', () => {
         updateAvailable: true,
         updateUrl: 'https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks',
         updateTemplateUrl: 'https://deployz-templates-us-east-1.s3.us-east-1.amazonaws.com/bootstrap/v1/versions/abc123def456/bootstrap-template-v1.json',
+        installedBuildId: 'old123def456',
+        publishedBuildId: 'abc123def456',
+        stackState: 'UPDATING' as const,
+        observedAt: '2026-08-31T11:58:00.000Z',
       },
     };
     expect(vendorDeploymentStatusSchema.parse(unconfirmed)).toStrictEqual(unconfirmed);
     expect(() => vendorDeploymentStatusSchema.parse({ ...vendor, connector: { ...vendor.connector, upgradeRequired: true, reason: 'OTHER' } })).toThrow(ZodError);
+    expect(() => vendorDeploymentStatusSchema.parse({ ...vendor, connector: { ...vendor.connector, stackState: 'UPDATE_IN_PROGRESS' } })).toThrow(ZodError);
 
     // The additive specComponents field (phase 3) round-trips when present;
     // the parse above already proves its absence parses.

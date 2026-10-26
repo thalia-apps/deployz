@@ -63,7 +63,7 @@ import {
 import { observeServiceDigests, type EcsTaskReader } from './ecs-observe.js';
 import { observeRuntimeHealth, type EcsServiceReader, type TargetHealthReader } from './ecs-health.js';
 import { probeHealthUrl } from './http-probe.js';
-import { readRelayIdentity } from './identity.js';
+import { isBootstrapStackUpdating, readBootstrapStackStatus, readRelayIdentity } from './identity.js';
 import {
   createDestroyExecutor,
   createDestroyResumer,
@@ -2163,6 +2163,11 @@ export interface RelayHandlerDeps {
    * the control plane passes in each poll's deployment meta.
    */
   observeProbe?: PollDependencies['observeProbe'];
+  /**
+   * Overrides the read of the relay's own bootstrap stack status. When
+   * omitted, calls DescribeStacks on DEPLOYZ_BOOTSTRAP_STACK_NAME.
+   */
+  observeBootstrapStack?: () => Promise<string | null>;
 }
 
 /**
@@ -2298,6 +2303,18 @@ export function createRelayHandler(deps: RelayHandlerDeps) {
       ...(installDeps.checkAuthority ? { checkAuthority: installDeps.checkAuthority } : {}),
     });
 
+    // One DescribeStacks per invocation. A failed read reports nothing and
+    // never pauses claims.
+    let bootstrapStackStatus: string | null = null;
+    try {
+      bootstrapStackStatus = await (
+        deps.observeBootstrapStack ??
+        (() => readBootstrapStackStatus(getCloudFormationReader(), relayBootstrapStackName()))
+      )();
+    } catch {
+      bootstrapStackStatus = null;
+    }
+
     const pollDeps: PollDependencies = {
       fetchFn: deps.fetchFn,
       ...(deps.sleep ? { sleep: deps.sleep } : {}),
@@ -2413,7 +2430,11 @@ export function createRelayHandler(deps: RelayHandlerDeps) {
             ...getPurgeClients(installationId, purgePrevId),
           })();
         }),
-      identity: deps.identity ?? readRelayIdentity(context),
+      identity: {
+        ...(deps.identity ?? readRelayIdentity(context)),
+        ...(bootstrapStackStatus !== null ? { bootstrapStackStatus } : {}),
+      },
+      ...(isBootstrapStackUpdating(bootstrapStackStatus) ? { pauseClaims: true } : {}),
       ...(deps.observeImage ? { observeImage: deps.observeImage } : {}),
       observeServiceDigests:
         deps.observeServiceDigests ??

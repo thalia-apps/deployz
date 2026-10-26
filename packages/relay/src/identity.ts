@@ -6,6 +6,8 @@
 
 import type { RelayCapabilities, RelayIdentity } from '@deployz/contracts';
 
+import type { CloudFormationReader } from './verify.js';
+
 /**
  * Bumped with each relay release. Drives capability gating and rollout
  * verification ("confirm relayVersion after updating deployz-bootstrap");
@@ -52,4 +54,32 @@ export function readRelayIdentity(context?: {
   if (accountId) identity.awsAccountId = accountId;
   if (process.env['AWS_REGION']) identity.region = process.env['AWS_REGION'];
   return identity;
+}
+
+/**
+ * The CloudFormation status of the relay's own bootstrap stack, reported on
+ * every heartbeat so the control plane can verify a connector update. Null
+ * when the read fails (an older stack without the read grant, a throttle):
+ * the heartbeat then omits the status and is sent as usual.
+ */
+export async function readBootstrapStackStatus(
+  cfn: Pick<CloudFormationReader, 'describeStack'>,
+  stackName: string,
+): Promise<string | null> {
+  try {
+    const lookup = await cfn.describeStack(stackName);
+    return lookup.found ? lookup.stack.status : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True while the customer updates the bootstrap stack (including its
+ * rollback). The relay then claims no new commands: the update can replace
+ * the relay code and role mid-command. A stack still being created or being
+ * deleted does not pause claims.
+ */
+export function isBootstrapStackUpdating(status: string | null): boolean {
+  return status !== null && status.startsWith('UPDATE_') && status.endsWith('_IN_PROGRESS');
 }

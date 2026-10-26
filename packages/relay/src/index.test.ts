@@ -178,6 +178,55 @@ describe('relay handler (integration)', () => {
     }
   });
 
+  it('reports its bootstrap stack status and claims nothing while the stack updates', async () => {
+    const restore = setEnv({
+      DEPLOYZ_INSTALLATION_ID: 'inst-update',
+      DEPLOYZ_CREDENTIAL_SECRET_ARN: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:test',
+      DEPLOYZ_CONTROL_PLANE_URL: 'https://api.deployz.dev',
+      DEPLOYZ_ENROLLMENT_CODE: 'code-int',
+    });
+
+    try {
+      const calls: { url: string; body?: string }[] = [];
+      const inner = makeFetchFn(200, { commands: [] });
+      const fetchFn: FetchFn = async (url, init) => {
+        calls.push({ url, ...(typeof init?.body === 'string' ? { body: init.body } : {}) });
+        return inner(url, init);
+      };
+      let status: string | null = 'UPDATE_IN_PROGRESS';
+      const handler = createRelayHandler({
+        secretsClient: makeSecretsClient('tok-update'),
+        fetchFn,
+        observe: stubObserve,
+        observeImage: stubObserveImage,
+        observeHealth: stubObserveHealth,
+        observeBootstrapStack: async () => status,
+      });
+
+      await handler(makeScheduledEvent());
+      const commandsUrl = () => calls.filter((c) => c.url.includes('/api/relay/commands')).at(-1)!.url;
+      const healthBody = () =>
+        JSON.parse(calls.filter((c) => c.url.includes('/api/relay/health')).at(-1)!.body!) as {
+          identity: Record<string, unknown>;
+        };
+      expect(commandsUrl()).toContain('&claim=0');
+      expect(healthBody().identity['bootstrapStackStatus']).toBe('UPDATE_IN_PROGRESS');
+
+      status = 'UPDATE_COMPLETE';
+      await handler(makeScheduledEvent());
+      expect(commandsUrl()).not.toContain('claim=');
+      expect(healthBody().identity['bootstrapStackStatus']).toBe('UPDATE_COMPLETE');
+
+      // A failed read omits the status and never pauses claims.
+      status = null;
+      await handler(makeScheduledEvent());
+      expect(commandsUrl()).not.toContain('claim=');
+      expect(healthBody().identity).not.toHaveProperty('bootstrapStackStatus');
+    } finally {
+      restore();
+    }
+  });
+
   it('logs error when env vars are missing', async () => {
     const restore = setEnv({
       DEPLOYZ_INSTALLATION_ID: undefined,

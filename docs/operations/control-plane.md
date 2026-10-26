@@ -440,6 +440,39 @@ itself. Without `BOOTSTRAP_BUILD_ID` only the missing-evidence case is offered,
 with the fixed latest template. If the republish step fails after the API
 deploy, run the workflow again to publish the template.
 
+The customer updates the connector stack in their AWS account. Deployz never
+calls their CloudFormation. Deployz verifies the update from the heartbeat:
+
+- On each invocation the relay reads the status of its own bootstrap stack
+  (`DescribeStacks`) and sends it as `identity.bootstrapStackStatus`. A failed
+  read (an older stack without the `RelayReadOwnStack` grant, a throttle)
+  sends no status; the heartbeat continues.
+- The API stores the status and the time it was received in
+  `observedState.bootstrapStack` (`{ status, observedAt }`). A heartbeat
+  without a status keeps the stored value. No database migration is needed.
+- The derived status `connector` adds `installedBuildId`
+  (`deployments.bootstrapVersion`), `publishedBuildId` (`BOOTSTRAP_BUILD_ID`),
+  `stackState` and `observedAt`. `stackState` is `UPDATING` for a status that
+  ends in `_IN_PROGRESS`, `ROLLED_BACK` for `UPDATE_ROLLBACK_COMPLETE`,
+  `FAILED` for a status that ends in `_FAILED`, `STABLE` for
+  `CREATE_COMPLETE` and `UPDATE_COMPLETE`, and `UNKNOWN` when there is no
+  status, another status, or a status older than 15 minutes. The UI shows
+  `stackState`, never the raw status.
+- The heartbeat records each outcome once in `event_logs` (payload: build ids
+  only): `connector.update_verified` when the stack becomes `STABLE` on the
+  published build after an update (the build id changed, or the stack was in
+  an update state); `connector.update_rolled_back` on the first
+  `UPDATE_ROLLBACK_COMPLETE`; `connector.update_failed` on the first update
+  status that ends in `_FAILED`. A failed create or delete is not an update
+  failure.
+- While the status is an update status that ends in `_IN_PROGRESS`, the relay
+  polls with `claim=0`: it gets the deployment facts but claims no new
+  command, because the update can replace the relay code and role. It still
+  finishes the commands it already claimed and sends heartbeats.
+- A connector created from a template without `RelayReadOwnStack` reports no
+  status before its update. After an update that rolls back, it again has no
+  grant, so the rollback shows only as the old build id.
+
 Until `BOOTSTRAP_TEMPLATE_URL` is set, the API returns no Quick Create URL
 and the install page says no template has been published. A Region that is
 not in `DEPLOYABLE_AWS_REGIONS` is rejected at deployment creation. When the

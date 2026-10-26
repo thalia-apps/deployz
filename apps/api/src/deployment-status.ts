@@ -14,6 +14,7 @@ import {
   workloadServicesFromSpec,
   type ComponentProgress,
   type ComponentProgressStatus,
+  type ConnectorStackState,
   type CustomDomainStatus,
   type CustomerDeploymentStatus,
   type DeploymentStage,
@@ -33,7 +34,12 @@ import {
   type FailureCode as StoredFailureCode,
 } from '@deployz/contracts';
 
-import type { ConnectorUpdateOffer } from './connector-update.js';
+import {
+  BOOTSTRAP_STACK_STALE_MS,
+  connectorStackState,
+  readObservedBootstrapStack,
+  type ConnectorUpdateOffer,
+} from './connector-update.js';
 import { readInstallVerification } from './install-verification.js';
 
 // Unified deployment status — the read-time derivation described in
@@ -349,6 +355,10 @@ export interface DerivedDeploymentStatus {
     updateAvailable: boolean;
     updateUrl: string | null;
     updateTemplateUrl: string | null;
+    installedBuildId: string | null;
+    publishedBuildId: string | null;
+    stackState: ConnectorStackState;
+    observedAt: string | null;
   };
   result: { url: string } | null;
   failure: DerivedFailure | null;
@@ -1168,9 +1178,13 @@ function buildHealthLayers(
  */
 function connectorStatus(
   upgradeRequired: boolean,
-  deployment: Pick<DerivationDeployment, 'bootstrapVersion'>,
+  deployment: Pick<DerivationDeployment, 'bootstrapVersion' | 'observedState'>,
   offer: ConnectorUpdateOffer | null,
+  now: Date,
 ): DerivedDeploymentStatus['connector'] {
+  const observed = readObservedBootstrapStack(deployment.observedState);
+  const observedAtMs = observed ? Date.parse(observed.observedAt) : Number.NaN;
+  const fresh = Number.isFinite(observedAtMs) && now.getTime() - observedAtMs <= BOOTSTRAP_STACK_STALE_MS;
   const newerBuild =
     offer?.publishedBuildId != null && (deployment.bootstrapVersion ?? null) !== offer.publishedBuildId;
   const updateAvailable = upgradeRequired || newerBuild;
@@ -1180,6 +1194,10 @@ function connectorStatus(
     updateAvailable,
     updateUrl: updateAvailable ? (offer?.updateUrl ?? null) : null,
     updateTemplateUrl: updateAvailable ? (offer?.templateUrl ?? null) : null,
+    installedBuildId: deployment.bootstrapVersion ?? null,
+    publishedBuildId: offer?.publishedBuildId ?? null,
+    stackState: fresh ? connectorStackState(observed!.status) : 'UNKNOWN',
+    observedAt: observed && Number.isFinite(observedAtMs) ? new Date(observedAtMs).toISOString() : null,
   };
 }
 
@@ -1483,7 +1501,7 @@ export function deriveDeploymentStatus(input: DeriveDeploymentStatusInput): Deri
       notStarted: releaseVerdict?.notStarted === true,
     },
     servingRelease: servingReleaseFor(deployment, jobs),
-    connector: connectorStatus(releaseVerdict?.reason === 'EVIDENCE_MISSING', deployment, connectorUpdate),
+    connector: connectorStatus(releaseVerdict?.reason === 'EVIDENCE_MISSING', deployment, connectorUpdate, now),
     // Runtime-verified reachability is the gate for exposing an address:
     // READY's https URL always, and the temporary HTTP ALB endpoint once a
     // VERIFYING deployment's health status confirms the app is actually

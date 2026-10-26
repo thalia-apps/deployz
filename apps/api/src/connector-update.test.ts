@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { connectorUpdateOffer } from './connector-update.js';
+import { connectorStackState, connectorUpdateEvent, connectorUpdateOffer } from './connector-update.js';
 
 const bound = { region: 'us-east-1', state: 'HEALTHY', relayBoundAt: new Date(), bootstrapStackName: 'deployz-acme-1' };
 const config = { buildId: 'abc123def456', legacyUrl: undefined, deployableRegions: ['us-east-1', 'us-east-2'] };
@@ -33,5 +33,61 @@ describe('connectorUpdateOffer', () => {
     expect(connectorUpdateOffer({ ...bound, relayBoundAt: null }, config)).toBeNull();
     expect(connectorUpdateOffer({ ...bound, state: 'DELETED' }, config)).toBeNull();
     expect(connectorUpdateOffer({ ...bound, region: 'eu-west-1' }, config)!.templateUrl).toBeNull();
+  });
+});
+
+describe('connectorStackState', () => {
+  it('maps CloudFormation statuses to the connector stack state', () => {
+    expect(connectorStackState('UPDATE_IN_PROGRESS')).toBe('UPDATING');
+    expect(connectorStackState('UPDATE_ROLLBACK_IN_PROGRESS')).toBe('UPDATING');
+    expect(connectorStackState('UPDATE_COMPLETE_CLEANUP_IN_PROGRESS')).toBe('UPDATING');
+    expect(connectorStackState('UPDATE_ROLLBACK_COMPLETE')).toBe('ROLLED_BACK');
+    expect(connectorStackState('UPDATE_ROLLBACK_FAILED')).toBe('FAILED');
+    expect(connectorStackState('UPDATE_FAILED')).toBe('FAILED');
+    expect(connectorStackState('CREATE_COMPLETE')).toBe('STABLE');
+    expect(connectorStackState('UPDATE_COMPLETE')).toBe('STABLE');
+    expect(connectorStackState('ROLLBACK_COMPLETE')).toBe('UNKNOWN');
+    expect(connectorStackState(null)).toBe('UNKNOWN');
+  });
+});
+
+describe('connectorUpdateEvent', () => {
+  const event = (
+    previous: { installedBuildId: string | null; status: string | null },
+    next: { installedBuildId: string | null; status: string },
+  ) => connectorUpdateEvent(previous, next, 'new');
+
+  it('verifies a stable stack on the published build after an update', () => {
+    expect(event({ installedBuildId: 'old', status: 'UPDATE_COMPLETE' }, { installedBuildId: 'new', status: 'UPDATE_COMPLETE' })).toBe(
+      'connector.update_verified',
+    );
+    expect(event({ installedBuildId: 'new', status: 'UPDATE_IN_PROGRESS' }, { installedBuildId: 'new', status: 'UPDATE_COMPLETE' })).toBe(
+      'connector.update_verified',
+    );
+    // An old relay never reported a status before the update.
+    expect(event({ installedBuildId: 'old', status: null }, { installedBuildId: 'new', status: 'UPDATE_COMPLETE' })).toBe(
+      'connector.update_verified',
+    );
+  });
+
+  it('does not verify a fresh install, an unchanged stack or another build', () => {
+    expect(event({ installedBuildId: 'new', status: null }, { installedBuildId: 'new', status: 'CREATE_COMPLETE' })).toBeNull();
+    expect(event({ installedBuildId: 'new', status: 'CREATE_IN_PROGRESS' }, { installedBuildId: 'new', status: 'CREATE_COMPLETE' })).toBeNull();
+    expect(event({ installedBuildId: 'new', status: 'UPDATE_COMPLETE' }, { installedBuildId: 'new', status: 'UPDATE_COMPLETE' })).toBeNull();
+    expect(event({ installedBuildId: 'old', status: 'UPDATE_IN_PROGRESS' }, { installedBuildId: 'other', status: 'UPDATE_COMPLETE' })).toBeNull();
+    expect(
+      connectorUpdateEvent({ installedBuildId: 'old', status: 'UPDATE_IN_PROGRESS' }, { installedBuildId: 'new', status: 'UPDATE_COMPLETE' }, null),
+    ).toBeNull();
+  });
+
+  it('records a rollback and an update failure on the first report only', () => {
+    expect(event({ installedBuildId: 'old', status: 'UPDATE_ROLLBACK_IN_PROGRESS' }, { installedBuildId: 'old', status: 'UPDATE_ROLLBACK_COMPLETE' })).toBe(
+      'connector.update_rolled_back',
+    );
+    expect(event({ installedBuildId: 'old', status: 'UPDATE_ROLLBACK_COMPLETE' }, { installedBuildId: 'old', status: 'UPDATE_ROLLBACK_COMPLETE' })).toBeNull();
+    expect(event({ installedBuildId: 'old', status: 'UPDATE_ROLLBACK_IN_PROGRESS' }, { installedBuildId: 'old', status: 'UPDATE_ROLLBACK_FAILED' })).toBe(
+      'connector.update_failed',
+    );
+    expect(event({ installedBuildId: 'old', status: 'DELETE_IN_PROGRESS' }, { installedBuildId: 'old', status: 'DELETE_FAILED' })).toBeNull();
   });
 });

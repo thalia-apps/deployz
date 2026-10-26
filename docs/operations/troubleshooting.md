@@ -172,6 +172,14 @@ releases) or reports a build other than the published one
 (`BOOTSTRAP_BUILD_ID`). The customer updates the existing stack with the
 versioned template and keeps every parameter at "Use existing value",
 especially `RelayCredential`. This is not a reset and issues no new credential.
+While the update runs, the alert says the update is in progress and the
+connector starts no new operations; the application continues to run. When
+the stack is stable on the published build, the alert goes away and the
+activity shows "Connector updated". "Connector update rolled back" means AWS
+restored the previous connector: the customer can try the update again.
+"Connector update failed" means the stack is in a failed state: the customer
+looks at the connector stack events in AWS. See
+[`control-plane.md`](control-plane.md) for the status rules.
 
 **CloudFormation refuses the Quick Create parameters.** The customer's
 bootstrap template predates a parameter the control plane now sends;
