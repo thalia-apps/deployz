@@ -1,0 +1,122 @@
+id: new-46
+repository: gethomepage/homepage
+commit: 42a26dcdc6b231062d362c109c1ef9410f0271ff
+summary: >-
+  Homepage is a self-hosted dashboard (Next.js pages router, Node 24, pnpm). It is configured by YAML files in
+  /app/config and has no database. It is self-hosted as the ghcr image or the repo Dockerfile, with a config volume.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >-
+    Single container, no DB/Redis/worker. Needs HOMEPAGE_ALLOWED_HOSTS=* (or the public host) or every request
+    with another Host header gets HTTP 400, and the ALB probe hits the task with Host=<task-ip>:3000, which cannot be
+    listed in advance, so * is needed for the health check. Config is not durable (skeleton files are re-created at boot).
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null   # last stage is runner = app
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 4, quote: "FROM node:24-slim AS builder"}
+    - {path: Dockerfile, line: 33, quote: "FROM node:24-alpine AS runner"}
+    - {path: Dockerfile, line: 18, quote: "if [ \"$CI\" != \"true\" ]; then  corepack enable ... pnpm run build"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 58, quote: "ENV PORT=3000"}
+    - {path: Dockerfile, line: 59, quote: "EXPOSE $PORT"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 57, quote: "ENV HOSTNAME=::"}
+    - {path: docker-entrypoint.sh, line: 20, quote: "export HOSTNAME=0.0.0.0   # fallback when IPv6 bind fails"}
+startCommand:
+  source: image
+  accept: ["node server.js"]
+  # entrypoint docker-entrypoint.sh is needed (sets HOSTNAME, HOMEPAGE_BUILDTIME); CMD is node server.js
+healthPath:
+  accept: ["/api/healthcheck"]
+  # "/" also renders the dashboard (2xx) if host validation passes, but healthcheck is the documented route.
+  evidence:
+    - {path: src/pages/api/healthcheck.js, line: 4, quote: "res.send(\"up\");"}
+    - {path: Dockerfile, line: 62, quote: "http://127.0.0.1:$PORT/api/healthcheck || exit 1"}
+    - {path: src/proxy.js, line: 26, quote: "pathname.startsWith(\"/api/healthcheck\")   # public even with auth"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: package.json, line: null, quote: "no database driver; state is YAML files in /app/config (src/utils/config/config.js:14)"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/app/config]
+  # /app/config holds user YAML (services.yaml, settings.yaml, ...). Missing files are copied from src/skeleton at
+  # first request; logs go to /app/config/logs. Without a volume the shipped defaults are used on each new task.
+  # Customisation is not durable on Deployz (no EFS). Defaults are a valid working dashboard.
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/utils/config/config.js, line: 14, quote: "join(process.cwd(), \"config\")"}
+    - {path: src/utils/config/config.js, line: 31, quote: "join(process.cwd(), \"src\", \"skeleton\", config)"}
+    - {path: docs/installation/docker.md, line: 49, quote: "-v /path/to/config:/app/config"}
+env:
+  required:
+    - {name: HOMEPAGE_ALLOWED_HOSTS, secret: false, buildTime: false, note: "set to * (ALB probes by task IP) or public host list; else 400 on all pages and /api/healthcheck"}
+  optional: [PORT, HOSTNAME, PUID, PGID, HOMEPAGE_CONFIG_DIR, HOMEPAGE_EXTERNAL_URL, NEXTAUTH_URL, HOMEPAGE_AUTH_ENABLED, NEXTAUTH_SECRET, HOMEPAGE_AUTH_SECRET, "HOMEPAGE_VAR_*", "HOMEPAGE_FILE_*", LOG_LEVEL]
+  buildTime: []   # BUILDTIME/VERSION/REVISION only label the build, optional; CI must NOT be "true" or build is skipped
+  evidence:
+    - {path: src/utils/auth.js, line: 6, quote: "process.env.HOMEPAGE_ALLOWED_HOSTS === \"*\""}
+    - {path: docs/installation/index.md, line: 32, quote: "one required environment variable to access homepage via a URL other than"}
+    - {path: Dockerfile, line: 15, quote: "ENV CI=$CI"}
+blockers:
+  expected: []
+  mustNot:
+    - "Docker socket: optional, only for docker integrations (docs/installation/docker.md:17 '(optional)'); not a blocker"
+    - "Config volume /app/config: defaults are created from skeleton; not a persistent-volume blocker"
+    - "Missing database/Redis: none exists"
+    - "HOMEPAGE_ALLOWED_HOSTS cannot be a hard blocker; the vendor documents * (docs/installation/index.md:40)"
+vendorQuestions:
+  legitimate:
+    - "Public hostname (only if the user will not use HOMEPAGE_ALLOWED_HOSTS=*): which value for HOMEPAGE_ALLOWED_HOSTS; the ALB health check still needs *"
+    - "Whether custom dashboard config (services, bookmarks) is needed; it cannot persist on Deployz"
+  unnecessary:
+    - "Which database / migrations / Redis"
+    - "Which port or health path"
+    - "Is the Docker socket needed"
+traps:
+  - "Dockerfile builder stage runs install and build only when ARG CI != true; CI=true skips the build and then /app/.next/standalone is missing -> never pass CI=true (Dockerfile:18)"
+  - "HOSTNAME=:: is IPv6 bind; entrypoint falls back to 0.0.0.0 if IPv6 bind fails (docker-entrypoint.sh:16-21); ALB IPv4 target reachable by dual stack"
+  - "Image HEALTHCHECK uses 127.0.0.1 (always allowed); the ALB uses the task IP as Host -> 400 unless HOMEPAGE_ALLOWED_HOSTS=* (src/utils/auth.js:6-16)"
+  - "Host check also runs in src/proxy.js for every route, not only API routes (src/proxy.js:21-23)"
+  - "docker.sock mounts in docs are optional integrations, not requirements (docs/installation/docker.md:17)"
+  - "pyproject.toml / uv.lock exist for docs tooling, not the app runtime"
+  - "Entrypoint PUID/PGID default 0 (root); chown of /app/config skipped when PUID=0 (docker-entrypoint.sh:25)"
+openQuestions:
+  - "docker-entrypoint.sh:11 creates a dangling symlink /app/config -> /config when /app/config is absent (it is not created in the runner stage). Whether mkdirSync then fails (config.js:20) was not run; docs imply default image works, so treated as fine for the volume-mounted case; without any volume the symlink stays dangling (existsSync false, mkdirSync recursive on a dangling symlink likely throws EEXIST, caught at config.js:21-23 which returns false), so the no-volume ephemeral claim is unverified. If it fails, the app may not initialise config; consider this a risk for the DEPLOYABLE reading."
+crossReview:
+  - {field: healthPath.evidence, change: "proxy.js public-path line corrected 20 -> 26 (host check itself is lines 21-23)", evidence: "src/proxy.js:20-26"}
+  - {field: traps, change: "proxy.js host-check ref 20 -> 21-23; entrypoint IPv6 fallback ref 17-21 -> 16-21", evidence: "src/proxy.js:21; docker-entrypoint.sh:16-21"}
+  - {field: env.optional, change: "added HOMEPAGE_AUTH_ENABLED (gates auth; /api/healthcheck stays public but host check still applies)", evidence: "src/utils/env.js:2; src/proxy.js:27"}
+  - {field: openQuestions, change: "expanded no-volume risk: /app/config is not created in runner stage (builder mkdir at Dockerfile:8 is not copied; only .next/standalone is), entrypoint:11 makes a dangling symlink to /config", evidence: "Dockerfile:8,49-50; docker-entrypoint.sh:11; config.js:19-24"}
+  - {field: healthPath, change: "verified: healthcheck is wrapped by withAllowedHost (400 on non-allowed Host) and proxy host check runs first; ALB Host=<ip>:3000 is not in the allow list, so '*' (or exact ip) is needed. '/' has the same host check", evidence: "src/pages/api/healthcheck.js:7; src/utils/auth.js:5-16; src/proxy.js:21; docs/installation/index.md:40"}
+  - {field: storage, change: "verified: /app/config holds user YAML plus logs (logger.js:43,52); skeleton copied if missing (config.js:29-31). No user state elsewhere", evidence: "src/utils/logger.js:43,52; src/utils/config/config.js:27-31"}
+  - {field: all, change: "verified", evidence: "27 citations checked"}

@@ -1,0 +1,149 @@
+id: new-43
+repository: n8n-io/n8n
+commit: b7d48904020d83cff2ca48eac7a2047533a5d169
+summary: >-
+  n8n is a TypeScript/Node.js pnpm monorepo for workflow automation (editor UI, API and webhooks in one process).
+  It is self-hosted from the prebuilt image n8nio/n8n; the repo Dockerfiles do not build from source
+  (they copy ./compiled, the output of a CI step `pnpm build:docker`).
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >-
+    Every production Dockerfile starts from ./compiled, which a prior pnpm build creates; a plain
+    docker build from a source archive fails. The vendor needs a new multi-stage source-build Dockerfile
+    (DEPLOYABLE_WITH_CHANGES). Once built, runtime needs DB_TYPE=postgresdb + DB_POSTGRESDB_* and N8N_ENCRYPTION_KEY;
+    sqlite is the default and is not durable on Fargate.
+dockerfile:
+  accept: []   # none builds from source without a prior CI build
+  reject:
+    - {path: docker/images/n8n/Dockerfile, reason: "needs ./compiled from pnpm build:docker (not in a source archive); also needs the n8nio/base image"}
+    - {path: docker/images/engine/Dockerfile, reason: "also needs ./compiled; separate engine service (port 3000), not the n8n app"}
+    - {path: docker/images/runners/Dockerfile, reason: "task runner sidecar, not the app"}
+    - {path: docker/images/runners/Dockerfile.distroless, reason: "task runner sidecar"}
+    - {path: docker/images/n8n-base/Dockerfile, reason: "base image only, no app"}
+    - {path: docker/images/node-pc/Dockerfile, reason: "compiles Node.js only, no app"}
+    - {path: .devcontainer/Dockerfile, reason: dev container}
+    - {path: packages/quality/efficiency/scale/benchmark/Dockerfile, reason: "benchmark k6 runner; builds from source with pnpm but is not the n8n app"}
+    - {path: .devcontainer/codespaces/Dockerfile, reason: dev container}
+    - {path: .devcontainer/preview/Dockerfile, reason: dev preview container}
+    - {path: packages/quality/environments/containers/dockerfiles/kent/Dockerfile, reason: test helper (kent mock server)}
+    - {path: .agents/skills/testmax-n8n-ai/sandbox/Dockerfile, reason: agent sandbox tooling}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/images/n8n/Dockerfile, line: 60, quote: "COPY --link ./compiled /usr/local/lib/node_modules/n8n"}
+    - {path: docker/images/n8n/Dockerfile, line: 18, quote: "COPY ./compiled/node_modules/.pnpm/isolated-vm@*/node_modules/isolated-vm /build/isolated-vm"}
+    - {path: docker/images/engine/Dockerfile, line: 11, quote: "`compiled/` is produced by `pnpm build:docker`."}
+    - {path: package.json, line: 17, quote: "\"build:docker\": \"node scripts/build-n8n.mjs && node scripts/dockerize-n8n.mjs\""}
+runtime: {accept: [node]}
+port:
+  accept: [5678]
+  evidence:
+    - {path: docker/images/n8n/Dockerfile, line: 86, quote: "EXPOSE 5678/tcp"}
+    - {path: packages/@n8n/config/src/index.ts, line: 177, quote: "port: number = 5678;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/@n8n/config/src/index.ts, line: 181, quote: "listen_address: string = '::';"}
+startCommand:
+  source: image
+  accept: ["n8n", "n8n start"]   # image ENTRYPOINT tini -- /docker-entrypoint.sh, which execs n8n
+healthPath:
+  accept: ["/healthz"]   # "/" serves the editor UI, not guaranteed 2xx before setup; /healthz/readiness is 200 only once the DB is connected
+  evidence:
+    - {path: packages/@n8n/config/src/configs/endpoints.config.ts, line: 231, quote: "health: string = '/healthz';"}
+    - {path: packages/cli/src/abstract-server.ts, line: 155, quote: "res.send({ status: 'ok' });"}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_TYPE: postgresdb}
+  connectionVars: [DB_POSTGRESDB_HOST, DB_POSTGRESDB_PORT, DB_POSTGRESDB_DATABASE, DB_POSTGRESDB_USER, DB_POSTGRESDB_PASSWORD, DB_POSTGRESDB_SCHEMA, DB_POSTGRESDB_SSL_ENABLED, DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED]   # RDS: SSL_ENABLED=true; the default reject-unauthorized=true needs DB_POSTGRESDB_SSL_CA (RDS CA bundle) or DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+  evidence:
+    - {path: packages/@n8n/config/src/configs/database.config.ts, line: 142, quote: "z.enum(['sqlite', 'postgresdb'])"}
+    - {path: packages/@n8n/config/src/configs/database.config.ts, line: 166, quote: "type: DbType = 'sqlite';"}
+    - {path: packages/@n8n/config/src/configs/database.config.ts, line: 61, quote: "@Env('DB_POSTGRESDB_HOST')"}
+    - {path: packages/@n8n/config/src/configs/database.config.ts, line: 34, quote: "@Env('DB_POSTGRESDB_SSL_ENABLED')"}
+    - {path: packages/@n8n/config/src/configs/database.config.ts, line: 51, quote: "rejectUnauthorized: boolean = true;"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/cli/src/commands/base-command.ts, line: 197, quote: ".migrate()"}
+redis:
+  status: conditional
+  selectBy: {EXECUTIONS_MODE: queue}   # default regular needs no Redis; queue mode uses QUEUE_BULL_REDIS_HOST/PORT
+  evidence:
+    - {path: packages/@n8n/config/src/configs/executions.config.ts, line: 91, quote: "mode: ExecutionMode = 'regular';"}
+    - {path: packages/@n8n/config/src/configs/scaling-mode.config.ts, line: 72, quote: "@Env('QUEUE_BULL_REDIS_HOST')"}
+workers:
+  status: optional-independent   # only in EXECUTIONS_MODE=queue; regular mode runs executions in the main process
+  commands: ["n8n worker"]
+  evidence:
+    - {path: packages/cli/src/commands/worker.ts, line: 33, quote: "name: 'worker',"}
+    - {path: packages/cli/src/commands/base-command.ts, line: 230, quote: "Scaling mode is not officially supported with sqlite. Please use PostgreSQL instead."}
+scheduledJobs:
+  status: embedded   # schedule-trigger nodes and execution pruning run in the main process
+  items: []
+  evidence:
+    - {path: packages/@n8n/config/src/configs/executions.config.ts, line: 10, quote: "@Env('EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL')"}
+storage:
+  local: conditional   # sqlite file, settings and key in /home/node/.n8n by default; with postgres + N8N_ENCRYPTION_KEY the dir holds no durable data
+  paths: [/home/node/.n8n]
+  s3: native
+  s3SelectBy: {N8N_DEFAULT_BINARY_DATA_MODE: s3}   # S3 binary mode works in any execution mode, needs N8N_EXTERNAL_STORAGE_S3_* and an enterprise license; N8N_DEFAULT_BINARY_DATA_MODE=database is the free durable alternative
+  evidence:
+    - {path: docker/images/n8n/Dockerfile, line: 82, quote: "mkdir -p /home/node/.n8n; \\"}
+    - {path: packages/core/src/binary-data/binary-data.config.ts, line: 64, quote: "this.mode ??= executionsConfig.mode === 'queue' ? 'database' : 'filesystem';"}
+    - {path: packages/cli/src/commands/base-command.ts, line: 443, quote: "S3 binary data storage requires a valid license."}
+    - {path: packages/@n8n/blob-storage/src/object-store/object-store.config.ts, line: 11, quote: "@Env('N8N_EXTERNAL_STORAGE_S3_BUCKET_NAME')"}
+    - {path: packages/core/src/binary-data/binary-data.config.ts, line: 27, quote: "@Env('N8N_DEFAULT_BINARY_DATA_MODE', binaryDataModesSchema)"}
+env:
+  required:
+    - {name: N8N_ENCRYPTION_KEY, secret: true, buildTime: false, note: "else a random key is written to /home/node/.n8n and lost with the task; credentials then cannot be decrypted"}
+    - {name: DB_TYPE, secret: false, buildTime: false, note: "set to postgresdb (not postgres: the enum rejects it); default sqlite is ephemeral on Fargate"}
+    - {name: DB_POSTGRESDB_HOST, secret: false, buildTime: false, note: "plus PORT, DATABASE, USER, PASSWORD (secret)"}
+  optional: [N8N_HOST, N8N_PROTOCOL, N8N_PORT, N8N_WEBHOOK_URL, N8N_PROXY_HOPS, GENERIC_TIMEZONE, N8N_ENDPOINT_HEALTH, DB_POSTGRESDB_SSL_ENABLED, DB_POSTGRESDB_SCHEMA, EXECUTIONS_MODE, QUEUE_BULL_REDIS_HOST, N8N_DEFAULT_BINARY_DATA_MODE, N8N_RUNNERS_MODE, N8N_BINARY_DATA_STORAGE_PATH]
+  buildTime: []
+  evidence:
+    - {path: packages/@n8n/config/src/configs/instance-settings-config.ts, line: 21, quote: "@Env('N8N_ENCRYPTION_KEY')"}
+    - {path: packages/core/src/instance-settings/instance-settings.ts, line: 355, quote: "encryptionKeyFromEnv ?? randomBytes(24).toString('base64')"}
+    - {path: packages/@n8n/config/src/index.ts, line: 293, quote: "@Env('N8N_WEBHOOK_URL')"}
+blockers:
+  expected:
+    - "No source-buildable Dockerfile: every n8n Dockerfile COPYs ./compiled produced by a CI build step (pnpm build:docker); docker build from a source archive fails."
+  mustNot:
+    - "SQLite default: Postgres is supported and selectable with DB_TYPE=postgresdb; not a blocker."
+    - "Redis and worker: optional (queue mode only); not required for a single-container deploy."
+    - "Persistent volume /home/node/.n8n: avoidable with Postgres + N8N_ENCRYPTION_KEY; not a blocker."
+    - "Multiple services (runners, engine Dockerfiles): task runners default to internal mode (child process); engine is separate and optional."
+    - "S3 binary storage: optional and license-gated; database binary mode works without it."
+vendorQuestions:
+  legitimate:
+    - "How to build n8n from source in one Dockerfile (the repo only has the prebuilt ./compiled flow; the official image n8nio/n8n exists but Deployz builds from source)."
+    - "Public URL for webhooks (N8N_WEBHOOK_URL / N8N_HOST) is deployment-specific."
+  unnecessary:
+    - "Which port or bind address (5678, '::')."
+    - "Health path (/healthz)."
+    - "Whether migrations run automatically (yes, at startup)."
+    - "Whether Postgres is supported (yes) or Redis is required (no)."
+traps:
+  - "docker/images/n8n/Dockerfile looks production-ready -> its build needs ./compiled, so it is not self-contained (docker/images/n8n/Dockerfile:60)"
+  - "engine/Dockerfile has a simple CMD and EXPOSE 3000 -> different component, also needs ./compiled (docker/images/engine/Dockerfile:17)"
+  - "runners/Dockerfile EXPOSE 5680 -> task runner sidecar, not the web app (docker/images/runners/Dockerfile:158)"
+  - "benchmark docker-compose files with Redis, worker, postgres -> test setups, not required for deployment (packages/quality/efficiency/scale/benchmark/scripts/n8n-setups/)"
+  - "DB_TYPE enum value is postgresdb, not postgres (packages/@n8n/config/src/configs/database.config.ts:142)"
+  - "Postgres uses separate DB_POSTGRESDB_* vars, no DATABASE_URL (database.config.ts:57-77)"
+  - "/healthz/readiness is not 200 until the DB connects; /healthz is liveness only (packages/cli/src/abstract-server.ts:149)"
+  - "Binary data default is filesystem in regular mode (~/.n8n/storage) -> workflow binary files are lost on task replacement unless N8N_DEFAULT_BINARY_DATA_MODE=database; core function (workflows, credentials) does not depend on it (binary-data.config.ts:64)"
+openQuestions:
+  - "Whether RDS rejects non-SSL connections depends on the RDS parameter group (force_ssl); the SSL variables are verified at packages/@n8n/db/src/connection/db-connection-options.ts:93-99."
+  - "Task runner external mode docs not read; internal default taken from packages/@n8n/config/src/configs/runners.config.ts:17."
+  - "Whether S3 binary mode is license-gated at this commit is inferred from the error text at base-command.ts:443."
+crossReview:
+  - {field: dockerfile.reject, change: "added .devcontainer/codespaces, .devcontainer/preview, kent and testmax sandbox Dockerfiles; noted benchmark Dockerfile builds from source with pnpm but is a k6 runner", evidence: "find -iname 'Dockerfile*'; packages/quality/efficiency/scale/benchmark/Dockerfile:63 ENTRYPOINT n8n-benchmark"}
+  - {field: healthPath.evidence, change: "line 154 -> 155 for the res.send quote", evidence: "packages/cli/src/abstract-server.ts:155"}
+  - {field: traps (engine Dockerfile), change: "line 15 (blank) -> 17 (EXPOSE 3000)", evidence: "docker/images/engine/Dockerfile:17"}
+  - {field: database, change: "added Postgres SSL reject-unauthorized default (true); RDS needs the CA or REJECT_UNAUTHORIZED=false", evidence: "packages/@n8n/config/src/configs/database.config.ts:50-51; packages/@n8n/db/src/connection/db-connection-options.ts:93-99"}
+  - {field: storage, change: "S3 binary mode is selectable in any mode (not only queue); filesystem default in regular mode loses binary files on Fargate, database mode is the durable option", evidence: "packages/core/src/binary-data/binary-data.config.ts:64; packages/cli/src/commands/base-command.ts:438-443"}
+  - {field: all, change: "verified", evidence: "30 citations checked"}

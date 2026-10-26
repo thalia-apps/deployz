@@ -49,6 +49,7 @@ export {
   detectDeclaredWorkerCommand,
   isDevToolCommand,
   mainCommandRunsWorker,
+  optionalQueueMode,
   isRuntimeSourcePath,
   // DEPLOY-029: shared with apps/api's GitHub tree-fetch boundary, which
   // walks the same Dockerfile CMD/ENTRYPOINT script chain

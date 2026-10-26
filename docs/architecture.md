@@ -217,9 +217,11 @@ breaker with rollback). The web workload runs behind the internet-facing
 ALB (one HTTP listener, a target group, an unhealthy-target alarm, and a
 300-second health-check grace period, so an app that migrates at boot is not
 stopped before it listens; the target group counts HTTP 200 as healthy, and
-also 400 when Analysis finds that the app checks the Host header, because the
+also 400 when Analysis finds that the app checks the Host header (Django
+`ALLOWED_HOSTS`, Rails `config.hosts`, a JS server that reads an
+`*_ALLOWED_HOSTS` list), because the
 ALB health check sends the task IP as Host — `health.hostChecked`; for an
-app without health evidence the check probes `/` and counts 200-399 —
+app without health evidence, or whose own HEALTHCHECK probes `/`, the check probes `/` and counts 200-399 —
 `health.redirectsAccepted`); each
 declared worker runs its own private service — one task, its own log group
 and security group, no ALB target, no HTTP health check. Every workload

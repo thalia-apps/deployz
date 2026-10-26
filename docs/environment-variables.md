@@ -167,7 +167,11 @@ frozen manifest.
   tag needs stays required. A throw guard inside a request handler, or on a
   feature switch (`*_ENABLED`), is not a boot guard. A read passed straight
   to a predicate helper (`isEnabled(process.env.X)`, `toBool(...)`) is a flag:
-  unset is false. A name that the operating system sets (`HOME`, `PATH`,
+  unset is false. A negation (`return !process.env.CLOUD_MODE`), a membership
+  test (`['ce', 'ee'].includes(process.env.MIX_ENV)`) and one candidate of a
+  list the code picks from (`[args.port, process.env.APP_PORT, 3001]`) are not
+  required. A secret stored in a local that a later condition tests without a
+  throw, or that a getter only returns, is required only behind a throw guard. A name that the operating system sets (`HOME`, `PATH`,
   `LOCALAPPDATA`, `PROGRAMFILES`) is never required.
 - **Client build-time names.** `NEXT_PUBLIC_*`, `VITE_*`, `REACT_APP_*` and
   `PUBLIC_*` names are inlined at build time. A bare read of one does not

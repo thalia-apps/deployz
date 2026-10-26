@@ -1,0 +1,135 @@
+id: new-45
+repository: dgtlmoon/changedetection.io
+commit: 9e24b537c0016d8a4313f19ff8a55a2a8af01076
+summary: >-
+  Self-hosted web page change monitor (Python, Flask + socketio, in-process fetch workers).
+  Meant to run as one Docker container with a /datastore volume; all state is JSON files on
+  local disk. There is no database option and no S3 option; browser fetching uses an optional separate
+  Chrome sidecar (Playwright protocol or Selenium) reached by URL.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  # judgement call: NOT_DEPLOYABLE is the primary reading (all user data is durable local state, no DB/S3 backend in code; only a large code change adding a backend could move it). DEPLOYABLE_WITH_CHANGES is accepted as the alternative reading under Deployz policy for durable local state.
+  reason: >-
+    All durable state (settings, watches, snapshots, history) is written as JSON/text files under the
+    datastore dir (/datastore). The code has no SQL driver, no Redis and no S3 support, so the data cannot move
+    to RDS or S3. On Fargate without a persistent volume the data is lost on each new task. Deployz
+    cannot host this durably (EFS/persistent volumes are unsupported). The app itself starts fine
+    and could run as a throw-away demo, but not as a supported deployment.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "# pip dependencies install stage"}
+    - {path: Dockerfile, line: 92, quote: "FROM python:${PYTHON_VERSION}-slim-bookworm"}
+    - {path: Dockerfile, line: 185, quote: "ENTRYPOINT [\"/docker-entrypoint.sh\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: Dockerfile, line: 155, quote: "EXPOSE 5000"}
+    - {path: changedetectionio/__init__.py, line: 223, quote: "port = int(os.environ.get('PORT', 5000))"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: changedetectionio/__init__.py, line: 222, quote: "host = os.environ.get(\"LISTEN_HOST\", \"0.0.0.0\").strip()"}
+startCommand:
+  source: image
+  accept: ["python ./changedetection.py -d /datastore"]
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: changedetectionio/blueprint/watchlist/__init__.py, line: 41, quote: "@watchlist_blueprint.route(\"/\", methods=['GET'])"}
+    - {path: changedetectionio/auth_decorator.py, line: 30, quote: "has_password_enabled = ...get('password') or os.getenv(\"SALTED_PASS\", False)"}
+    - {path: changedetectionio/flask_app.py, line: 1424, quote: "@app.route('/worker-health', methods=['GET'])  # also login_optionally_required"}
+  note: >-
+    No dedicated unauthenticated health route. "/" returns 200 while no password is set (default).
+    If a password is set (UI or SALTED_PASS), "/" redirects to /login (302); then "/login" returns 200.
+    /worker-health and /queue-status are behind the same login check.
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: changedetectionio/store/file_saving_datastore.py, line: 5, quote: "- Individual watch.json file persistence"}
+    - {path: changedetectionio/store/__init__.py, line: 79, quote: "db_path = os.path.join(self.datastore_path, \"changedetection.json\")"}
+    - {path: requirements.txt, line: null, quote: "no psycopg/mysql/sqlalchemy/redis/boto3 entries (grep over requirements.txt returned none)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: changedetectionio/store/updates.py, line: 657, quote: "individual watch.json files created"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: requirements.txt, line: null, quote: "no redis client in requirements; grep for redis/boto3 in app code returned no file"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: changedetectionio/flask_app.py, line: 1517, quote: "n_workers = int(os.getenv(\"FETCH_WORKERS\", datastore.data['settings']['requests']['workers']))"}
+    - {path: changedetectionio/flask_app.py, line: 1542, quote: "threading.Thread("}
+scheduledJobs:
+  status: embedded
+  items: ["recheck loop in the web process, per-watch interval (default settings), thread in flask_app.py"]
+  evidence:
+    - {path: changedetectionio/flask_app.py, line: 1817, quote: "seconds_since_last_recheck >= (threshold + watch.jitter_seconds)"}
+storage:
+  local: required
+  paths: [/datastore]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 146, quote: "RUN [ ! -d \"/datastore\" ] && mkdir /datastore"}
+    - {path: Dockerfile, line: 188, quote: "CMD [\"python\", \"./changedetection.py\", \"-d\", \"/datastore\"]"}
+    - {path: docker-compose.yml, line: 7, quote: "- changedetection-data:/datastore"}
+env:
+  required: []
+  optional: [PORT, LISTEN_HOST, BASE_URL, SALTED_PASS, USE_X_SETTINGS, FETCH_WORKERS, PLAYWRIGHT_DRIVER_URL, WEBDRIVER_URL, MINIMUM_SECONDS_RECHECK_TIME, LOGGER_LEVEL, EXTRA_PACKAGES, HTTP_PROXY, HTTPS_PROXY, ALLOW_IANA_RESTRICTED_ADDRESSES, TZ]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yml, line: 55, quote: "#      - BASE_URL=https://mysite.com"}
+    - {path: changedetectionio/__init__.py, line: 679, quote: "if os.getenv('USE_X_SETTINGS'):"}
+    - {path: changedetectionio/flask_app.py, line: 730, quote: "raw_salt_pass = os.getenv(\"SALTED_PASS\", False)"}
+    - {path: changedetectionio/content_fetchers/playwright.py, line: 194, quote: "os.getenv(\"PLAYWRIGHT_DRIVER_URL\", 'ws://playwright-chrome:3000')"}
+blockers:
+  expected:
+    - "Durable local filesystem state: all data is JSON files in /datastore, no DB or S3 alternative. A Fargate task loses it."
+  mustNot:
+    - "Missing database: the app has none by design; do not ask for DATABASE_URL."
+    - "Missing Redis: not used at all."
+    - "Worker/scheduler needs a separate service: workers and scheduler are threads inside the web process."
+    - "Playwright/Selenium sidecar as blocker: optional; the default requests fetcher works without it."
+    - "Missing required env var: none is required to start."
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database to use (none exists)."
+    - "Which port (5000 in Dockerfile and default) and bind address (0.0.0.0 default)."
+    - "Which start command (image CMD is correct)."
+    - "Whether migrations are needed (done at startup inside the store)."
+traps:
+  - "docker-compose.yml commented sockpuppet/selenium chrome services -> optional browser sidecars, not required app services (docker-compose.yml:129-153)"
+  - "docker-compose.yml image ghcr.io/dgtlmoon/changedetection.io -> prebuilt image; the repo Dockerfile builds from source (docker-compose.yml:3)"
+  - "Dockerfile playwright / opencv installs with '|| echo WARN' -> optional, failure is tolerated (Dockerfile:73,86)"
+  - "Dockerfile ARG LOGGER_LEVEL, DEPS_REFRESH_DATE -> test/CI args, not needed (Dockerfile:46,172)"
+  - 'ENTRYPOINT is docker-entrypoint.sh with exec "$@" -> do not replace it; start command must stay image CMD (docker-entrypoint.sh:21-24 installs EXTRA_PACKAGES then exec "$@")'
+  - "-C flag creates the datastore dir; Dockerfile already creates /datastore so it is not needed (changedetectionio/__init__.py:328,390)"
+  - "/worker-health looks like a health route but is behind login_optionally_required (flask_app.py:1424-1426)"
+  - "Default no-password mode exposes the UI to the internet; SALTED_PASS or a UI password is a security matter, not a start blocker (auth_decorator.py:30)"
+openQuestions:
+  - "Whether a Deployz outcome of DEPLOYABLE_WITH_CHANGES is acceptable for ephemeral demo use: the repo gives no durable alternative, so NOT_DEPLOYABLE is the ground truth for supported use."
+  - "Exact Dockerfile line numbers are approximate (+-2) for lines past the first 60; the quotes are exact."
+crossReview:
+  - {field: "dockerfile.evidence", change: "line numbers corrected: FROM 98->92, ENTRYPOINT 190->185, EXPOSE 156->155, mkdir /datastore 130->146, CMD 193->188", evidence: "Dockerfile grep -n"}
+  - {field: "dockerfile.evidence[0]", change: "quote is a comment on line 1, kept; builder FROM is line 5", evidence: "Dockerfile:1,5"}
+  - {field: "traps", change: "ARG line refs 63,169 -> 46,172; playwright/opencv WARN lines 73,86; entrypoint exec line 21-24", evidence: "Dockerfile:46,172,73,86; docker-entrypoint.sh:18-24"}
+  - {field: "env.optional", change: "removed HIDE_REFERER (only appears in a test script, not read by the app)", evidence: "changedetectionio/run_basic_tests.sh:96; no os.getenv in app code"}
+  - {field: "outcome.accept", change: "added DEPLOYABLE_WITH_CHANGES as alternative reading; kept NOT_DEPLOYABLE primary. Confirmed no DB/Redis/S3 option: requirements.txt has none; Watch.py and file_saving_datastore.py mention postgres/redis only in abstraction docstrings (Watch.py:18,223; file_saving_datastore.py:533-557), no implementation", evidence: "grep for redis|boto3|sqlalchemy|psycopg|S3_|DATABASE_URL over changedetectionio/*.py returned nothing"}
+  - {field: "healthPath", change: "verified: '/' route has @login_optionally_required (watchlist/__init__.py:42), /login at flask_app.py:1065", evidence: "watchlist/__init__.py:41-42"}
+  - {field: "all", change: "verified", evidence: "34 citations checked"}

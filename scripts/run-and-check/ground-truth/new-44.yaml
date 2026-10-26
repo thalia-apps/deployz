@@ -1,0 +1,157 @@
+id: new-44
+repository: louislam/uptime-kuma
+commit: be2b4409657a2873b4b08946509dad7a1bf59588
+summary: >
+  Uptime Kuma 3.0.0-beta.0 per package.json (Node.js, Express + Socket.IO, Vue frontend), a self-hosted uptime monitor. Meant to run as one
+  container (compose.yaml still names image louislam/uptime-kuma:2, ./data mounted at /app/data) with SQLite by default, or
+  external/embedded MariaDB. IMPORTANT: the frontend dist/ is not in git and docker/dockerfile never builds it.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    A build of docker/dockerfile from a source archive gives an image whose server exits at boot because
+    dist/index.html is missing (dist is made only by release scripts on the host). A vendor must add a frontend
+    build (npm run build needs devDependencies, which the dockerfile omits). Also needs UPTIME_KUMA_DB_TYPE=mariadb
+    with an external DB; SQLite (default) is ephemeral on Fargate. The mariadb type uses the mysql2 driver and
+    plain CREATE DATABASE, so RDS MySQL probably works, but docs name only MariaDB (unverified).
+dockerfile:
+  accept: [docker/dockerfile]
+  reject:
+    - {path: docker/debian-base.dockerfile, reason: builds only the base image louislam/uptime-kuma:base3, no app}
+    - {path: docker/builder-go.dockerfile, reason: builds only the Go healthcheck builder image}
+    - {path: docker/docker-compose-dev.yml, reason: dev compose file, not a Dockerfile}
+  target: release   # the last stage is upload-artifact (needs GITHUB_TOKEN); rootless is also valid (USER node)
+  context: .
+  evidence:
+    - {path: docker/dockerfile, line: 36, quote: "FROM $BASE_IMAGE AS release"}
+    - {path: docker/dockerfile, line: 103, quote: "FROM louislam/uptime-kuma:base3 AS upload-artifact"}
+    - {path: docker/dockerfile, line: 1, quote: "ARG BASE_IMAGE=louislam/uptime-kuma:base3"}
+    - {path: docker/dockerfile, line: 8, quote: "FROM louislam/uptime-kuma:builder-go3 AS build_healthcheck"}
+    - {path: docker/dockerfile, line: 21, quote: "RUN npm ci --omit=dev"}
+runtime: {accept: [node]}
+port:
+  accept: [3001]
+  evidence:
+    - {path: docker/dockerfile, line: 47, quote: "EXPOSE 3001"}
+    - {path: server/config.js, line: 12, quote: "[args.port, process.env.UPTIME_KUMA_PORT, process.env.PORT, 3001]"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/config.js, line: 6, quote: "If host is omitted, the server will accept connections on the unspecified IPv6 address (::)"}
+    - {path: server/config.js, line: 10, quote: "const hostname = args.host || process.env.UPTIME_KUMA_HOST || hostEnv;"}
+startCommand:
+  source: image
+  accept: ["node server/server.js"]   # not npm start: it needs the tsx loader, which the image removes
+  evidence:
+    - {path: docker/dockerfile, line: 50, quote: "CMD [\"node\", \"server/server.js\"]"}
+    - {path: docker/dockerfile, line: 28, quote: "rm -rf node_modules/tsx node_modules/esbuild"}
+healthPath:
+  accept: ["/", "/api/entry-page"]
+  # No /health route. "/" redirects 302 to /dashboard in normal mode (the image HEALTHCHECK does GET / and follows
+  # the redirect); in setup-wizard mode every path returns 200 index.html. /dashboard also returns 200 (SPA catch-all).
+  evidence:
+    - {path: server/server.js, line: 263, quote: "app.get(\"/\", async (request, response) => {"}
+    - {path: server/server.js, line: 283, quote: "response.redirect(\"/dashboard\");"}
+    - {path: extra/healthcheck.go, line: 74, quote: "resp, err := client.Get(url)"}
+    - {path: server/routers/api-router.js, line: 28, quote: "router.get(\"/api/entry-page\""}
+database:
+  status: required
+  engines: [sqlite, mariadb, embedded-mariadb]
+  default: sqlite   # with no UPTIME_KUMA_DB_TYPE and an empty data dir a setup wizard waits for a person
+  deployzEngine: mysql   # unverified: type "mariadb" uses mysql2 and plain SQL; docs name only MariaDB
+  selectBy: {UPTIME_KUMA_DB_TYPE: mariadb}
+  connectionVars: [UPTIME_KUMA_DB_HOSTNAME, UPTIME_KUMA_DB_PORT, UPTIME_KUMA_DB_NAME, UPTIME_KUMA_DB_USERNAME, UPTIME_KUMA_DB_PASSWORD, UPTIME_KUMA_DB_SSL, UPTIME_KUMA_DB_CA]
+  # No DATABASE_URL. Env is written to /app/data/db-config.json at each boot. Embedded MariaDB needs
+  # UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB=1 (data on local disk, unsupported). PostgreSQL is not supported.
+  evidence:
+    - {path: server/setup-database.js, line: 98, quote: "if (process.env.UPTIME_KUMA_DB_TYPE) {"}
+    - {path: server/setup-database.js, line: 102, quote: "dbConfig.hostname = process.env.UPTIME_KUMA_DB_HOSTNAME;"}
+    - {path: server/setup-database.js, line: 105, quote: "dbConfig.username = getEnvOrFile(\"UPTIME_KUMA_DB_USERNAME\");"}
+    - {path: server/database.js, line: 354, quote: "} else if (dbConfig.type === \"mariadb\") {"}
+    - {path: server/database.js, line: 375, quote: "CREATE DATABASE IF NOT EXISTS \" + escapedDBName"}
+    - {path: server/setup-database.js, line: 127, quote: "process.env.UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB === \"1\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/server.js, line: 1582, quote: "await Database.patch(port, hostname);"}
+    - {path: server/database.js, line: 529, quote: "await R.knex.migrate.latest({"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: server/monitor-types/redis.js, line: 3, quote: "const redis = require(\"redis\");  (only a monitor type for user-supplied Redis servers)"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/server.js, line: 1458, quote: "server.httpServer.listen(port, hostname, async () => {"}
+scheduledJobs:
+  status: embedded
+  items: [clear-old-data (daily 03:14), incremental-vacuum]
+  evidence:
+    - {path: server/jobs.js, line: 9, quote: "interval: \"14 03 * * *\","}
+    - {path: server/jobs.js, line: 4, quote: "const Cron = require(\"croner\");"}
+storage:
+  local: conditional
+  paths: [/app/data]
+  s3: none
+  s3SelectBy: {}
+  # With external MariaDB only upload/ (status page logos), screenshots/ and docker-tls/ stay on disk (non-critical).
+  # With SQLite, kuma.db and db-config.json are durable data (unsupported on Fargate).
+  evidence:
+    - {path: server/database.js, line: 152, quote: "process.env.DATA_DIR || args[\"data-dir\"] || Database.getDevDataDir() || \"./data/\""}
+    - {path: compose.yaml, line: 6, quote: "- ./data:/app/data"}
+    - {path: docker/dockerfile, line: 31, quote: "RUN mkdir ./data"}
+env:
+  required:
+    - {name: UPTIME_KUMA_DB_TYPE, secret: false, buildTime: false, note: "value mariadb; otherwise a setup wizard blocks first boot"}
+    - {name: UPTIME_KUMA_DB_HOSTNAME, secret: false, buildTime: false, note: "external DB host"}
+    - {name: UPTIME_KUMA_DB_PORT, secret: false, buildTime: false, note: "3306"}
+    - {name: UPTIME_KUMA_DB_NAME, secret: false, buildTime: false, note: "created if missing, so the user needs CREATE rights"}
+    - {name: UPTIME_KUMA_DB_USERNAME, secret: false, buildTime: false, note: ""}
+    - {name: UPTIME_KUMA_DB_PASSWORD, secret: true, buildTime: false, note: ""}
+  optional: [UK_INITIAL_ADMIN_USERNAME, UK_INITIAL_ADMIN_PASSWORD, UPTIME_KUMA_PORT, UPTIME_KUMA_HOST, DATA_DIR, UPTIME_KUMA_DB_SSL, UPTIME_KUMA_DB_CA, UPTIME_KUMA_DB_POOL_MAX_CONNECTIONS, UPTIME_KUMA_WS_ORIGIN_CHECK, UPTIME_KUMA_DISABLE_FRAME_SAMEORIGIN, UPTIME_KUMA_CLOUDFLARED_TOKEN, UPTIME_KUMA_DISABLE_LEAK_PWD_CHECK]
+  buildTime: []
+  evidence:
+    - {path: server/initial-admin.ts, line: 11, quote: "process.env.UK_INITIAL_ADMIN_USERNAME?.trim()"}
+    - {path: server/initial-admin.ts, line: 25, quote: "UK_INITIAL_ADMIN_USERNAME and UK_INITIAL_ADMIN_PASSWORD must be set together."}
+    - {path: server/database.js, line: 275, quote: "process.env.UPTIME_KUMA_DB_POOL_MAX_CONNECTIONS"}
+blockers:
+  expected:
+    - "Missing frontend build: the dockerfile never creates dist/, so the server exits with 'Cannot find dist/index.html' (server/uptime-kuma-server.js:99-104)"
+    - "SQLite default is ephemeral on Fargate unless UPTIME_KUMA_DB_TYPE=mariadb with an external DB"
+  mustNot:
+    - "MariaDB/MySQL as unsupported: the mysql2 driver and plain SQL work with an external DB; only the embedded MariaDB is unsupported"
+    - "Redis, workers or an external scheduler: none needed"
+    - "/app/data as a blocking volume when an external DB is chosen"
+    - "louislam/uptime-kuma:base3 as a private image: it is a public Docker Hub tag"
+vendorQuestions:
+  legitimate:
+    - "Is RDS MySQL (not MariaDB) supported for UPTIME_KUMA_DB_TYPE=mariadb? The repo names only MariaDB."
+    - "How to get dist/ into a source build? The repo has npm run download-dist (fetches the dist.tar.gz asset of the GitHub release named after package.json version) but docker/dockerfile never calls it, and whether a release 3.0.0-beta.0 asset exists is not verified."
+  unnecessary:
+    - "Which port or bind address (3001, all interfaces)"
+    - "Which start command (image CMD)"
+    - "Whether migrations need a separate step (they run at boot)"
+    - "Whether Redis or a worker is needed"
+traps:
+  - dockerfile has many stages and the last stage is upload-artifact (needs GITHUB_TOKEN, uploads a release) -> use target release (docker/dockerfile:103)
+  - base image louislam/uptime-kuma:base3 is a Docker Hub image built from docker/debian-base.dockerfile (node:26-trixie-slim), not an official library tag (docker/dockerfile:1, docker/debian-base.dockerfile:3)
+  - pr-test2 stage clones git and runs npm run start-pr-test -> not production (docker/dockerfile:70-98)
+  - npm start uses the tsx loader, which the image removes -> use node server/server.js (package.json:24, docker/dockerfile:28)
+  - compose.yaml uses the published image and has no DB service -> it is not proof that a source build works (compose.yaml:3)
+  - no /health route; the Go healthcheck calls GET / (extra/healthcheck.go:74)
+  - setup wizard waits for a person when no DB env is set, and it answers 200 so the ALB would pass it (server/setup-database.js:98)
+  - UPTIME_KUMA_PORT can be overwritten by Kubernetes service env (tcp://...) (extra/healthcheck.go:23)
+  - redis in package.json is only for the Redis monitor type, not an app dependency (server/monitor-types/redis.js:3)
+  - dist/ is gitignored, so it is absent from a source archive (.gitignore:3; extra/release/build-images.mjs:47-49)
+openQuestions:
+  - "Whether any documented path builds the frontend inside docker/dockerfile: none found; release scripts build dist on the host. A vendor change could run npm run download-dist (tar is a production dependency, package.json:148) or npm run build (vite is a devDependency, which npm ci --omit=dev skips) before the final stage; both unverified."
+  - "UK_INITIAL_ADMIN_* are optional, but without them the first visitor to the public URL creates the admin account; a vendor choice."
+  - "Whether MySQL 8 (RDS) passes all knex migrations with type mariadb: not verified."
+crossReview:
+  - {field: summary, change: "v2 -> 3.0.0-beta.0 (package.json version); the compose image tag :2 is stale", evidence: "package.json:3"}
+  - {field: evidence line numbers, change: "server/config.js 14->12 and 5->6, server/server.js 281->283, extra/healthcheck.go 71->74 (also in the trap ref)", evidence: "server/config.js:6,12; server/server.js:283; extra/healthcheck.go:74"}
+  - {field: vendorQuestions / openQuestions, change: "'no documented path' corrected: npm run download-dist exists (package.json:46, extra/download-dist.js, fetches the release dist.tar.gz by package version, tar is a prod dependency) but the dockerfile never runs it; added the UK_INITIAL_ADMIN_* first-visitor open question. Outcome unchanged: dist/ is absent from the source tree (.gitignore:3), docker/dockerfile never builds or downloads it, and server exits when dist/index.html is missing", evidence: "docker/dockerfile:1-45 (no build, no download-dist); package.json:27,46; server/uptime-kuma-server.js:99-104"}
+  - {field: dockerfile.target, change: "none: release (line 36) builds from the repo context (COPY . . at line 22) and is a valid non-upload target; rootless also valid; the build stage fetches only public Docker Hub bases", evidence: "docker/dockerfile:22,36"}
+  - {field: all, change: verified, evidence: "33 citations checked"}

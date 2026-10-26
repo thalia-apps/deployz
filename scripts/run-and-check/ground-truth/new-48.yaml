@@ -1,0 +1,163 @@
+id: new-48
+repository: outline/outline
+commit: 7741da7a2a585a4efc95ae77dfecca448c17d7f1
+summary: >-
+  Outline is a team wiki and knowledge base (TypeScript, Koa, React/Vite, Sequelize, Node). Self-hosting is
+  the official Docker image with PostgreSQL and Redis (both required) and S3 or local file storage. One Node
+  process tree runs the web, websockets, collaboration and worker services by default.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >-
+    One Node container with managed Postgres and Redis. Vendor sets FILE_STORAGE=s3 (IAM task role works),
+    SECRET_KEY, UTILS_SECRET, URL. The root Dockerfile builds nothing from the repo (it copies build output
+    and node_modules from the floating outlinewiki/outline-base image). Dockerfile.base builds from source
+    but has no CMD, so an explicit start command is needed. Sign-in needs an auth provider set by the vendor.
+dockerfile:
+  accept: [Dockerfile.base, Dockerfile]
+  reject:
+    - {path: Dockerfile, reason: "Preferable to avoid: copies build/, server/, node_modules from floating outlinewiki/outline-base (latest upstream image, not this commit). If selected, report it as a floating-base-image risk."}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2, quote: "ARG BASE_IMAGE=outlinewiki/outline-base"}
+    - {path: Dockerfile, line: 29, quote: "COPY --from=base --chown=nodejs:nodejs $APP_PATH/build ./build"}
+    - {path: Dockerfile, line: 33, quote: "COPY --from=base --chown=nodejs:nodejs $APP_PATH/node_modules ./node_modules"}
+    - {path: Dockerfile.base, line: 17, quote: "COPY . ."}
+    - {path: Dockerfile.base, line: 19, quote: "RUN yarn build"}
+    - {path: Dockerfile.base, line: 24, quote: "ENV PORT=3000"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 51, quote: "EXPOSE 3000"}
+    - {path: server/env.ts, line: 301, quote: "public PORT = this.toOptionalNumber(environment.PORT) ?? 3000;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/main.ts, line: 176, quote: "server.listen(normalizedPort);"}
+startCommand:
+  source: image
+  accept: ["node build/server/index.js", "yarn start"]
+  note: "Root Dockerfile CMD is correct. Dockerfile.base has no CMD: use node build/server/index.js (package.json start script)."
+healthPath:
+  accept: ["/_health"]
+  evidence:
+    - {path: server/main.ts, line: 81, quote: 'router.get("/_health", async (ctx) => {'}
+    - {path: server/main.ts, line: 83, quote: 'await sequelize.query("SELECT 1");'}
+    - {path: server/main.ts, line: 91, quote: "await Redis.defaultClient.ping();"}
+    - {path: server/main.ts, line: 98, quote: 'ctx.body = "OK";'}
+    - {path: server/main.ts, line: 101, quote: "app.use(router.routes());"}
+    - {path: server/services/web.ts, line: 51, quote: "enforceHttps({"}
+  note: "/_health is registered in main.ts before the services run, so the web service's enforceHttps middleware (added later) never sees it: an http probe without X-Forwarded-Proto gets 200, not a 301. Depends on DB and Redis; unauthenticated."
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, "or DATABASE_HOST + DATABASE_NAME + DATABASE_USER + DATABASE_PASSWORD"]
+  evidence:
+    - {path: server/env.ts, line: 94, quote: "public DATABASE_URL = this.toOptionalString(environment.DATABASE_URL);"}
+    - {path: .env.sample, line: 60, quote: "DATABASE_URL=postgres://user:pass@postgres:5432/outline"}
+    - {path: .env.sample, line: 69, quote: "# PGSSLMODE=disable"}
+    - {path: server/storage/database.ts, line: 275, quote: "The database does not support SSL connections. Set the `PGSSLMODE`"}
+migrations:
+  mode: startup
+  accept: ["yarn db:migrate"]
+  evidence:
+    - {path: server/index.ts, line: 33, quote: "await checkPendingMigrations();"}
+    - {path: server/scripts/checkMigrations.ts, line: 42, quote: "await migrations.up();"}
+    - {path: server/utils/startup.ts, line: 76, quote: "// Migrations are run as a separate release step in the hosted service."}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: server/env.ts, line: 194, quote: "public REDIS_URL = environment.REDIS_URL;"}
+    - {path: server/env.ts, line: 193, quote: "@IsNotEmpty()"}
+    - {path: server/main.ts, line: 91, quote: "await Redis.defaultClient.ping();"}
+    - {path: .env.sample, line: 79, quote: "REDIS_URL=redis://redis:6379"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/env.ts, line: 363, quote: '"collaboration,websockets,worker,web"'}
+    - {path: docs/SERVICES.md, line: 5, quote: "it will run all of the production services by default."}
+    - {path: Procfile, line: 2, quote: "worker: yarn start --services=worker"}
+scheduledJobs:
+  status: embedded
+  items:
+    - "Optional: add cron to SERVICES (SERVICES=collaboration,websockets,worker,web,cron) to run hourly and daily tasks in process; the default services omit cron."
+    - "Alternative: external POST /api/cron.daily and /api/cron.hourly with UTILS_SECRET token."
+    - "Maintenance tasks only; not needed for first deploy."
+  evidence:
+    - {path: server/services/index.ts, line: 13, quote: 'cron: () => import("./cron"),'}
+    - {path: server/services/cron.ts, line: 42, quote: "setInterval(() => void run(TaskInterval.Day), Day.ms).unref();"}
+    - {path: server/routes/api/cron/cron.ts, line: 25, quote: "if (!safeEqual(env.UTILS_SECRET, token)) {"}
+storage:
+  local: conditional
+  paths: [/var/lib/outline/data]
+  s3: native
+  s3SelectBy: {FILE_STORAGE: s3, AWS_S3_UPLOAD_BUCKET_NAME: "<bucket>", AWS_REGION: "<region>"}
+  evidence:
+    - {path: server/env.ts, line: 735, quote: 'public FILE_STORAGE = this.toOptionalString(environment.FILE_STORAGE) ?? "s3";'}
+    - {path: server/storage/files/S3Storage.ts, line: 376, quote: "const client = new sdk.S3Client({"}
+    - {path: .env.sample, line: 95, quote: "FILE_STORAGE=local"}
+    - {path: Dockerfile, line: 40, quote: "ENV FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data"}
+    - {path: server/env.ts, line: 641, quote: '@CannotUseWithout("AWS_ACCESS_KEY_ID") on AWS_SECRET_ACCESS_KEY'}
+  note: "S3Client is built with no explicit credentials, so the AWS default chain (ECS task role) works; AWS_ACCESS_KEY_ID is optional."
+env:
+  required:
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "exactly 64 hex chars (openssl rand -hex 32), validated at boot"}
+    - {name: UTILS_SECRET, secret: true, buildTime: false, note: "IsNotEmpty; any random string"}
+    - {name: URL, secret: false, buildTime: false, note: "public https URL of the app; must match the ALB domain"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres URL; PGSSLMODE=disable only if the DB has no SSL"}
+    - {name: REDIS_URL, secret: true, buildTime: false, note: "IsNotEmpty at boot"}
+    - {name: AWS_S3_UPLOAD_BUCKET_NAME, secret: false, buildTime: false, note: "code default FILE_STORAGE is s3 and the bucket is not validated at boot: without it the app boots but attachment uploads fail"}
+    - {name: AWS_REGION, secret: false, buildTime: false, note: "S3 client region; same silent failure when missing"}
+  optional: [FILE_STORAGE, PORT, WEB_CONCURRENCY, SERVICES, FORCE_HTTPS, PROXY_HEADERS_TRUSTED, PGSSLMODE, AWS_S3_ACL, AWS_S3_FORCE_PATH_STYLE, COLLABORATION_URL, REDIS_COLLABORATION_URL, CDN_URL, DEFAULT_LANGUAGE, DATABASE_CONNECTION_POOL_MAX, SMTP_HOST, SLACK_CLIENT_ID, GOOGLE_CLIENT_ID, OIDC_CLIENT_ID]
+  buildTime: [CDN_URL]
+  evidence:
+    - {path: server/env.ts, line: 73, quote: 'public SECRET_KEY = environment.SECRET_KEY ?? "";'}
+    - {path: server/env.ts, line: 80, quote: 'public UTILS_SECRET = environment.UTILS_SECRET ?? "";'}
+    - {path: server/env.ts, line: 246, quote: "public URL = ("}
+    - {path: Dockerfile.base, line: 18, quote: "ARG CDN_URL"}
+    - {path: server/env.ts, line: 376, quote: 'public FORCE_HTTPS = this.toBoolean(environment.FORCE_HTTPS ?? "true");'}
+blockers:
+  expected: []
+  mustNot:
+    - "Collaboration, websockets and worker as separate services: all run in the one process tree by default (SERVICES default)."
+    - "Persistent volume at /var/lib/outline/data: S3 is native; local is only the .env.sample default."
+    - "Redis: required but Deployz provides ElastiCache."
+    - "Migrations: run automatically at start; no separate release command needed."
+    - "Cron service off by default: not a blocker."
+    - "Root Dockerfile floating base image: a risk to report, not a blocker by itself."
+vendorQuestions:
+  legitimate:
+    - "Which authentication provider (Slack, Google, Microsoft, OIDC, SMTP magic link) to configure: no default exists and the choice is the vendor's."
+    - "Whether to enable the cron service or external cron for maintenance tasks."
+  unnecessary:
+    - "Whether migrations must be run manually (startup runs them)."
+    - "Whether a worker or collaboration service is needed separately (embedded by default)."
+    - "Health path (/_health in server/main.ts)."
+    - "Which port (3000)."
+    - "Whether Redis is required (yes: boot validation and health check)."
+traps:
+  - "Root Dockerfile copies build and node_modules from outlinewiki/outline-base (floating image) -> not a build of this commit; Dockerfile.base is the real source build (Dockerfile:2-3,29-33; Dockerfile.base:17-19)"
+  - "Dockerfile.base has no CMD/ENTRYPOINT -> start command node build/server/index.js is needed (package.json:12)"
+  - "Dockerfile.base final stage is the build stage with root user, node:26 full image, ENV PORT only (Dockerfile.base:2,24)"
+  - "docker-compose.yml holds only redis and postgres dev dependencies, not the app (docker-compose.yml:1-14)"
+  - ".env.sample has FILE_STORAGE=local and AWS key placeholders -> code default is s3 and keys are optional with an IAM role (.env.sample:95, server/env.ts:735); the root Dockerfile sets only FILE_STORAGE_LOCAL_ROOT_DIR, so a missing bucket name means failed uploads, not local fallback"
+  - "Procfile splits web and worker for scaling; not required, default runs both (Procfile:1-2)"
+  - "/_health returns 500 if DB or Redis fail, so the app needs both before the ALB marks it healthy (server/main.ts:81-98)"
+  - "heroku-postbuild runs db:migrate (package.json:24); Heroku only, the app also migrates at boot"
+  - "Collaboration forces 1 process without REDIS_COLLABORATION_URL (server/index.ts:18-26); keep one task unless it is set"
+  - "FORCE_HTTPS defaults true (server/services/web.ts:48-62) but /_health is registered earlier (server/main.ts:81,101) and is not redirected; other routes get a 301 without X-Forwarded-Proto. PROXY_HEADERS_TRUSTED defaults true (server/env.ts:392)"
+openQuestions:
+  - "Traced from code, not run: /_health is mounted before enforceHttps, so FORCE_HTTPS=true does not redirect the ALB probe; nothing was executed."
+crossReview:
+  - {field: healthPath, change: "added evidence and note: /_health is mounted before enforceHttps, so no 301 for an http probe", evidence: "server/main.ts:101 (router.routes before service loop); server/services/web.ts:51"}
+  - {field: traps (FORCE_HTTPS), change: "removed claim that /_health is behind the HTTPS redirect", evidence: "server/main.ts:81,101; server/services/web.ts:51"}
+  - {field: openQuestions, change: "replaced the unverified 301 question with the traced result", evidence: "server/main.ts:101"}
+  - {field: env.required, change: "FILE_STORAGE is not required (code default is s3); AWS_S3_UPLOAD_BUCKET_NAME and AWS_REGION are the settings that must be set, else uploads fail silently", evidence: "server/env.ts:735,702; server/storage/files/S3Storage.ts:376-381"}
+  - {field: migrations.evidence, change: "startup.ts cited line corrected from 74 to 76", evidence: "server/utils/startup.ts:76"}
+  - {field: all, change: "verified (commit matches; Dockerfile copies build/server/node_modules from outlinewiki/outline-base; Dockerfile.base has no CMD; Redis required; NODE_ENV defaults to production in code)", evidence: "40 citations checked"}

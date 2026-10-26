@@ -15,6 +15,7 @@ import {
   isProductionComposeFile,
   isRuntimeSourcePath,
   listProductionComposeFiles,
+  optionalQueueMode,
   parsePackageJsons,
   siblingAppFilter,
 } from './detectors.js';
@@ -745,6 +746,9 @@ function findOptionalReason(tree: FileTree, status: ConnectionStatus, documented
       }
     }
   }
+
+  const queueMode = optionalQueueMode(tree);
+  if (queueMode) return `${queueMode.name} defaults to ${queueMode.value} in ${queueMode.path}; the Redis queue runs only in queue mode`;
 
   const selectors = samples.filter((d) => !d.commented && d.value !== '' && BACKEND_SELECTOR_REGEX.test(d.name));
   const selectedOther = selectors.find((d) => !/redis/i.test(d.value));
