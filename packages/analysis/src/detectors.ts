@@ -625,6 +625,8 @@ const DEV_DOCKERFILE_REGEX =
 const DOCKERFILE_VARIANT_REGEX =
   /(?:^|\/)[\w.-]*(?:[-_.](?:arm|arm64|armv\d+|aarch64)|multi[-_]?(?:process|service|container))[\w.-]*(?:\/|$)/i;
 const PRODUCTION_DOCKERFILE_REGEX = /(?:^|[/._-])prod(?:uction)?(?:[/._-]|$)/i;
+// A documentation site image (authentik `website/Dockerfile`: a Docusaurus build served by nginx) is not the app.
+const DOCS_SITE_DOCKERFILE_REGEX = /\b(?:docusaurus|mkdocs|vitepress|vuepress|sphinx-build|mdbook|antora|docsify)\b/i;
 // A runtime that is evidently a development server: a Dockerfile that runs
 // one is never the production image.
 const DEV_RUNTIME_REGEX =
@@ -776,8 +778,8 @@ function compareDockerfileCandidates(tree: FileTree, tied = false): (a: string, 
     const bUnusable = isUnusableDockerfile(b, tree[b] ?? '');
     if (aUnusable !== bUnusable) return aUnusable ? 1 : -1;
 
-    const aDev = DEV_DOCKERFILE_REGEX.test(a);
-    const bDev = DEV_DOCKERFILE_REGEX.test(b);
+    const aDev = DEV_DOCKERFILE_REGEX.test(a) || DOCS_SITE_DOCKERFILE_REGEX.test(tree[a] ?? '');
+    const bDev = DEV_DOCKERFILE_REGEX.test(b) || DOCS_SITE_DOCKERFILE_REGEX.test(tree[b] ?? '');
     if (aDev !== bDev) return aDev ? 1 : -1;
 
     const aVariant = DOCKERFILE_VARIANT_REGEX.test(a);
@@ -1328,8 +1330,9 @@ const HEALTH_PATH_SEGMENT_REGEX = /(?:^|\/)(?:health|healthz|healthcheck|heartbe
 // A health URL in a container/compose health check: `curl -f http://localhost:3000/api/heartbeat`.
 // The host is the container itself (localhost, a loopback/any address, or a
 // `$VAR`), never a documentation link that happens to sit on the same line.
+// A script may choose the scheme and a base path (vaultwarden `http${s}://${addr}:${ROCKET_PORT}${base_path}/alive`).
 const HEALTHCHECK_URL_REGEX =
-  /(?:https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\$\{?[\w:-]+\}?)|(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):\d+)(?::\$?\{?[\w:-]+\}?)?(?:\{[^}\s]*\})?(\/[\w./-]*)?(?=["'\s?#]|$)/;
+  /(?:https?(?:\$\{\w+\})?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\$\{?[\w:-]+\}?)|(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):\d+)(?::\$?\{?[\w:-]+\}?)?(?:\$?\{[^}\s]*\})?(\/[\w./-]*)?(?=["'\s?#]|$)/;
 // A HEALTHCHECK that runs a script shipped in the image (`CMD node
 // healthcheck.js`) names its URL inside that script (Stage A COMP-034).
 const HEALTHCHECK_SCRIPT_REGEX = /[\w./-]+\.(?:[cm]?js|sh|py|rb)\b/g;
@@ -4846,6 +4849,9 @@ function scanConfigFileEnvReads(path: string, content: string): { key: string; n
   return found;
 }
 
+// A shell read (`${NAME:-x}`, `$NAME`) or the Docker-library `file_env 'NAME'` helper.
+const SHELL_ENV_NAME_REGEX = /\$\{([A-Z][A-Z0-9_]*)|\$([A-Z][A-Z0-9_]*)|\bfile_env\s+["']?([A-Z][A-Z0-9_]*)/g;
+
 export function detectEnvVarModel(
   tree: FileTree,
   externalServices: string[] = [],
@@ -4893,6 +4899,19 @@ export function detectEnvVarModel(
   for (const [key] of imageDockerfile ? dockerfileEnvValues(imageDockerfile.content) : []) {
     if (classifyEnvVarPurpose(key).purpose !== 'infrastructure_binding') continue;
     nestedSampleFiles.set(key, [...(nestedSampleFiles.get(key) ?? []), imageDockerfile!.path]);
+  }
+  // So does the start script the image runs (metabase `ENTRYPOINT ["/app/run_metabase.sh"]`
+  // with `file_env 'MB_DB_CONNECTION_URI'`): a JVM or other compiled app reads the rest.
+  if (imageDockerfile) {
+    const { cmd, entrypoint } = dockerfileImageCommand(imageDockerfile.content);
+    const dockerDir = imageDockerfile.path.includes('/') ? imageDockerfile.path.slice(0, imageDockerfile.path.lastIndexOf('/')) : '';
+    for (const path of extractCmdScriptPaths(`${cmd ?? ''} ${entrypoint ?? ''}`, tree, dockerDir, new Set())) {
+      for (const [, braced, plain, fileEnv] of (tree[path] ?? '').replace(/^\s*#.*$/gm, '').matchAll(SHELL_ENV_NAME_REGEX)) {
+        const key = braced ?? plain ?? fileEnv!;
+        if (classifyEnvVarPurpose(key).purpose !== 'infrastructure_binding' || nestedSampleFiles.get(key)?.includes(path)) continue;
+        nestedSampleFiles.set(key, [...(nestedSampleFiles.get(key) ?? []), path]);
+      }
+    }
   }
 
   // ── 2. Reads: which variables the app actually reads, and whether a read

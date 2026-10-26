@@ -107,6 +107,8 @@ Repository (GitHub tree, bounded)
   `--reload` or `sleep infinity`). A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
   one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. A
+  documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
+  mdBook, Antora, Docsify) ranks with the dev images, below the app image. A
   Dockerfile named production or prod ranks first. An
   arm or multi-process variant ranks last. When the other signals tie, a
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
@@ -129,7 +131,9 @@ Repository (GitHub tree, bounded)
   runtime source. An
   image with a front web server (nginx, caddy) publishes port 80. The health
   path, in order: the URL that the HEALTHCHECK of the production stage or a
-  production Compose app service probes; a dedicated route that the app
+  production Compose app service probes (also in the script it runs, with the
+  host, port, scheme and a base path from variables:
+  `http${s}://${addr}:${PORT}${base_path}/alive`); a dedicated route that the app
   registers, with the framework prefix and URI version; the Spring actuator
   route. A dedicated route ends in a health word, and only an API root, a
   version or one namespace (for example system) comes before it.
