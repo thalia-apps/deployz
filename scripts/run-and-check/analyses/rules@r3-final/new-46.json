@@ -1,0 +1,309 @@
+{
+  "id": "new-46",
+  "commit": "42a26dcdc6b231062d362c109c1ef9410f0271ff",
+  "analyser": "rules@r3-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "next build --webpack",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"server.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/healthcheck",
+      "mode": "explicit",
+      "hostChecked": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HOMEPAGE_ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in vitest.setup.js",
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_AUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/utils/env.js",
+            "read in src/proxy.js",
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "HOMEPAGE_BUILDTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/pages/api/hash.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/config/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_EXTERNAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/env.js",
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_MCP_ALLOW_WRITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/mcp/homepage-mcp.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_MCP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/mcp/homepage-mcp.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_MCP_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/utils/mcp/homepage-mcp.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_OIDC_AUTO_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/pages/auth/signin.jsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEPAGE_PROXY_DISABLE_IPV6",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/proxy/http.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KUBERNETES_SERVICE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/config/kubernetes.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/logger.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_TARGETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/logger.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/utils/env.js",
+            "read in src/proxy.js",
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/env.js",
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BUILDTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/components/version.jsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_REVISION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/components/version.jsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/components/version.jsx",
+            "read in src/widgets/calendar/proxy.js",
+            "read in src/widgets/feed/proxy.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/instrumentation.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/utils/auth.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the app declares durable local state (HOMEPAGE_CONFIG_DIR (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (HOMEPAGE_CONFIG_DIR (runtime source)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

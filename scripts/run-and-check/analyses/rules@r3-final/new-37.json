@@ -1,0 +1,2097 @@
+{
+  "id": "new-37",
+  "commit": "0f19cc46ef6b6426ee398c670575b3c96be7af9e",
+  "analyser": "rules@r3-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build --filter=@calcom/web...",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/calcom/scripts/start.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DATABASE_DIRECT_URL",
+          "kind": "url"
+        },
+        {
+          "name": "INSIGHTS_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "SAML_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOWED_HOSTNAMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOWED_HOSTNAMES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "API_KEY_PREFIX",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares API_KEY_PREFIX"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH_BEARER_TOKEN_VERCEL",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AUTH_BEARER_TOKEN_VERCEL"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AVATARAPI_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AVATARAPI_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AVATARAPI_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AVATARAPI_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWAITING_PAYMENT_EMAIL_DELAY_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWAITING_PAYMENT_EMAIL_DELAY_MINUTES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BLACKLISTED_GUEST_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BLACKLISTED_GUEST_EMAILS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CALCOM_APP_CREDENTIAL_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CALCOM_APP_CREDENTIAL_ENCRYPTION_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CALCOM_CREDENTIAL_SYNC_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CALCOM_CREDENTIAL_SYNC_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CALCOM_CREDENTIAL_SYNC_HEADER_NAME",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CALCOM_CREDENTIAL_SYNC_HEADER_NAME"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CALCOM_CREDENTIAL_SYNC_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CALCOM_CREDENTIAL_SYNC_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CALCOM_SERVICE_ACCOUNT_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CALCOM_SERVICE_ACCOUNT_ENCRYPTION_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CALCOM_TELEMETRY_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CALCOM_TELEMETRY_DISABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CALENDSO_ENCRYPTION_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares CALENDSO_ENCRYPTION_KEY",
+            "read in apps/web/next.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CAL_AI_CALL_RATE_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CAL_AI_CALL_RATE_PER_MINUTE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CAL_VIDEO_ASSUME_ROLE_ARN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CAL_VIDEO_ASSUME_ROLE_ARN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CAL_VIDEO_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CAL_VIDEO_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CAL_VIDEO_BUCKET_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CAL_VIDEO_BUCKET_REGION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CAL_VIDEO_MEETING_LINK_FOR_TESTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CAL_VIDEO_MEETING_LINK_FOR_TESTING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CAL_VIDEO_RECORDING_TOKEN_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CAL_VIDEO_RECORDING_TOKEN_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CLOSECOM_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLOSECOM_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLOSECOM_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLOSECOM_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLOUDFLARE_TURNSTILE_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLOUDFLARE_TURNSTILE_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CRON_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CRON_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CRON_ENABLE_APP_SYNC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CRON_ENABLE_APP_SYNC"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CSP_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CSP_POLICY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_CHUNK_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_CHUNK_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_DIRECT_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_DIRECT_URL",
+            "read in packages/prisma/schema.prisma"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "scripts/start.sh declares DATABASE_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "docker-compose.yml build arg DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES",
+            ".env.example declares DATABASE_URL",
+            "Dockerfile declares DATABASE_URL",
+            "read in packages/prisma/schema.prisma",
+            "read in packages/kysely/index.ts",
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DIRECTORY_IDS_TO_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DIRECTORY_IDS_TO_LOG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUB_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DUB_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUB_SMS_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DUB_SMS_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUB_SMS_FOLDER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DUB_SMS_FOLDER_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_APPLE_CALENDAR_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_APPLE_CALENDAR_EMAIL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_APPLE_CALENDAR_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares E2E_TEST_APPLE_CALENDAR_PASSWORD"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_CALCOM_GCAL_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_CALCOM_GCAL_KEYS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_CALCOM_QA_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_CALCOM_QA_EMAIL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_CALCOM_QA_GCAL_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares E2E_TEST_CALCOM_QA_GCAL_CREDENTIALS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_CALCOM_QA_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares E2E_TEST_CALCOM_QA_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "E2E_TEST_MAILHOG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares E2E_TEST_MAILHOG_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EDGE_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EDGE_CONFIG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAIL_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_FROM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_FROM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAIL_SERVER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_SERVER_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAIL_SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMAIL_SERVER_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENABLE_ASYNC_TASKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_ASYNC_TASKER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORMBRICKS_FEEDBACK_SURVEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FORMBRICKS_FEEDBACK_SURVEY_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_ADS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_ADS_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_API_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_API_CREDENTIALS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CALENDAR_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_CALENDAR_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_LOGIN_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_WEBHOOK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_WEBHOOK_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_WEBHOOK_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HUDDLE01_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HUDDLE01_API_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IFFY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares IFFY_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "INSIGHTS_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INSIGHTS_DATABASE_URL",
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "INTERCOM_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INTERCOM_API_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INTERCOM_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INTERCOM_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LINGO_DOT_DEV_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LINGO_DOT_DEV_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINKEDIN_ADS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LINKEDIN_ADS_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MICROSOFT_WEBHOOK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MICROSOFT_WEBHOOK_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MICROSOFT_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MICROSOFT_WEBHOOK_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXTAUTH_COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_COOKIE_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXTAUTH_SECRET",
+            "read in apps/web/next.config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_URL",
+            "read in apps/web/next.config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "NEXT_PUBLIC_API_V2_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_API_V2_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_APP_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AVAILABILITY_SCHEDULE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_AVAILABILITY_SCHEDULE_INTERVAL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BODY_SCRIPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_BODY_SCRIPTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BOOKER_NUMBER_OF_DAYS_TO_LOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_BOOKER_NUMBER_OF_DAYS_TO_LOAD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_CAL_AI_PHONE_NUMBER_MONTHLY_PRICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_CAL_AI_PHONE_NUMBER_MONTHLY_PRICE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_CLOUDFLARE_SITEKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_CLOUDFLARE_SITEKEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_CLOUDFLARE_USE_TURNSTILE_IN_BOOKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_CLOUDFLARE_USE_TURNSTILE_IN_BOOKER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_COMPANY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_COMPANY_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DISABLE_SIGNUP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DUB_PROGRAM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_DUB_PROGRAM_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_EMBED_LIB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_EMBED_LIB_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FORMBRICKS_ENVIRONMENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_FORMBRICKS_ENVIRONMENT_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FORMBRICKS_HOST_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_FORMBRICKS_HOST_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FRESHCHAT_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_FRESHCHAT_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FRESHCHAT_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_FRESHCHAT_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_HEAD_SCRIPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_HEAD_SCRIPTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_HELPSCOUT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_HELPSCOUT_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_HOSTED_CAL_FEATURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_HOSTED_CAL_FEATURES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_INTERCOM_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_INTERCOM_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_INVALIDATE_AVAILABLE_SLOTS_ON_BOOKING_FORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_INVALIDATE_AVAILABLE_SLOTS_ON_BOOKING_FORM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_IS_E2E",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_IS_E2E"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_IS_PREMIUM_NEW_PLAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_IS_PREMIUM_NEW_PLAN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_LOGGER_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_LOGGER_LEVEL",
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MINUTES_TO_BOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_MINUTES_TO_BOOK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ORGANIZATIONS_MIN_SELF_SERVE_SEATS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_ORGANIZATIONS_MIN_SELF_SERVE_SEATS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ORGANIZATIONS_SELF_SERVE_PRICE_NEW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_ORGANIZATIONS_SELF_SERVE_PRICE_NEW"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_POSTHOG_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_POSTHOG_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_QUERY_AVAILABLE_SLOTS_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_QUERY_AVAILABLE_SLOTS_INTERVAL_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_QUERY_RESERVATION_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_QUERY_RESERVATION_INTERVAL_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_QUERY_RESERVATION_STALE_TIME_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_QUERY_RESERVATION_STALE_TIME_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_QUICK_AVAILABILITY_ROLLOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_QUICK_AVAILABILITY_ROLLOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENDER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENDER_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENDGRID_SENDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENDGRID_SENDER_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SENTRY_DSN_CLIENT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SINGLE_ORG_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SINGLE_ORG_SLUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_CREDITS_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_STRIPE_CREDITS_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_PREMIUM_NEW_PLAN_PRICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_STRIPE_PREMIUM_NEW_PLAN_PRICE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_PREMIUM_PLAN_PRICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_STRIPE_PREMIUM_PLAN_PRICE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_PRO_PLAN_PRICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_STRIPE_PRO_PLAN_PRICE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPPORT_MAIL_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SUPPORT_MAIL_ADDRESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_VAPID_PUBLIC_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_USE_BOTID_IN_BOOKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_VERCEL_USE_BOTID_IN_BOOKER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEBAPP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_WEBAPP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEBSITE_PRIVACY_POLICY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_WEBSITE_PRIVACY_POLICY_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEBSITE_TERMS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_WEBSITE_TERMS_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEBSITE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_WEBSITE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_ZENDESK_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/lib/env.ts",
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORGANIZATIONS_AUTOLINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORGANIZATIONS_AUTOLINK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ORGANIZATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORGANIZATIONS_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ORG_MONTHLY_CREDITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ORG_MONTHLY_CREDITS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OUTLOOK_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OUTLOOK_LOGIN_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGSSLMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PGSSLMODE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PROJECT_ID_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROJECT_ID_VERCEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RESERVED_SUBDOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RESERVED_SUBDOMAINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RETELL_AI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RETELL_AI_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RETELL_AI_TEST_CAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RETELL_AI_TEST_CAL_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "RETELL_AI_TEST_EVENT_TYPE_MAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RETELL_AI_TEST_EVENT_TYPE_MAP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RETELL_AI_TEST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RETELL_AI_TEST_MODE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SALESFORCE_GRAPHQL_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SALESFORCE_GRAPHQL_DELAY_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SALESFORCE_GRAPHQL_MAX_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SALESFORCE_GRAPHQL_MAX_DELAY_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SALESFORCE_GRAPHQL_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SALESFORCE_GRAPHQL_MAX_RETRIES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_ADMINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_ADMINS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SAML_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SAML_DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SEED_OAUTH2_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SEED_OAUTH2_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEED_OAUTH2_CLIENT_SECRET_HASHED",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SEED_OAUTH2_CLIENT_SECRET_HASHED"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEED_PLATFORM_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SEED_PLATFORM_OAUTH_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEED_PLATFORM_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SEED_PLATFORM_OAUTH_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENDGRID_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SENDGRID_API_KEY",
+            "sendgrid requires SENDGRID_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENDGRID_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENDGRID_EMAIL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENDGRID_SYNC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SENDGRID_SYNC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEND_FEEDBACK_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SEND_FEEDBACK_EMAIL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SENTRY_AUTH_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_DEBUG"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_MAX_SPANS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_MAX_SPANS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_ORG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_ORG"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_PROJECT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_REPLAYS_SESSION_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_REPLAYS_SESSION_SAMPLE_RATE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_SAMPLE_RATE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENTRY_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_TRACES_SAMPLE_RATE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SINK_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SINK_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SINK_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SINK_API_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_ORG_ANNUAL_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_ORG_ANNUAL_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_ORG_MONTHLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_ORG_MONTHLY_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_ORG_PRODUCT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_ORG_PRODUCT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_ORG_TRIAL_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_ORG_TRIAL_DAYS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_PHONE_NUMBER_MONTHLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_PHONE_NUMBER_MONTHLY_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_TEAM_ANNUAL_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_TEAM_ANNUAL_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_TEAM_MONTHLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_TEAM_MONTHLY_PRICE_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_TEAM_PRODUCT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STRIPE_TEAM_PRODUCT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET_APPS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET_APPS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET_BILLING",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares STRIPE_WEBHOOK_SECRET_BILLING"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TASKER_ENABLE_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TASKER_ENABLE_EMAILS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TASKER_ENABLE_WEBHOOKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TASKER_ENABLE_WEBHOOKS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TEAM_ID_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TEAM_ID_VERCEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRIGGER_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRIGGER_API_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRIGGER_DEV_PROJECT_REF",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRIGGER_DEV_PROJECT_REF"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRIGGER_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares TRIGGER_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWILIO_OPT_OUT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TWILIO_OPT_OUT_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWILIO_VERIFY_SID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TWILIO_VERIFY_SID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TZ",
+            "read in vitest.workspace.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNKEY_ROOT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares UNKEY_ROOT_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "USE_POOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VAPID_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares VAPID_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITEST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in vitest.workspace.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "sendgrid",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE"
+}
