@@ -31,3 +31,34 @@ export async function migrationsUpToDate(
     return false;
   }
 }
+
+/** Fixed key of the session advisory lock that serialises migrator runs. */
+export const MIGRATION_LOCK_KEY = 7_243_150_055;
+
+export interface MigrationLockClient {
+  query(text: string, values?: unknown[]): Promise<unknown>;
+  release(): void;
+}
+
+/**
+ * Runs `run` while this connection holds the migration advisory lock.
+ * Containers that cold-start together otherwise run the same migration at the
+ * same time, and `CREATE TABLE IF NOT EXISTS` is not safe under concurrency:
+ * the loser fails with 23505 on pg_type (seen in production on 0055).
+ */
+export async function withMigrationLock<T>(
+  connect: () => Promise<MigrationLockClient>,
+  run: () => Promise<T>,
+): Promise<T> {
+  const client = await connect();
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    try {
+      return await run();
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+    }
+  } finally {
+    client.release();
+  }
+}
