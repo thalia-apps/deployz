@@ -120,6 +120,26 @@ refuses to deploy if any is missing: `CLOUDFLARE_ZONE_ID`,
 `api.deployz.dev` CNAME must be DNS-only (not proxied) or TLS to the API
 fails with a Cloudflare 525.
 
+### Session cookies and customer hostnames
+
+The default customer hostnames are in the same zone as the control plane. A
+browser sends a cookie to every host inside the cookie's domain, so
+`COOKIE_DOMAIN` must not cover `<prefix><id>.<zone>`. Otherwise the dashboard
+and Team Admin session reaches the vendor's application code each time a
+signed-in user opens a customer application.
+
+- Staging is correct: `COOKIE_DOMAIN` is `.staging.deployz.dev`, and its
+  applications are `s-<id>.deployz.dev`.
+- **Known gap:** production uses `.deployz.dev`, which covers every `d-*` and
+  `s-*` host. The fix moves the browser API to `API_BROWSER_DOMAIN_NAME`
+  (`api.app.deployz.dev`) and sets `COOKIE_DOMAIN` to `.app.deployz.dev`.
+  Until the cutover, the API deploy shows a warning.
+- A customer application can still set a cookie for `.deployz.dev`, which the
+  browser also sends to the control plane. The API refuses a state-changing
+  request whose `Origin` is not `WEB_URL` or `MARKETING_URL`. A separate
+  registrable domain for customer hostnames removes this risk; that is a
+  post-MVP item.
+
 `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX` controls which names the control plane
 mints and which names its namespace guard lets it write. Every control plane
 that shares the zone therefore needs its own prefix: staging uses `s-`, so it

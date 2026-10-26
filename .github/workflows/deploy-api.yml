@@ -188,9 +188,12 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM }}
       API_DOMAIN_NAME: ${{ vars.API_DOMAIN_NAME }}
       API_CERTIFICATE_ARN: ${{ secrets.API_CERTIFICATE_ARN }}
+      # Optional pair. The browser-facing API hostname, under COOKIE_DOMAIN.
+      # API_DOMAIN_NAME stays mapped for installed relays and the webhooks.
+      API_BROWSER_DOMAIN_NAME: ${{ vars.API_BROWSER_DOMAIN_NAME }}
+      API_BROWSER_CERTIFICATE_ARN: ${{ secrets.API_BROWSER_CERTIFICATE_ARN }}
       # Optional. It changes the session-cookie name, which keeps another
       # control plane in the same cookie domain out of this one's session.
-      # Production leaves it empty, so Better Auth keeps its default name.
       COOKIE_PREFIX: ${{ vars.COOKIE_PREFIX }}
       # Cloudflare DNS (Phase 1 runtime config). The zone lives on Cloudflare,
       # so the API needs the zone id/name plus a scoped edit token before any
@@ -382,21 +385,30 @@ jobs:
           # Environment that declares no value of its own inherits the
           # repository one, which belongs to production, and the required-key
           # list cannot catch that because the inherited value is not empty.
-          STAGE_OWNED_IF_SET="BOOTSTRAP_TEMPLATE_URL"
+          STAGE_OWNED_IF_SET="BOOTSTRAP_TEMPLATE_URL API_BROWSER_DOMAIN_NAME"
           problems=()
 
           if [ "${DEPLOYZ_STAGE}" != "${EXPECTED_ENVIRONMENT}" ]; then
             problems+=("DEPLOYZ_STAGE is \"${DEPLOYZ_STAGE}\"; this job may deploy only \"${EXPECTED_ENVIRONMENT}\".")
           fi
-          if [ "${API_URL}" != "https://${API_DOMAIN_NAME}" ]; then
-            problems+=("API_URL must be https:// followed by API_DOMAIN_NAME.")
+          # The browser calls API_URL, so the session cookie is set for that
+          # host. With a browser domain, API_DOMAIN_NAME serves only relays
+          # and webhooks.
+          if [ -n "${API_BROWSER_DOMAIN_NAME:-}" ] && [ -z "${API_BROWSER_CERTIFICATE_ARN:-}" ]; then
+            problems+=("API_BROWSER_DOMAIN_NAME needs API_BROWSER_CERTIFICATE_ARN.")
+          fi
+          BROWSER_API_HOST="${API_BROWSER_DOMAIN_NAME:-${API_DOMAIN_NAME}}"
+          if [ "${API_URL}" != "https://${API_DOMAIN_NAME}" ] && [ "${API_URL}" != "https://${BROWSER_API_HOST}" ]; then
+            problems+=("API_URL must be https:// followed by API_DOMAIN_NAME or API_BROWSER_DOMAIN_NAME.")
           fi
           if [ "${BETTER_AUTH_URL}" != "${API_URL}" ]; then
             problems+=("BETTER_AUTH_URL must equal API_URL.")
           fi
-          case "${API_DOMAIN_NAME}" in
-            *://*|*/*) problems+=("API_DOMAIN_NAME must be a bare hostname, with no scheme and no slash.") ;;
-          esac
+          for key in API_DOMAIN_NAME API_BROWSER_DOMAIN_NAME; do
+            case "${!key:-}" in
+              *://*|*/*) problems+=("$key must be a bare hostname, with no scheme and no slash.") ;;
+            esac
+          done
           # WEB_URL and MARKETING_URL reach the Lambda and end up in links sent
           # to vendors, so a missing scheme or a trailing slash is a live defect.
           for key in WEB_URL MARKETING_URL; do
@@ -410,9 +422,22 @@ jobs:
             .*) ;;
             *) problems+=("COOKIE_DOMAIN must start with a dot.") ;;
           esac
-          case "${API_DOMAIN_NAME}" in
-            *"${COOKIE_DOMAIN}") ;;
-            *) problems+=("API_DOMAIN_NAME must end with COOKIE_DOMAIN.") ;;
+          # The API sets the session cookie and the dashboard server reads
+          # it, so both hosts must be inside COOKIE_DOMAIN.
+          API_URL_HOST="${API_URL#https://}"
+          WEB_URL_HOST="${WEB_URL#https://}"
+          for host in "${API_URL_HOST}" "${WEB_URL_HOST}"; do
+            case "${host}" in
+              "${COOKIE_DOMAIN#.}"|*"${COOKIE_DOMAIN}") ;;
+              *) problems+=("${host} (from API_URL or WEB_URL) must be inside COOKIE_DOMAIN.") ;;
+            esac
+          done
+          # Default customer hostnames are <prefix><id>.<zone>. A cookie domain
+          # that covers the zone sends the dashboard session to every customer
+          # application. A warning until production moves its cookie domain.
+          case "${CLOUDFLARE_ZONE_NAME}" in
+            "${COOKIE_DOMAIN#.}"|*"${COOKIE_DOMAIN}")
+              echo "::warning::COOKIE_DOMAIN ${COOKIE_DOMAIN} covers the customer hostnames in ${CLOUDFLARE_ZONE_NAME}. Browsers send the session cookie to every customer application." ;;
           esac
           if ! printf '%s' "${DEPLOYZ_DEFAULT_HOSTNAME_PREFIX}" | grep -Eq '^[a-z0-9]+-$'; then
             problems+=("DEPLOYZ_DEFAULT_HOSTNAME_PREFIX must be lowercase letters or digits and a trailing dash.")
@@ -457,9 +482,6 @@ jobs:
                 esac
               done
             done
-            if [ -n "${COOKIE_PREFIX:-}" ]; then
-              problems+=("COOKIE_PREFIX must be empty in production.")
-            fi
           fi
 
           if [ ${#problems[@]} -ne 0 ]; then

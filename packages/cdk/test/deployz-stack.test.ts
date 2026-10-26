@@ -406,6 +406,32 @@ describe('DeployzStack', () => {
         'ExportDeployzTestApiRegionalDomainName',
       );
     });
+
+    // The browser hostname is a second mapping next to the relay hostname, so
+    // a cookie-domain move never replaces the domain installed relays call.
+    it('maps the API onto the browser domain too when both browser values are given', () => {
+      const template = synth({
+        apiDomainName: 'api.deployz.dev',
+        apiCertificateArn: CERT_ARN,
+        apiBrowserDomainName: 'api.app.deployz.dev',
+        apiBrowserCertificateArn: CERT_ARN,
+      });
+
+      template.resourceCountIs('AWS::ApiGatewayV2::DomainName', 2);
+      template.resourceCountIs('AWS::ApiGatewayV2::ApiMapping', 2);
+      template.hasResourceProperties('AWS::ApiGatewayV2::DomainName', { DomainName: 'api.deployz.dev' });
+      template.hasResourceProperties('AWS::ApiGatewayV2::DomainName', { DomainName: 'api.app.deployz.dev' });
+      const outputs = Object.keys(template.findOutputs('*'));
+      expect(outputs).toContain('ExportDeployzTestBrowserApiRegionalDomain');
+      // deploy-api.yml reads the one output with this suffix as the relay host's DNS target.
+      expect(outputs.filter((key) => key.endsWith('ApiRegionalDomainName'))).toHaveLength(1);
+    });
+
+    it('creates no browser domain when only the browser domain name is given', () => {
+      const template = synth({ apiBrowserDomainName: 'api.app.deployz.dev' });
+
+      template.resourceCountIs('AWS::ApiGatewayV2::DomainName', 0);
+    });
   });
 
   // The fix-instructions model settings, including the rollback switch, must
