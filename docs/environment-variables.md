@@ -260,7 +260,9 @@ frozen manifest.
   connections (RDS `rds.force_ssl`). When Deployz provisions it and the app
   reads a TLS mode variable (`PGSSLMODE`, `*_DB_SSLMODE`,
   `*_DATABASE_SSL_MODE`) whose default is `disable`, the variable is
-  **required**, and the source line asks for `require`.
+  **required**, and the source line asks for `require`. Only a read in the
+  language that the image runs counts (a Go demo tool next to a JVM app does
+  not).
 - **S3 switched on by presence.** When the app builds its S3 client only if
   several variables are all set (`A && B && C ? new S3(…)`), each of them that
   Deployz does not bind or derive is required: otherwise the files go to the

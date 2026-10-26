@@ -159,6 +159,25 @@ describe('Redis evidence of a sibling app that the image does not hold (cal.com)
   });
 });
 
+describe('a TLS Redis requirement (formbricks)', () => {
+  const tree = (source: string): FileTree => ({
+    Dockerfile: 'FROM node:22\nCOPY . .\nCMD ["node", "server.js"]\n',
+    'package.json': JSON.stringify({ name: 'app', dependencies: { bullmq: '^5.0.0', ioredis: '^5.0.0' } }),
+    '.env.example': 'REDIS_URL=redis://localhost:6379\n',
+    'src/redis.ts': source,
+  });
+
+  it('is not read from a message that lists rediss:// as an allowed scheme', () => {
+    const redis = assessRedis(tree('if (protocol !== "redis:" && protocol !== "rediss:") throw new Error("REDIS_URL must use redis:// or rediss://");\n'));
+    expect(redis.required).toBe(true);
+  });
+
+  it('still makes a rediss:// connection URL unsupported', () => {
+    const redis = assessRedis(tree('const url = process.env.REDIS_URL ?? "rediss://cache.example.com:6380";\n'));
+    expect(redis.compatibility.supported).toBe(false);
+  });
+});
+
 describe('a queue consumer that the start path runs (linkding)', () => {
   const tree: FileTree = {
     Dockerfile: 'FROM python:3.13\nCOPY . .\nCMD ["./bootstrap.sh"]\n',

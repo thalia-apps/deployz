@@ -171,7 +171,8 @@ Repository (GitHub tree, bounded)
   code from another image, not from the commit (outline copies its build and
   `node_modules` from the floating `outlinewiki/outline-base` image), unless
   another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
-  file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
+  file list (GitHub cuts the listing of a very large repository and says
+  `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
@@ -512,7 +513,8 @@ JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
 service and declared workers; also a multi-process image: s6-overlay or
-supervisord with two or more services, or a start script on the
+supervisord with two or more services in the production stage (a trailing
+dev all-in-one stage does not count), or a start script on the
 CMD/ENTRYPOINT chain that puts two or more long-running servers in the
 background with `&`, such as Homarr's `redis-server &` and
 `node server.js &`; an nginx, apache, httpd or caddy front end and a

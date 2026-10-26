@@ -128,7 +128,8 @@ const GEMFILE_REGEX = /(?:^|\/)Gemfile$/;
 const GOMOD_REGEX = /(?:^|\/)go\.mod$/;
 const COMPOSER_JSON_REGEX = /(?:^|\/)composer\.json$/;
 const README_REGEX = /(?:^|\/)README(?:\.[\w.-]+)?$/i;
-const REDISS_SCHEME_REGEX = /rediss:\/\//i;
+// A connection URL with a host, never a scheme that a message lists as allowed (`"must use redis:// or rediss://"`).
+const REDISS_SCHEME_REGEX = /rediss:\/\/[\w$[{:@]/i;
 
 // ── package.json helpers (workspace-aware; dependencies vs devDependencies) ──
 
