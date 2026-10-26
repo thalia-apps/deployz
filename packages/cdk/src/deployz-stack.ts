@@ -29,7 +29,7 @@ import {
   ObjectOwnership,
   type IBucket,
 } from 'aws-cdk-lib/aws-s3';
-import { CfnStage, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ApiMapping, CfnStage, DomainName, HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
@@ -399,6 +399,36 @@ export class DeployzStack extends Stack {
       defaultIntegration: new HttpLambdaIntegration('ApiIntegration', apiLambda.function),
       ...(apiDomain ? { defaultDomainMapping: { domainName: apiDomain } } : {}),
     });
+
+    // The browser-facing API hostname. It sits under its own cookie domain
+    // (for example api.app.deployz.dev under .app.deployz.dev), so the session
+    // cookie never reaches the default customer hostnames in the zone apex.
+    // A separate construct, not a rename of ApiDomain: installed relays and
+    // the webhooks keep calling API_DOMAIN_NAME, so that mapping must stay.
+    const browserApiDomainName =
+      (this.node.tryGetContext('apiBrowserDomainName') as string | undefined) ??
+      process.env.API_BROWSER_DOMAIN_NAME;
+    const browserApiCertificateArn =
+      (this.node.tryGetContext('apiBrowserCertificateArn') as string | undefined) ??
+      process.env.API_BROWSER_CERTIFICATE_ARN;
+    const browserApiDomain =
+      browserApiDomainName && browserApiCertificateArn
+        ? new DomainName(this, 'BrowserApiDomain', {
+            domainName: browserApiDomainName,
+            certificate: Certificate.fromCertificateArn(
+              this,
+              'BrowserApiCertificate',
+              browserApiCertificateArn,
+            ),
+          })
+        : undefined;
+    if (browserApiDomain && httpApi.defaultStage) {
+      new ApiMapping(this, 'BrowserApiMapping', {
+        api: httpApi,
+        domainName: browserApiDomain,
+        stage: httpApi.defaultStage,
+      });
+    }
     (httpApi.defaultStage?.node.defaultChild as CfnStage).defaultRouteSettings = {
       throttlingBurstLimit: 200,
       throttlingRateLimit: 100,
@@ -452,6 +482,15 @@ export class DeployzStack extends Stack {
       });
       this.exportValue(apiDomain.regionalHostedZoneId, {
         name: `${this.stackName}-ApiRegionalHostedZoneId`,
+      });
+    }
+
+    if (browserApiDomain) {
+      // The DNS-only CNAME target for the browser-facing API hostname. The
+      // name must not end in ApiRegionalDomainName: deploy-api.yml reads the
+      // single output with that suffix as the API_DOMAIN_NAME target.
+      this.exportValue(browserApiDomain.regionalDomainName, {
+        name: `${this.stackName}-BrowserApiRegionalDomain`,
       });
     }
   }

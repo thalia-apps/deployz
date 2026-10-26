@@ -167,8 +167,9 @@ API reads is validated in `apps/api/src/env.ts`.
 | --- | --- | --- |
 | Stage | `DEPLOYZ_STAGE` (variable) | Selects the stack id and every stage-derived resource name. The stage gate refuses a deploy when it does not equal the Environment's own name. |
 | Deploy identity | `AWS_DEPLOY_ROLE_ARN` (variable) | The IAM role GitHub Actions assumes with OIDC; one role for each Environment (see *Deploy identity*). A variable and not a secret: a role ARN is no credential, and a masked value would hide which role a run assumed. |
-| Public URLs | `API_URL`, `WEB_URL`, `MARKETING_URL`, `COOKIE_DOMAIN`, `COOKIE_PREFIX`, `BETTER_AUTH_URL`, `EMAIL_FROM` | Variables on the GitHub Environment. `COOKIE_PREFIX` is optional. It changes the session-cookie name. A different name keeps a second control plane in the same cookie domain out of this one's session. Production leaves the variable empty, so it keeps Better Auth's default cookie name. Build the web image with the same value as the `NEXT_PUBLIC_COOKIE_PREFIX` build argument, or the dashboard looks for a cookie name the API never sets. |
-| API domain | `API_DOMAIN_NAME`, `API_CERTIFICATE_ARN` | Both required or the `api.deployz.dev` mapping is removed. The certificate is requested out of band; the Cloudflare `api` CNAME must be DNS-only or TLS fails with 525. |
+| Public URLs | `API_URL`, `WEB_URL`, `MARKETING_URL`, `COOKIE_DOMAIN`, `COOKIE_PREFIX`, `BETTER_AUTH_URL`, `EMAIL_FROM` | Variables on the GitHub Environment. `COOKIE_PREFIX` is optional. It changes the session-cookie name. A different name keeps a second control plane in the same cookie domain out of this one's session. Change the name when `COOKIE_DOMAIN` changes: browsers keep the old cookie until it expires, and an old cookie with the same name can hide the new one. Build the web image with the same value as the `NEXT_PUBLIC_COOKIE_PREFIX` build argument, or the dashboard looks for a cookie name the API never sets. |
+| API domain | `API_DOMAIN_NAME`, `API_CERTIFICATE_ARN` | Both required or the `api.deployz.dev` mapping is removed. The certificate is requested out of band; the Cloudflare `api` CNAME must be DNS-only or TLS fails with 525. Installed relays (their `ControlPlaneUrl` stack parameter) and the GitHub and Paddle webhooks call this host, so it stays mapped. |
+| Browser API domain | `API_BROWSER_DOMAIN_NAME` (variable), `API_BROWSER_CERTIFICATE_ARN` (secret) | Optional pair. A second mapping of the same API, for the browser. It lets `COOKIE_DOMAIN` exclude the customer hostnames (see [`../networking-and-https.md`](../networking-and-https.md#session-cookies-and-customer-hostnames)). The stack exports its DNS target as `<stack>-BrowserApiRegionalDomain`; the CNAME must be DNS-only. The deploy checks the record only through the readiness poll on `API_URL`. |
 | Auth and GitHub | `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_INSTALL_URL` | The GitHub App's **Setup URL** must be `<WEB_URL>/github/setup` with "Redirect on update" enabled; that page binds the installation to the vendor's organisation and offers sign-in when needed. The dashboard's Connect link goes through `GET /api/github/connect`, which adds a signed 10-minute `state` (organisation id, HMAC with `BETTER_AUTH_SECRET`) to `GITHUB_APP_INSTALL_URL`; the setup callback creates a binding only when that `state` matches the session's organisation, otherwise the vendor lands on `?github=failed`. A request that carries the session cookie and changes data must send an `Origin` (or `Referer`) from `WEB_URL` or `MARKETING_URL`; otherwise it gets 403 `ORIGIN_NOT_ALLOWED`. Rate limits use the right-most `X-Forwarded-For` hop (the one API Gateway appends). An installation already bound to another organisation is never rebound (the vendor lands on `?github=failed`); restoring a wrong binding is an operator DB edit. |
 | Email | `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY` | Organisation membership email only |
 | Default HTTPS | `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ZONE_NAME`, `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX`, `CLOUDFLARE_ZONE_EDIT_API_TOKEN` | [`../networking-and-https.md`](../networking-and-https.md) |
@@ -230,9 +231,13 @@ deploy whose values belong to another stage. It reports every violation at
 once. The rules are:
 
 - `DEPLOYZ_STAGE` equals the stage the job is allowed to deploy.
-- `API_URL` is `https://` and `API_DOMAIN_NAME`, and `BETTER_AUTH_URL` equals
-  `API_URL`.
-- `COOKIE_DOMAIN` starts with a dot, and `API_DOMAIN_NAME` ends with it.
+- `API_URL` is `https://` and `API_DOMAIN_NAME` or `API_BROWSER_DOMAIN_NAME`,
+  and `BETTER_AUTH_URL` equals `API_URL`. `API_BROWSER_DOMAIN_NAME` needs
+  `API_BROWSER_CERTIFICATE_ARN`.
+- `COOKIE_DOMAIN` starts with a dot, and the hosts of `API_URL` and `WEB_URL`
+  are inside it.
+- A `COOKIE_DOMAIN` that covers `CLOUDFLARE_ZONE_NAME` gives a warning: the
+  session cookie then reaches every customer application.
 - `DEPLOYZ_DEFAULT_HOSTNAME_PREFIX` is lowercase letters or digits and a
   trailing dash.
 - In the web deploy, `API_URL` starts with `https://` and carries no path, and
@@ -246,8 +251,7 @@ once. The rules are:
   prefix, so a stage that keeps production's `d-` is refused. A later stage
   whose name starts with `d` fails this rule. That is the intended signal:
   two control planes in one zone cannot share a prefix.
-- In production, none of those values carries another stage's name, and
-  `COOKIE_PREFIX` is empty.
+- In production, none of those values carries another stage's name.
 
 A non-production stage must carry its own name in every host and name it
 owns. A value without the stage name in it can only belong to another stage,
