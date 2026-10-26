@@ -123,7 +123,9 @@ watchdog, and the stack-event progress route's settlement backstop):
   finished in the last 24 hours.
 - A **configured first start** (DEPLOY-009): when a vendor value or a
   Deployz-generated secret must reach the task before it can boot
-  (`configPrecedesFirstStart`, `apps/api/src/install-config.ts`) and a READY
+  (`configPrecedesFirstStart`, `apps/api/src/install-config.ts`), or the
+  frozen spec has a migration workload (the migration must run before the
+  first task: miniflux exits on an empty schema), and a READY
   release exists, the INSTALL creates the stack with `param_DesiredCount=0`
   and carries `startAfterConfig` in its payload. The stack completes without
   ever running an unconfigured task; the post-install `CONFIG_UPDATE`
