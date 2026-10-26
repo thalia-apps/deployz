@@ -60,6 +60,16 @@ const TUNING_IDS = [
   'new-46',
   'new-47',
   'new-48',
+  'new-49',
+  'new-50',
+  'new-51',
+  'new-52',
+  'new-53',
+  'new-54',
+  'new-55',
+  'new-56',
+  'new-57',
+  'new-58',
 ] as const;
 
 // The reviewed truths (`outcomePatch`, `healthPath`, `localState`, `setupWizard`) are read by the claim check and the full run only, never by the Analysis.
