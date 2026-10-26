@@ -37,11 +37,10 @@ import {
 
 import type { FileTree } from './detectors.js';
 import {
-  CMD_REGEX,
-  ENTRYPOINT_REGEX,
   collectDependencyNames,
   collectScripts,
   detectDeclaredWorkerCommands,
+  dockerfileImageCommand,
   isRuntimeSourcePath,
   listDockerfileCandidates,
 } from './detectors.js';
@@ -183,7 +182,8 @@ function resolveWebEntry(tree: FileTree): string | null {
   const dockerfilePath = listDockerfileCandidates(tree)[0];
   const dockerfileContent = dockerfilePath !== undefined ? tree[dockerfilePath] : undefined;
   if (dockerfileContent) {
-    const cmd = CMD_REGEX.exec(dockerfileContent)?.[1] ?? ENTRYPOINT_REGEX.exec(dockerfileContent)?.[1];
+    const { cmd: imageCmd, entrypoint } = dockerfileImageCommand(dockerfileContent);
+    const cmd = imageCmd ?? entrypoint;
     if (cmd) {
       const cleaned = cmd.replace(/^\[|\]$/g, '').replace(/["',]/g, ' ').replace(/\s+/g, ' ').trim();
       const resolved = resolveCommandEntry(tree, cleaned);

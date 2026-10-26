@@ -1,0 +1,171 @@
+id: new-35
+repository: shlinkio/shlink
+commit: 9008811836903b48b8108d8f751da39d7369d7f8
+summary: >
+  Shlink is a self-hosted URL shortener (PHP 8.5, Mezzio, Doctrine ORM) with a REST API.
+  The official self-hosting path is the root Dockerfile (php:alpine + RoadRunner HTTP server on 8080),
+  configured only by environment variables; the entrypoint runs shlink-installer (schema/migrations) then starts RoadRunner.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    Set DB_DRIVER=postgres (or mysql) with DB_HOST/DB_NAME/DB_USER/DB_PASSWORD, DEFAULT_DOMAIN and IS_HTTPS_ENABLED=true.
+    Default SQLite is ephemeral in a container, so a managed DB is needed for durable data. Redis, RabbitMQ, Mercure, Matomo, GeoLite are optional.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: data/infra/php.Dockerfile, reason: dev php-fpm image for docker-compose, no app code, no entrypoint}
+    - {path: data/infra/roadrunner.Dockerfile, reason: dev image, source is bind-mounted}
+    - {path: data/infra/frankenphp.Dockerfile, reason: dev image, source is bind-mounted}
+  target: null          # last stage is the final image
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 50, quote: "FROM base"}
+    - {path: Dockerfile, line: 68, quote: "ENTRYPOINT [\"/bin/sh\", \"./docker-entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 5, quote: "ARG SHLINK_RUNTIME=rr"}
+runtime: {accept: [php]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "EXPOSE 8080"}
+    - {path: config/roadrunner/.rr.yml, line: 10, quote: "address: '${ADDRESS:-0.0.0.0}:${PORT:-8080}'"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config/roadrunner/.rr.yml, line: 10, quote: "'${ADDRESS:-0.0.0.0}:${PORT:-8080}'"}
+startCommand:
+  source: image
+  accept: []
+  # entrypoint: docker-entrypoint.sh runs installer then exec ./bin/rr serve -c config/roadrunner/.rr.yml
+healthPath:
+  accept: ["/rest/health", "/rest/v3/health", "/rest/v2/health", "/rest/v1/health"]
+  evidence:
+    - {path: module/Rest/src/Action/HealthAction.php, line: 20, quote: "ROUTE_PATH = '/health'"}
+    - {path: module/Rest/src/ConfigProvider.php, line: 15, quote: "'/rest/v{version:1|2|3}'"}
+    - {path: module/Rest/src/ConfigProvider.php, line: 16, quote: "UNVERSIONED_ROUTES_PREFIX = '/rest'"}
+    - {path: module/Rest/config/auth.config.php, line: 12, quote: "Action\\HealthAction::class,"}
+  # 200 only when a DB query works (503 otherwise). No API key needed. "/" is not safe: depends on base URL redirect settings.
+database:
+  status: required
+  engines: [sqlite, mysql, maria, postgres, mssql]
+  default: sqlite
+  deployzEngine: postgres      # mysql also acceptable (DB_DRIVER=mysql)
+  selectBy: {DB_DRIVER: postgres}
+  connectionVars: [DB_DRIVER, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD]  # parts only, no URL var; DB_USE_ENCRYPTION optional
+  # Each var is read as env(NAME) ?? contents of file NAME_FILE ?? default (EnvVars::loadFromEnv).
+  # DB_DRIVER unset or "sqlite" -> silent SQLite at /etc/shlink/data/database.sqlite (WORKDIR), no error: data loss on task replacement.
+  # Valid DB_DRIVER values: sqlite, mysql, maria, postgres, mssql. Any other value (e.g. "postgresql") silently falls to pdo_mysql.
+  # DB_PORT default is 5432 for postgres, 1433 for mssql, else 3306. DB_HOST has no default (falls to DB_UNIX_SOCKET, null) -> set it.
+  evidence:
+    - {path: module/Core/src/Config/EnvVars.php, line: 131, quote: "self::DB_DRIVER => 'sqlite',"}
+    - {path: config/autoload/entity-manager.global.php, line: 56, quote: "null, 'sqlite' => ["}
+    - {path: config/autoload/entity-manager.global.php, line: 58, quote: "'path' => 'data/database.sqlite',"}
+    - {path: config/autoload/entity-manager.global.php, line: 19, quote: "'postgres' => 'pdo_pgsql',"}
+    - {path: Dockerfile, line: 20, quote: "docker-php-ext-install -j\"$(nproc)\" pdo_mysql pdo_pgsql intl"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 129, quote: "self::DB_NAME => 'shlink',"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 95, quote: "return env($this->value) ?? $this->loadFromFileEnv() ?? $this->defaultValue();"}
+    - {path: config/autoload/entity-manager.global.php, line: 21, quote: "default => 'pdo_mysql',"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 130, quote: "self::DB_HOST => self::DB_UNIX_SOCKET->loadFromEnv(),"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 132, quote: "self::DB_PORT => match (self::DB_DRIVER->loadFromEnv()) {"}
+migrations:
+  mode: startup
+  accept: []   # a separate "bin/cli db:migrate" is not needed; entrypoint does it
+  evidence:
+    - {path: docker/docker-entrypoint.sh, line: 26, quote: "php vendor/bin/shlink-installer init ${flags}"}
+    - {path: config/autoload/installer.global.php, line: 82, quote: "InstallationCommand::DB_CREATE_SCHEMA->value => ["}
+    - {path: config/autoload/installer.global.php, line: 85, quote: "InstallationCommand::DB_MIGRATE->value => ["}
+  # inferred: the installer package is a vendor dependency (not in repo); installation_commands config shows what init runs
+redis:
+  status: optional
+  selectBy: {REDIS_SERVERS: "redis://host:6379"}   # used for cache, locks, optional pub/sub (REDIS_PUB_SUB_ENABLED)
+  evidence:
+    - {path: config/autoload/cache.global.php, line: 10, quote: "$cacheRedisBlock = $redisServers === null"}
+    - {path: config/autoload/locks.global.php, line: 28, quote: "EnvVars::REDIS_SERVERS->existsInEnv() ? 'redis_lock_store' : 'local_lock_store'"}
+workers:
+  status: embedded     # RoadRunner jobs pool (in-memory queue) runs inside the same rr serve process tree
+  commands: []
+  evidence:
+    - {path: config/roadrunner/.rr.yml, line: 19, quote: "jobs:"}
+    - {path: config/roadrunner/.rr.yml, line: 27, quote: "driver: memory"}
+    - {path: bin/roadrunner-worker.php, line: 34, quote: "RoadRunnerTaskConsumerToListener"}
+scheduledJobs:
+  status: none         # no cron in repo or docker docs; GeoLite refresh is an async event, only with licence key
+  items: []
+  evidence:
+    - {path: module/Core/src/EventDispatcher/Helper/EnabledListenerChecker.php, line: 41, quote: "UpdateGeoLiteDb::class => $this->geoLiteOptions->hasLicenseKey(),"}
+storage:
+  local: ephemeral     # data/cache, locks, log, proxies, temp-geolite are regenerated; durable data is in the DB
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/docker-entrypoint.sh, line: 7, quote: "mkdir -p data/cache data/locks data/log data/proxies data/temp-geolite"}
+    - {path: config/autoload/geolite2.global.php, line: 9, quote: "'db_location' => __DIR__ . '/../../data/GeoLite2-City.mmdb',"}
+  # GeoLite2 mmdb is downloaded only when GEOLITE_LICENSE_KEY is set; lost on task restart (re-downloaded at boot). Optional feature.
+env:
+  required:
+    - {name: DB_DRIVER, secret: false, buildTime: false, note: "postgres or mysql; default sqlite is ephemeral"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "RDS host"}
+    - {name: DB_NAME, secret: false, buildTime: false, note: "defaults to shlink"}
+    - {name: DB_USER, secret: false, buildTime: false, note: "DB user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "DB password"}
+    - {name: DEFAULT_DOMAIN, secret: false, buildTime: false, note: "public host; docs mark it mandatory, code default is empty"}
+    - {name: IS_HTTPS_ENABLED, secret: false, buildTime: false, note: "true behind HTTPS ALB; code default is already true"}
+  optional: [INITIAL_API_KEY, GEOLITE_LICENSE_KEY, SKIP_INITIAL_GEOLITE_DOWNLOAD, DB_PORT, DB_USE_ENCRYPTION, REDIS_SERVERS, TRUSTED_PROXIES, TIMEZONE, MEMORY_LIMIT, BASE_PATH, WEB_WORKER_NUM, TASK_WORKER_NUM, LOGS_FORMAT, PORT, CORS_ALLOW_ORIGIN]
+  buildTime: []         # SHLINK_VERSION / SHLINK_RUNTIME build args have defaults
+  evidence:
+    - {path: docker/README.md, line: 14, quote: "`DEFAULT_DOMAIN`: The default short domain used for this shlink instance."}
+    - {path: docker/README.md, line: 16, quote: "`GEOLITE_LICENSE_KEY`: Your GeoLite2 license key."}
+    - {path: docker/docker-entrypoint.sh, line: 22, quote: "if [ -n \"${initial_api_key}\" ]; then"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 123, quote: "self::IS_HTTPS_ENABLED, self::AUTO_RESOLVE_TITLES => true,"}
+    - {path: module/Core/src/Config/EnvVars.php, line: 104, quote: "private function loadFromFileEnv()"}
+  # GEOLITE_LICENSE_KEY is called mandatory in docker README but the entrypoint skips the download when empty (docker-entrypoint.sh:17) -> optional.
+  # Without INITIAL_API_KEY no API key exists; one can then only be made with `shlink api-key:generate` in the container. Recommended, secret.
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite as blocker: default only; DB_DRIVER=postgres/mysql removes it"
+    - "MSSQL / MariaDB / Mercure / RabbitMQ / Matomo: optional, not needed"
+    - "GeoLite licence key as blocking: optional (visit geolocation only)"
+    - "Persistent volume: data/ holds only caches/locks/logs, the DB holds state"
+    - "Worker / scheduler service: jobs run in the rr process (memory driver)"
+    - "Redis as required"
+    - "Missing DB_DRIVER as a boot failure: it boots on SQLite; the vendor must set DB_DRIVER=postgres or mysql (silent data-loss trap)"
+vendorQuestions:
+  legitimate:
+    - "Public domain for DEFAULT_DOMAIN (depends on the customer DNS)"
+    - "Whether to create an initial API key (INITIAL_API_KEY); this is the vendor's secret choice"
+  unnecessary:
+    - "Which port (8080 in Dockerfile and rr config)"
+    - "Which Dockerfile or start command (root Dockerfile, image ENTRYPOINT)"
+    - "Whether to run migrations (entrypoint runs installer init)"
+    - "Health path (/rest/health)"
+    - "Whether a Redis, worker or cron is needed"
+traps:
+  - data/infra/*.Dockerfile and docker-compose.yml are dev environments (bind mount, php-fpm, nginx) -> use root Dockerfile (docker-compose.yml:14-24)
+  - docker-compose.yml services (mysql, maria, mssql, redis, mercure, rabbitmq, matomo) are test infra, not app requirements -> ignore (docker-compose.yml:26-36)
+  - Docker README lists GEOLITE_LICENSE_KEY as mandatory -> entrypoint treats it as optional (docker/docker-entrypoint.sh:17)
+  - Health route is under /rest, not /health (module/Rest/src/ConfigProvider.php:16)
+  - '"/" is not a health path; behaviour depends on DEFAULT_BASE_URL_REDIRECT (module/Core/src/Config/EnvVars.php:59)'
+  - SQLite default path data/database.sqlite inside the container is lost on a new task (config/autoload/entity-manager.global.php:58)
+  - Builder stage runs `rm -r docker` but the final stage copies docker/ from the context, so the context must include docker/ (Dockerfile:46,63)
+  - DB_DRIVER must be exactly postgres or mysql; a typo such as "postgresql" is not rejected and selects pdo_mysql (config/autoload/entity-manager.global.php:18-22)
+  - .dockerignore excludes data/infra, bin/rr, build*, docker-*, **/.* (config/roadrunner/.rr.yml is re-included) but keeps docker/ (.dockerignore)
+  - Build needs network - MS ODBC driver by wget on x86_64 and RoadRunner binary by `rr get` (Dockerfile:30,56)
+  - rr RPC listens on 127.0.0.1:6001 only -> not a service port (config/roadrunner/.rr.yml:4)
+openQuestions:
+  - "Exact order/behaviour of `shlink-installer init` (create schema vs migrate, idempotence): package is a vendor dependency (composer.json:49), not in repo; inferred from installer.global.php:82-92."
+  - "Whether shlink.io docs list extra mandatory settings: not read, only repo content used."
+  - "Behaviour of / with default settings: not verified."
+crossReview:
+  - field: evidence (redis lock store)
+    change: "locks.global.php line corrected from 56 to 28"
+    evidence: {path: config/autoload/locks.global.php, line: 28, quote: "'lock_store' => EnvVars::REDIS_SERVERS->existsInEnv() ? 'redis_lock_store' : 'local_lock_store',"}
+  - field: database
+    change: "added evidence and notes on how DB_DRIVER is read (env, then _FILE, then default sqlite); unknown driver values fall to pdo_mysql; DB_HOST has no default; DB_PORT default depends on driver"
+    evidence: {path: module/Core/src/Config/EnvVars.php, line: 95, quote: "env($this->value) ?? $this->loadFromFileEnv() ?? $this->defaultValue()"}
+  - field: blockers.mustNot / traps
+    change: "added missing-DB_DRIVER-is-not-a-boot-failure and unknown-driver-value traps; added .dockerignore trap"
+    evidence: {path: config/autoload/entity-manager.global.php, line: 21, quote: "default => 'pdo_mysql',"}
+  - field: all
+    change: verified
+    evidence: "47 citations checked"

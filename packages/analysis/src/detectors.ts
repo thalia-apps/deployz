@@ -203,6 +203,8 @@ const NON_RUNTIME_SEGMENT_REGEX =
 const NON_RUNTIME_FILE_REGEX =
   /(?:\.(?:test|spec|stories|e2e|cy)\.[cm]?[jt]sx?$|(?:^|\/)(?:[\w.-]+\.config\.[cm]?[jt]s|\.(?:eslintrc|prettierrc|babelrc)(?:\.[cm]?js)?|conftest\.py|test_[\w-]+\.py|[\w-]+_test\.(?:py|go|rb))$)/i;
 
+const NEXT_CONFIG_FILE_REGEX = /(?:^|\/)next\.config\.[cm]?[jt]s$/i;
+
 // A typed config class (`configs/database.config.ts`) is app code, unlike a tool's `jest.config.js`.
 const TYPED_CONFIG_FILE_REGEX = /(?:^|\/)configs\/[\w.-]+\.config\.[cm]?[jt]s$/i;
 
@@ -858,6 +860,48 @@ export function selectedDockerfile(tree: FileTree): { path: string; content: str
   return { path, content: tree[path] ?? '' };
 }
 
+const APP_DIR_REGEX = /(?:^|\/)(apps|services|applications)\/([^/\s"']+)/;
+
+/**
+ * The app directories (`apps/<name>`) that the production image holds: the
+ * ones its stage lineage copies, following a copy of a whole stage into that
+ * stage's own copies. Null when the image takes the whole build context, or
+ * names no app directory.
+ */
+function imageAppDirs(content: string): { parent: string; names: Set<string> } | null {
+  const stages = parseDockerfileStages(normalizeDockerfile(content));
+  if (stages.length === 0) return null;
+  const names = new Map<string, Set<string>>();
+  const visited = new Set<number>();
+  let whole = false;
+  const visit = (index: number): void => {
+    for (const i of stageLineage(stages, index)) {
+      if (visited.has(i)) continue;
+      visited.add(i);
+      for (const [, args] of stages[i]!.body.matchAll(/^\s*(?:COPY|ADD)\s+(.+)$/gim)) {
+        const tokens = args!.trim().split(/\s+/);
+        const from = tokens.find((token) => token.startsWith('--from='))?.slice(7);
+        const sources = tokens.filter((token) => !token.startsWith('--')).slice(0, -1);
+        const fromIndex = from === undefined ? -1 : stages.indexOf(resolveDockerfileStage(from, stages, i)!);
+        if (from !== undefined && fromIndex < 0) continue;
+        for (const source of sources) {
+          const app = APP_DIR_REGEX.exec(source);
+          if (app) names.set(app[1]!, (names.get(app[1]!) ?? new Set()).add(app[2]!));
+          else if (from === undefined && /^\.\/?$/.test(source)) whole = true;
+          else if (from !== undefined) {
+            const fromWorkdir = [...stages[fromIndex]!.body.matchAll(DOCKERFILE_WORKDIR_REGEX)].pop()?.[1];
+            if (/^(?:\/|\.\/?)$/.test(source) || source.replace(/\/$/, '') === fromWorkdir?.replace(/\/$/, '')) visit(fromIndex);
+          }
+        }
+      }
+    }
+  };
+  visit(productionStageIndex(stages));
+  if (whole || names.size !== 1) return null;
+  const [parent, set] = [...names][0]!;
+  return { parent, names: set };
+}
+
 /**
  * A monorepo builds one app from `apps/web/Dockerfile`; its sibling apps
  * (`apps/landing`) are other apps, so their env reads are not this
@@ -869,6 +913,16 @@ export function selectedDockerfile(tree: FileTree): { path: string; content: str
 export function siblingAppFilter(tree: FileTree): (path: string) => boolean {
   const dockerfile = selectedDockerfile(tree);
   const match = dockerfile ? /^((?:apps|services|applications)\/)([^/]+)\/(?:.+\/)?[^/]+$/.exec(dockerfile.path) : null;
+  if (dockerfile && !match) {
+    // A root Dockerfile whose image holds only named app directories (cal.com
+    // copies `apps/web` into its runtime stage, never `apps/api/v2`).
+    const image = imageAppDirs(dockerfile.content);
+    if (image === null) return () => false;
+    return (path) => {
+      const app = APP_DIR_REGEX.exec(path);
+      return app !== null && app[1] === image.parent && !image.names.has(app[2]!);
+    };
+  }
   if (!dockerfile || !match) return () => false;
   const [, parent, own] = match as unknown as [string, string, string];
   const references = [dockerfile.content, ...listProductionComposeFiles(tree).map((path) => tree[path] ?? '')];
@@ -1506,8 +1560,17 @@ function startCommandText(tree: FileTree, runtimeText: string): string {
 export function mainCommandRunsWorker(tree: FileTree): boolean {
   const dockerfile = selectedDockerfile(tree);
   if (!dockerfile) return false;
-  const text = startCommandText(tree, productionStageText(dockerfile.content));
-  return /\b(?:concurrently|npm-run-all|run-p|honcho|foreman|overmind|supervisord|pm2)\b/.test(text) && /\bworkers?\b/i.test(text);
+  let text = startCommandText(tree, productionStageText(dockerfile.content));
+  // A process manager config the start path names (`supervisord -c supervisord-tasks.conf`) runs its programs too.
+  for (const config of text.match(/[\w./-]+\.(?:conf|ini)\b/g) ?? []) {
+    const basename = config.split('/').pop() ?? config;
+    const file = Object.keys(tree).find((path) => path === basename || path.endsWith(`/${basename}`));
+    if (file) text += `\n${tree[file] ?? ''}`;
+  }
+  return (
+    (/\b(?:concurrently|npm-run-all|run-p|honcho|foreman|overmind|supervisord|pm2)\b/.test(text) && /\bworkers?\b/i.test(text)) ||
+    WORKER_COMMAND_REGEX.test(text)
+  );
 }
 
 /** The app or package a source file belongs to: the nearest directory above it that holds a dependency manifest. */
@@ -2528,7 +2591,9 @@ const WORKER_LANGUAGE_TOKENS: { token: string; name: string }[] = [
 ];
 const WORKER_COMMAND_FILE_REGEX = /(?:^|\/)(?:Procfile|[\w.-]*\.sh|supervisord?\.conf|[\w.-]*\.ini)$|(?:^|\/)(?:docker-compose|compose)\.ya?ml$|dockerfile/i;
 const WORKER_COMMAND_REGEX =
-  /\b(?:bundle exec )?(?:sidekiq|good_job start|rake (?:jobs|resque):work)\b|\bcelery\b[^\n]*\bworker\b|\brq\s+worker\b|\bdramatiq\s+[\w.]+|\bhuey_consumer(?:\.py)?\b|\b(?:arq|procrastinate)\b[^\n]*\bworker\b|artisan\s+(?:queue:work|queue:listen|horizon)\b|\bmanage\.py\s+(?:rqworker|qcluster|procrastinate)\b/;
+  /\b(?:bundle exec )?(?:sidekiq|good_job start|rake (?:jobs|resque):work)\b|\bcelery\b[^\n]*\bworker\b|\brq\s+worker\b|\bdramatiq\s+[\w.]+|\bhuey_consumer(?:\.py)?\b|\b(?:arq|procrastinate)\b[^\n]*\bworker\b|artisan\s+(?:queue:work|queue:listen|horizon)\b|\bmanage\.py\s+(?:rqworker|qcluster|procrastinate|run_huey)\b/;
+/** The worker pattern of a queue consumer that the image's own start command runs. */
+export const START_COMMAND_WORKER = 'queue worker run by the start command';
 const WORKER_CODE_REGEX = /(?:require|import)\s*(?:\(|.*from\s*)['"]node:worker_threads['"]/;
 
 /**
@@ -2584,6 +2649,16 @@ export function detectWorker(tree: FileTree): DetectorFinding {
 
   if (detected.length === 0) {
     return { detector: 'worker', detected: false };
+  }
+  // The image's start path already runs the queue consumer next to the web
+  // process (linkding starts `manage.py run_huey` under supervisord).
+  if (declaredSources.size === 0 && mainCommandRunsWorker(tree)) {
+    return {
+      detector: 'worker',
+      detected: true,
+      value: [START_COMMAND_WORKER],
+      details: `Worker patterns detected: ${detected.join(', ')}; the image's start command runs the queue worker`,
+    };
   }
 
   return {
@@ -2934,7 +3009,7 @@ function resolveCmdScriptPath(token: string, tree: FileTree, dockerDir: string):
 
 /**
  * Every script path named in `text` that resolves to a tree file, not yet
- * visited. Exported (alongside `CMD_REGEX`/`ENTRYPOINT_REGEX`/
+ * visited. Exported (alongside `dockerfileImageCommand`/
  * `CMD_CHAIN_MAX_DEPTH`) so `apps/api`'s GitHub tree-fetch boundary can walk
  * the identical CMD/ENTRYPOINT chain — with a lazily-fetched `tree` — to
  * decide which paths must survive the `ANALYSIS_MAX_FILES` trim
@@ -3194,9 +3269,7 @@ export function detectStartupMigrationEvidence(tree: FileTree): MigrationStartup
   // boots, so it counts as Dockerfile-command evidence.
   const imageRunsStartScript =
     dockerfile !== null &&
-    /\b(?:npm|yarn|pnpm)\s+(?:run\s+)?start\b/.test(
-      `${CMD_REGEX.exec(dockerfile.content)?.[1] ?? ''} ${ENTRYPOINT_REGEX.exec(dockerfile.content)?.[1] ?? ''}`,
-    );
+    /\b(?:npm|yarn|pnpm)\s+(?:run\s+)?start\b/.test(Object.values(dockerfileImageCommand(dockerfile.content)).join(' '));
   for (const [name, command] of collectScripts(tree)) {
     if (name === 'start' || name === 'dev') {
       consider(command, `package.json script "${name}"`, name === 'start' && imageRunsStartScript);
@@ -3205,8 +3278,7 @@ export function detectStartupMigrationEvidence(tree: FileTree): MigrationStartup
   }
 
   if (dockerfile) {
-    const cmd = CMD_REGEX.exec(dockerfile.content)?.[1];
-    const entry = ENTRYPOINT_REGEX.exec(dockerfile.content)?.[1];
+    const { cmd, entrypoint: entry } = dockerfileImageCommand(dockerfile.content);
     if (cmd) consider(cmd, `CMD (${dockerfile.path})`, true);
     if (entry) consider(entry, `ENTRYPOINT (${dockerfile.path})`, true);
     if (STARTUP_MIGRATION_ENV_REGEX.test(dockerfile.content)) {
@@ -3318,10 +3390,21 @@ export function detectMigrationCommand(tree: FileTree): DetectorFinding {
 // 11. Startup command
 // ---------------------------------------------------------------------------
 
-// Exported alongside `extractCmdScriptPaths`/`CMD_CHAIN_MAX_DEPTH` for
-// apps/api's GitHub tree-fetch boundary (DEPLOY-029) — see there.
-export const CMD_REGEX = /^CMD\s+(.+)$/m;
-export const ENTRYPOINT_REGEX = /^ENTRYPOINT\s+(.+)$/m;
+const CMD_REGEX = /^CMD\s+(.+)$/m;
+const ENTRYPOINT_REGEX = /^ENTRYPOINT\s+(.+)$/m;
+
+/**
+ * The CMD and ENTRYPOINT arguments of the image `docker build` produces: the
+ * last of each in the production stage and the stages it is built `FROM`.
+ * A HEALTHCHECK's `CMD` continuation line and a CMD of another stage are not
+ * the image command. Exported alongside `extractCmdScriptPaths` for apps/api's
+ * GitHub tree-fetch boundary (DEPLOY-029).
+ */
+export function dockerfileImageCommand(content: string): { cmd: string | undefined; entrypoint: string | undefined } {
+  const stage = productionStageText(content);
+  const last = (name: string): string | undefined => [...stage.matchAll(new RegExp(`^\\s*${name}\\s+(.+)$`, 'gim'))].pop()?.[1]?.trim();
+  return { cmd: last('CMD'), entrypoint: last('ENTRYPOINT') };
+}
 
 /**
  * Detect the application startup command from the selected Dockerfile's
@@ -3354,14 +3437,9 @@ export function detectStartupCommand(tree: FileTree): DetectorFinding {
     if (noDefault !== null) {
       return { detector: 'startup-command', detected: false, details: `${dockerfile.path}: ${noDefault}` };
     }
-    const cmdMatch = CMD_REGEX.exec(dockerfile.content);
-    if (cmdMatch && cmdMatch[1]) {
-      sources.push(`CMD: ${cmdMatch[1].trim()}`);
-    }
-    const entryMatch = ENTRYPOINT_REGEX.exec(dockerfile.content);
-    if (entryMatch && entryMatch[1]) {
-      sources.push(`ENTRYPOINT: ${entryMatch[1].trim()}`);
-    }
+    const { cmd, entrypoint } = dockerfileImageCommand(dockerfile.content);
+    if (cmd) sources.push(`CMD: ${cmd}`);
+    if (entrypoint) sources.push(`ENTRYPOINT: ${entrypoint}`);
     if (sources.length > 0) source = 'dockerfile';
   }
 
@@ -4023,12 +4101,23 @@ function insideElixirBranch(lines: readonly string[], index: number): boolean {
 const PHP_SERVER_NAME_REGEX = /^(?:HTTPS?|HTTP_\w+|REQUEST_\w+|SERVER_\w+|REMOTE_\w+|SCRIPT_\w+|PHP_\w+|DOCUMENT_\w+|PATH_\w+|QUERY_STRING|CONTENT_\w+|GATEWAY_\w+|ORIG_\w+|REDIRECT_\w+|UNIQUE_ID)$/;
 
 /**
+ * A PHP backed enum of env names that reads `env($this->value)` (Shlink's
+ * `case DB_DRIVER = 'DB_DRIVER'` with `EnvVars::DB_DRIVER->loadFromEnv()`):
+ * each case name with the env name it reads.
+ */
+function phpEnvEnumCases(content: string): Map<string, string> {
+  if (!/\benum\s+\w+\s*:\s*string\b/.test(content)) return new Map();
+  if (!/(?:\bgetenv\(\s*|(?<![\w>:$\\])env\(\s*|\$_(?:ENV|SERVER)\[\s*)\$this->value\b/.test(content)) return new Map();
+  return new Map([...content.matchAll(/^\s*case\s+(\w+)\s*=\s*['"]([A-Z][A-Z0-9_]*)['"]\s*;/gm)].map((m) => [m[1]!, m[2]!]));
+}
+
+/**
  * PHP `getenv('X')`, `$_ENV['X']`, `$_SERVER['X']` and Laravel `env('X')`: an
  * unset variable reads as false or null, so a read is required only behind a
  * `?: throw` / `?? throw`.
  */
 function scanPhpEnvReads(content: string): { key: string; needsValue: boolean }[] {
-  const found: { key: string; needsValue: boolean }[] = [];
+  const found: { key: string; needsValue: boolean }[] = [...phpEnvEnumCases(content).values()].map((key) => ({ key, needsValue: false }));
   for (const m of content.matchAll(/(?:\bgetenv\(\s*|\$_(?:ENV|SERVER)\[\s*|(?<![\w>:$\\])env\(\s*)['"]([A-Z][A-Z0-9_]*)['"]\s*([,)\]])/g)) {
     if (PHP_SERVER_NAME_REGEX.test(m[1]!)) continue;
     if (/^\s*(?:\/\/|\*|#)/.test(content.slice(content.lastIndexOf('\n', m.index) + 1, m.index))) continue;
@@ -4363,6 +4452,12 @@ function scanDefaultedEnvReads(content: string): [string, string][] {
     found.push([m[1]!, m[2]!]);
   }
   for (const m of content.matchAll(/\b([A-Z][A-Z0-9_]*)\s*:\s*z\.[^\n]*?\.default\(\s*["'`]([^"'`\n]*)["'`]/g)) found.push([m[1]!, m[2]!]);
+  // PHP env enum defaults: `self::DB_DRIVER => 'sqlite'`
+  const enumCases = phpEnvEnumCases(content);
+  for (const m of content.matchAll(/\bself::(\w+)\s*=>\s*['"]([^'"\n]*)['"]/g)) {
+    const name = enumCases.get(m[1]!);
+    if (name !== undefined) found.push([name, m[2]!]);
+  }
   return found;
 }
 
@@ -4745,6 +4840,18 @@ export function detectEnvVarModel(
     }
   }
 
+  // `next start` loads `next.config.*` at boot, so its throw guards stop the
+  // start (cal.com `if (!process.env.NEXTAUTH_URL) throw`). A standalone
+  // `server.js` carries the built config instead and never runs the file.
+  const nextConfigRunsAtStart = imageDockerfile !== null && !/\.next\/standalone|\bserver\.js\b/.test(productionStageText(imageDockerfile.content));
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !nextConfigRunsAtStart || !NEXT_CONFIG_FILE_REGEX.test(path) || isSiblingApp(path)) continue;
+    for (const key of scanThrowGuardedEnvKeys(content)) {
+      recordRead(key, true, path);
+      bootRequiredKeys.add(key);
+    }
+  }
+
   for (const [path, content] of Object.entries(tree)) {
     if (!content || !isRuntimeSourcePath(path) || isSiblingApp(path) || DEV_CONFIG_FILE_REGEX.test(path)) continue;
     if (JS_SOURCE.test(path)) {
@@ -4985,6 +5092,8 @@ export function detectEnvVarModel(
       for (const entry of scanConfigFileEnvReads(path, content)) {
         recordRead(entry.key, entry.needsValue, path, true);
       }
+      // `src/Config/EnvVars.php` is PHP source in a config directory.
+      for (const key of phpEnvEnumCases(content).values()) recordRead(key, false, path);
     } else if (PHP_SOURCE_REGEX.test(path)) {
       for (const entry of scanPhpEnvReads(content)) recordRead(entry.key, entry.needsValue, path);
     } else if (RUST_SOURCE_REGEX.test(path) && !RUST_NON_RUNTIME_FILE_REGEX.test(path)) {
@@ -5666,9 +5775,8 @@ function startCommandTexts(tree: FileTree): { file: string; text: string }[] {
   const texts: { file: string; text: string }[] = [];
   const dockerfile = selectedDockerfile(tree);
   if (dockerfile) {
-    for (const regex of [CMD_REGEX, ENTRYPOINT_REGEX]) {
-      const match = regex.exec(dockerfile.content);
-      if (match?.[1]) texts.push({ file: dockerfile.path, text: execFormToShell(match[1]) });
+    for (const command of Object.values(dockerfileImageCommand(dockerfile.content))) {
+      if (command) texts.push({ file: dockerfile.path, text: execFormToShell(command) });
     }
   }
   for (const [path, content] of Object.entries(tree)) {

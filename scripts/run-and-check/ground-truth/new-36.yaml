@@ -1,0 +1,150 @@
+id: new-36
+repository: docmost/docmost
+commit: 6d117f8c52e54e810d5931f153eb2d31c904efb3
+summary: >-
+  Docmost is a collaborative wiki/docs app (NestJS + Fastify server, React/Vite client, TypeScript, pnpm/nx monorepo).
+  Self-hosted via the root Dockerfile (one image serves API, websockets and the built client) with PostgreSQL and Redis,
+  as in the repo docker-compose.yml. Collaboration (hocuspocus), queues (BullMQ) and interval tasks run inside the web process.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >-
+    Postgres (RDS) and Redis (ElastiCache) are both required and both supported by Deployz. Migrations run at boot, workers
+    are in-process, uploads can go to S3 with STORAGE_DRIVER=s3. Needs APP_URL, APP_SECRET (32+ chars), DATABASE_URL, REDIS_URL,
+    and STORAGE_DRIVER=s3 so attachments are durable. Without S3 the attachments are lost on task replacement.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null           # last stage (installer) is the app
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 15, quote: "FROM base AS installer"}
+    - {path: Dockerfile, line: 64, quote: "CMD [\"pnpm\", \"start\"]"}
+    - {path: Dockerfile, line: 12, quote: "RUN pnpm install --frozen-lockfile"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 62, quote: "EXPOSE 3000"}
+    - {path: apps/server/src/main.ts, line: 177, quote: "const port = process.env.PORT || 3000;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/server/src/main.ts, line: 178, quote: "const host = process.env.HOST || '0.0.0.0';"}
+startCommand:
+  source: image
+  accept: ["pnpm start", "pnpm --filter ./apps/server run start:prod"]
+healthPath:
+  # /api/health checks Postgres and Redis (503 if down); /api/health/live always returns "ok", no auth.
+  # "/" is served by the static SPA handler; not verified as 2xx without a client build quirk.
+  accept: ["/api/health/live", "/api/health"]
+  evidence:
+    - {path: apps/server/src/integrations/health/health.controller.ts, line: 25, quote: "@Get('live')"}
+    - {path: apps/server/src/integrations/health/health.controller.ts, line: 7, quote: "@Controller('health')"}
+    - {path: apps/server/src/main.ts, line: 52, quote: "app.setGlobalPrefix('api', {"}
+    - {path: apps/server/src/main.ts, line: 129, quote: "'/api/health',"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: apps/server/src/integrations/environment/environment.validation.ts, line: 20, quote: "protocols: ['postgres', 'postgresql'],"}
+    - {path: apps/server/src/database/database.module.ts, line: 43, quote: "dialect: new PostgresJSDialect({"}
+    - {path: docker-compose.yml, line: 10, quote: "DATABASE_URL: 'postgresql://docmost:STRONG_DB_PASSWORD@db:5432/docmost'"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: apps/server/src/database/database.module.ts, line: 137, quote: "if (this.environmentService.getNodeEnv() === 'production') {"}
+    - {path: apps/server/src/database/database.module.ts, line: 138, quote: "await this.migrationService.migrateToLatest();"}
+    - {path: apps/server/package.json, line: 14, quote: "\"start:prod\": \"cross-env NODE_ENV=production node dist/main\""}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: apps/server/src/integrations/environment/environment.validation.ts, line: 35, quote: "REDIS_URL must be a valid redis connection string"}
+    - {path: apps/server/src/main.ts, line: 68, quote: "await redisIoAdapter.connectToRedis();"}
+    - {path: apps/server/src/integrations/queue/queue.module.ts, line: 11, quote: "BullModule.forRootAsync({"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: apps/server/src/core/attachment/processors/attachment.processor.ts, line: 8, quote: "@Processor(QueueName.ATTACHMENT_QUEUE)"}
+    - {path: apps/server/src/collaboration/processors/history.processor.ts, line: 23, quote: "@Processor(QueueName.HISTORY_QUEUE)"}
+    - {path: docker-compose.yml, line: 2, quote: "docmost:   # only docmost, db, redis services; no worker service"}
+scheduledJobs:
+  status: embedded
+  items: ["trash cleanup every 24h", "session cleanup every 24h", "telemetry every 24h (DISABLE_TELEMETRY=true turns it off)"]
+  evidence:
+    - {path: apps/server/src/core/page/services/trash-cleanup.service.ts, line: 20, quote: "@Interval('trash-cleanup', 24 * 60 * 60 * 1000)"}
+    - {path: apps/server/src/core/session/session.service.ts, line: 30, quote: "@Interval('session-cleanup', 24 * 60 * 60 * 1000)"}
+storage:
+  local: conditional
+  paths: [/app/data/storage]
+  s3: native
+  s3SelectBy: {STORAGE_DRIVER: s3, AWS_S3_BUCKET: "<bucket>", AWS_S3_REGION: "<region>"}   # no static keys: leave AWS_S3_ACCESS_KEY_ID/SECRET unset, the SDK uses the task role
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "VOLUME [\"/app/data/storage\"]"}
+    - {path: .env.example, line: 13, quote: "# options: local | s3 | azure"}
+    - {path: apps/server/src/integrations/storage/providers/storage.provider.ts, line: 46, quote: "case StorageOption.S3:"}
+    - {path: apps/server/src/integrations/environment/environment.service.ts, line: 83, quote: "get<string>('STORAGE_DRIVER', 'local')"}
+    - {path: apps/server/src/integrations/storage/providers/storage.provider.ts, line: 64, quote: "if (environmentService.getAwsS3AccessKeyId() ||"}
+env:
+  required:
+    - {name: APP_SECRET, secret: true, buildTime: false, note: "min 32 chars; the placeholder REPLACE_WITH_LONG_SECRET is rejected"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres:// or postgresql:// URL (contains password)"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "redis:// or rediss:// URL"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "validation marks it optional, but without it links use http://localhost:3000 and isHttps() is false (cookies not secure); set the public https URL"}
+  optional: [STORAGE_DRIVER, AWS_S3_BUCKET, AWS_S3_REGION, AWS_S3_ACCESS_KEY_ID, AWS_S3_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT, AWS_S3_FORCE_PATH_STYLE, MAIL_DRIVER, MAIL_FROM_ADDRESS, SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, POSTMARK_TOKEN, FILE_UPLOAD_SIZE_LIMIT, DISABLE_TELEMETRY, COLLAB_URL, COLLAB_DISABLE_REDIS, PORT, JWT_TOKEN_EXPIRES_IN]
+  buildTime: []
+  evidence:
+    - {path: apps/server/src/integrations/environment/environment.validation.ts, line: 45, quote: "@IsNotIn(['REPLACE_WITH_LONG_SECRET'])"}
+    - {path: apps/server/src/integrations/environment/environment.validation.ts, line: 39, quote: "@IsOptional() (before APP_URL)"}
+    - {path: .env.example, line: 17, quote: "AWS_S3_ACCESS_KEY_ID="}
+blockers:
+  expected: []
+  mustNot:
+    - "Redis: supported by Deployz (ElastiCache); not a blocker."
+    - "Local storage VOLUME /app/data/storage: attachments can use STORAGE_DRIVER=s3; not a blocker."
+    - "Workers/queues: BullMQ processors run in the web process; no separate worker needed."
+    - "docker-compose.yml: only app + db + redis; Postgres and Redis are Deployz-managed addons."
+    - "Azure storage driver: ignore; S3 is available."
+vendorQuestions:
+  legitimate:
+    - "Public APP_URL / domain: depends on the customer's chosen host name."
+    - "SMTP/Postmark settings: depend on the customer's mail provider (needed for invites and password reset)."
+  unnecessary:
+    - "Which database engine (only Postgres is supported by the app)."
+    - "Which port or bind address (3000, 0.0.0.0)."
+    - "How migrations run (automatic at boot in production)."
+    - "Whether a separate worker or cron is needed (all in-process)."
+    - "Which Dockerfile (only one)."
+traps:
+  - "apps/server 'start' script is nest start with NODE_ENV=development; root 'pnpm start' uses start:prod; image CMD is correct -> keep image CMD (package.json:8, apps/server/package.json:11)"
+  - "Migrations run only when NODE_ENV=production; start:prod sets it -> no separate migration command (database.module.ts:137)"
+  - "Dev migration scripts (migration:up via tsx) are not needed -> startup migration is enough (apps/server/package.json:19)"
+  - "docker-compose volume at /app/data/storage is the local-disk default -> S3 is the cloud answer (docker-compose.yml:16)"
+  - "/api/health needs Postgres and Redis up (503 otherwise); /api/health/live is the light probe; both under the api prefix (health.controller.ts:7, main.ts:52)"
+  - "Collab websocket (/collab) is on the same port by default; COLLAB_URL is optional, only for a separate collab server (environment.service.ts:233)"
+  - "Dockerfile uses node:26-slim and pnpm@11.28.2; large monorepo build; no build-time env vars (Dockerfile:1,4)"
+  - "Server rewrites client/dist/index.html at boot; /app is chowned to node so this works (static.module.ts, Dockerfile:51)"
+  - "ee/ code is optional and loaded conditionally -> not required (app.module.ts:38)"
+openQuestions:
+  - "Whether node:26-slim and pnpm 11.28.2 resolve at build time: not checked (registry availability)."
+  - "S3 with ECS task-role credentials: credentials stay undefined when both AWS_S3_ACCESS_KEY_ID and AWS_S3_SECRET_ACCESS_KEY are empty, so the AWS SDK default chain (task role) applies (storage.provider.ts:55,64-72). Required: STORAGE_DRIVER=s3, AWS_S3_BUCKET, AWS_S3_REGION; AWS_S3_ENDPOINT and AWS_S3_URL optional. Not run."
+  - "Whether GET / returns 2xx in the container: static handler registered only if client/dist/index.html exists; not run."
+crossReview:
+  - field: evidence line numbers
+    change: "corrected 9 citations: validation protocols 15->20, REDIS_URL message 27->35, IsNotIn 44->45, IsOptional 37->39; docker-compose DATABASE_URL 9->10, volume 20->16; storage S3 case 47->46; .env.example 115->13, 119->17"
+    evidence: {path: apps/server/src/integrations/environment/environment.validation.ts, line: 35, quote: "REDIS_URL must be a valid redis connection string"}
+  - field: storage.s3SelectBy / openQuestions
+    change: "confirmed S3 with task role: no static keys needed; credentials undefined unless a key var is set; added evidence"
+    evidence: {path: apps/server/src/integrations/storage/providers/storage.provider.ts, line: 64, quote: "environmentService.getAwsS3AccessKeyId() ||"}
+  - field: env.required APP_URL
+    change: "note now states the insecure effect of a missing APP_URL (isHttps false)"
+    evidence: {path: apps/server/src/integrations/environment/environment.service.ts, line: 27, quote: "const appUrl = this.configService.get<string>('APP_URL');"}
+  - field: all
+    change: verified
+    evidence: "52 citations checked"

@@ -1,0 +1,164 @@
+id: new-37
+repository: calcom/cal.com
+commit: 0f19cc46ef6b6426ee398c670575b3c96be7af9e
+summary: >-
+  At this commit the repo is the MIT "Cal.diy" scheduling app (calcom/cal.com now holds cal.diy content: README and
+  .env.example point to calcom/cal.diy). Next.js (apps/web) + tRPC + Prisma on PostgreSQL, yarn 4 / turbo monorepo.
+  Self-hosting is a Docker image via the root docker-compose.yml. The repo DOES contain a production root Dockerfile
+  (no separate calcom/docker repo needed).
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >-
+    Root Dockerfile builds the web app only; Postgres on RDS fits. Needs DATABASE_URL, DATABASE_DIRECT_URL, NEXTAUTH_SECRET,
+    CALENDSO_ENCRYPTION_KEY, NEXT_PUBLIC_WEBAPP_URL. Migrations run at container start. Redis is optional (Upstash REST only,
+    which Deployz cannot provide, so leave it off). The internal task queue needs an external cron hitting /api/tasks/cron
+    (CRON_SECRET) for async tasks, so core booking works without it but some features degrade. DEPLOYABLE_WITH_CHANGES is
+    fair because DATABASE_HOST (host:port) and a scheduled job are extra settings.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: apps/api/v2/Dockerfile, reason: separate NestJS API v2 service (second app); not the main web app}
+  target: null            # last stage is `runner` and is the app
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 77, quote: "FROM node:20 AS runner"}
+    - {path: Dockerfile, line: 94, quote: "CMD [\"/calcom/scripts/start.sh\"]"}
+    - {path: docker-compose.yml, line: 41, quote: "dockerfile: Dockerfile"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 89, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 92, quote: "wget --spider http://localhost:3000 || exit 1"}
+bindAllInterfaces:
+  value: true             # `next start` defaults to 0.0.0.0; no HOSTNAME override in repo; compose publishes 3000
+  evidence:
+    - {path: apps/web/package.json, line: 22, quote: "\"start\": \"next start\""}
+    - {path: docker-compose.yml, line: 60, quote: "- 3000:3000"}
+startCommand:
+  source: image           # CMD runs start.sh: placeholder replace, wait-for-it, migrate deploy, seed apps, yarn start
+  accept: []
+  evidence:
+    - {path: scripts/start.sh, line: 11, quote: "yarn start"}
+healthPath:
+  # /api/version returns JSON with no auth. "/" redirects (307) to /auth/login without a session; the image
+  # HEALTHCHECK probes "/" (wget follows redirects). If "/" is used, ALB success codes must include 3xx.
+  accept: ["/api/version", "/auth/login", "/"]
+  evidence:
+    - {path: apps/web/app/api/version/route.ts, line: 6, quote: "return NextResponse.json({ version: packageJson.version })"}
+    - {path: apps/web/app/page.tsx, line: 13, quote: "redirect(\"/auth/login\")"}
+    - {path: Dockerfile, line: 92, quote: "wget --spider http://localhost:3000"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  # DATABASE_DIRECT_URL is the prisma directUrl; set equal to DATABASE_URL (no pooler).
+  # DATABASE_HOST (host:port) is only used by start.sh wait-for-it; empty value prints an error, script continues (no set -e).
+  connectionVars: [DATABASE_URL, DATABASE_DIRECT_URL, DATABASE_HOST]
+  evidence:
+    - {path: packages/prisma/schema.prisma, line: 6, quote: "url       = env(\"DATABASE_URL\")"}
+    - {path: packages/prisma/schema.prisma, line: 7, quote: "directUrl = env(\"DATABASE_DIRECT_URL\")"}
+    - {path: scripts/start.sh, line: 8, quote: "scripts/wait-for-it.sh ${DATABASE_HOST} -- echo \"database is up\""}
+    - {path: .env.example, line: 20, quote: "DATABASE_DIRECT_URL=\"postgresql://postgres:@localhost:5450/calendso\""}
+migrations:
+  mode: startup
+  accept: ["npx prisma migrate deploy --schema /calcom/packages/prisma/schema.prisma"]
+  evidence:
+    - {path: scripts/start.sh, line: 9, quote: "npx prisma migrate deploy --schema /calcom/packages/prisma/schema.prisma"}
+    - {path: scripts/start.sh, line: 10, quote: "npx ts-node --transpile-only /calcom/scripts/seed-app-store.ts"}
+redis:
+  status: optional        # only Upstash REST; a no-op client is used otherwise. REDIS_URL is only for apps/api/v2.
+  selectBy: {UPSTASH_REDIS_REST_URL: "<url>", UPSTASH_REDIS_REST_TOKEN: "<token>"}
+  evidence:
+    - {path: packages/features/redis/di/redisModule.ts, line: 9, quote: "if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)"}
+    - {path: packages/features/redis/di/redisModule.ts, line: 12, quote: "return new NoopRedisService();"}
+workers:
+  status: embedded        # InternalTasker is a DB queue; no separate worker process; drained by the cron endpoint below
+  commands: []
+  evidence:
+    - {path: packages/features/tasker/tasker-factory.ts, line: 18, quote: "// Default to InternalTasker"}
+    - {path: packages/features/tasker/README.md, line: 11, quote: "should work out of the box (by configuring a proper cron)"}
+scheduledJobs:
+  status: external
+  items:
+    - {command: "GET /api/tasks/cron with Authorization: Bearer $CRON_SECRET", schedule: "* * * * *", note: "drains task queue; CRON_SECRET not in .env.example"}
+    # /api/cron/* routes accept Authorization: Bearer $CRON_SECRET or CRON_API_KEY. vercel.json also lists /api/cron/queuedFormResponseCleanup and /api/cron/credentials, but no route exists for them in apps/web/app/api/cron at this commit.
+    - {command: "GET /api/tasks/cleanup", schedule: "0 0 * * *"}
+    - {command: "GET /api/cron/calendar-subscriptions", schedule: "*/5 * * * *"}
+    - {command: "GET /api/cron/selected-calendars", schedule: "*/5 * * * *"}
+    - {command: "GET /api/cron/calendar-subscriptions-cleanup", schedule: "0 3 * * *"}
+  evidence:
+    - {path: apps/web/vercel.json, line: 16, quote: "\"path\": \"/api/tasks/cron\""}
+    - {path: apps/web/app/api/cron/calendar-subscriptions/route.ts, line: 27, quote: "if (![process.env.CRON_API_KEY, `Bearer ${process.env.CRON_SECRET}`].includes(`${apiKey}`))"}
+    - {path: apps/web/vercel.json, line: 17, quote: "\"schedule\": \"* * * * *\""}
+    - {path: packages/features/tasker/api/cron.ts, line: 8, quote: "authHeader !== `Bearer ${process.env.CRON_SECRET}`"}
+    - {path: apps/web/app/api/cron/syncAppMeta/route.ts, line: 23, quote: "if (process.env.CRON_API_KEY !== apiKey)"}
+storage:
+  local: ephemeral        # no durable local data paths in the app image; DB holds data. No S3 integration found in repo.
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 18, quote: "- database-data:/var/lib/postgresql"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql://...; also a build ARG but the build uses placeholders"}
+    - {name: DATABASE_DIRECT_URL, secret: true, buildTime: false, note: "same value as DATABASE_URL when no pooler (prisma directUrl)"}
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "next.config.ts throws at boot if unset; the Dockerfile ARG default 'secret' is not in the runner stage, so it must be set at runtime"}
+    - {name: CALENDSO_ENCRYPTION_KEY, secret: true, buildTime: false, note: "next.config.ts throws at boot if unset; 32 bytes (openssl rand -base64 24)"}
+    - {name: NEXT_PUBLIC_WEBAPP_URL, secret: false, buildTime: false, note: "public https URL; start.sh rewrites the baked placeholder at runtime. README calls it optional, but without it (and without NEXTAUTH_URL) next.config.ts throws at boot"}
+  optional: [NEXTAUTH_URL, DATABASE_HOST, CRON_SECRET, CRON_API_KEY, CALCOM_TELEMETRY_DISABLED, EMAIL_FROM, EMAIL_SERVER_HOST, EMAIL_SERVER_PORT, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD, ALLOWED_HOSTNAMES, GOOGLE_API_CREDENTIALS, UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, NEXT_PUBLIC_WEBSITE_URL]
+  buildTime: [NEXT_PUBLIC_WEBAPP_URL (placeholder, replaced at runtime), NEXT_PUBLIC_API_V2_URL, NEXT_PUBLIC_LICENSE_CONSENT, NEXT_PUBLIC_WEBSITE_TERMS_URL, NEXT_PUBLIC_WEBSITE_PRIVACY_POLICY_URL, NEXT_PUBLIC_SINGLE_ORG_SLUG, ORGANIZATIONS_ENABLED, MAX_OLD_SPACE_SIZE]
+  evidence:
+    - {path: apps/web/next.config.ts, line: 50, quote: "if (!process.env.NEXTAUTH_SECRET) throw new Error(\"Please set NEXTAUTH_SECRET\");"}
+    - {path: apps/web/next.config.ts, line: 51, quote: "if (!process.env.CALENDSO_ENCRYPTION_KEY) throw new Error(\"Please set CALENDSO_ENCRYPTION_KEY\");"}
+    - {path: apps/web/next.config.ts, line: 69, quote: "if (!process.env.NEXTAUTH_URL && process.env.NEXT_PUBLIC_WEBAPP_URL) {"}
+    - {path: apps/web/next.config.ts, line: 94, quote: "if (!process.env.NEXTAUTH_URL) throw new Error(\"Please set NEXTAUTH_URL\");"}
+    - {path: README.md, line: 574, quote: "NEXTAUTH_SECRET | Cookie encryption key. Must match build variable."}
+    - {path: Dockerfile, line: 21, quote: "NEXT_PUBLIC_WEBAPP_URL=http://NEXT_PUBLIC_WEBAPP_URL_PLACEHOLDER"}
+    - {path: scripts/start.sh, line: 6, quote: "scripts/replace-placeholder.sh \"$BUILT_NEXT_PUBLIC_WEBAPP_URL\" \"$NEXT_PUBLIC_WEBAPP_URL\""}
+    - {path: Dockerfile, line: 13, quote: "ARG MAX_OLD_SPACE_SIZE=6144"}
+blockers:
+  expected: []
+  mustNot:
+    - "Missing Dockerfile: root Dockerfile exists (Dockerfile:1)."
+    - "Redis required: compose has a redis service, but the app only uses optional Upstash REST; Noop client otherwise."
+    - "Separate worker required: the tasker is a DB queue drained by cron HTTP calls, not a worker process."
+    - "Persistent volume: only compose Postgres/Redis volumes; the app container has none."
+    - "Multi-service: calcom-api (apps/api/v2) is optional and not needed for the web app."
+vendorQuestions:
+  legitimate:
+    - "Public URL / domain for NEXT_PUBLIC_WEBAPP_URL and NEXTAUTH_URL (depends on the customer domain)."
+    - "SMTP settings for email (cannot be derived; app works without but sends no mail)."
+    - "Whether to schedule the cron endpoints and the CRON_SECRET value (docs do not describe self-host cron)."
+  unnecessary:
+    - "Which database engine (Postgres only)."
+    - "Who runs migrations (start.sh does)."
+    - "Container port / health path (3000, /api/version)."
+    - "Whether S3 or a volume is needed (neither)."
+traps:
+  - "docker-compose.yml has database, redis, calcom-api, studio services -> only the calcom service (root Dockerfile) is the app (docker-compose.yml:37-138)"
+  - "apps/api/v2/Dockerfile is a second NestJS service, not the web app (docker-compose.yml:72)"
+  - "studio service runs prisma studio on 5555 -> admin tool, must not be deployed (docker-compose.yml:120-137)"
+  - "Dockerfile ARG NEXTAUTH_SECRET/CALENDSO_ENCRYPTION_KEY default 'secret' -> build placeholders; runtime values must be set (Dockerfile:11-12)"
+  - "NEXT_PUBLIC_WEBAPP_URL is baked into the bundle but start.sh rewrites it at boot, so no rebuild per domain; adds startup delay (scripts/start.sh:6)"
+  - "Dockerfile HEALTHCHECK probes '/', which redirects to /auth/login (apps/web/app/page.tsx:13)"
+  - "Procfile / app.json (Heroku) and apps/web/vercel.json crons are other platforms; vercel.json only documents cron paths and schedules (Procfile:1)"
+  - "start.sh uses ${DATABASE_HOST} only for wait-for-it; empty value prints an error but does not stop boot (scripts/start.sh:8)"
+  - "README says DOCKER_BUILDKIT=0 for build network access, but the build only uses a placeholder DATABASE_URL (README.md:533)"
+  - "Build is heavy: node:20, max-old-space-size 6144 MB, yarn install + turbo; needs a large builder (Dockerfile:13)"
+  - "REDIS_URL and the many calcom-api env vars in compose belong to api/v2 only (docker-compose.yml:92)"
+openQuestions:
+  - "Which cron endpoints are essential for a minimal self-host: not documented; /api/tasks/cron is the queue drain per the tasker README."
+  - "CRON_SECRET is missing from .env.example; undocumented for self-hosters."
+  - "Static read only: did not verify at runtime that /api/version returns 200 without a session and that middleware does not block it."
+  - "Build memory and time on Deployz builders not tested (heavy monorepo build)."
+crossReview:
+  - {field: healthPath.evidence, change: "version route line 5 -> 6", evidence: "apps/web/app/api/version/route.ts:6"}
+  - {field: workers.evidence, change: "tasker-factory line 17 -> 18 for the Default comment", evidence: "packages/features/tasker/tasker-factory.ts:18"}
+  - {field: storage.evidence, change: "compose volume line 17 -> 18", evidence: "docker-compose.yml:18"}
+  - {field: scheduledJobs.items, change: "removed /api/cron/queuedFormResponseCleanup and /api/cron/credentials: listed in vercel.json but no route exists in apps/web/app/api/cron; noted that cron routes accept CRON_SECRET bearer or CRON_API_KEY", evidence: "ls apps/web/app/api/cron; calendar-subscriptions/route.ts:27"}
+  - {field: env.required, change: "NEXTAUTH_SECRET and CALENDSO_ENCRYPTION_KEY crash boot when absent (not only insecure); NEXT_PUBLIC_WEBAPP_URL or NEXTAUTH_URL absent also crashes boot; added citations", evidence: "apps/web/next.config.ts:50,51,69,94"}
+  - {field: all, change: "verified", evidence: "38 citations checked; redis optional (Upstash only), health paths, Dockerfile COPY sources and ARG defaults confirmed"}

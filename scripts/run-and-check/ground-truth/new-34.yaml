@@ -1,0 +1,150 @@
+id: new-34
+repository: go-vikunja/vikunja
+commit: b67a9728ef6e739a361ea1205f2c3249d2aad628
+summary: >-
+  Vikunja is a to-do / project management app. A Go API (echo) embeds a Vue frontend built in the
+  same Dockerfile and serves both from one binary. Self-hosting is the single published image
+  (Dockerfile, FROM scratch); all settings come from VIKUNJA_* env vars.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]   # DEPLOYABLE only if Deployz passes the RELEASE_VERSION build arg itself
+  reason: >-
+    Build from a source archive fails unless RELEASE_VERSION is passed (no default in the apibuilder stage;
+    no .git for the git describe fallback). Single container with a Postgres or MySQL option. Set VIKUNJA_DATABASE_TYPE=postgres (default is sqlite),
+    DB host/user/password/database, VIKUNJA_DATABASE_SSLMODE=require for RDS (default disable),
+    VIKUNJA_SERVICE_PUBLICURL (boot fails without it), and VIKUNJA_SERVICE_SECRET (else random per start).
+    Files: set VIKUNJA_FILES_TYPE=s3 for durable attachments.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 40, quote: "FROM scratch"}
+    - {path: Dockerfile, line: 50, quote: "ENTRYPOINT [ \"/app/vikunja/vikunja\" ]"}
+    - {path: Dockerfile, line: 24, quote: "COPY --from=frontendbuilder /build/dist ./frontend/dist"}
+    - {path: Dockerfile, line: 26, quote: "ARG TARGETOS TARGETARCH TARGETVARIANT RELEASE_VERSION"}
+    - {path: build/magefile.go, line: 141, quote: "if v := os.Getenv(\"RELEASE_VERSION\"); v != \"\" {"}
+    - {path: build/magefile.go, line: 145, quote: "out, err := exec.CommandContext(ctx, \"git\", \"describe\", \"--tags\", \"--always\", \"--abbrev=10\").Output()"}
+    - {path: build/magefile.go, line: 213, quote: "version, err := releaseVersion(ctx)   (in Release.Xgo, run by Dockerfile:31)"}
+runtime: {accept: [go]}
+port:
+  accept: [3456]
+  evidence:
+    - {path: Dockerfile, line: 51, quote: "EXPOSE 3456"}
+    - {path: pkg/config/config.go, line: 381, quote: "ServiceInterface.setDefault(\":3456\")"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: pkg/config/config.go, line: 381, quote: "ServiceInterface.setDefault(\":3456\")  (no host = all interfaces)"}
+startCommand: {source: image, accept: []}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: pkg/routes/routes.go, line: 244, quote: "e.GET(\"/health\", HealthcheckHandler)"}
+    - {path: pkg/health/health.go, line: 36, quote: "pings the DB; pings redis only if RedisEnabled"}
+database:
+  status: required
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {VIKUNJA_DATABASE_TYPE: postgres}
+  connectionVars: [VIKUNJA_DATABASE_HOST, VIKUNJA_DATABASE_USER, VIKUNJA_DATABASE_PASSWORD, VIKUNJA_DATABASE_DATABASE, VIKUNJA_DATABASE_SSLMODE]
+  evidence:
+    - {path: pkg/config/config.go, line: 427, quote: "DatabaseType.setDefault(\"sqlite\")"}
+    - {path: pkg/db/db.go, line: 99, quote: "case \"mysql\": engine, err = initMysqlEngine()"}
+    - {path: pkg/db/db.go, line: 104, quote: "case \"postgres\":"}
+    - {path: pkg/config/config.go, line: 436, quote: "DatabaseSslMode.setDefault(\"disable\")"}
+    - {path: Dockerfile, line: 58, quote: "ENV VIKUNJA_DATABASE_PATH=/db/vikunja.db (sqlite path, a volume)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: pkg/initialize/init.go, line: 95, quote: "migration.Migrate(nil)  (in FullInitWithoutAsync, run by web)"}
+    - {path: pkg/cmd/web.go, line: 141, quote: "initialize.FullInit()"}
+redis:
+  status: optional
+  selectBy: {VIKUNJA_REDIS_ENABLED: "true", VIKUNJA_REDIS_HOST: "host:6379", VIKUNJA_KEYVALUE_TYPE: redis, VIKUNJA_RATELIMIT_STORE: redis}
+  evidence:
+    - {path: pkg/config/config.go, line: 456, quote: "RedisEnabled.setDefault(false)"}
+    - {path: pkg/config/config.go, line: 518, quote: "KeyvalueType.setDefault(\"memory\")"}
+    - {path: pkg/modules/keyvalue/keyvalue.go, line: 51, quote: "keyvalue.type is set to %q but redis is not enabled"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: pkg/initialize/init.go, line: 162, quote: "events.InitEvents()  (event handlers run in the web process)"}
+scheduledJobs:
+  status: embedded
+  items:
+    - {name: task reminders, schedule: "* * * * *"}
+    - {name: overdue reminders, schedule: "* * * * *"}
+    - {name: saved filter views, OpenID provider checks, schedule: "* * * * *"}
+    - {name: hourly cleanups (exports, sessions, deletions, tokens), schedule: "0 * * * *"}
+  evidence:
+    - {path: pkg/initialize/init.go, line: 138, quote: "cron.Init()"}
+    - {path: pkg/models/task_reminder.go, line: 408, quote: "cron.Schedule(\"* * * * *\", func() {"}
+storage:
+  local: conditional
+  paths: [/app/vikunja/files, /db]
+  s3: native
+  s3SelectBy: {VIKUNJA_FILES_TYPE: s3, VIKUNJA_FILES_S3_BUCKET: bucket, VIKUNJA_FILES_S3_REGION: region, VIKUNJA_FILES_S3_ENDPOINT: endpoint, VIKUNJA_FILES_S3_ACCESSKEY: key, VIKUNJA_FILES_S3_SECRETKEY: secret}
+  evidence:
+    - {path: pkg/config/config.go, line: 486, quote: "FilesType.setDefault(\"local\")"}
+    - {path: pkg/files/filehandling.go, line: 121, quote: "case \"s3\": return initS3FileHandler(ctx)"}
+    - {path: Dockerfile, line: 57, quote: "ENV VIKUNJA_SERVICE_ROOTPATH=/app/vikunja/"}
+env:
+  required:
+    - {name: VIKUNJA_SERVICE_PUBLICURL, secret: false, buildTime: false, note: "full URL with scheme; boot fails when empty because CORS is on by default"}
+    - {name: VIKUNJA_DATABASE_TYPE, secret: false, buildTime: false, note: "postgres or mysql; default sqlite is ephemeral"}
+    - {name: VIKUNJA_DATABASE_HOST, secret: false, buildTime: false, note: "default localhost"}
+    - {name: VIKUNJA_DATABASE_USER, secret: false, buildTime: false, note: "default vikunja"}
+    - {name: VIKUNJA_DATABASE_PASSWORD, secret: true, buildTime: false, note: ""}
+    - {name: VIKUNJA_DATABASE_DATABASE, secret: false, buildTime: false, note: "default vikunja"}
+    - {name: VIKUNJA_DATABASE_SSLMODE, secret: false, buildTime: false, note: "set require for RDS; default disable"}
+    - {name: VIKUNJA_SERVICE_SECRET, secret: true, buildTime: false, note: "random per start when empty; logins break on restart"}
+  optional: [VIKUNJA_SERVICE_ENABLEREGISTRATION, VIKUNJA_SERVICE_TIMEZONE, VIKUNJA_FILES_TYPE, VIKUNJA_FILES_S3_BUCKET, VIKUNJA_REDIS_ENABLED, VIKUNJA_MAILER_ENABLED, VIKUNJA_MAILER_HOST, VIKUNJA_MAILER_FROMEMAIL, VIKUNJA_SERVICE_TRUSTEDPROXIES, VIKUNJA_SERVICE_IPEXTRACTIONMETHOD, VIKUNJA_CORS_ORIGINS, VIKUNJA_AUTH_OPENID_ENABLED, VIKUNJA_METRICS_ENABLED, VIKUNJA_LOG_LEVEL]
+  buildTime: [RELEASE_VERSION]   # no default in the apibuilder stage; any string, e.g. 1.0.0 (the frontend stage defaults to dev)
+  evidence:
+    - {path: pkg/config/config.go, line: 801, quote: "service.publicurl is required when cors.enable is true"}
+    - {path: pkg/config/config.go, line: 563, quote: "generateServiceSecretIfEmpty sets a random service.secret when none was configured"}
+    - {path: pkg/config/config.go, line: 635, quote: "strings.HasPrefix(key, \"VIKUNJA_\")"}
+blockers:
+  expected:
+    - "Build arg RELEASE_VERSION has no default in the apibuilder stage and a source archive has no .git, so release:xgo fails at git describe unless the arg is passed"
+  mustNot:
+    - "SQLite default: Postgres/MySQL is supported, not a blocker."
+    - "Local files and logs: S3 is native; logs go to stdout; not a blocker."
+    - "Redis: optional; do not demand it."
+    - "Cron and event workers: embedded; no separate worker service."
+    - "FROM scratch image: no shell or curl in the image; health check must be the ALB HTTP probe."
+vendorQuestions:
+  legitimate:
+    - "Public URL (domain) the app is served from; cannot be known from the repo."
+    - "RELEASE_VERSION default in the Dockerfile (or confirmation that the build is run with the arg)."
+  unnecessary:
+    - "Which port, start command, health path, or whether migrations need a command."
+    - "Whether Redis or a worker is needed."
+    - "Which DB engines are supported."
+traps:
+  - "Dockerfile has no CMD, only ENTRYPOINT -> the image entrypoint is correct, runs web by default (Dockerfile:50)"
+  - "No docker-compose or .env.example in repo; settings are in config-raw.json and config.go (config-raw.json:7)"
+  - "Dockerfile sets VIKUNJA_DATABASE_PATH=/db/vikunja.db -> sqlite only; ignore when type is postgres (Dockerfile:58)"
+  - "Default CORS origins list localhost; publicurl still required or boot fails (config.go:801)"
+  - "Dockerfile builds frontend/ and API in one file; no separate frontend service (Dockerfile:24)"
+  - "ARG RELEASE_VERSION=dev exists only in the frontend stage; the apibuilder stage redeclares it without a default (Dockerfile:14 vs :26) -> docker build without --build-arg RELEASE_VERSION fails in build/magefile.go:145"
+  - "Dockerfile base images use BUILDPLATFORM + xgo cross-compile; works with plain docker build (Dockerfile:17)"
+  - "desktop/ and veans/ folders are other products -> not the web image (repo root)"
+  - "healthcheck CLI command exists but image has no shell -> use HTTP /health (pkg/cmd/healthcheck.go)"
+openQuestions:
+  - "Image runs as USER 1000 on scratch; files under /app/vikunja/files would be ephemeral without S3 (not tested)."
+  - "MySQL path not read in depth; postgres is the Deployz choice."
+  - "Build of xgo/mage step not executed (untrusted repo); build success assumed from upstream image."
+crossReview:
+  - {field: outcome.accept, change: "DEPLOYABLE removed; DEPLOYABLE_WITH_CHANGES only (DEPLOYABLE if Deployz supplies the build arg)", evidence: "Dockerfile:26 ARG RELEASE_VERSION without default; build/magefile.go:140-147,213 needs RELEASE_VERSION or git describe; Dockerfile:31 runs release:xgo; a source archive has no .git"}
+  - {field: env.buildTime, change: "[] -> [RELEASE_VERSION]", evidence: "Dockerfile:26; build/magefile.go:141"}
+  - {field: blockers.expected, change: "added missing RELEASE_VERSION build arg", evidence: "build/magefile.go:145"}
+  - {field: vendorQuestions, change: "added RELEASE_VERSION default", evidence: "Dockerfile:14 vs :26"}
+  - {field: traps, change: "added RELEASE_VERSION trap", evidence: "Dockerfile:14,26"}
+  - {field: scheduledJobs.items, change: "added per-minute filter-view and OpenID checks", evidence: "pkg/models/saved_filters.go:638; pkg/modules/auth/openid/cron.go:59"}
+  - {field: redis.evidence, change: "keyvalue.go 50 -> 51 and quote made exact", evidence: "pkg/modules/keyvalue/keyvalue.go:51"}
+  - {field: all, change: "verified", evidence: "32 citations checked"}

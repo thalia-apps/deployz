@@ -16,7 +16,7 @@
  * - a low-confidence answer never passes.
  */
 import { postgresSemantic } from '../bindings.js';
-import { composeServices, listDockerfileCandidates, type FileTree } from '../detectors.js';
+import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
 import { isProductionFile, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
@@ -223,9 +223,9 @@ export function checkBlocker(ctx: CheckContext, question: Question & BlockerItem
 
 // ── Port ───────────────────────────────────────────────────────────────────
 
-/** The port signals of the production stage (after the last FROM): EXPOSE, ENV PORT, HEALTHCHECK. */
+/** The port signals of the production stage lineage: EXPOSE, ENV PORT, HEALTHCHECK. */
 export function dockerfilePorts(content: string): number[] {
-  const stage = finalStage(content);
+  const stage = productionStageText(content);
   const ports = new Set<number>();
   for (const match of stage.matchAll(/^\s*EXPOSE\s+([^\n]+)/gim)) {
     for (const token of match[1]!.split(/\s+/)) {
@@ -259,12 +259,6 @@ export function checkPort(ctx: CheckContext, id: string, port: number, answer: F
 
 // ── Start command ──────────────────────────────────────────────────────────
 
-/** The instructions after the last FROM. */
-function finalStage(content: string): string {
-  const stages = content.split(/^\s*FROM\s/im);
-  return stages[stages.length - 1] ?? '';
-}
-
 /** An ENTRYPOINT or CMD argument as one command line: the exec form `["a", "b"]` joined, the shell form as written. */
 function instructionCommand(argument: string): string {
   const text = argument.trim();
@@ -279,9 +273,9 @@ function instructionCommand(argument: string): string {
   return text;
 }
 
-/** The final stage's ENTRYPOINT and CMD (the last of each), with line continuations joined. */
+/** The production stage's ENTRYPOINT and CMD (the last of each), with line continuations joined. */
 export function imageCommand(dockerfile: string): { entrypoint: string | null; cmd: string | null } {
-  const stage = finalStage(dockerfile).replace(/\\\r?\n/g, ' ');
+  const stage = productionStageText(dockerfile);
   const last = (name: string): string | null => {
     const matches = [...stage.matchAll(new RegExp(`^\\s*${name}\\s+(.+)$`, 'gim'))];
     const argument = matches[matches.length - 1]?.[1];

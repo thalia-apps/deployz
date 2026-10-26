@@ -7,8 +7,7 @@ import {
   isRuntimeSourcePath,
   listDockerfileCandidates,
   extractCmdScriptPaths,
-  CMD_REGEX,
-  ENTRYPOINT_REGEX,
+  dockerfileImageCommand,
   CMD_CHAIN_MAX_DEPTH,
   type FileTree,
   TREE_PATHS,
@@ -759,6 +758,9 @@ const SCHEDULE_FILE_REGEX =
 // to tell a consumer apart from the web process. Case-sensitive on purpose —
 // that is the detectors' own pattern.
 const PROCFILE_REGEX = /(?:^|\/)Procfile$/;
+// A supervisord config that the start path names runs its programs in the web
+// container too (detectors.ts mainCommandRunsWorker, linkding's `run_huey`).
+const SUPERVISORD_CONFIG_REGEX = /(?:^|\/)supervisord?[\w.-]*\.conf$/;
 
 // The extension-less scripts an s6-overlay image runs at start (`/init`): a
 // service's `run` or `up` file and a `cont-init.d` step. detectStartupMigrationEvidence
@@ -786,6 +788,7 @@ function isRelevantPath(path: string): boolean {
   if (DEPLOYMENT_DESCRIPTOR_REGEX.test(path)) return true;
   if (SCHEDULE_FILE_REGEX.test(path)) return true;
   if (PROCFILE_REGEX.test(path)) return true;
+  if (SUPERVISORD_CONFIG_REGEX.test(path)) return true;
   if (S6_SCRIPT_REGEX.test(path)) return true;
   const isRoot = !path.includes('/');
   if (isRoot) {
@@ -1074,10 +1077,9 @@ async function resolveCmdChainProtectedPaths(
   if (dockerfileContent === null) return protectedPaths;
 
   const dockerDir = dockerfilePath.includes('/') ? dockerfilePath.split('/').slice(0, -1).join('/') : '';
-  const cmd = CMD_REGEX.exec(dockerfileContent)?.[1] ?? '';
-  const entryInstruction = ENTRYPOINT_REGEX.exec(dockerfileContent)?.[1] ?? '';
+  const { cmd, entrypoint } = dockerfileImageCommand(dockerfileContent);
   const visited = new Set<string>();
-  let frontier = extractCmdScriptPaths(`${cmd} ${entryInstruction}`, knownPaths, dockerDir, visited);
+  let frontier = extractCmdScriptPaths(`${cmd ?? ''} ${entrypoint ?? ''}`, knownPaths, dockerDir, visited);
 
   for (let depth = 0; depth < CMD_CHAIN_MAX_DEPTH && frontier.length > 0; depth += 1) {
     const next: string[] = [];
