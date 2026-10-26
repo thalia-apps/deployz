@@ -1,0 +1,164 @@
+id: new-49
+repository: miniflux/v2
+commit: d5c529b94ce9a172bd4c22a2b89da068c583783b
+summary: >
+  Miniflux is a minimalist feed reader. It is one Go binary with the web UI, the REST API, a feed scheduler and a
+  cleanup scheduler in the same process. It needs PostgreSQL. The Dockerfiles live under packaging/docker (not at the
+  repository root) and build the binary from source with the repository root as context. The image does not run
+  migrations or create an admin user by default: the vendor must set RUN_MIGRATIONS=1, CREATE_ADMIN=1, ADMIN_USERNAME
+  and ADMIN_PASSWORD, or the process exits at start.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The alpine Dockerfile builds from source and starts the server. PostgreSQL is the only database and is available.
+    No Redis, no worker, no durable local disk. The vendor must set DATABASE_URL, RUN_MIGRATIONS=1 and the admin
+    variables. Only env values are needed, but the Dockerfile is not at the repository root.
+dockerfile:
+  accept: [packaging/docker/alpine/Dockerfile, packaging/docker/distroless/Dockerfile]
+  reject:
+    - {path: packaging/debian/Dockerfile, reason: "builds a .deb package, not the app image"}
+    - {path: packaging/rpm/Dockerfile, reason: "builds an .rpm package, not the app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: packaging/docker/alpine/Dockerfile, line: 3, quote: "ADD . /go/src/app"}
+    - {path: packaging/docker/alpine/Dockerfile, line: 5, quote: "RUN make miniflux"}
+    - {path: packaging/docker/alpine/Dockerfile, line: 22, quote: "CMD [\"/usr/bin/miniflux\"]"}
+    - {path: packaging/docker/distroless/Dockerfile, line: 4, quote: "RUN make miniflux"}
+    - {path: .github/workflows/docker.yml, line: 87, quote: "file: ./packaging/docker/alpine/Dockerfile"}
+    - {path: .github/workflows/docker.yml, line: 86, quote: "context: ."}
+    - {path: internal/ui/static/static.go, line: 33, quote: "//go:embed bin/*"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: packaging/docker/alpine/Dockerfile, line: 17, quote: "EXPOSE 8080"}
+    - {path: packaging/docker/alpine/Dockerfile, line: 18, quote: "ENV LISTEN_ADDR=0.0.0.0:8080"}
+    - {path: internal/config/parser.go, line: 134, quote: "Override LISTEN_ADDR with PORT if set"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packaging/docker/alpine/Dockerfile, line: 18, quote: "0.0.0.0:8080"}
+    - {path: internal/config/options.go, line: 323, quote: "127.0.0.1:8080"}
+    - {path: internal/config/parser.go, line: 136, quote: "[]string{\":\" + cp.options.Port()}"}
+startCommand:
+  source: image
+  accept: ["/usr/bin/miniflux"]
+healthPath:
+  accept: ["/healthz", "/readyz", "/liveness", "/readiness", "/healthcheck"]
+  # /healthz and /liveness return 200 with no dependency check. /readyz and /readiness (and /healthcheck, which sits
+  # under the BASE_URL path) ping the database and return 503 if it fails. "/" renders the login page (200) when not
+  # signed in, but a probe path is cleaner.
+  evidence:
+    - {path: internal/http/server/routes.go, line: 62, quote: "rootMux.HandleFunc(\"/healthz\", livenessProbe)"}
+    - {path: internal/http/server/routes.go, line: 64, quote: "rootMux.HandleFunc(\"/readyz\", readinessProbe)"}
+    - {path: internal/http/server/routes.go, line: 24, quote: "appMux.HandleFunc(\"GET /healthcheck\", readinessProbe)"}
+    - {path: internal/http/server/healthcheck.go, line: 14, quote: "w.WriteHeader(http.StatusOK)"}
+    - {path: internal/http/server/healthcheck.go, line: 21, quote: "http.StatusServiceUnavailable"}
+    - {path: internal/ui/ui.go, line: 163, quote: "mux.Handle(\"GET /{$}\""}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  # The default DATABASE_URL points to a local postgres user with no host; the vendor (or Deployz) must set it.
+  evidence:
+    - {path: internal/config/options.go, line: 187, quote: "user=postgres password=postgres dbname=miniflux2 sslmode=disable"}
+    - {path: internal/database/postgresql.go, line: 10, quote: "_ \"github.com/lib/pq\""}
+    - {path: internal/cli/cli.go, line: 170, quote: "if err := store.Ping(); err != nil {"}
+    - {path: internal/database/database.go, line: 35, quote: "TRUNCATE schema_version"}
+migrations:
+  mode: startup
+  accept: ["miniflux -migrate", "/usr/bin/miniflux -migrate"]
+  # Startup only when RUN_MIGRATIONS=1. The default is off, and then IsSchemaUpToDate stops the process on an empty database.
+  evidence:
+    - {path: internal/config/options.go, line: 548, quote: "parsedBoolValue: false,"}
+    - {path: internal/cli/cli.go, line: 216, quote: "if config.Opts.RunMigrations() {"}
+    - {path: internal/cli/cli.go, line: 222, quote: "database.IsSchemaUpToDate(db)"}
+    - {path: internal/cli/cli.go, line: 64, quote: "flag.BoolVar(&flagMigrate, \"migrate\", false, flagMigrateHelp)"}
+    - {path: contrib/docker-compose/basic.yml, line: 13, quote: "RUN_MIGRATIONS=1"}
+redis:
+  status: none
+  evidence:
+    - {path: go.mod, line: 14, quote: "github.com/lib/pq"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: internal/cli/daemon.go, line: 33, quote: "worker.NewPool(store, config.Opts.WorkerPoolSize())"}
+    - {path: internal/cli/daemon.go, line: 36, quote: "runScheduler(store, pool)"}
+    - {path: internal/cli/scheduler.go, line: 18, quote: "go feedScheduler("}
+scheduledJobs:
+  status: embedded
+  items: [feed refresh scheduler (POLLING_FREQUENCY, default 60 minutes), cleanup scheduler (CLEANUP_FREQUENCY_HOURS)]
+  evidence:
+    - {path: internal/cli/scheduler.go, line: 27, quote: "go cleanupScheduler("}
+    - {path: internal/config/options.go, line: 508, quote: "parsedDuration: 60 * time.Minute,"}
+    - {path: internal/config/options.go, line: 788, quote: "!c.options[\"DISABLE_SCHEDULER_SERVICE\"]"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: internal/ui/static/static.go, line: 33, quote: "//go:embed bin/*"}
+    - {path: internal/ui/static/static.go, line: 36, quote: "//go:embed css/*.css"}
+    - {path: internal/template/engine.go, line: 15, quote: "//go:embed templates/common/*.html"}
+    - {path: internal/locale/catalog.go, line: 26, quote: "//go:embed translations/*.json"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL connection string; Deployz provides DB values, map them here. The default is a local user, not usable on Fargate"}
+    - {name: RUN_MIGRATIONS, secret: false, buildTime: false, note: "set to 1; default is 0 and the process exits when the schema is missing"}
+    - {name: CREATE_ADMIN, secret: false, buildTime: false, note: "set to 1 to create the first admin user from the environment; otherwise no user exists (the create-admin flag needs an interactive terminal)"}
+    - {name: ADMIN_USERNAME, secret: false, buildTime: false, note: "first admin user name, used with CREATE_ADMIN=1"}
+    - {name: ADMIN_PASSWORD, secret: true, buildTime: false, note: "first admin password, used with CREATE_ADMIN=1"}
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for links and feed URLs; default http://localhost"}
+  optional: [PORT, LISTEN_ADDR, HTTPS, TRUSTED_REVERSE_PROXY_NETWORKS, POLLING_FREQUENCY, BATCH_SIZE, WORKER_POOL_SIZE, CLEANUP_FREQUENCY_HOURS, DATABASE_MAX_CONNS, DATABASE_MIN_CONNS, DISABLE_SCHEDULER_SERVICE, MEDIA_PROXY_MODE, MEDIA_PROXY_PRIVATE_KEY, METRICS_COLLECTOR, DISABLE_API, LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: internal/config/options.go, line: 158, quote: "parsedBoolValue: false,"}
+    - {path: internal/cli/cli.go, line: 226, quote: "if config.Opts.CreateAdmin() {"}
+    - {path: internal/cli/cli.go, line: 205, quote: "if flagCreateAdmin {"}
+    - {path: internal/config/options.go, line: 104, quote: "parsedStringValue: \"http://localhost\","}
+    - {path: internal/config/parser.go, line: 127, quote: "Generate a media proxy private key if not set"}
+    - {path: contrib/docker-compose/basic.yml, line: 14, quote: "CREATE_ADMIN=1"}
+blockers:
+  expected: []
+  mustNot:
+    - "The Dockerfile is not at the repository root: this must not block. Use packaging/docker/alpine/Dockerfile with context ."
+    - "Go with no root Dockerfile must not be reported as no Dockerfile or as needing a new Dockerfile"
+    - "Redis must not be required or provisioned: the app has no Redis support"
+    - "A worker or scheduler service must not be required: both run inside the one process"
+    - "Local disk must not block: the app stores everything in PostgreSQL"
+    - "Missing admin user must not block: CREATE_ADMIN=1 with ADMIN_USERNAME and ADMIN_PASSWORD creates it at start"
+vendorQuestions:
+  legitimate:
+    - "Admin user name and password for the first account"
+    - "Public URL (BASE_URL) if no custom domain is set"
+  unnecessary:
+    - "Which port? (8080 in image; PORT overrides LISTEN_ADDR)"
+    - "Which database? (PostgreSQL is the only engine)"
+    - "Who runs migrations? (set RUN_MIGRATIONS=1; the app runs them at start)"
+    - "Is a worker or scheduler process needed? (embedded in the main process)"
+    - "Health path? (/healthz or /readyz)"
+traps:
+  - "No Dockerfile at the repository root -> the production Dockerfiles are packaging/docker/alpine/Dockerfile and packaging/docker/distroless/Dockerfile, built with context . (.github/workflows/docker.yml:86-87)"
+  - "packaging/debian/Dockerfile and packaging/rpm/Dockerfile -> package builders, not the app image"
+  - "Procfile 'web: miniflux.app' -> Heroku style; the binary is miniflux; use the image CMD (Procfile:1)"
+  - "Default LISTEN_ADDR is 127.0.0.1:8080 in the binary -> the image sets 0.0.0.0:8080, and PORT sets :PORT (internal/config/options.go:323, packaging/docker/alpine/Dockerfile:18)"
+  - "RUN_MIGRATIONS and CREATE_ADMIN default to off -> the image does not migrate by itself; set both (internal/config/options.go:548, :158)"
+  - "The default DATABASE_URL has no host -> it is a local default; set it (internal/config/options.go:187)"
+  - "HTTPS defaults to off and X-Forwarded-Proto is trusted only from TRUSTED_REVERSE_PROXY_NETWORKS -> behind the load balancer, set HTTPS=1 for secure cookies and HSTS (internal/http/server/middleware.go:25)"
+  - "-healthcheck CLI flag in the compose comment -> an in-container check, not an HTTP path to probe (contrib/docker-compose/basic.yml:20)"
+  - "contrib/docker-compose lists a postgres service -> Deployz provides the RDS database instead"
+openQuestions:
+  - "Whether the platform prefers /healthz (no DB check) or /readyz (DB check) as the health path"
+crossReview:
+  - {field: env.optional, change: "removed DEBUG: the app has no DEBUG option (LOG_LEVEL=debug is the real name); DEBUG=1 appears only in the compose example", evidence: "internal/config/options.go:345 \"LOG_LEVEL\"; contrib/docker-compose/basic.yml:16 DEBUG=1"}
+  - {field: redis, change: "none: no Redis code in any Go file and go.mod has only lib/pq as the database driver", evidence: "go.mod:14; grep -ri redis over *.go returns nothing"}
+  - {field: dockerfile, change: "none: alpine and distroless both build from source with context . ; the embedded static assets exist in git; make miniflux needs no CI artefact", evidence: "packaging/docker/alpine/Dockerfile:3-5; internal/ui/static/bin exists at the commit"}
+  - {field: healthPath, change: "none: /healthz and /liveness return 200 with no check; /readyz and /readiness ping the database; GET / also returns 200 login page when not signed in with no redirect", evidence: "internal/http/server/routes.go:61-64; internal/ui/login_show.go:26-29"}
+  - {field: migrations/admin, change: "none: RUN_MIGRATIONS and CREATE_ADMIN default off; an existing admin is skipped on restart, so setting both on every start is safe", evidence: "internal/cli/create_admin.go:31-36; internal/cli/cli.go:216-229"}
+  - {field: all, change: verified, evidence: "45 citations checked"}

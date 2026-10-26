@@ -1,0 +1,152 @@
+id: new-56
+repository: paperless-ngx/paperless-ngx
+commit: 5f17b1a310aa011f43b56474221d97f8d6bfe689
+summary: >
+  Paperless-ngx is a Django and Angular document management system. The root Dockerfile builds the Angular
+  frontend and the Python backend from source. The image uses s6-overlay to run the web server (granian),
+  a Celery worker, Celery beat and a file consumer in one container. It needs Redis (Celery broker) and
+  keeps all documents as files in a media directory. The code has no S3 storage backend.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  # judgement call: NOT_DEPLOYABLE is primary (all documents are durable local files and the code has no S3 backend; only a repository change adding one could move it). DEPLOYABLE_WITH_CHANGES is accepted as the alternative reading under the Deployz readiness policy, which classes this blocker as a repository change (the gate still blocks the deployment).
+  reason: >
+    Paperless stores originals, archive files and thumbnails on the local file system (MEDIA_ROOT) with the
+    Django FileSystemStorage backend. There is no S3 option. Fargate disk is ephemeral, so every uploaded
+    document is lost at each task restart. The app also needs Redis. The database part works (PostgreSQL or
+    MariaDB), but durable document storage has no Deployz answer.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 8, quote: "AS compile-frontend"}
+    - {path: Dockerfile, line: 88, quote: "FROM s6-overlay-base AS main-app"}
+    - {path: Dockerfile, line: 213, quote: "COPY --chown=1000:1000 ./src ./"}
+    - {path: Dockerfile, line: 216, quote: "COPY --from=compile-frontend"}
+    - {path: Dockerfile, line: 250, quote: "ENTRYPOINT [\"/init\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 252, quote: "EXPOSE 8000"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-webserver/run, line: 8, quote: "PAPERLESS_PORT:-8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-webserver/run, line: 7, quote: "PAPERLESS_BIND_ADDR:-\"::\""}
+startCommand:
+  source: image
+  accept: ["/init"]
+healthPath:
+  accept: ["/accounts/login/"]
+  # "/" is wrapped in login_required, so it returns a 302 redirect to /accounts/login/ without a session.
+  # The image HEALTHCHECK uses curl -L, which follows the redirect. /api/ paths need authentication.
+  evidence:
+    - {path: src/paperless/urls.py, line: 423, quote: "login_required(ensure_csrf_cookie(IndexView.as_view()))"}
+    - {path: src/paperless/urls.py, line: 346, quote: "path(\"login/\", allauth_account_views.login, name=\"account_login\"),"}
+    - {path: src/paperless/settings/custom.py, line: 21, quote: "login_url = base_url + \"accounts/login/\""}
+    - {path: Dockerfile, line: 254, quote: "\"-L\""}
+database:
+  status: optional
+  engines: [sqlite, postgresql, mariadb]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {PAPERLESS_DBENGINE: postgresql, PAPERLESS_DBHOST: "<db host>"}
+  connectionVars: [PAPERLESS_DBENGINE, PAPERLESS_DBHOST, PAPERLESS_DBPORT, PAPERLESS_DBNAME, PAPERLESS_DBUSER, PAPERLESS_DBPASS]
+  evidence:
+    - {path: src/paperless/settings/custom.py, line: 229, quote: "engine = \"postgresql\" if \"PAPERLESS_DBHOST\" in os.environ else \"sqlite\""}
+    - {path: src/paperless/settings/custom.py, line: 261, quote: "\"HOST\": os.getenv(\"PAPERLESS_DBHOST\"),"}
+    - {path: src/paperless/settings/custom.py, line: 264, quote: "\"PASSWORD\": os.getenv(\"PAPERLESS_DBPASS\", \"paperless\"),"}
+    - {path: docs/configuration.md, line: 63, quote: "By default, Paperless uses **SQLite**"}
+migrations:
+  mode: startup
+  accept: ["manage.py migrate"]
+  evidence:
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/init-migrations/run, line: 19, quote: "python3 manage.py migrate --skip-checks --no-input"}
+redis:
+  status: required
+  evidence:
+    - {path: src/paperless/settings/__init__.py, line: 688, quote: "CELERY_BROKER_URL = _CELERY_REDIS_URL"}
+    - {path: src/paperless/settings/custom.py, line: 40, quote: "return (\"redis://localhost:6379\", \"redis://localhost:6379\")"}
+    - {path: docker/rootfs/usr/local/bin/wait-for-redis.py, line: 57, quote: "sys.exit(os.EX_UNAVAILABLE)"}
+    - {path: src/paperless/settings/__init__.py, line: 283, quote: "\"hosts\": [_CHANNELS_REDIS_URL],"}
+workers:
+  status: embedded
+  commands: []
+  # s6-overlay starts the web server, the Celery worker, Celery beat and the consumer inside the one container.
+  evidence:
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-worker/run, line: 9, quote: "celery --app paperless worker"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-scheduler/run, line: 9, quote: "celery --app paperless beat"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-consumer/run, line: 16, quote: "manage.py document_consumer"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/svc-webserver/run, line: 19, quote: "granian --interface asginl"}
+scheduledJobs:
+  status: embedded
+  items: ["Check all e-mail accounts", "Train the classifier", "Optimize the index", "Perform sanity check", "Empty trash", "Check and run scheduled workflows", "Rebuild LLM index", "Cleanup expired share link bundles"]
+  evidence:
+    - {path: src/paperless/settings/custom.py, line: 82, quote: "\"name\": \"Check all e-mail accounts\","}
+    - {path: src/paperless/settings/custom.py, line: 93, quote: "\"name\": \"Train the classifier\","}
+    - {path: src/paperless/settings/__init__.py, line: 731, quote: "CELERY_BEAT_SCHEDULE = parse_beat_schedule()"}
+storage:
+  local: required
+  paths: [/usr/src/paperless/media, /usr/src/paperless/data, /usr/src/paperless/consume, /usr/src/paperless/export]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/paperless/settings/__init__.py, line: 68, quote: "MEDIA_ROOT = get_path_from_env("}
+    - {path: src/paperless/settings/__init__.py, line: 69, quote: "ORIGINALS_DIR = MEDIA_ROOT / \"documents\" / \"originals\""}
+    - {path: src/paperless/settings/__init__.py, line: 246, quote: "\"default\": {\"BACKEND\": \"django.core.files.storage.FileSystemStorage\"},"}
+    - {path: src/paperless/settings/__init__.py, line: 74, quote: "DATA_DIR = get_path_from_env("}
+    - {path: Dockerfile, line: 245, quote: "VOLUME [\"/usr/src/paperless/data\","}
+env:
+  required:
+    - {name: PAPERLESS_SECRET_KEY, secret: true, buildTime: false, note: "the app refuses to start if it is empty or 'change-me'"}
+    - {name: PAPERLESS_REDIS, secret: false, buildTime: false, note: "Redis URL; the default is redis://localhost:6379 and the start-up check fails without a Redis there"}
+    - {name: PAPERLESS_URL, secret: false, buildTime: false, note: "public HTTPS URL; adds the host to ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS and CORS; login POST fails behind the load balancer without it"}
+    - {name: PAPERLESS_ADMIN_USER, secret: false, buildTime: false, note: "no account exists at first start; the image creates the superuser only when this is set"}
+    - {name: PAPERLESS_ADMIN_PASSWORD, secret: true, buildTime: false, note: "needed with PAPERLESS_ADMIN_USER"}
+    - {name: PAPERLESS_DBENGINE, secret: false, buildTime: false, note: "postgresql; the default is SQLite on local disk"}
+    - {name: PAPERLESS_DBHOST, secret: false, buildTime: false, note: "database host; with PAPERLESS_DBPORT, PAPERLESS_DBNAME, PAPERLESS_DBUSER and PAPERLESS_DBPASS (secret)"}
+  optional: [PAPERLESS_DBPORT, PAPERLESS_DBNAME, PAPERLESS_DBUSER, PAPERLESS_DBPASS, PAPERLESS_DBSSLMODE, PAPERLESS_ADMIN_MAIL, PAPERLESS_ALLOWED_HOSTS, PAPERLESS_CSRF_TRUSTED_ORIGINS, PAPERLESS_PROXY_SSL_HEADER, PAPERLESS_TRUSTED_PROXIES, PAPERLESS_PORT, PAPERLESS_BIND_ADDR, PAPERLESS_WEBSERVER_WORKERS, PAPERLESS_TASK_WORKERS, PAPERLESS_CONSUMER_DISABLE, PAPERLESS_ENABLE_FLOWER, PAPERLESS_OCR_LANGUAGE, PAPERLESS_TIME_ZONE, PAPERLESS_EMAIL_HOST, PAPERLESS_REDIS_PREFIX, PAPERLESS_DATA_DIR, PAPERLESS_MEDIA_ROOT, PAPERLESS_CONSUMPTION_DIR]
+  buildTime: []
+  evidence:
+    - {path: src/paperless/settings/__init__.py, line: 501, quote: "SECRET_KEY = os.getenv(\"PAPERLESS_SECRET_KEY\")"}
+    - {path: src/paperless/settings/__init__.py, line: 502, quote: "or SECRET_KEY == \"change-me\""}
+    - {path: src/paperless/settings/__init__.py, line: 462, quote: "url = os.getenv(\"PAPERLESS_URL\")"}
+    - {path: src/paperless/settings/__init__.py, line: 250, quote: "os.getenv(\"PAPERLESS_REDIS\", None),"}
+    - {path: docker/rootfs/etc/s6-overlay/s6-rc.d/init-superuser/run, line: 6, quote: "if [[ -n \"${PAPERLESS_ADMIN_USER}\" ]]; then"}
+    - {path: src/documents/management/commands/manage_superuser.py, line: 31, quote: "password = os.getenv(\"PAPERLESS_ADMIN_PASSWORD\")"}
+blockers:
+  expected:
+    - "Durable document storage: originals, archive and thumbnails are written to the local MEDIA_ROOT (FileSystemStorage) with no S3 backend; Fargate disk is ephemeral, so documents are lost on restart"
+  mustNot:
+    - "Several processes (web server, Celery worker, beat, consumer) must not count as several services: s6-overlay runs them in the one image"
+    - "SQLite default must not block: PostgreSQL and MariaDB are supported with PAPERLESS_DBENGINE and PAPERLESS_DBHOST"
+    - "Missing Dockerfile must not be reported: the root Dockerfile builds the frontend and backend from source"
+    - "The consume and export directories must not be a separate blocker: they are optional import and export paths"
+vendorQuestions:
+  legitimate:
+    - "Where to keep documents: the app has only local file storage, so a durable volume is needed"
+  unnecessary:
+    - "Which port? (8000 in the image and the s6 web server script)"
+    - "Who runs migrations? (init-migrations runs at each start)"
+    - "Is a separate worker or scheduler needed? (s6 starts them in the same container)"
+    - "Which Dockerfile? (only the root Dockerfile exists)"
+traps:
+  - "docker/compose files list a broker, a database, Gotenberg and Tika as services -> Redis is required; the database is optional (SQLite default); Gotenberg and Tika are optional, only for Office and email files (docker/compose/docker-compose.postgres-tika.yml); the broker service is a Redis-compatible image (docker/compose/docker-compose.postgres.yml:29)"
+  - "Many s6 services (worker, scheduler, consumer, flower) -> embedded in one container; flower starts only with PAPERLESS_ENABLE_FLOWER (svc-flower/run:9)"
+  - "/ looks like a health path -> it redirects to /accounts/login/ because of login_required; use /accounts/login/ (src/paperless/urls.py:423)"
+  - "Web server binds to :: (IPv6 wildcard) by default -> it accepts IPv4 too on a dual-stack host; set PAPERLESS_BIND_ADDR=0.0.0.0 if the platform has no IPv6 (svc-webserver/run:7)"
+  - "Dockerfile builds the frontend in a first stage -> the last stage main-app is the app, no --target needed (Dockerfile:88)"
+  - "PAPERLESS_SECRET_KEY=build-time-dummy in the Dockerfile -> only for collectstatic at build; a real key is needed at run time (Dockerfile:241)"
+  - "docker-compose.env sets PAPERLESS_SECRET_KEY=change-me -> the app rejects this value (src/paperless/settings/__init__.py:502)"
+openQuestions:
+  - "Whether a persistent shared file system (not offered by Deployz) can be used for /usr/src/paperless/media and /usr/src/paperless/data; this decides if the app can run at all"
+crossReview:
+  - {field: traps (compose files), change: "the cited line docker-compose.postgres.yml:29 is the broker image (valkey), not Gotenberg or Tika; Tika and Gotenberg are in the *-tika.yml compose files. Text fixed", evidence: "docker/compose/docker-compose.postgres.yml:29 image: docker.io/valkey/valkey:9-alpine; docker/compose/docker-compose.postgres-tika.yml exists"}
+  - {field: outcome, change: "none: NOT_DEPLOYABLE kept; STORAGES default is FileSystemStorage, no django-storages or boto3 in pyproject.toml, uv.lock or src, docs name only NFS-like shares for remote storage", evidence: "src/paperless/settings/__init__.py:246; grep for storages/boto3 returned no match"}
+  - {field: healthPath, change: "none: / is login_required (302), /accounts/login/ is a plain allauth view without auth; ALLOWED_HOSTS defaults to * so the load balancer Host header is accepted", evidence: "src/paperless/urls.py:423; src/paperless/settings/__init__.py:454"}
+  - {field: dockerfile, change: "none: COPY sources ./src-ui, ./docker/rootfs, ./src, pyproject.toml and uv.lock exist in git; the frontend output is built in the compile-frontend stage; last stage main-app is correct", evidence: "Dockerfile:10, 82, 179, 213, 216"}
+  - {field: redis / database / migrations / workers, change: "none: PAPERLESS_REDIS default localhost makes the wait-for-redis init fail without Redis; DB defaults to SQLite unless PAPERLESS_DBENGINE or PAPERLESS_DBHOST is set; init-migrations runs migrate at each start; s6 services run in one container", evidence: "docker/rootfs/usr/local/bin/wait-for-redis.py:57; src/paperless/settings/custom.py:229; init-migrations/run:19"}
+  - {field: all, change: verified, evidence: "39 citations checked"}
+  - {field: outcome (orchestrator), change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES], the same policy reading as new-45 and new-47", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES (local-file-storage, unsupported-multi-service are CODE_CHANGE)"}

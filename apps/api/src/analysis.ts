@@ -431,7 +431,14 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // validation; an optional queue mode makes Redis and package.json workers
 // optional; a production JSON config naming `mysql` is MySQL; env package
 // defaults and production JSON configs stay inside the file cap.
-export const ANALYSIS_VERSION = 69;
+// Version 70 (2026-10 corpus round 3): a documentation site image ranks below
+// the app image; the start script the image runs names database bindings
+// (`file_env 'MB_DB_CONNECTION_URI'`); a health check script URL may set the
+// scheme and a base path from variables; a subdirectory Dockerfile that copies
+// its whole context from a directory with no project file builds from the
+// root. Stored v69 rows can build the docs image or the wrong context, or ask
+// for the database variable.
+export const ANALYSIS_VERSION = 70;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

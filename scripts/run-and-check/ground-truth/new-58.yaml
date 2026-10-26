@@ -1,0 +1,145 @@
+id: new-58
+repository: supabase/supabase
+commit: 564d724ed79adc62e0e571881e898663b00d1f43
+summary: >
+  Supabase monorepo (pnpm, turbo). The only app Dockerfile that builds from source is apps/studio/Dockerfile, the
+  Studio dashboard (Next.js standalone, port 3000). Studio is a UI only. It has no database of its own. It calls a
+  separate postgres-meta service (STUDIO_PG_META_URL), a gateway (Envoy or Kong) and a Supabase Postgres image. The
+  official self-host stack is a docker/docker-compose.yml of about ten containers. A vendor who imports this repo
+  gets a dashboard that cannot work alone.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  # judgement call: NOT_DEPLOYABLE is primary (Studio needs postgres-meta and the Supabase stack as other containers). DEPLOYABLE_WITH_CHANGES is accepted as the alternative reading under the Deployz readiness policy, which classes extra compose services as a repository change (the gate still blocks the deployment).
+  reason: >
+    Studio needs a second required service container (supabase/postgres-meta) plus the gateway, auth and
+    Supabase Postgres (roles, extensions and schemas that RDS does not give). Deployz runs one application
+    container, so the dashboard starts but every database feature fails. The full platform is a multi-container compose stack.
+dockerfile:
+  accept: [apps/studio/Dockerfile]
+  reject:
+    - {path: apps/lite-studio/Dockerfile, reason: "separate small app (npm ci, package-lock.json), not the Supabase dashboard"}
+    - {path: packages/pg-meta/test/db/Dockerfile, reason: "test database image for pg-meta tests"}
+    - {path: .agents/skills/test-the-docs/sandbox/Dockerfile, reason: "agent sandbox tooling"}
+  target: null
+  context: .
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 4, quote: "docker build . -f apps/studio/Dockerfile --target production"}
+    - {path: apps/studio/Dockerfile, line: 94, quote: "FROM base AS production"}
+    - {path: apps/studio/Dockerfile, line: 43, quote: "pnpm dlx turbo@2.9.14 prune studio --docker"}
+    - {path: apps/studio/Dockerfile, line: 49, quote: "COPY ./patches/ ./patches"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 98, quote: "ENV PORT=3000"}
+    - {path: apps/studio/Dockerfile, line: 99, quote: "EXPOSE 3000"}
+startCommand:
+  source: image
+  accept: ["node apps/studio/server.js"]
+healthPath:
+  accept: ["/api/platform/profile"]
+  # The Dockerfile and the compose file use this path as the health check. It returns 200 JSON without a login in self-host mode.
+  # "/" redirects to the project page, so it is not a safe health path.
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 101, quote: "fetch('http://localhost:3000/api/platform/profile')"}
+    - {path: docker/docker-compose.yml, line: 23, quote: "http://localhost:3000/api/platform/profile"}
+    - {path: apps/studio/pages/api/platform/profile/index.ts, line: 38, quote: "return res.status(200).json(response)"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: null
+  selectBy: {}
+  # Studio has no database connection of its own. It reaches Supabase Postgres only through postgres-meta over HTTP.
+  # deployzEngine is null on purpose: a correct analysis provisions no RDS database, because the Studio process never opens a database socket.
+  # The Postgres must be the supabase/postgres image (supabase_admin and other roles), which RDS cannot give.
+  connectionVars: [STUDIO_PG_META_URL, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_PASSWORD]
+  evidence:
+    - {path: apps/studio/lib/constants/index.ts, line: 50, quote: "process.env.STUDIO_PG_META_URL"}
+    - {path: docker/docker-compose.yml, line: 33, quote: "STUDIO_PG_META_URL: http://meta:8080"}
+    - {path: docker/docker-compose.yml, line: 419, quote: "image: supabase/postgres-meta:v0.100.0"}
+    - {path: docker/docker-compose.yml, line: 480, quote: "image: supabase/postgres:17.6.1.136"}
+    - {path: apps/studio/lib/api/self-hosted/constants.ts, line: 12, quote: "process.env.POSTGRES_USER_READ_WRITE || 'supabase_admin'"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 102, quote: "CMD [\"node\", \"apps/studio/server.js\"]"}
+redis:
+  status: none
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 102, quote: "CMD [\"node\", \"apps/studio/server.js\"]"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 102, quote: "CMD [\"node\", \"apps/studio/server.js\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: apps/studio/Dockerfile, line: 102, quote: "CMD [\"node\", \"apps/studio/server.js\"]"}
+storage:
+  local: conditional
+  paths: [/app/snippets, /app/edge-functions]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/docker-compose.yml, line: 62, quote: "SNIPPETS_MANAGEMENT_FOLDER: /app/snippets"}
+    - {path: docker/docker-compose.yml, line: 63, quote: "EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions"}
+    - {path: apps/studio/lib/api/snippets.constants.ts, line: 1, quote: "process.env.SNIPPETS_MANAGEMENT_FOLDER ?? ''"}
+    - {path: apps/studio/lib/api/self-hosted/functions/index.ts, line: 13, quote: "new FileSystemFunctionsArtifactStore(process.env.EDGE_FUNCTIONS_MANAGEMENT_FOLDER)"}
+env:
+  required:
+    - {name: STUDIO_PG_META_URL, secret: false, buildTime: false, note: "URL of a postgres-meta service; Deployz cannot run it, so this must point to an outside host"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "password of the Supabase Postgres; used for pg-meta calls and SQL"}
+    - {name: SUPABASE_URL, secret: false, buildTime: false, note: "internal URL of the API gateway"}
+    - {name: SUPABASE_PUBLIC_URL, secret: false, buildTime: false, note: "public URL of the API gateway"}
+    - {name: SUPABASE_ANON_KEY, secret: true, buildTime: false, note: "anon JWT; the repo .env holds a demo key that must not be used"}
+    - {name: SUPABASE_SERVICE_KEY, secret: true, buildTime: false, note: "service_role JWT"}
+    - {name: AUTH_JWT_SECRET, secret: true, buildTime: false, note: "JWT secret; the code falls back to a public default"}
+    - {name: PG_META_CRYPTO_KEY, secret: true, buildTime: false, note: "encryption key shared with postgres-meta; falls back to SAMPLE_KEY"}
+  optional: [HOSTNAME, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER_READ_WRITE, PGRST_DB_SCHEMAS, PGRST_DB_MAX_ROWS, PGRST_DB_EXTRA_SEARCH_PATH, DEFAULT_ORGANIZATION_NAME, DEFAULT_PROJECT_NAME, OPENAI_API_KEY, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY, SNIPPETS_MANAGEMENT_FOLDER, EDGE_FUNCTIONS_MANAGEMENT_FOLDER, ENABLED_FEATURES_LOGS_ALL, NEXT_PUBLIC_BASE_PATH]
+  buildTime: []
+  evidence:
+    - {path: docker/docker-compose.yml, line: 31, quote: "HOSTNAME: \"0.0.0.0\""}
+    - {path: docker/docker-compose.yml, line: 55, quote: "AUTH_JWT_SECRET: ${JWT_SECRET}"}
+    - {path: docker/docker-compose.yml, line: 42, quote: "PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}"}
+    - {path: apps/studio/lib/api/self-hosted/constants.ts, line: 7, quote: "process.env.PG_META_CRYPTO_KEY || 'SAMPLE_KEY'"}
+    - {path: apps/studio/lib/api/self-hosted/constants.ts, line: 20, quote: "process.env.AUTH_JWT_SECRET || DEFAULT_AUTH_JWT_SECRET"}
+    - {path: apps/studio/.env, line: 4, quote: "POSTGRES_PASSWORD=your-super-secret-and-long-postgres-password"}
+blockers:
+  expected:
+    - "Studio needs the separate postgres-meta service (STUDIO_PG_META_URL) and a Supabase Postgres plus gateway; Deployz runs one application container."
+    - "The self-host stack (docker/docker-compose.yml) has many required service containers (gateway, auth, rest, realtime, storage, meta, functions, db, supavisor); none is part of this one image."
+  mustNot:
+    - "Do not report a missing Dockerfile: apps/studio/Dockerfile builds from source."
+    - "Do not require Redis or a worker: Studio has none."
+    - "Do not report the docs, www or examples apps as separate required services."
+vendorQuestions:
+  legitimate:
+    - "Where does postgres-meta run, and which gateway and Supabase Postgres does Studio use? Deployz cannot host them."
+  unnecessary:
+    - "Which port? (3000 in the image)"
+    - "Health path? (/api/platform/profile)"
+    - "Which Dockerfile? (apps/studio/Dockerfile; the last stage production is built by default)"
+    - "Who runs migrations? (Studio has none)"
+traps:
+  - "docker/docker-compose.yml suggests a stack to deploy -> it is the multi-container self-host platform, not one app (docker/docker-compose.yml:13)"
+  - "compose uses the prebuilt image supabase/studio -> the repo Dockerfile builds the same app from source (docker/docker-compose.yml:17, apps/studio/Dockerfile:94)"
+  - "ARG STUDIO_FRAMEWORK=next selects the build -> default next is correct; tanstack is an alternative build (apps/studio/Dockerfile:18)"
+  - "ENTRYPOINT docker-entrypoint.sh -> the entrypoint of the node base image, found on PATH; apps/studio/docker-entrypoint.sh is not copied (apps/studio/Dockerfile:100)"
+  - "dev stage (line 55) is not the last stage -> production is the last stage (apps/studio/Dockerfile:94), so no --target is needed; the usage comment still names --target production"
+  - "apps/studio/.env holds demo keys and a localhost PG meta URL -> build defaults only, not production values (apps/studio/.env:3)"
+  - "Dashboard login (DASHBOARD_USERNAME) is enforced by the Envoy or Kong gateway, not by Studio -> Studio alone has no login (docker/docker-compose.yml:105)"
+openQuestions:
+  - "Whether a vendor would accept a Studio-only deploy pointed at an outside postgres-meta; the outcome keeps NOT_DEPLOYABLE because the required service is not in the repo image."
+crossReview:
+  - {field: dockerfile.target, change: "production -> null; production (line 94) is the last FROM, so a plain build gives it. The usage comment still names --target production, which is harmless", evidence: "apps/studio/Dockerfile:94 FROM base AS production; stages at lines 20, 40, 46, 55, 62, 75, 91, 94"}
+  - {field: env.required HOSTNAME, change: "moved to optional; Next standalone reads HOSTNAME, and Docker or Fargate always sets it to the container hostname, which resolves to the task IP, so the load balancer reaches the server. Compose sets 0.0.0.0 only so the localhost in-container health check works", evidence: "docker/docker-compose.yml:30-31 comment 'Listen on all IPv4 interfaces'; apps/studio/Dockerfile:101 health check uses localhost"}
+  - {field: database, change: "none: status required and deployzEngine null kept. Studio opens no database socket (no pg import in apps/studio/lib or pages; POSTGRES_* only feed the connection sent to postgres-meta), and the scorer expects no provisioned database when deployzEngine is null. Added a comment that null is deliberate", evidence: "apps/studio/lib/api/self-hosted/constants.ts:8-12; docker/docker-compose.yml:33"}
+  - {field: traps / vendorQuestions, change: "reworded the dev-stage trap and the Dockerfile question to match target null", evidence: "apps/studio/Dockerfile:55,94"}
+  - {field: healthPath, change: "none: /api/platform/profile returns 200 with no auth in self-host mode; apiWrapper checks auth only when IS_PLATFORM is true", evidence: "apps/studio/lib/api/apiWrapper.ts:42; apps/studio/lib/constants/index.ts:5; apps/studio/pages/api/platform/profile/index.ts:38"}
+  - {field: outcome / dockerfile.accept / port / startCommand, change: "none: NOT_DEPLOYABLE kept (postgres-meta is a required second container); all COPY sources are in git (patches/react-data-grid.patch tracked, apps/studio/.env tracked, docker-entrypoint.sh comes from the node base image); lite-studio and other Dockerfiles are not Supabase Studio", evidence: "apps/studio/Dockerfile:41-49,98-102"}
+  - {field: all, change: verified, evidence: "28 citations checked"}
+  - {field: outcome (orchestrator), change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES], the same policy reading as new-45 and new-47", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES (unsupported-multi-service is CODE_CHANGE)"}

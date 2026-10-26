@@ -107,6 +107,8 @@ Repository (GitHub tree, bounded)
   `--reload` or `sleep infinity`). A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
   one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. A
+  documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
+  mdBook, Antora, Docsify) ranks with the dev images, below the app image. A
   Dockerfile named production or prod ranks first. An
   arm or multi-process variant ranks last. When the other signals tie, a
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
@@ -116,7 +118,12 @@ Repository (GitHub tree, bounded)
   stage (an artifact, upload, export, publish, lint, build or test stage) and
   an earlier named stage is the production stage, the analysis records
   `dockerfileBuildTarget`. The build then runs `docker build --target <stage>`
-  (not for a vendor-overridden Dockerfile). The runtime comes from the
+  (not for a vendor-overridden Dockerfile). A Dockerfile in a subdirectory
+  builds from its own directory, unless it is written for the repository root
+  (`dockerfileBuildContext` `.`): it runs `turbo prune`, copies a workspace
+  root file, a path under its own directory or a path that only the root has,
+  or copies the whole context from a directory with no project file (miniflux
+  `packaging/docker/alpine/`: `ADD . /go/src/app`, then `make miniflux`). The runtime comes from the
   production stage and the stages it is built `FROM` (leaf to root);
   `COPY --from` counts only when that lineage names no runtime image. A
   `go.mod` with no Go source and a `package.json` with no dependencies are
@@ -129,7 +136,9 @@ Repository (GitHub tree, bounded)
   runtime source. An
   image with a front web server (nginx, caddy) publishes port 80. The health
   path, in order: the URL that the HEALTHCHECK of the production stage or a
-  production Compose app service probes; a dedicated route that the app
+  production Compose app service probes (also in the script it runs, with the
+  host, port, scheme and a base path from variables:
+  `http${s}://${addr}:${PORT}${base_path}/alive`); a dedicated route that the app
   registers, with the framework prefix and URI version; the Spring actuator
   route. A dedicated route ends in a health word, and only an API root, a
   version or one namespace (for example system) comes before it.

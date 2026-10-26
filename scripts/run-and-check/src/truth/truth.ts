@@ -87,6 +87,14 @@ export function compareWithTruth(truth: GroundTruth, analysis: AnalysisResultFil
     results.push({ field, critical, verdict: ok === 'question' ? 'QUESTION' : ok ? 'MATCH' : 'MISMATCH', expected: show(expected), actual: show(actual) });
   };
   const variables = new Map(manifest.environment.variables.map((variable) => [variable.key, variable]));
+  /** The names Deployz binds to a provisioned database, Redis or bucket (`DATABASE_URL`): supplied, never typed. */
+  const bound = new Set(
+    [
+      ...(manifest.database.postgres ? (manifest.database.envBindings ?? []) : []),
+      ...(manifest.redis.required ? manifest.redis.envBindings : []),
+      ...(manifest.storage.required ? manifest.storage.envBindings : []),
+    ].map((binding) => binding.name),
+  );
   /** The vendor is made to decide the variable: required, or a `customer_required` decision. */
   const asked = (name: string): boolean => {
     const variable = variables.get(name);
@@ -127,7 +135,7 @@ export function compareWithTruth(truth: GroundTruth, analysis: AnalysisResultFil
   const wantsDatabase = truth.database.status !== 'none' && truth.database.deployzEngine !== null;
   add('database', true, wantsDatabase ? engine === truth.database.deployzEngine : engine === null, wantsDatabase ? truth.database.deployzEngine : 'none', engine ?? 'none');
   for (const name of Object.keys(truth.database.selectBy)) {
-    add(`database.selectBy.${name}`, true, asked(name), 'the vendor sets it', variables.get(name)?.classification ?? 'not listed');
+    add(`database.selectBy.${name}`, true, asked(name) || bound.has(name), 'the vendor sets it', bound.has(name) ? 'bound' : (variables.get(name)?.classification ?? 'not listed'));
   }
 
   const migration = manifest.migration;
@@ -168,8 +176,8 @@ export function compareWithTruth(truth: GroundTruth, analysis: AnalysisResultFil
 
   for (const variable of truth.env.required) {
     const listed = variables.get(variable.name);
-    const ok = listed !== undefined && (listed.required || (listed.classification !== undefined && SUPPLIED.has(listed.classification)) || listed.classification === 'customer_required');
-    add(`env.${variable.name}`, false, ok, 'required', listed === undefined ? 'not listed' : `${listed.classification ?? '?'}${listed.required ? ', required' : ''}`);
+    const ok = bound.has(variable.name) || (listed !== undefined && (listed.required || (listed.classification !== undefined && SUPPLIED.has(listed.classification)) || listed.classification === 'customer_required'));
+    add(`env.${variable.name}`, false, ok, 'required', bound.has(variable.name) ? 'bound' : listed === undefined ? 'not listed' : `${listed.classification ?? '?'}${listed.required ? ', required' : ''}`);
   }
   return results;
 }

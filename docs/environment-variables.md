@@ -220,7 +220,9 @@ frozen manifest.
 - **App-specific binding names.** Deployz sets its managed database, cache
   and bucket values under the names the app reads. Analysis finds these names
   from code reads, `.env.example` files at any depth inside the selected app
-  (not in docs, examples or sibling apps), Prisma `datasource` blocks
+  (not in docs, examples or sibling apps), the selected Dockerfile `ENV`, the
+  start script that the image runs (`$NAME`, `${NAME}` or the Docker library
+  `file_env 'NAME'` helper; metabase `MB_DB_CONNECTION_URI`), Prisma `datasource` blocks
   (`url`, `directUrl`, `shadowDatabaseUrl`, whatever the variable is called),
   and framework config files: Rails `config/*.yml`, Laravel `config/*.php` and
   Spring `application*.properties|yml` (a `spring.datasource` property means

@@ -1,0 +1,190 @@
+id: new-55
+repository: goauthentik/authentik
+commit: d871a4723352453c77910957f586e76549c6e84c
+summary: >
+  authentik identity provider (Python/Django core, Rust server binary, web UI built with pnpm). The repo has one
+  production Dockerfile, lifecycle/container/Dockerfile, that builds everything from source. The image has an
+  ENTRYPOINT (`ak`) and no CMD, so the vendor must give a command. Docker Compose and the repo ECS template run
+  two services (`server` and `worker`). The `allinone` command runs both in one process and fits one Deployz
+  service. `server` as main command with one `worker` service also works. `server` alone does not: only the
+  worker applies the blueprints that create the default login flows. PostgreSQL is the only database. There is no Redis: cache, channels and task queue use PostgreSQL.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    Needs a start command (`allinone`), because the image has no CMD. Needs AUTHENTIK_SECRET_KEY and the
+    AUTHENTIK_POSTGRESQL__* values. For durable uploads, switch the file storage to S3 with
+    AUTHENTIK_STORAGE__BACKEND=s3. Without it, uploaded icons and backgrounds go to ephemeral /data. No second
+    container, Redis or other datastore is needed.
+dockerfile:
+  accept: [lifecycle/container/Dockerfile]
+  reject:
+    - {path: lifecycle/container/ldap.Dockerfile, reason: "LDAP outpost image, a separate Go proxy, not the core application"}
+    - {path: lifecycle/container/proxy.Dockerfile, reason: "proxy outpost image, not the core application"}
+    - {path: lifecycle/container/rac.Dockerfile, reason: "RAC outpost image, not the core application"}
+    - {path: lifecycle/container/radius.Dockerfile, reason: "RADIUS outpost image, not the core application"}
+    - {path: website/Dockerfile, reason: "documentation site image"}
+  target: null
+  context: .
+  evidence:
+    - {path: lifecycle/container/Dockerfile, line: 355, quote: "# The default target, so it has to stay last"}
+    - {path: lifecycle/container/Dockerfile, line: 356, quote: "FROM runtime-assemble AS final"}
+    - {path: lifecycle/container/Dockerfile, line: 303, quote: "FROM scratch AS distroless"}
+    - {path: lifecycle/container/Dockerfile, line: 142, quote: "cargo build --package authentik"}
+    - {path: lifecycle/container/Dockerfile, line: 46, quote: "RUN pnpm run build"}
+    - {path: lifecycle/container/Dockerfile, line: 60, quote: "Failed to get GeoIP database, disabling"}
+runtime: {accept: [python]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: authentik/lib/default.yml, line: 38, quote: "\"[::]:9000\""}
+    - {path: lifecycle/aws/template.yaml, line: 713, quote: "ContainerPort: 9000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: authentik/lib/default.yml, line: 38, quote: "\"[::]:9000\""}
+startCommand:
+  source: explicit
+  # `server` is accepted for the vendor topology (server main command + one `worker` service). `server` with no
+  # worker service is a broken deployment: only the worker applies blueprints (the default flows).
+  accept: ["allinone", "server"]
+  evidence:
+    - {path: lifecycle/container/Dockerfile, line: 368, quote: "ENTRYPOINT [ \"dumb-init\", \"--\", \"ak\" ]"}
+    - {path: lifecycle/ak.py, line: 25, quote: "argv = [\"manage\", \"--\", *args]"}
+    - {path: lifecycle/ak.py, line: 13, quote: "COMMANDS = (\"allinone\", \"server\", \"worker\""}
+    - {path: src/main.rs, line: 57, quote: "/// Run both the authentik server and worker."}
+    - {path: src/main.rs, line: 146, quote: "let workers = worker::start(worker::Cli::default(), &mut tasks)?;"}
+    - {path: lifecycle/container/compose.yml, line: 22, quote: "command: server"}
+    - {path: lifecycle/aws/template.yaml, line: 669, quote: "- server"}
+    - {path: src/main.rs, line: 77, quote: "Command::Server(_) => {"}
+healthPath:
+  accept: ["/-/health/live/", "/-/health/ready/"]
+  # /-/health/live/ returns 200 from the server and, in allinone mode, also checks that the worker runs. It does not
+  # touch the database. /-/health/ready/ also runs SELECT 1 on the database. `/` redirects to the login flow, so not used.
+  evidence:
+    - {path: src/server/core.rs, line: 282, quote: ".route(\"/health/live/\", any(health_live))"}
+    - {path: src/server/core.rs, line: 281, quote: ".route(\"/health/ready/\", any(health_ready))"}
+    - {path: src/server/core.rs, line: 299, quote: ".nest(\"/-/\", monitoring_router.clone())"}
+    - {path: src/server/core.rs, line: 194, quote: "SELECT 1"}
+    - {path: authentik/root/middleware.py, line: 43, quote: "if request.path == \"/-/health/live/\":"}
+    - {path: lifecycle/aws/template.yaml, line: 1165, quote: "HealthCheckPath: /-/health/live/"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [AUTHENTIK_POSTGRESQL__HOST, AUTHENTIK_POSTGRESQL__PORT, AUTHENTIK_POSTGRESQL__USER, AUTHENTIK_POSTGRESQL__PASSWORD, AUTHENTIK_POSTGRESQL__NAME, AUTHENTIK_POSTGRESQL__SSLMODE]
+  evidence:
+    - {path: authentik/lib/default.yml, line: 18, quote: "postgresql:"}
+    - {path: authentik/lib/default.yml, line: 24, quote: "sslmode: disable"}
+    - {path: lifecycle/wait_for_db.py, line: 47, quote: "if CONFIG.get(\"secret_key\") is None"}
+    - {path: lifecycle/aws/template.yaml, line: 678, quote: "AUTHENTIK_POSTGRESQL__SSLMODE"}
+    - {path: lifecycle/aws/template.yaml, line: 679, quote: "Value: require"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/main.rs, line: 72, quote: "Command::AllInOne(_) => {"}
+    - {path: src/boot.rs, line: 276, quote: "wait_for_db()?;"}
+    - {path: src/boot.rs, line: 277, quote: "run_migrations()"}
+    - {path: src/boot.rs, line: 251, quote: "\"lifecycle.migrate\""}
+redis:
+  status: none
+  evidence:
+    - {path: authentik/root/settings.py, line: 261, quote: "django_postgres_cache.backend.DatabaseCache"}
+    - {path: authentik/root/settings.py, line: 356, quote: "django_channels_postgres.layer.PostgresChannelLayer"}
+workers:
+  status: optional-independent
+  commands: ["worker"]
+  # The vendor topology is two services (server + worker). allinone runs both in the one container, so no
+  # separate Deployz worker service is needed. With `server` as main command, one `worker` service is REQUIRED:
+  # the server runs migrations itself (boot::bootstrap) and answers /-/health/live/ without a worker, but only the
+  # worker applies blueprints (default flows and brand), runs schedules and runs the outpost controller.
+  # The comparator scores optional-independent as zero worker services, so a correct server + worker answer
+  # gets a workers mismatch there. Keep this limit in mind when you read the score.
+  evidence:
+    - {path: lifecycle/container/compose.yml, line: 44, quote: "command: worker"}
+    - {path: lifecycle/aws/template.yaml, line: 899, quote: "- worker"}
+    - {path: src/main.rs, line: 146, quote: "let workers = worker::start(worker::Cli::default(), &mut tasks)?;"}
+    - {path: authentik/lib/default.yml, line: 174, quote: "processes: 1"}
+    - {path: authentik/blueprints/apps.py, line: 127, quote: "send_on_startup=True,"}
+    - {path: authentik/blueprints/v1/tasks.py, line: 148, quote: "def blueprints_discovery"}
+    - {path: authentik/outposts/tasks.py, line: 106, quote: "def outpost_controller"}
+scheduledJobs:
+  status: embedded
+  items: [scheduled tasks and blueprint, outpost, token and cache housekeeping run by the task worker]
+  evidence:
+    - {path: authentik/lib/default.yml, line: 181, quote: "scheduler_interval: \"seconds=60\""}
+storage:
+  local: conditional
+  paths: [/data, /data/media, /certs, /templates]
+  s3: native
+  s3SelectBy: {AUTHENTIK_STORAGE__BACKEND: s3, AUTHENTIK_STORAGE__S3__BUCKET_NAME: "<bucket>", AUTHENTIK_STORAGE__S3__REGION: "<region>"}
+  evidence:
+    - {path: authentik/lib/default.yml, line: 184, quote: "backend: file # or s3"}
+    - {path: authentik/lib/default.yml, line: 186, quote: "path: ./data"}
+    - {path: website/docs/install-config/configuration/configuration.mdx, line: 490, quote: "Valid values are `file` and `s3`"}
+    - {path: website/docs/install-config/configuration/configuration.mdx, line: 560, quote: "May be omitted if using AWS SDK authentication."}
+    - {path: authentik/admin/files/backends/s3.py, line: 91, quote: "aws_access_key_id=access_key"}
+    - {path: authentik/admin/files/backends/s3.py, line: 106, quote: "self._get_config(\"region\", None)"}
+    - {path: lifecycle/container/Dockerfile, line: 265, quote: "mkdir -p /certs /data /media /blueprints"}
+    - {path: lifecycle/aws/template.yaml, line: 708, quote: "ContainerPath: /data/media"}
+env:
+  required:
+    - {name: AUTHENTIK_SECRET_KEY, secret: true, buildTime: false, note: "cookie signing key; startup exits when it is empty; use a long random value"}
+    - {name: AUTHENTIK_POSTGRESQL__HOST, secret: false, buildTime: false, note: "default is localhost; Deployz supplies the database host"}
+    - {name: AUTHENTIK_POSTGRESQL__PASSWORD, secret: true, buildTime: false, note: "default is env POSTGRES_PASSWORD; user and database name default to authentik"}
+    - {name: AUTHENTIK_POSTGRESQL__SSLMODE, secret: false, buildTime: false, note: "set to require for RDS; the default.yml default is disable and the docs say verify-ca"}
+    - {name: AUTHENTIK_STORAGE__BACKEND, secret: false, buildTime: false, note: "s3 for durable uploads; default file writes to ephemeral /data"}
+    - {name: AUTHENTIK_STORAGE__S3__BUCKET_NAME, secret: false, buildTime: false, note: "the S3 bucket; access key and secret key are optional, the AWS SDK default chain (task role) is used"}
+    - {name: AUTHENTIK_STORAGE__S3__REGION, secret: false, buildTime: false, note: "bucket region"}
+  optional: [AUTHENTIK_POSTGRESQL__USER, AUTHENTIK_POSTGRESQL__NAME, AUTHENTIK_POSTGRESQL__PORT, AUTHENTIK_BOOTSTRAP_PASSWORD, AUTHENTIK_BOOTSTRAP_PASSWORD_HASH, AUTHENTIK_BOOTSTRAP_TOKEN, AUTHENTIK_BOOTSTRAP_EMAIL, AUTHENTIK_WEB__BASE_URL, AUTHENTIK_LOG_LEVEL, AUTHENTIK_LISTEN__HTTP, AUTHENTIK_EMAIL__HOST, AUTHENTIK_EMAIL__FROM, AUTHENTIK_STORAGE__S3__ACCESS_KEY, AUTHENTIK_STORAGE__S3__SECRET_KEY, AUTHENTIK_DISABLE_UPDATE_CHECK, AUTHENTIK_ERROR_REPORTING__ENABLED]
+  buildTime: []
+  evidence:
+    - {path: lifecycle/wait_for_db.py, line: 47, quote: "if CONFIG.get(\"secret_key\") is None"}
+    - {path: lifecycle/aws/template.yaml, line: 679, quote: "Value: require"}
+    - {path: authentik/lib/default.yml, line: 19, quote: "host: localhost"}
+    - {path: authentik/core/setup/signals.py, line: 27, quote: "getenv(\"AUTHENTIK_BOOTSTRAP_PASSWORD\")"}
+    - {path: authentik/core/setup/signals.py, line: 58, quote: "if Setup.get() and not get_system_settings().base_url:"}
+    - {path: authentik/admin/apps.py, line: 50, quote: "CONFIG.get(\"web.base_url\", \"\")"}
+    - {path: website/docs/install-config/configuration/configuration.mdx, line: 874, quote: "After the initial setup, authentik does not start until a base URL is configured."}
+blockers:
+  expected: []
+  mustNot:
+    - "Redis must not be required: cache, channel layer and task queue use PostgreSQL"
+    - "A second worker container must not be required: allinone runs server and worker in one process"
+    - "The Docker socket mount in compose.yml must not block: it only lets the worker manage outpost containers; the embedded outpost needs no socket"
+    - "Local /data must not block: it holds uploaded icons and backgrounds, and S3 is a native option"
+    - "The outpost Dockerfiles (ldap, proxy, rac, radius) must not be read as extra required services"
+    - "The distroless stage must not be chosen as the target: the default last stage final is right"
+vendorQuestions:
+  legitimate:
+    - "Which admin password to set at first start (AUTHENTIK_BOOTSTRAP_PASSWORD_HASH), or whether to use the first-visit setup page"
+    - "Public URL to set as AUTHENTIK_WEB__BASE_URL when the bootstrap variables are used"
+  unnecessary:
+    - "Which port? (9000 in default.yml; 9443 is a self-signed TLS port)"
+    - "Who runs migrations? (boot runs lifecycle.migrate at every start)"
+    - "Is Redis needed? (no)"
+    - "Which Dockerfile or target? (lifecycle/container/Dockerfile, last stage)"
+    - "Health path? (/-/health/live/)"
+traps:
+  - "The image has ENTRYPOINT but no CMD -> `ak` with no argument runs a Django manage command and exits; set `allinone` (lifecycle/ak.py:25, lifecycle/container/Dockerfile:368)"
+  - "compose.yml and the ECS template list server and worker as two services -> allinone is the one-service form (src/main.rs:57, lifecycle/container/compose.yml:22); `server` is also valid, but only with a worker service (authentik/blueprints/apps.py:127)"
+  - "No EXPOSE in the Dockerfile -> the port is 9000 from default.yml:38, not 80 or 8000; 8000 is the internal gunicorn socket address (src/server/mod.rs:172)"
+  - "`/` returns a redirect to the login flow -> use /-/health/live/ (src/server/core.rs:282)"
+  - "The distroless stage is defined before final -> final is last, so no --target is needed (lifecycle/container/Dockerfile:355)"
+  - "Docs say the SSL mode default is verify-ca, default.yml says disable -> set AUTHENTIK_POSTGRESQL__SSLMODE=require for RDS (default.yml:24, lifecycle/aws/template.yaml:679)"
+  - "The ECS template mounts EFS on /data and /data/media -> only for uploads; S3 is the Deployz-compatible choice (lifecycle/aws/template.yaml:708)"
+  - "The build compiles Rust and the web UI in one Dockerfile and needs BuildKit (RUN --mount) -> a long, memory-heavy build (lifecycle/container/Dockerfile:142)"
+  - "With AUTHENTIK_BOOTSTRAP_* set the instance counts as set up, and then AUTHENTIK_WEB__BASE_URL is required or startup fails (authentik/core/setup/signals.py:58)"
+  - "Without bootstrap variables the first visitor to the initial-setup flow creates the admin account (authentik/core/setup/views.py:40)"
+openQuestions:
+  - "Whether allinone is supported for production: the docs and the ECS template use two services, and the Makefile uses allinone for development (Makefile:129). The code runs both in one process."
+  - "Not run: the whole analysis comes from reading the code at this commit"
+crossReview:
+  - {field: startCommand.accept, change: "[allinone] -> [allinone, server]; the vendor topology (compose.yml, ECS template) is server + worker, and both commands run boot::bootstrap, so the server migrates alone. server needs a worker service (see workers). Limit: the comparator cannot link the two, so server with no worker is not caught", evidence: "src/main.rs:77; lifecycle/container/compose.yml:22; lifecycle/aws/template.yaml:669"}
+  - {field: workers, change: "status kept optional-independent (comparator expects zero worker services for it; independent would fail the allinone answer). Comment and evidence now state that a worker is required with server, because blueprints, schedules and the outpost controller run only as worker tasks. Server health /-/health/live/ does not depend on the worker in server mode", evidence: "authentik/blueprints/apps.py:127; authentik/blueprints/v1/tasks.py:148; authentik/outposts/tasks.py:106; src/server/core.rs:255"}
+  - {field: summary / traps / openQuestions, change: "added the server + worker form and its limit", evidence: "see startCommand and workers"}
+  - {field: dockerfile, change: "none: every COPY and bind-mount source exists in git (package.json, web, website, packages, tests/container, schemas, locale, blueprints, lifecycle, krb5.conf, .cargo, scripts/node); the last stage final is the default target", evidence: "lifecycle/container/Dockerfile:29-44,123-125,271-288,356"}
+  - {field: port / healthPath / database / redis / storage / env, change: "none: re-read from code and confirmed (9000, /-/health/live/ in src/server/core.rs:282, Postgres only, no Redis, S3 native, secret key check in wait_for_db.py:47)", evidence: "authentik/lib/default.yml:38; src/server/core.rs:282; lifecycle/wait_for_db.py:47"}
+  - {field: all, change: verified, evidence: "57 citations checked"}

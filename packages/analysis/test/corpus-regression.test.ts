@@ -1,6 +1,7 @@
 /**
  * Regressions from the 2026-10 analysis corpus (linkding, memos, vikunja,
- * shlink, docmost, cal.com; scripts/run-and-check/ground-truth/). Each case is
+ * shlink, docmost, cal.com, authentik, metabase, vaultwarden, miniflux;
+ * scripts/run-and-check/ground-truth/). Each case is
  * a small tree with the shape that the real repository has, and a negative
  * case that must keep the old answer.
  */
@@ -9,10 +10,13 @@ import { describe, expect, it } from 'vitest';
 import { analyseRepo } from '../src/analyser.js';
 import { isDerivedUrlEnvVariable } from '../src/derived-url.js';
 import {
+  detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
   detectEnvVarModel,
   detectStartupCommand,
   detectWorker,
+  selectedDockerfile,
+  TREE_PATHS,
   type FileTree,
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
@@ -441,5 +445,82 @@ describe('a production JSON config that names the database client (Ghost)', () =
 
   it('is not MySQL when it names another client', () => {
     expect(normalizeDeploymentManifest(analyseRepo(tree('sqlite3')), {}).database.engine).not.toBe('mysql');
+  });
+});
+
+describe('a documentation site image beside the app image (authentik)', () => {
+  const docs = (generator: string): string =>
+    [
+      'FROM node:24 AS docs-builder',
+      `RUN pnpm install --filter "@goauthentik/${generator}-config"`,
+      'COPY ./website /work/website/',
+      'RUN pnpm run build',
+      'FROM nginx:1.29',
+      'COPY --from=docs-builder /work/website/docs/build /usr/share/nginx/html',
+      '',
+    ].join('\n');
+  const tree = (generator: string): FileTree => ({
+    'website/Dockerfile': docs(generator),
+    'lifecycle/container/Dockerfile': 'FROM python:3.14-slim\nCOPY ./authentik /authentik\nCOPY ./manage.py /\nENTRYPOINT ["dumb-init", "--", "ak"]\n',
+    'pyproject.toml': '[project]\nname = "authentik"\n',
+  });
+
+  it('builds the application image, not the shallower docs site', () => {
+    expect(selectedDockerfile(tree('docusaurus'))?.path).toBe('lifecycle/container/Dockerfile');
+  });
+
+  it('keeps the shallower image when it is no docs site', () => {
+    expect(selectedDockerfile(tree('eslint'))?.path).toBe('website/Dockerfile');
+  });
+});
+
+describe('a database URL that only the image start script names (metabase)', () => {
+  const tree = (script: string): FileTree => ({
+    Dockerfile: 'FROM eclipse-temurin:25-jre\nCOPY bin/docker/run_metabase.sh /app/\nENTRYPOINT ["/app/run_metabase.sh"]\n',
+    'bin/docker/run_metabase.sh': script,
+  });
+
+  it('lists the binding name the script forwards, not one in a comment', () => {
+    const script = "#!/bin/bash\n# usage: file_env 'XYZ_DB_PASSWORD'\nfile_env() { :; }\nfile_env 'MB_DB_CONNECTION_URI'\nexec java -jar /app/metabase.jar\n";
+    expect(envVar(tree(script), 'MB_DB_CONNECTION_URI')?.purpose).toBe('infrastructure_binding');
+    expect(envVar(tree(script), 'XYZ_DB_PASSWORD')).toBeUndefined();
+  });
+
+  it('adds no name the script does not read', () => {
+    expect(envVar(tree('#!/bin/bash\nexec java -jar /app/metabase.jar\n'), 'MB_DB_CONNECTION_URI')).toBeUndefined();
+  });
+});
+
+describe('a health check script that builds its URL from variables (vaultwarden)', () => {
+  const tree = (url: string): FileTree => ({
+    Dockerfile: 'FROM debian:bookworm-slim\nCOPY docker/healthcheck.sh /healthcheck.sh\nEXPOSE 80\nHEALTHCHECK --interval=60s CMD ["/healthcheck.sh"]\nCMD ["/start.sh"]\n',
+    'docker/healthcheck.sh': `#!/bin/sh\ncurl --insecure --fail --silent \\n     "${url}" || exit 1\n`,
+  });
+
+  it('reads the path after a scheme and a base path variable', () => {
+    expect(normalizeDeploymentManifest(analyseRepo(tree('http${s}://${addr}:${ROCKET_PORT}${base_path}/alive')), {}).health).toEqual({ path: '/alive', mode: 'explicit' });
+  });
+
+  it('does not read a URL on another host', () => {
+    expect(normalizeDeploymentManifest(analyseRepo(tree('https://example.com/alive')), {}).health.path).not.toBe('/alive');
+  });
+});
+
+describe('a Dockerfile beside no project file that copies its whole context (miniflux)', () => {
+  const tree = (extra: string[]): FileTree => {
+    const files: FileTree = {
+      'packaging/docker/alpine/Dockerfile': 'FROM golang:alpine AS build\nADD . /go/src/app\nWORKDIR /go/src/app\nRUN make miniflux\nFROM alpine\nCOPY --from=build /go/src/app/miniflux /usr/bin/miniflux\nCMD ["/usr/bin/miniflux"]\n',
+      Makefile: 'miniflux:\n\tgo build -o miniflux main.go\n',
+      'go.mod': 'module miniflux.app/v2\n',
+    };
+    return Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+  };
+
+  it('builds from the repository root', () => {
+    expect(detectDockerfileBuildContext(tree([])).value).toBe('.');
+  });
+
+  it('keeps the Dockerfile directory when it holds the project', () => {
+    expect(detectDockerfileBuildContext(tree(['packaging/docker/alpine/go.mod'])).detected).toBe(false);
   });
 });
