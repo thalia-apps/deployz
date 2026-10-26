@@ -140,6 +140,10 @@ export type DeploymentEventType =
   | 'application.analysis_disputed'
   | 'application.analysis_dispute_withdrawn'
   | 'customer.created'
+  // Customer page access (docs/customer-access.md). Ids only, never the email.
+  | 'customer.signed_in'
+  | 'customer.signed_out'
+  | 'customer.owner_claimed'
   // release/build telemetry. `release.created` is written by the release
   // route; `release.build_*` by the cdk worker (packages/cdk/src/lambda/
   // worker.ts, which cannot import this module and writes the rows directly —
@@ -152,8 +156,8 @@ export type DeploymentEventType =
 export interface DeploymentEvent {
   readonly organizationId: string;
   readonly eventType: DeploymentEventType;
-  /** 'user' for a vendor action, 'relay' for anything the relay reports. */
-  readonly actorType: 'user' | 'relay' | 'system';
+  /** 'user' for a vendor action, 'relay' for anything the relay reports, 'customer' for the customer page. */
+  readonly actorType: 'user' | 'relay' | 'system' | 'customer';
   /** Better Auth user id, or the deployment id for a relay actor. */
   readonly actorId: string;
   readonly deploymentId?: string | undefined;

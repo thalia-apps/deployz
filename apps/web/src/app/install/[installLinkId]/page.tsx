@@ -3,7 +3,10 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
+import { CustomerDeploymentOverview } from '@/components/customer-deployment-overview';
 import { CustomerInstallSections } from '@/components/customer-install-sections';
+import { CustomerSessionBar } from '@/components/customer-session-bar';
+import { CustomerSignIn } from '@/components/customer-sign-in';
 import { DocsLink } from '@/components/docs-link';
 import { ExistingConnectorUpdate } from '@/components/existing-connector-update';
 import { InstallLaunchButton } from '@/components/install-launch-button';
@@ -11,7 +14,6 @@ import { InstallLoadError } from '@/components/install-load-error';
 import { InstallProgress } from '@/components/install-progress';
 import { InstallRetryButton } from '@/components/install-retry-button';
 import { InvitationTokenGate } from '@/components/invitation-token-gate';
-import { LinkTokenGate } from '@/components/link-token-gate';
 import { PublicInstallFlow } from '@/components/public-install-flow';
 import { TechnicalDetails } from '@/components/technical-details';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -26,7 +28,6 @@ import {
   installPlanRetainedComponents,
   RETENTION_CHARGES_NOTE,
 } from '@/lib/install-plan';
-import { LINK_TOKEN_COOKIE } from '@/lib/link-token-cookie';
 import { fetchPublicInstallData } from '@/lib/public-install-data';
 import { publicInstallErrorMessage } from '@/lib/public-install-types';
 import { fetchInstallStatusServer } from '@/lib/install-status';
@@ -79,16 +80,17 @@ export default async function InstallPage({
     );
   }
 
-  // The link secret reaches the server as a cookie: the browser moves it out
-  // of the URL fragment (LinkTokenGate), so it never appears in a request URL.
-  const token = (await cookies()).get(LINK_TOKEN_COOKIE)?.value;
+  // The API decides who may see more than the publisher's name: the verified
+  // owner or a vendor member (docs/customer-access.md). It reads the
+  // browser's cookies, so the server forwards them.
+  const cookieHeader = (await cookies()).toString();
 
   // Fetched in parallel: the status projection is a nice-to-have for the
   // first paint (a failed fetch just costs one extra client round trip —
   // see fetchInstallStatusServer), so it never blocks or fails the page.
   const [lookup, initialStatus] = await Promise.all([
-    fetchInstallData(installLinkId, token),
-    fetchInstallStatusServer(installLinkId),
+    fetchInstallData(installLinkId, cookieHeader),
+    fetchInstallStatusServer(installLinkId, cookieHeader),
   ]);
 
   // The control plane did not answer. That says nothing about the link, so
@@ -120,22 +122,20 @@ export default async function InstallPage({
     return <InvitationTokenGate installLinkId={installLinkId} />;
   }
 
+  // A valid link, but nothing more until the owner email is verified. This
+  // is also the step before "Connect AWS account" for a new customer.
+  if (lookup.status === 'sign_in') {
+    return (
+      <CustomerSignIn
+        installLinkId={installLinkId}
+        applicationName={lookup.applicationName}
+        publisherName={lookup.publisherName}
+      />
+    );
+  }
+
   const data = lookup.data;
-  const tokenGate = (
-    <LinkTokenGate
-      path={`/install/${installLinkId}`}
-      current={token}
-      fallback={
-        <Alert>
-          <AlertTitle>Open the full install link</AlertTitle>
-          <AlertDescription>
-            This page needs the whole link that {data.publisherName} sent. Open the link as you
-            received it, or ask {data.publisherName} for a new link.
-          </AlertDescription>
-        </Alert>
-      }
-    />
-  );
+  const sessionBar = <CustomerSessionBar installLinkId={installLinkId} viewer={data.viewer} />;
 
   // The customer pressed "Review setup in AWS" and the control plane is
   // waiting for the connector to enroll. Never a failure: past the staleness
@@ -145,6 +145,7 @@ export default async function InstallPage({
   if (data.waitingForRelay) {
     return (
       <div className="flex flex-col gap-6">
+        {sessionBar}
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{data.applicationName}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -179,11 +180,7 @@ export default async function InstallPage({
                     </p>
                   </div>
                 </div>
-                {data.credentialsWithheld ? (
-                  tokenGate
-                ) : (
-                  <InstallRetryButton installLinkId={installLinkId} token={token} />
-                )}
+                <InstallRetryButton installLinkId={installLinkId} />
               </section>
             ) : null
           }
@@ -217,6 +214,7 @@ export default async function InstallPage({
     const removed = data.deploymentState === 'DELETING' || data.deploymentState === 'DELETED';
     return (
       <div className="flex flex-col gap-6">
+        {sessionBar}
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{data.applicationName}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -253,6 +251,12 @@ export default async function InstallPage({
             connector trades it — long before the install finishes. This copy
             stays out of the primary flow: it must NOT look like a failure
             note, only a de-emphasized footnote about the link itself. */}
+        <CustomerDeploymentOverview
+          installLinkId={installLinkId}
+          publisherName={data.publisherName}
+          removed={removed}
+        />
+
         <p className="text-xs text-muted-foreground" data-testid="consumed-link-notice">
           This install link has been used. Another installation needs a new link.
         </p>
@@ -270,6 +274,7 @@ export default async function InstallPage({
   // its single primary action, and the access detail behind one disclosure.
   return (
     <div className="flex flex-col gap-6">
+      {sessionBar}
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           Deploy {data.applicationName} to your AWS account
@@ -301,9 +306,7 @@ export default async function InstallPage({
 
           <CustomerInstallSections plan={data.plan} />
 
-          {data.credentialsWithheld ? (
-            tokenGate
-          ) : data.existingStackUpdate ? (
+          {data.existingStackUpdate ? (
             <ExistingConnectorUpdate installLinkId={installLinkId} update={data.existingStackUpdate} />
           ) : (
           <section aria-labelledby="connect-aws" className="flex flex-col gap-2">

@@ -12,7 +12,8 @@ import { fetchInstallCredentials } from './simulation/relay-harness.js';
 // app-url.spec.ts and fleet.spec.ts.
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
-import { installLinkPath, installLinkToken } from './install-link.js';
+import { signInAsCustomer } from './customer-session.js';
+import { sessionCookieHeader } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -65,6 +66,7 @@ async function seedDeployment(
   applicationName: string;
   installationId: string;
   enrollmentCode: string;
+  customerEmail: string;
 }> {
   const appResponse = await page.request.post(`${API_URL}/api/applications`, {
     data: {
@@ -104,6 +106,7 @@ async function seedDeployment(
     applicationName: application.name,
     installationId: `inst-${suffix}`,
     enrollmentCode: deployment.enrollmentCode,
+    customerEmail: `progress-customer-${suffix}@example.com`,
   };
 }
 
@@ -196,7 +199,7 @@ test('happy path: WAITING_FOR_AWS -> CONNECTING -> PROVISIONING -> VERIFYING -> 
   );
   // DZ-AUDIT-013: the relay presents the server-minted credential from the
   // Quick Create URL (a real relay reads it from the stack's secret).
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   // ── 1. Freshly seeded: nothing has enrolled yet.
@@ -212,7 +215,7 @@ test('happy path: WAITING_FOR_AWS -> CONNECTING -> PROVISIONING -> VERIFYING -> 
     customerHeading: /^Deploy .* to your AWS account$/,
     vendorLabel: 'Waiting for your customer to install',
   });
-  await page.goto(await installLinkPath(page.request, installLinkId));
+  await page.goto(`/install/${installLinkId}`);
   await expect(page.getByRole('link', { name: 'Connect AWS account' })).toBeVisible();
 
   // ── 2. Relay registers (spends the enrollment code, creates the INSTALL
@@ -456,7 +459,7 @@ test('failure path: a failed INSTALL shows a customer-safe message with no jargo
     page,
     suffix,
   );
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
@@ -522,8 +525,8 @@ test('refresh and reopen: a mid-flow stage renders identically from server truth
 }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   await signUp(page);
-  const { installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { installLinkId, installationId, enrollmentCode, customerEmail } = await seedDeployment(page, suffix);
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
@@ -549,10 +552,11 @@ test('refresh and reopen: a mid-flow stage renders identically from server truth
     page.getByRole('heading', { name: 'Creating application infrastructure' }),
   ).toBeVisible();
 
-  // A brand-new browser context (no cookies, no client-side state at all)
-  // sees the exact same server-derived stage.
+  // A brand-new browser context (no client-side state at all), signed in as
+  // the owner, sees the exact same server-derived stage.
   const freshContext = await browser.newContext();
   const freshPage = await freshContext.newPage();
+  await signInAsCustomer(freshPage.request, installLinkId, customerEmail);
   await freshPage.goto(`/install/${installLinkId}`);
   await expect(
     freshPage.getByRole('heading', { name: 'Creating application infrastructure' }),
@@ -569,8 +573,8 @@ test('status API: 404s on unknown/malformed ids, and a live one matches the cust
   const malformed = await request.get(`${API_URL}/api/install/not-a-real-id/status`);
   expect(malformed.status()).toBe(404);
 
-  // A real deployment, seeded the unauthenticated way (these public routes
-  // need no session — see install.spec.ts's seedInstall).
+  // A real deployment, seeded through the vendor's API session, which the
+  // status route also accepts (docs/customer-access.md).
   const suffix = crypto.randomUUID().slice(0, 8);
   const email = `e2e-progress-api-${suffix}@example.com`;
   const signUpResponse = await request.post(`${API_URL}/api/auth/sign-up/email`, {
@@ -615,7 +619,7 @@ test('status API: 404s on unknown/malformed ids, and a live one matches the cust
   expect(body['url']).toBeNull();
   expect(body['failure']).toBeNull();
 
-  // Never any relay/job/account identity on this unauthenticated projection.
+  // Never any relay/job/account identity on this customer projection.
   const serialized = JSON.stringify(body);
   for (const forbidden of ['awsAccountId', 'enrollmentCode', 'installationId', 'relayTokenHash', 'token']) {
     expect(serialized.toLowerCase()).not.toContain(forbidden.toLowerCase());
@@ -628,7 +632,7 @@ test('consistency under relay silence: a confirmed stage never regresses on relo
   const suffix = crypto.randomUUID().slice(0, 8);
   await signUp(page);
   const { installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {

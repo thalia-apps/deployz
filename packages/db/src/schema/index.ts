@@ -2,6 +2,7 @@ export * from './auth.js';
 export * from './billing.js';
 export * from './core.js';
 export * from './custom-domains.js';
+export * from './customer-access.js';
 export * from './deploy-links.js';
 export * from './deployment-resources.js';
 export * from './deployments.js';

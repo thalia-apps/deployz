@@ -53,6 +53,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-23 | Until public launch, staging is skipped: production deploys after CI on `main`, and staging deploys only from a dispatch | Active |
 | 2026-10-23 | Until public launch, the `production` Environment has no required reviewers: production deploys without an approval | Active |
 | 2026-10-23 | Until public launch, there is no pull-request CI: the full CI run on `main` is the only gate before production | Active |
+| 2026-10-27 | The MVP boundary expands to a customer page for each deployment, behind an emailed sign-in code; connector updates stay customer-run in AWS | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1451,3 +1452,34 @@ What would change it: the public launch, or a red `main` that blocks merges
 often. Then restore the pull-request trigger, the `plan` and `pr-gate`
 jobs, and "PR Gate" as a required check, before the production reviewers
 come back.
+
+## A customer page behind an emailed code (2026-10-27)
+
+Context: the customer page (`/install/:installLinkId`) worked as a bearer
+link. Anyone with the link id saw progress, Region, stack name, AWS events
+and resources, and the fragment token gave the Quick Create credential. The
+connector-update offer was only on the vendor dashboard, so the vendor had
+to relay the steps by hand. The specification "Customer Deployment Page and
+Connector Updates" (2026-10-26) asked for a persistent, secure customer page.
+
+Decision:
+
+- One page for each deployment, behind an emailed 8-digit code. The allowed
+  email is the deployment's customer record; the first verified sign-in
+  claims the deployment, and the owner stays fixed after that. A vendor
+  member's dashboard session also opens the page. The customer must verify
+  the email before "Connect AWS account" ([`../customer-access.md`](../customer-access.md)).
+- A small Deployz-owned session (three tables), not a second Better Auth
+  instance: Better Auth creates a vendor organization for each new user.
+- Connector updates are read-only on the Deployz side. The bootstrap build id
+  (a content hash) is the release id; the update state is derived from the
+  heartbeat (build id and the connector's own stack status), not stored as a
+  workflow. There is no reservation lock; the relay does not claim commands
+  while its own stack is updating.
+- Invitations and install links expire after 7 days.
+
+Not done (post-MVP): ownership transfer, recovery of a lost owner mailbox,
+sign-out of all sessions, a step-up check, more than one owner.
+
+What would change it: customer teams or customer-side operations, which need
+a stronger identity (MFA or SSO), or a request to transfer ownership.

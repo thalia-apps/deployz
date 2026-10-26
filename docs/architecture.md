@@ -454,6 +454,7 @@ Notes:
 | Deployz | The control plane, the ECR repository and build logs, the template buckets, the KMS key, the `deployz.dev` zone | GitHub App key, OAuth and SES keys, the Cloudflare zone-edit token, Paddle and AI keys — all Lambda environment from CI secrets |
 | Customer | Both stacks, the retained data, the ACM certificates, the SSM marker, the relay credential, the application secrets, the runtime logs | The relay bearer token; the customer's own AWS credentials, which Deployz never asks for |
 | Vendor | Applications, releases, configuration values | A Better Auth session |
+| Customer page owner | Nothing in Deployz beyond the page access | A customer session after an email code ([`customer-access.md`](customer-access.md)); never AWS permissions |
 
 - The control plane holds **no** customer AWS credentials and never calls
   into a customer account. It can queue commands from the relay's fixed

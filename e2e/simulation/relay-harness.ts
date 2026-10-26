@@ -241,18 +241,20 @@ export function extractQuickCreateParam(quickCreateUrl: string, paramName: strin
 }
 
 /**
- * Fetch install info from the public install page and extract the
- * enrollment code + relay credential from the Quick Create URL.
- * DZ-AUDIT-013: the relay credential is now carried inside the URL.
+ * Fetch install info from the install page and extract the enrollment code +
+ * relay credential from the Quick Create URL. The route answers it only to
+ * the owner or a vendor member, so the caller passes a session cookie header
+ * (docs/customer-access.md). DZ-AUDIT-013: the relay credential is carried
+ * inside the URL.
  */
 export async function fetchInstallCredentials(
   apiUrl: string,
   installLinkId: string,
-  installLinkToken: string,
+  sessionCookie: string,
   fetchFn: FetchFn = globalThis.fetch as unknown as FetchFn,
 ): Promise<{ enrollmentCode: string; relayCredential: string }> {
   const response = await fetchFn(`${apiUrl}/api/install/${installLinkId}`, {
-    headers: { 'x-deployz-token': installLinkToken },
+    headers: { cookie: sessionCookie },
   });
   if (response.status !== 200) {
     throw new Error(`GET /api/install/${installLinkId} -> ${response.status}`);

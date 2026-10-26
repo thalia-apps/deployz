@@ -34,3 +34,9 @@ export async function installLinkHeaders(
 export async function installLinkPath(request: APIRequestContext, installLinkId: string): Promise<string> {
   return `/install/${installLinkId}#${await installLinkToken(request, installLinkId)}`;
 }
+
+/** The cookie header of a request context's session, for a plain fetch that must act as that user. */
+export async function sessionCookieHeader(request: APIRequestContext): Promise<string> {
+  const { cookies } = await request.storageState();
+  return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+}

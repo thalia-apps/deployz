@@ -24,7 +24,7 @@ Both invitation kinds live in `public_install_links`
   link creates at most 50 deployments in 24 hours (`429
   PUBLIC_INSTALL_LIMIT_REACHED`). Vendor approval and a CAPTCHA are post-MVP.
 - **Targeted invitation** — `customer_id` + `token_hash` set, `expires_at`
-  (default 30 days), optional `recommended_region`. Exactly one deployment,
+  (default 7 days), optional `recommended_region`. Exactly one deployment,
   ever: confirmation stamps `confirmed_at` (state `used`).
 
 Both kinds freeze `recommended_size_profile` and `minimum_size_profile`
@@ -107,22 +107,19 @@ customer is involved. See `docs/product/user-flows.md` for all entry points.
 ## Customer deployment links
 
 Each deployment keeps its own `install_link_id`
-(`/install/:installLinkId`). The id alone is not a credential. The URL carries
-a second secret as its fragment (`/install/:installLinkId#<token>`), derived
-as an HMAC of the id with the server secret, so nothing extra is stored. The
-page moves it into a path-scoped cookie and removes it from the address bar;
-the server page sends it as the `x-deployz-token` header. Without it
-`GET /api/install/:installLinkId` still serves the progress view but leaves
-out `quickCreateUrl` and `existingStackUpdate` (the relay enrollment code and
-credential) and sets `credentialsWithheld`, and `POST
-/api/install/:installLinkId/retry` answers 404. The vendor dashboard and the
-confirm response return `installLinkToken` next to `installLinkId`, so every
-link the product shows or copies includes the fragment. A link copied before
-this change has no fragment: the customer asks the vendor to copy it again.
+(`/install/:installLinkId`). The id alone is not a credential. Without the
+verified owner (an email code) or a member of the vendor organization,
+`GET /api/install/:installLinkId` returns only the application and publisher
+names, and the other install routes answer 404
+([`customer-access.md`](customer-access.md)). The owner must verify the email
+before the page shows the Quick Create link, which carries the relay
+enrollment code and credential. Links the vendor copies still end with an
+HMAC fragment (`#<token>`), but the install routes no longer read it.
 Until a relay enrolls, the link stops new installs: `GET`, `launched`,
 `retry` and relay registration answer `410 INSTALL_LINK_EXPIRED` after the
-link expires, and `410 INSTALL_LINK_REVOKED` when the publisher revoked it or
-removed the deployment. A started install keeps its progress view.
+link expires (7 days after it was issued or reset), and `410
+INSTALL_LINK_REVOKED` when the publisher revoked it or removed the
+deployment. A started install keeps its progress view.
 Copy actions on the vendor's customer page are
 attached to the deployment row and copy that deployment's own URL — there is
 no customer-level "the install link" and no helper that picks one deployment

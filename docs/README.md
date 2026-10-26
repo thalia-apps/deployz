@@ -34,6 +34,7 @@ not here.
 | Networking and HTTPS | [`networking-and-https.md`](networking-and-https.md) | VPC layout, default `d-*` URL, Cloudflare records, ACM, custom domains, teardown |
 | Sizing and cost | [`infrastructure-profiles.md`](infrastructure-profiles.md) | The immutable profile registry, footprint, cost estimate, parity |
 | Customer entry points | [`installation-invitations.md`](installation-invitations.md), [`deploy-links.md`](deploy-links.md) | Public links and invitations; the legacy deploy link |
+| Customer page and access | [`customer-access.md`](customer-access.md) | Email-code sign-in, the deployment owner, sessions, who may see what, the customer page sections |
 | Operating the control plane | [`operations/control-plane.md`](operations/control-plane.md) | CI-only deploys, promotion and the production approval, rollback, configuration keys, migrations, publishing templates, enabling a Region, release builds, local development |
 | Troubleshooting | [`operations/troubleshooting.md`](operations/troubleshooting.md) | Where to look, failure codes and recoverability, stuck operations, common situations, test-account hygiene |
 | Docker Hub credentials | [`docker-hub-credentials.md`](docker-hub-credentials.md) | Authenticated base-image pulls for release builds |
