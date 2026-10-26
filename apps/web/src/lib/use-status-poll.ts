@@ -62,9 +62,11 @@ export function useStatusPoll<T>(options: {
 
   const tick = useCallback(async () => {
     if (!latest.current.enabled || inFlight.current) return;
-    // A hidden tab does not poll; the visibilitychange listener below resumes
-    // the loop. So a background tab never keeps a customer session alive.
-    if (document.visibilityState === 'hidden') return;
+    // A hidden tab does not repeat polls; the visibilitychange listener below
+    // resumes the loop. So a background tab never keeps a customer session
+    // alive. The first fetch still runs, so a page opened in the background
+    // has data.
+    if (document.visibilityState === 'hidden' && dataRef.current !== null) return;
     inFlight.current = true;
     try {
       const next = await latest.current.fetcher();

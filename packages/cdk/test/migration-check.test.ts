@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { migrationsUpToDate } from '../src/lambda/migration-check';
+import { MIGRATION_LOCK_KEY, migrationsUpToDate, withMigrationLock } from '../src/lambda/migration-check';
 
 const journal = { entries: [{ when: 100 }, { when: 300 }, { when: 200 }] };
 const dbReturning = (created_at: string | number | null | undefined) => ({
@@ -30,5 +30,44 @@ describe('migrationsUpToDate', () => {
       },
     };
     expect(await migrationsUpToDate(broken, journal)).toBe(false);
+  });
+});
+
+describe('withMigrationLock', () => {
+  function recordingClient(calls: string[]) {
+    return {
+      query: async (text: string, values?: unknown[]) => {
+        calls.push(`${text} ${JSON.stringify(values)}`);
+        return {};
+      },
+      release: () => {
+        calls.push('release');
+      },
+    };
+  }
+
+  it('takes the advisory lock, runs, then unlocks and releases the connection', async () => {
+    const calls: string[] = [];
+    const result = await withMigrationLock(async () => recordingClient(calls), async () => {
+      calls.push('run');
+      return 'done';
+    });
+    expect(result).toBe('done');
+    expect(calls).toEqual([
+      `SELECT pg_advisory_lock($1) [${MIGRATION_LOCK_KEY}]`,
+      'run',
+      `SELECT pg_advisory_unlock($1) [${MIGRATION_LOCK_KEY}]`,
+      'release',
+    ]);
+  });
+
+  it('unlocks and releases when the migration fails', async () => {
+    const calls: string[] = [];
+    await expect(
+      withMigrationLock(async () => recordingClient(calls), async () => {
+        throw new Error('23505');
+      }),
+    ).rejects.toThrow('23505');
+    expect(calls.slice(-2)).toEqual([`SELECT pg_advisory_unlock($1) [${MIGRATION_LOCK_KEY}]`, 'release']);
   });
 });

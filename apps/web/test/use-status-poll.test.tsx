@@ -209,4 +209,25 @@ describe('useStatusPoll', () => {
     });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
+
+  it('in a hidden tab, fetches once for first data, then waits for the tab to show', async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    const fetcher = vi.fn().mockResolvedValue('a');
+    mount({ fetcher, intervalMs: 5000, terminalIntervalMs: 60000, isTerminal: () => false });
+    await flush();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20000);
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });

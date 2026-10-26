@@ -292,9 +292,14 @@ value that one migration adds and also uses still fails with 55P04; see
 `0006_funny_pete_wisdom.sql` for the workaround. A new migration under
 `packages/db/drizzle/` needs a matching hand-written import in that file;
 `packages/cdk/test/lambda-migrations.test.ts` fails when one is missing. A
-migration that cannot apply kills Lambda initialization: `/health/ready`
-fails, the deploy workflow fails, and warm containers keep the cached
-failure until they are recycled.
+migration that cannot apply fails the cold start: `/health/ready` fails and
+the deploy workflow fails. The container does not keep the failure; its next
+request tries again. Containers that cold-start together take a Postgres
+advisory lock (`withMigrationLock` in `migration-check.ts`) before the
+migrator, so only one container runs a migration and the others check again
+after it. Without the lock, two containers ran `CREATE TABLE IF NOT EXISTS`
+at the same time on 0055 and the second failed with 23505 for about one
+minute.
 
 A migration that adds an index uses plain `CREATE INDEX IF NOT EXISTS`: the
 migrator runs each migration in a transaction, so `CONCURRENTLY` is not

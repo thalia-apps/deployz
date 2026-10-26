@@ -65,8 +65,9 @@ Limits (constants in `customer-access.ts`):
   `session_token`, so the API's general origin check also covers every
   state-changing install route.
 - **Polling and idle expiry.** A request from the page refreshes the idle
-  timer. The page does not poll in a hidden tab (`useStatusPoll`), so a
-  background tab does not keep a session alive.
+  timer. In a hidden tab the page fetches only its first data and does not
+  repeat polls (`useStatusPoll`), so a background tab does not keep a session
+  alive.
 - **Fixture mode.** With `EMAIL_VERIFICATION_FIXTURE_MODE=true` (simulated
   E2E only), the code request also returns `fixtureCode`.
 - **Known limit.** A request for an allowed email does more work (database

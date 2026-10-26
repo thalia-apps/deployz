@@ -566,3 +566,40 @@ describe('the deploy republishes bootstrap artifacts to every deployable region'
     expect(steps).toMatch(/BOOTSTRAP_PUBLISH_REGIONS[^\n]*DEPLOYABLE_AWS_REGIONS/);
   });
 });
+
+describe('SES credentials', () => {
+  let tempDir: string;
+  const SES_VARS = ['AWS_SES_ACCESS_KEY_ID', 'AWS_SES_SECRET_ACCESS_KEY'];
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'deployz-env-ses-'));
+    vi.spyOn(process, 'cwd').mockReturnValue(tempDir);
+    for (const key of SES_VARS) delete process.env[key];
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    for (const key of SES_VARS) delete process.env[key];
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  // Production had a trailing newline in the access key id, which made every
+  // SES request fail with ERR_INVALID_CHAR in the authorization header.
+  it('trims surrounding whitespace from both keys', async () => {
+    process.env.AWS_SES_ACCESS_KEY_ID = 'AKIATESTKEY\n';
+    process.env.AWS_SES_SECRET_ACCESS_KEY = ' secret-value ';
+
+    const { env } = await import('./env.js');
+    expect(env.sesAccessKeyId).toBe('AKIATESTKEY');
+    expect(env.sesSecretAccessKey).toBe('secret-value');
+  });
+
+  it('treats an empty or blank key as unset', async () => {
+    process.env.AWS_SES_ACCESS_KEY_ID = '\n';
+
+    const { env } = await import('./env.js');
+    expect(env.sesAccessKeyId).toBeUndefined();
+    expect(env.sesSecretAccessKey).toBeUndefined();
+  });
+});

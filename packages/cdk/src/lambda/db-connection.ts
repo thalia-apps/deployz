@@ -83,7 +83,7 @@ import migration0053 from '../../../db/drizzle/0053_deployment_billing_paused.sq
 import migration0054 from '../../../db/drizzle/0054_hot_path_indexes.sql';
 import migration0055 from '../../../db/drizzle/0055_customer_access.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
-import { migrationsUpToDate } from './migration-check.js';
+import { migrationsUpToDate, withMigrationLock } from './migration-check.js';
 
 /**
  * Migration SQL keyed by journal tag.
@@ -242,26 +242,35 @@ export function connectDb(): Promise<LambdaDb> {
       // writing and re-checking every bundled migration. Any doubt runs the
       // migrator exactly as before.
       if (!(await migrationsUpToDate(pool, journal))) {
-        const migrationsDir = writeMigrationsToTmp();
-        // One migrator run per journal prefix, so each migration commits
-        // before the next one starts. drizzle applies every pending migration
-        // in ONE transaction, and Postgres refuses to use an enum value until
-        // the transaction that added it commits (55P04): 0023 uses values that
-        // 0002, 0014 and 0017 add, so a fresh database failed at 0023.
-        // Already-applied entries are skipped by drizzle's own created_at check.
-        const entries = (journal as { entries: readonly unknown[] }).entries;
-        for (let count = 1; count <= entries.length; count++) {
-          writeFileSync(
-            join(migrationsDir, 'meta', '_journal.json'),
-            JSON.stringify({ ...journal, entries: entries.slice(0, count) }),
-          );
-          await migrate(db, { migrationsFolder: migrationsDir });
-        }
+        await withMigrationLock(() => pool.connect(), async () => {
+          // Another container may have applied everything while this one waited.
+          if (await migrationsUpToDate(pool, journal)) return;
+          const migrationsDir = writeMigrationsToTmp();
+          // One migrator run per journal prefix, so each migration commits
+          // before the next one starts. drizzle applies every pending migration
+          // in ONE transaction, and Postgres refuses to use an enum value until
+          // the transaction that added it commits (55P04): 0023 uses values that
+          // 0002, 0014 and 0017 add, so a fresh database failed at 0023.
+          // Already-applied entries are skipped by drizzle's own created_at check.
+          const entries = (journal as { entries: readonly unknown[] }).entries;
+          for (let count = 1; count <= entries.length; count++) {
+            writeFileSync(
+              join(migrationsDir, 'meta', '_journal.json'),
+              JSON.stringify({ ...journal, entries: entries.slice(0, count) }),
+            );
+            await migrate(db, { migrationsFolder: migrationsDir });
+          }
+        });
       }
 
       process.env.DATABASE_URL = databaseUrl;
       return db;
     })();
+    // A failed start must not stay cached: the next invocation in this
+    // container tries again instead of failing until AWS recycles it.
+    dbPromise.catch(() => {
+      dbPromise = null;
+    });
   }
   return dbPromise;
 }
