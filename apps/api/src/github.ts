@@ -952,8 +952,14 @@ export async function fetchRepositoryTreeEntries(
   }
 
   const data = (await response.json()) as { tree?: GitTreeEntry[]; truncated?: boolean };
-  return data.tree ?? [];
+  const entries = data.tree ?? [];
+  if (data.truncated === true) truncatedListings.add(entries);
+  return entries;
 }
+
+// GitHub cuts the recursive listing of a very large repository (twenty) and
+// says so with `truncated`. Such a listing is not the full path list.
+const truncatedListings = new WeakSet<GitTreeEntry[]>();
 
 // Resolves a branch's current head commit sha — the Task 6 commit-SHA
 // analysis cache uses this to decide whether a re-analysis would produce the
@@ -1158,11 +1164,14 @@ export async function buildFileTreeForAnalysis(
       tree[entry.path] = '';
     }
   }
-  // Every tracked path, so a detector can tell a missing file from an unfetched one.
-  Object.defineProperty(tree, TREE_PATHS, {
-    value: entries.filter((entry) => entry.type === 'blob').map((entry) => entry.path),
-    enumerable: false,
-  });
+  // Every tracked path, so a detector can tell a missing file from an unfetched
+  // one. A truncated listing is not every path, so it is not attached.
+  if (!truncatedListings.has(entries)) {
+    Object.defineProperty(tree, TREE_PATHS, {
+      value: entries.filter((entry) => entry.type === 'blob').map((entry) => entry.path),
+      enumerable: false,
+    });
+  }
 
   return tree;
 }

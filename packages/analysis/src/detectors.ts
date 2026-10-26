@@ -4684,6 +4684,8 @@ function unresolvedSelectors(
   }
   const dockerfile = selectedDockerfile(tree);
   if (dockerfile) for (const [name, value] of dockerfileEnvValues(dockerfile.content)) add(imageDefaults, name, value, dockerfile.path);
+  const runtime = detectRuntime(tree).value;
+  const startedLanguage = (dockerfile ? startedRuntime(tree, productionStageText(dockerfile.content)) : null) ?? (typeof runtime === 'string' ? runtime : null);
   const runtimeSamples = new Set(appEnvSampleFiles(tree, isSiblingApp));
   const runtimeSampleNames = new Set<string>();
   for (const path of [...runtimeSamples, ...listProductionComposeFiles(tree)]) {
@@ -4706,7 +4708,11 @@ function unresolvedSelectors(
   for (const name of names) {
     // The managed PostgreSQL database accepts only TLS connections (RDS `rds.force_ssl`).
     if (DB_SSL_MODE_NAME_REGEX.test(name)) {
-      const disabled = [...(imageDefaults.get(name) ?? codeDefaults.get(name) ?? [])].find(({ value }) => /^disable$/i.test(value));
+      // Only a read in the language the image starts: a Go demo tool next to a JVM app (geopulse) is another program.
+      const disabled = [...(imageDefaults.get(name) ?? codeDefaults.get(name) ?? [])].find(({ value, file }) => {
+        const language = SOURCE_FILE_RUNTIMES.find(([pattern]) => pattern.test(file))?.[1];
+        return /^disable$/i.test(value) && (startedLanguage === null || language === undefined || language === startedLanguage);
+      });
       if (engine === 'postgres' && disabled !== undefined) {
         result.set(name, { evidence: `TLS setting: default "disable" cannot reach the managed PostgreSQL database, which accepts only TLS — set "require"`, files: [disabled.file] });
       }

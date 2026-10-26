@@ -221,6 +221,33 @@ describe('a build argument that a RUN step requires (memos)', () => {
   });
 });
 
+describe('a multi-process check of the image the build produces (twenty)', () => {
+  const tree = (lastStage: string): FileTree => ({
+    'docker/Dockerfile': [
+      'FROM node:24-alpine AS twenty',
+      'COPY . /app',
+      'CMD ["node", "dist/main"]',
+      `FROM twenty AS ${lastStage}`,
+      'ADD https://github.com/just-containers/s6-overlay/releases/download/v3/s6-overlay-noarch.tar.xz /tmp',
+      'COPY docker/s6-rc.d /etc/s6-overlay/s6-rc.d',
+      'ENTRYPOINT ["/init"]',
+      '',
+    ].join('\n'),
+    'docker/s6-rc.d/postgres/run': '#!/bin/sh\nexec postgres\n',
+    'docker/s6-rc.d/redis/run': '#!/bin/sh\nexec redis-server\n',
+    'docker/s6-rc.d/server/run': '#!/bin/sh\nexec node dist/main\n',
+  });
+  const multiProcess = (files: FileTree) => analyseRepo(files).rejections.some((rejection) => rejection.dependency === 'multi-process-image' && rejection.detected);
+
+  it('ignores a trailing dev all-in-one stage', () => {
+    expect(multiProcess(tree('twenty-app-dev'))).toBe(false);
+  });
+
+  it('still rejects an s6 image that is the production stage', () => {
+    expect(multiProcess(tree('all-in-one'))).toBe(true);
+  });
+});
+
 describe('a database TLS mode that defaults to disable (vikunja)', () => {
   const tree = (sslDefault: string): FileTree => ({
     'pkg/config/config.go': [
@@ -245,6 +272,15 @@ describe('a database TLS mode that defaults to disable (vikunja)', () => {
     const variable = sslMode(tree('disable'), 'postgres');
     expect(variable?.required).toBe(true);
     expect(variable?.source.join(' ')).toContain('set "require"');
+  });
+
+  it('is not asked for a read in a tool of another language than the image (geopulse)', () => {
+    const tool: FileTree = {
+      Dockerfile: 'FROM eclipse-temurin:21-jre\nCOPY target/app.jar /app.jar\nCMD ["java", "-jar", "/app.jar"]\n',
+      'demo-integrations/store.go': 'package demo\nvar q = "sslmode=" + env("GEOPULSE_POSTGRES_SSLMODE", "disable")\n',
+    };
+    const variable = detectEnvVarModel(tool, [], { database: 'postgres', storage: false }).find((entry) => entry.key === 'GEOPULSE_POSTGRES_SSLMODE');
+    expect(variable?.required ?? false).toBe(false);
   });
 
   it('is not asked when the default already uses TLS or no database is provisioned', () => {

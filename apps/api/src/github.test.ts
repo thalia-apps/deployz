@@ -11,6 +11,7 @@ import {
   manifestToApplicationGraph,
   normalizeDeploymentManifest,
   planApplicationGraph,
+  TREE_PATHS,
 } from '@deployz/analysis';
 
 import { createAuth, type Auth } from './auth.js';
@@ -439,6 +440,20 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     // One tree call + one blob call per relevant file (3) — never touches
     // README.md, node_modules/**, or the directory entry.
     expect(calls).toHaveLength(4);
+  });
+
+  // twenty: GitHub cut the listing of a 47k-path repository, so `yarn.lock`
+  // looked missing and the Dockerfile was rejected as unbuildable.
+  it('attaches the full path list only when GitHub did not truncate the listing', async () => {
+    const listing = (truncated: boolean): FetchFn => async (url) =>
+      url.includes('/git/trees/')
+        ? makeFetchResponse(200, { truncated, tree: [{ path: 'Dockerfile', type: 'blob', sha: 'sha-docker', size: 9 }] })
+        : makeFetchResponse(200, { content: Buffer.from('FROM node').toString('base64'), encoding: 'base64' });
+    const full = await buildFileTreeForAnalysis(REF, 'tok', listing(false));
+    expect((full as Record<symbol, unknown>)[TREE_PATHS]).toEqual(['Dockerfile']);
+    const truncated = await buildFileTreeForAnalysis(REF, 'tok', listing(true));
+    expect((truncated as Record<symbol, unknown>)[TREE_PATHS]).toBeUndefined();
+    expect(truncated).toEqual({ Dockerfile: 'FROM node' });
   });
 
   it('fetches C#, Java, Kotlin, PHP, Rust and Elixir source and appsettings.json for the env-var model', async () => {

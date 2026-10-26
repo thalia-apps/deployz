@@ -1,0 +1,150 @@
+id: new-39
+repository: formbricks/formbricks
+commit: f684d12b411ba67c87ac849c430117a66726e47b
+summary: >-
+  Formbricks v6 is an open-source survey/experience-management platform (Next.js 16 standalone, Node 24, Prisma,
+  pnpm/turbo monorepo). The documented self-hosting stack is several services: the Formbricks app plus the Hub
+  (Go API and worker), Cube, SpiceDB, PostgreSQL with pgvector and Redis/Valkey. The app image alone is not enough.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >-
+    The app refuses to serve without SpiceDB (AUTHZED_ENABLED=true, v6 has no fallback). It also requires
+    HUB_API_URL/HUB_API_KEY (Hub image) and CUBEJS_API_URL/CUBEJS_API_SECRET (Cube image). Hub, hub-worker, Cube
+    and SpiceDB are separate application services with their own images; Deployz hosts one Dockerfile image plus
+    same-image workers. NOT_DEPLOYABLE is the best answer. DEPLOYABLE_WITH_CHANGES is acceptable only when the
+    vendor supplies external Hub, Cube and AuthZed endpoints (app + RDS Postgres/pgvector + ElastiCache + S3).
+dockerfile:
+  accept: [apps/web/Dockerfile]
+  reject:
+    - {path: docker/cube-image/Dockerfile, reason: separate Cube analytics service image, not the app}
+  target: null
+  context: .
+  evidence:
+    - {path: apps/web/Dockerfile, line: 45, quote: "FROM base AS installer"}
+    - {path: apps/web/Dockerfile, line: 137, quote: "FROM runtime-base AS runner"}
+    - {path: apps/web/Dockerfile, line: 69, quote: "COPY --parents apps/*/package.json packages/*/package.json docker/package.json ./"}
+    - {path: apps/web/Dockerfile, line: 93, quote: "COPY . ."}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: apps/web/Dockerfile, line: 390, quote: "EXPOSE 3000"}
+    - {path: apps/web/scripts/docker/server.js, line: 15, quote: "process.env.PORT || \"3000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/web/Dockerfile, line: 391, quote: "ENV HOSTNAME=\"0.0.0.0\""}
+    - {path: apps/web/scripts/docker/server.js, line: 17, quote: "process.env.HOSTNAME || \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["/home/nextjs/start.sh"]
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: apps/web/app/health/route.ts, line: 2, quote: "Response.json({ status: \"ok\" })"}
+    - {path: apps/web/app/middleware/route-config.ts, line: 20, quote: "HEALTH_ROUTES: [/^\\/health$/]"}
+    - {path: apps/web/app/health/ready/route.ts, line: 38, quote: "{ status: \"not_ready\" }, { status: 503 }"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: apps/web/lib/env.ts, line: 571, quote: "DATABASE_URL: z.url(),"}
+    - {path: docker/docker-compose.yml, line: 268, quote: "image: pgvector/pgvector:pg18"}
+    - {path: packages/database/migration/20241017124431_add_documents_and_insights/migration.sql, line: 2, quote: "CREATE EXTENSION IF NOT EXISTS \"vector\";"}
+    - {path: docs/self-hosting/deployment-components.mdx, line: 16, quote: "RDS for PostgreSQL ... with the `vector` extension"}
+migrations:
+  mode: startup
+  accept: ["node packages/database/dist/scripts/apply-migrations.js"]
+  evidence:
+    - {path: apps/web/scripts/docker/next-start.sh, line: 58, quote: "node packages/database/dist/scripts/apply-migrations.js"}
+    - {path: apps/web/scripts/docker/next-start.sh, line: 54, quote: "SKIP_STARTUP_MIGRATION:-false"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: apps/web/lib/env.ts, line: 709, quote: "REDIS_URL is required for caching, rate limiting, and audit logging"}
+    - {path: apps/web/lib/jobs/config.ts, line: 57, quote: "REDIS_URL is required to start the BullMQ worker"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: apps/web/lib/jobs/config.ts, line: 26, quote: "return env.NODE_ENV !== \"test\";"}
+    - {path: .env.example, line: 46, quote: "BullMQ worker startup is enabled by default outside tests."}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: .env.example, line: 38, quote: "API Secret for running cron jobs. (mandatory)"}
+storage:
+  local: conditional
+  paths: [/home/nextjs/apps/web/uploads/, /home/nextjs/apps/web/saml-connection]
+  s3: native
+  s3SelectBy: {S3_BUCKET_NAME: "<bucket>", S3_REGION: "<region>"}
+  evidence:
+    - {path: packages/storage/src/client.ts, line: 41, quote: "allows the AWS SDK to use IAM roles, instance profiles"}
+    - {path: apps/web/lib/constants.ts, line: 206, quote: "IS_STORAGE_CONFIGURED = Boolean(S3_BUCKET_NAME)"}
+    - {path: docs/self-hosting/configuration/file-uploads.mdx, line: 6, quote: "Formbricks requires S3-compatible storage for file uploads."}
+    - {path: apps/web/Dockerfile, line: 400, quote: "VOLUME /home/nextjs/apps/web/uploads/"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres URL; build uses fallback"}
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "openssl rand -hex 32; z.string() without default"}
+    - {name: BETTER_AUTH_SECRET, secret: true, buildTime: false, note: "boot fails if neither it nor NEXTAUTH_SECRET is set"}
+    - {name: WEBAPP_URL, secret: false, buildTime: false, note: "public https URL"}
+    - {name: BETTER_AUTH_URL, secret: false, buildTime: false, note: "same as WEBAPP_URL"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "z.url(), required outside tests"}
+    - {name: HUB_API_URL, secret: false, buildTime: false, note: "needs a separate Hub service"}
+    - {name: HUB_API_KEY, secret: true, buildTime: false, note: "non-empty"}
+    - {name: CUBEJS_API_URL, secret: false, buildTime: false, note: "needs a separate Cube service"}
+    - {name: CUBEJS_API_SECRET, secret: true, buildTime: false, note: "non-empty"}
+    - {name: AUTHZED_ENABLED, secret: false, buildTime: false, note: "must be true"}
+    - {name: AUTHZED_ENDPOINT, secret: false, buildTime: false, note: "host:port of SpiceDB, no scheme"}
+    - {name: AUTHZED_TOKEN, secret: true, buildTime: false, note: "SpiceDB preshared key"}
+    - {name: AUTHZED_CONSISTENCY, secret: false, buildTime: false, note: "must be fully_consistent"}
+    - {name: CRON_SECRET, secret: true, buildTime: false, note: ".env.example marks it mandatory; schema is optional"}
+  optional: [AUTHZED_SYSTEM_KEY, AUTHZED_INSECURE, SKIP_STARTUP_MIGRATION, S3_BUCKET_NAME, S3_REGION, S3_ACCESS_KEY, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_FORCE_PATH_STYLE, SMTP_HOST, SMTP_PORT, MAIL_FROM, EMAIL_VERIFICATION_DISABLED, PASSWORD_RESET_DISABLED, BULLMQ_WORKER_ENABLED, PUBLIC_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, SAML_DATABASE_URL, LOG_LEVEL]
+  buildTime: [BASE_PATH]
+  evidence:
+    - {path: apps/web/lib/env.ts, line: 617, quote: "ENCRYPTION_KEY: z.string(),"}
+    - {path: apps/web/lib/env.ts, line: 484, quote: "BETTER_AUTH_SECRET is required. Generate one with"}
+    - {path: apps/web/lib/env.ts, line: 992, quote: "Formbricks v6 requires AUTHZED_ENABLED=true"}
+    - {path: apps/web/lib/env.ts, line: 658, quote: "HUB_API_URL: z.url(),"}
+    - {path: apps/web/lib/env.ts, line: 652, quote: "CUBEJS_API_SECRET: z.string().trim().min(1),"}
+    - {path: apps/web/scripts/docker/read-secrets.sh, line: 7, quote: "DEFAULT_DATABASE_URL=\"postgresql://test:test@localhost:5432/formbricks\""}
+    - {path: apps/web/Dockerfile, line: 89, quote: "ARG BASE_PATH=\"\""}
+blockers:
+  expected:
+    - "Hub (ghcr.io/formbricks/hub, API plus hub-worker) is a required separate Go service; the app needs HUB_API_URL and HUB_API_KEY"
+    - "Cube (ghcr.io/formbricks/cube) is a required separate analytics service; the app needs CUBEJS_API_URL and CUBEJS_API_SECRET"
+    - "SpiceDB/AuthZed is a required separate gRPC service for all permission checks (AUTHZED_ENABLED=true cannot be disabled)"
+  mustNot:
+    - "PostgreSQL: supported (RDS Postgres with pgvector); not a blocker"
+    - "Redis: required but ElastiCache/Valkey is provided by Deployz; not a blocker"
+    - "Local uploads volume: S3 is native, so it is not a persistent-volume blocker"
+    - "BullMQ worker: runs inside the web process, no separate worker service needed"
+    - "Migrations: run at container start; no separate migration job needed"
+    - "vLLM/Qwen GPU and taxonomy services: optional AI profiles, not part of the baseline"
+vendorQuestions:
+  legitimate:
+    - "Are external Hub, Cube and AuthZed endpoints available? The repo cannot say what the operator runs elsewhere"
+  unnecessary:
+    - "Which port or health path (3000 and /health are in the Dockerfile and routes)"
+    - "Whether to run migrations manually (start.sh does it)"
+    - "Whether a worker process is needed (embedded BullMQ)"
+    - "Which database engine (Postgres only)"
+    - "Whether Redis is optional (REDIS_URL is required)"
+traps:
+  - "docker-compose.yml shows one formbricks service -> it needs hub, hub-worker, cube, spicedb siblings; not single-container (docker/docker-compose.yml:265-420)"
+  - "formbricks-migrate/authzed-initialize one-shot services -> same image; the image start script also migrates unless SKIP_STARTUP_MIGRATION=true (docker/docker-compose.yml:349, apps/web/scripts/docker/next-start.sh:54)"
+  - "/health/ready (DB query, 503 when not ready) -> use /health for the load balancer, it is static 200 (apps/web/app/health/route.ts:2)"
+  - "build secrets database_url etc. look required at build -> read-secrets.sh falls back to placeholders, plain docker build works (apps/web/scripts/docker/read-secrets.sh:7)"
+  - "NEXTAUTH_* in docs/compose -> legacy aliases; BETTER_AUTH_SECRET/URL are the current names (apps/web/lib/env.ts:679)"
+  - ".env.example SpiceDB comments mention the dev stack -> v6 requires it in production (apps/web/lib/env.ts:992)"
+  - "docker/cube-image/Dockerfile and docker-compose.dev.yml -> not the app image"
+  - "Dockerfile builds Node 24 from source in a stage -> long build; the last stage runner is the app, no --target needed (apps/web/Dockerfile:14,137)"
+openQuestions:
+  - "Hub/Cube/AuthZed runtime need was read from env schema and docs; I did not trace whether every page fails when Hub or Cube is unreachable (only env presence is validated at boot)."
