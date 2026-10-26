@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { customerSessionHeaders } from './customer-access-fixture.js';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -428,7 +429,7 @@ describe('deployment plans (Phase 4)', () => {
     const customer = await insertCustomer(db, org.organizationId);
     const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id);
 
-    const installResponse = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}` });
+    const installResponse = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(installResponse.statusCode, installResponse.body).toBe(200);
     const installBody = installResponse.json() as { plan: unknown };
 

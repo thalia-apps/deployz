@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { customerSessionHeaders } from './customer-access-fixture.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -611,6 +612,7 @@ describe('custom domain link-scoped check route', () => {
     const response = await app.inject({
       method: 'POST',
       url: `/api/install/${deployment.installLinkId}/domain/check`,
+      headers: await customerSessionHeaders(db, deployment.installLinkId),
     });
     expect(response.statusCode).toBe(404);
   });
@@ -630,6 +632,7 @@ describe('custom domain link-scoped check route', () => {
     const response = await app.inject({
       method: 'POST',
       url: `/api/install/${deployment.installLinkId}/domain/check`,
+      headers: await customerSessionHeaders(db, deployment.installLinkId),
     });
     expect(response.statusCode).toBe(200);
     const body = response.json() as { domain: { status: string; url: string | null } };
@@ -647,7 +650,7 @@ describe('custom domain link-scoped check route', () => {
       .from(schema.customDomains)
       .where(eq(schema.customDomains.deploymentId, deployment.id));
 
-    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}` });
+    const response = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(response.statusCode).toBe(200);
     const body = response.json() as {
       deploymentId: string;

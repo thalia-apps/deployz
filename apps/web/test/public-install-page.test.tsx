@@ -22,7 +22,7 @@ const routerMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => routerMocks }));
-vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined, toString: () => '' }) }));
 
 const confirmMocks = vi.hoisted(() => ({ confirmPublicInstall: vi.fn() }));
 vi.mock('../src/lib/public-install-confirm', () => ({
@@ -282,6 +282,7 @@ describe('InstallPage public resolution', () => {
         plan: null,
         quickCreateUrl: 'https://quick.create',
         alreadyInstalled: false,
+        viewer: { kind: 'customer', email: 'owner@example.com' },
         deploymentId: 'dep-1',
         deploymentState: 'NOT_INSTALLED',
         domain: null,
@@ -296,7 +297,7 @@ describe('InstallPage public resolution', () => {
     const doc = await renderServer();
 
     expect(doc.body.textContent).toContain('to your AWS account');
-    expect(pageMocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, undefined);
+    expect(pageMocks.fetchInstallData).toHaveBeenCalledWith(LINK_ID, '');
   });
 });
 

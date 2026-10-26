@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import Link from 'next/link';
 
 import { InstallLoadError } from '@/components/install-load-error';
 import { InvitationTokenGate } from '@/components/invitation-token-gate';
 import { SecurityDetailsContent } from '@/components/security-details-content';
+import { Button } from '@/components/ui/button';
 import { fetchInstallData } from '@/lib/install-data';
 import { fetchPublicInstallData } from '@/lib/public-install-data';
 import { publicInstallErrorMessage } from '@/lib/public-install-types';
@@ -21,7 +24,7 @@ export default async function SecurityDetailsPage({
   // Resolve the link first: this page used to render the full security story
   // for any id at all, including ones the parent route had already told the
   // reader were invalid.
-  const lookup = await fetchInstallData(installLinkId);
+  const lookup = await fetchInstallData(installLinkId, (await cookies()).toString());
   const securityHref = `/install/${encodeURIComponent(installLinkId)}/security`;
   if (lookup.status === 'error') return <InstallLoadError href={securityHref} />;
 
@@ -50,6 +53,20 @@ export default async function SecurityDetailsPage({
     if (publicLookup === null) {
       return <InvitationTokenGate installLinkId={installLinkId} view="security" />;
     }
+  }
+
+  if (lookup.status === 'sign_in') {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Verify your email first</h1>
+        <p className="max-w-md text-sm text-muted-foreground">
+          The security details of this deployment show after you verify your email.
+        </p>
+        <Button asChild className="w-fit">
+          <Link href={`/install/${encodeURIComponent(installLinkId)}`}>Verify your email</Link>
+        </Button>
+      </div>
+    );
   }
 
   if (lookup.status !== 'ok') {

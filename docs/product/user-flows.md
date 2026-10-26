@@ -10,8 +10,10 @@ behind each step is in [`../architecture.md`](../architecture.md).
 
 - **Vendor** — the software company. Signs in to the Deployz dashboard
   (`apps/web`), owns applications, releases, customers and deployments.
-- **Customer** — the vendor's customer. Never needs a Deployz account. Uses a
-  public install page and their own AWS console.
+- **Customer** — the vendor's customer. Has no Deployz account or password.
+  Uses one page for each deployment, after an emailed code proves the owner
+  email ([`../customer-access.md`](../customer-access.md)), and their own AWS
+  console.
 - **Deployz team** — operates the control plane and the Team Admin support
   console ([`../admin/team-admin.md`](../admin/team-admin.md)).
 
@@ -31,7 +33,7 @@ behind each step is in [`../architecture.md`](../architecture.md).
 | 10 | Share with customers | see *Customer entry points* below | Three ways to hand a customer an install: a reusable public install link, a targeted invitation, or a vendor-created deployment. |
 | 11 | Fleet views | `/dashboard/deployments`, `/dashboard/customers` | One status per deployment (Waiting for customer, Setting up, Live, Updating, Install / Update / Removal failed, Needs attention · reason, Removing, Removed), grouped for filtering as Failed or needs attention / In progress / Waiting for customer / Update available / Live / Removed. Customers roll up to Not installed / Installing / Live / Needs attention / Removing / Removed. |
 | 12 | Deployment detail | `/dashboard/deployments/[id]` | The canonical operational page: status badge, hero (situation, progress, address), and for a failure the recovery panel (what happened, impact, cause and fix from the diagnostics classification, recoverability, technical details). Identifiers, the infrastructure check and raw events are under "Technical details". `…/diagnostics` is only a deep link to that section. |
-| 13 | Day-2 actions | same page | Deploy update, Restart, Rollback to a previous release, Configuration (customer scope), Retry deployment (failed first install, for every failure code; when the connector is disconnected or not registered, the dialog leads with Issue new install link), new install link (connector reset: the link address stays the same, the connection code and credential change, and the link is valid for 30 days from the reset; for an installed deployment the customer updates the existing connector stack with the new `RelayCredential` and `EnrollmentCode`; it never creates a second stack), connector update (customer-approved alert; keeps the credential), default-HTTPS retry (only when the default address itself is in error, not a custom domain). Actions are gated in this order: removed → never installed → relay not connected → another operation running. A failed update keeps the previous release live. Rollback never re-runs migrations. Bulk deploy of one release to every deployment exists only as an API route. |
+| 13 | Day-2 actions | same page | Deploy update, Restart, Rollback to a previous release, Configuration (customer scope), Retry deployment (failed first install, for every failure code; when the connector is disconnected or not registered, the dialog leads with Issue new install link), new install link (connector reset: the link address stays the same, the connection code and credential change, and the link is valid for 7 days from the reset; for an installed deployment the customer updates the existing connector stack with the new `RelayCredential` and `EnrollmentCode`; it never creates a second stack), connector update (customer-approved alert; keeps the credential), default-HTTPS retry (only when the default address itself is in error, not a custom domain). Actions are gated in this order: removed → never installed → relay not connected → another operation running. A failed update keeps the previous release live. Rollback never re-runs migrations. Bulk deploy of one release to every deployment exists only as an API route. |
 | 14 | Custom domain | deployment detail → customer install page in a vendor session | The vendor enters the hostname; the customer creates two CNAME records in their own DNS; the relay issues an ACM certificate and wires the 443 listener. Change = remove, then add. See [`../networking-and-https.md`](../networking-and-https.md). |
 | 15 | Remove deployment and Delete retained data | deployment detail | Remove deployment (type-to-confirm, plan-driven) deletes the application, network and cache and **retains** the database, its credentials and the bucket. Delete retained data deletes the retained items; the Deployz connector stays. "Complete removal anyway" settles a removal whose connector is gone, and says that resources may remain. Only the vendor can delete retained data. |
 | 16 | Billing | `/dashboard/settings/billing` | Paddle subscription. Evaluation is free; the first PRODUCTION deployment requires the $49/month platform subscription; each production deployment adds $19/month while it serves the customer; a failed or disconnected one is paused and not billed. See [`../billing/paddle-billing.md`](../billing/paddle-billing.md). |
@@ -42,13 +44,13 @@ behind each step is in [`../architecture.md`](../architecture.md).
 | --- | --- | --- | --- | --- |
 | **Reusable public install link** | Application overview ("Create install link") | Nothing until a customer confirms. Each confirmation creates a new customer record and a PRODUCTION deployment. One live link per application; enable / disable / revoke / regenerate. | Customer selects (pre-selected to the vendor's recommendation when present and deployable; otherwise explicit choice required) | Works end to end. |
 | **Targeted invitation** | Customer detail page ("Create installation") or "Create deployment" on Home/Deployments, "Invite customer" on the Customers list | Nothing until the customer confirms. Bound to one customer, secured by a one-time token shown once. The token travels as the URL fragment (`#<token>`), stripped from history after capture. Revoke an active invitation from the customer detail page. | Customer selects (pre-selected to the vendor's recommendation when present and deployable; otherwise explicit choice required) | Works end to end. |
-| **Test deployment** | "Create Test Deployment" (`/dashboard/deployments/new?test=true`) | A TEST deployment immediately, in NOT_INSTALLED, with a per-deployment install link (valid for 30 days; the deployment page shows the expiry date, and Issue new install link renews it). Free; no subscription required. | **Vendor** picks the Region | Works end to end. |
+| **Test deployment** | "Create Test Deployment" (`/dashboard/deployments/new?test=true`) | A TEST deployment immediately, in NOT_INSTALLED, with a per-deployment install link (valid for 7 days; the deployment page shows the expiry date, and Issue new install link renews it). Free; no subscription required. | **Vendor** picks the Region | Works end to end. |
 | Legacy deploy link | API only (`POST /api/customers/:id/deploy-links`) | A `/deploy/<publicId>?token=…` link with a vendor-fixed Region | Vendor | Legacy; kept for links that already exist. See [`../deploy-links.md`](../deploy-links.md). |
 
 ## Customer journey
 
-1. **Receive a link** from the vendor (Deployz sends no email to customers).
-   No Deployz account is needed.
+1. **Receive a link** from the vendor. Deployz sends a customer no email
+   except the sign-in code. No Deployz account is needed.
 2. **Review and choose** (public-link flow only, `apps/web/src/components/public-install-flow.tsx`):
    the AWS Region (only Regions the control plane can install into are
    offered), the application settings the vendor marked "Set by customer"
@@ -70,7 +72,13 @@ behind each step is in [`../architecture.md`](../architecture.md).
    pending-secret vault ([`../pending-secret-delivery.md`](../pending-secret-delivery.md)).
    A vendor-created deployment skips this step; the vendor enters customer
    values on the deployment's configuration page instead.
-3. **Pre-launch page** (`/install/<installLinkId>`): application,
+3. **Verify the email.** The deployment page (`/install/<installLinkId>`)
+   shows only the application and publisher names until the customer enters
+   the owner email (the email on the deployment's customer record) and the
+   8-digit code sent to it. The first verified sign-in claims the deployment.
+   A member of the vendor organization can open the page with the dashboard
+   session. See [`../customer-access.md`](../customer-access.md).
+   **Pre-launch page**: application,
    publisher, Region, release and invitation expiry, then the one shared
    customer review (also used by the hosted deploy page): the estimated
    monthly AWS cost; what will be deployed, as a compact summary under
@@ -131,7 +139,13 @@ behind each step is in [`../architecture.md`](../architecture.md).
     (connector) stack. If the vendor never purges: the retained RDS instance,
     its secrets, the bucket, and the network objects the retained database
     pins (a private subnet, the database security group, the VPC).
-11. **What the customer cannot do in Deployz**: no deploy, rollback, restart,
+11. **The lasting customer page**: the same URL stays the customer's page. It
+    shows the status, the Deployz connector (connection, last contact,
+    version, update state), the AWS location, customer-safe activity and help.
+    When a connector update is available, "Update connector" shows the steps
+    to update the stack in the customer's own AWS account; the page shows the
+    update as done only when the connector reports the new version.
+12. **What the customer cannot do in Deployz**: no deploy, rollback, restart,
     configuration, disconnect or purge. The customer uninstalls only through
     the AWS console.
 

@@ -1,5 +1,5 @@
 // §12/§44 unified deployment-status client for the public install page.
-// Wraps `GET /api/install/:installLinkId/status` — the same unauthenticated,
+// Wraps `GET /api/install/:installLinkId/status` — the owner-or-vendor,
 // customer-only projection the API derives in apps/api/src/deployment-status
 // .ts (see customerDeploymentStatusSchema in @deployz/contracts). Mirrors
 // install-data.ts's split between a server-time fetch (initial paint) and a
@@ -20,11 +20,12 @@ import { apiUrl, serverApiUrl } from '@/lib/api-url';
  */
 export async function fetchInstallStatusServer(
   installLinkId: string,
+  cookieHeader?: string | undefined,
 ): Promise<CustomerDeploymentStatus | null> {
   try {
     const response = await fetch(
       `${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}/status`,
-      { cache: 'no-store' },
+      { cache: 'no-store', ...(cookieHeader ? { headers: { cookie: cookieHeader } } : {}) },
     );
     if (!response.ok) return null;
     return (await response.json()) as CustomerDeploymentStatus;
@@ -37,6 +38,7 @@ export async function fetchInstallStatusServer(
  *  so `useStatusPoll`'s own failure/backoff/staleness handling applies. */
 export async function fetchInstallStatus(installLinkId: string): Promise<CustomerDeploymentStatus> {
   const response = await fetch(`${apiUrl}/api/install/${encodeURIComponent(installLinkId)}/status`, {
+    credentials: 'include',
     cache: 'no-store',
   });
   if (!response.ok) {

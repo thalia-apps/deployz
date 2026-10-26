@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/lib/install-data', () => ({ fetchInstallData: mocks.fetchInstallData }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ toString: () => '' }) }));
 vi.mock('../src/lib/public-install-data', () => ({ fetchPublicInstallData: mocks.fetchPublicInstallData }));
 
 const InstallSecurityPage = (await import('../src/app/install/[installLinkId]/security/page')).default;

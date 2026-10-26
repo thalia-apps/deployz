@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { customerSessionHeaders } from './customer-access-fixture.js';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -212,7 +213,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const [updatedJob] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, job.id));
     expect(updatedJob!.lastProgressAt).not.toBeNull();
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(status.statusCode).toBe(200);
     const body = status.json() as { stage: string; step: string };
     expect(body.stage).toBe('PROVISIONING');
@@ -246,7 +247,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     );
     expect(response.statusCode).toBe(200);
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     expect(status.statusCode).toBe(200);
     const body = customerDeploymentStatusSchema.parse(status.json());
     expect(body.stepStartedAt).not.toBeUndefined();
@@ -285,7 +286,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const [updatedJob] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, job.id));
     expect(updatedJob!.state).toBe('RUNNING');
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const body = customerDeploymentStatusSchema.parse(status.json());
     expect(body.stage).toBe('PROVISIONING');
     expect(body.provisioningIssue).toEqual({
@@ -335,7 +336,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     );
     expect(response.statusCode).toBe(200);
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const body = status.json() as { stage: string; step: string };
     expect(body.stage).toBe('PROVISIONING');
     expect(body.step).toBe('NETWORK');
@@ -589,7 +590,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
 
     // The customer page flips to the terminal state, cleanup in progress,
     // and the activity line stays jargon-free.
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const body = customerDeploymentStatusSchema.parse(status.json());
     expect(body.stage).toBe('FAILED');
     expect(body.cleanup).toBe('IN_PROGRESS');
@@ -629,7 +630,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const terminalLogRows = await db.select().from(schema.eventLogs).where(eq(schema.eventLogs.jobId, job.id));
     expect(terminalLogRows.filter((row) => row.eventType === 'install.failed')).toHaveLength(1);
 
-    const terminalStatus = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const terminalStatus = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const terminalBody = customerDeploymentStatusSchema.parse(terminalStatus.json());
     expect(terminalBody.stage).toBe('FAILED');
     expect(terminalBody.cleanup).toBe('RETAINED');
@@ -716,7 +717,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const [updatedJob] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, job.id));
     expect(updatedJob!.state).toBe('RUNNING');
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const body = status.json() as { stage: string };
     expect(body.stage).toBe('PROVISIONING');
   });
@@ -747,7 +748,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const [updatedJob] = await db.select().from(schema.deploymentJobs).where(eq(schema.deploymentJobs.id, job.id));
     expect(updatedJob!.state).toBe('FAILED');
 
-    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` });
+    const status = await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) });
     const body = customerDeploymentStatusSchema.parse(status.json());
     expect(body.stage).toBe('FAILED');
     expect(body.cleanup).toBe('RETAINED');
@@ -774,6 +775,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     const readyResponse = await app.inject({
       method: 'GET',
       url: `/api/install/${ready.installLinkId}/status`,
+      headers: await customerSessionHeaders(db, ready.installLinkId),
     });
     expect(readyResponse.statusCode).toBe(200);
     const readyBody = customerDeploymentStatusSchema.parse(readyResponse.json());
@@ -793,7 +795,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
       observedState: { releaseVerdict: { pass: true, reason: null, notStarted: false } },
     });
     const unenrolledBody = customerDeploymentStatusSchema.parse(
-      (await app.inject({ method: 'GET', url: `/api/install/${unenrolled.installLinkId}/status` })).json(),
+      (await app.inject({ method: 'GET', url: `/api/install/${unenrolled.installLinkId}/status`, headers: await customerSessionHeaders(db, unenrolled.installLinkId) })).json(),
     );
     expect(unenrolledBody.stage).toBe('READY');
     expect(unenrolledBody.awsSummary).toBeUndefined();
@@ -808,7 +810,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
       payload: {},
     });
     const provisioningBody = customerDeploymentStatusSchema.parse(
-      (await app.inject({ method: 'GET', url: `/api/install/${provisioning.installLinkId}/status` })).json(),
+      (await app.inject({ method: 'GET', url: `/api/install/${provisioning.installLinkId}/status`, headers: await customerSessionHeaders(db, provisioning.installLinkId) })).json(),
     );
     expect(provisioningBody.stage).toBe('PROVISIONING');
     expect(provisioningBody.awsSummary).toBeUndefined();
@@ -825,7 +827,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
       observedState: { releaseVerdict: { pass: true, reason: null, notStarted: false } },
     });
     const body = customerDeploymentStatusSchema.parse(
-      (await app.inject({ method: 'GET', url: `/api/install/${healthy.installLinkId}/status` })).json(),
+      (await app.inject({ method: 'GET', url: `/api/install/${healthy.installLinkId}/status`, headers: await customerSessionHeaders(db, healthy.installLinkId) })).json(),
     );
     expect(body.stage).toBe('READY');
     expect((body.specComponents ?? []).filter((component) => component.state === 'PENDING')).toEqual([]);
@@ -844,7 +846,7 @@ describe('POST /api/relay/commands/:id/progress', () => {
     });
     const step = async () =>
       customerDeploymentStatusSchema.parse(
-        (await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status` })).json(),
+        (await app.inject({ method: 'GET', url: `/api/install/${deployment.installLinkId}/status`, headers: await customerSessionHeaders(db, deployment.installLinkId) })).json(),
       ).step;
     expect(await step()).toBe('APPLICATION');
 

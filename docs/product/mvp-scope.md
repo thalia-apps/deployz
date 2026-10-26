@@ -221,9 +221,16 @@ Not provided by the platform:
   skips that deployment with the reason, and the post-install auto-deploy is
   not queued. A dropped database or cache, and changes to the runtime, port,
   health path, environment values or migration command, stay deployable.
-- Customer-side controls inside Deployz: the customer approves the Quick
-  Create and can only uninstall through the AWS console.
-- Deployment notifications by email or Slack, vendor-branded install pages,
+- Customer-side operations inside Deployz. The customer has one page for
+  each deployment: an emailed code proves the owner email, and the page shows
+  status, the connector, the AWS location and activity, and the steps to
+  update the connector in the customer's own AWS account
+  ([`../customer-access.md`](../customer-access.md)). Deploy, rollback,
+  restart, configuration, disconnect and purge stay with the vendor; the
+  customer uninstalls only through the AWS console. Customer teams, ownership
+  transfer and more than one owner are post-MVP.
+- Deployment notifications by email or Slack (the only email to a customer
+  is the sign-in code), vendor-branded install pages,
   customer-owned ECR, backup management, release approval workflows,
   scheduled releases, webhooks.
 - Application-level observability. Customer runtime logs stay in the

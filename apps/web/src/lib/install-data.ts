@@ -1,6 +1,7 @@
-// §12/§44 public customer installation data — server-side fetch for the
-// unauthenticated /install/:installLinkId page. Wired to the real
-// (public, no-auth) `GET /api/install/:installLinkId` endpoint.
+// §12/§44 customer installation data — server-side fetch for the
+// /install/:installLinkId page, wired to `GET /api/install/:installLinkId`.
+// The page forwards the browser's cookies: the API answers with details
+// only for the verified owner or a vendor member (docs/customer-access.md).
 //
 // The route parameter is the install-LINK id, which is not the relay's
 // installation id. They used to be the same value, which made the link a
@@ -9,6 +10,7 @@
 import type { DeploymentPlan } from '@deployz/contracts';
 
 import { serverApiUrl } from '@/lib/api-url';
+import type { InstallViewer } from '@/lib/customer-access';
 import type { CustomDomainView } from '@/lib/domains';
 
 interface InstallData {
@@ -30,8 +32,8 @@ interface InstallData {
   quickCreateUrl: string | null;
   /** Set instead of `quickCreateUrl` when the connector stack already exists in the customer's account (a reconnect): they update it. */
   existingStackUpdate: ExistingStackUpdate | null;
-  /** True when the request lacked the link token, so the credentials above were left out. */
-  credentialsWithheld: boolean;
+  /** Who the API resolved: the verified owner or a vendor member. */
+  viewer: InstallViewer;
   /** True once a relay has enrolled — the link has already been used. */
   alreadyInstalled: boolean;
   /** The deployment this install link names — needed once installed, to scope the domain card. */
@@ -70,6 +72,8 @@ export interface ExistingStackUpdate {
 /** The outcome of resolving a public install link. */
 export type InstallLinkLookup =
   | { status: 'ok'; data: InstallData }
+  /** The link is valid, but the visitor must verify the owner email first. */
+  | { status: 'sign_in'; applicationName: string; publisherName: string }
   | { status: 'not_found' }
   | { status: 'unavailable'; code: string; message: string }
   /** The control plane could not answer (network failure, 5xx, rate limit). Says nothing about the link. */
@@ -80,13 +84,13 @@ export type InstallLinkLookup =
  *  other failure is `error`, never a claim about the link. */
 export async function fetchInstallData(
   installLinkId: string,
-  token?: string | undefined,
+  cookieHeader?: string | undefined,
 ): Promise<InstallLinkLookup> {
   let response: Response;
   try {
     response = await fetch(`${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}`, {
       cache: 'no-store',
-      ...(token ? { headers: { 'x-deployz-token': token } } : {}),
+      ...(cookieHeader ? { headers: { cookie: cookieHeader } } : {}),
     });
   } catch {
     return { status: 'error' };
@@ -105,10 +109,14 @@ export async function fetchInstallData(
     }
     return { status: 'unavailable', code, message };
   }
-  return { status: 'ok', data: (await response.json()) as InstallData };
+  const body = (await response.json()) as InstallData | { signInRequired: true; applicationName: string; publisherName: string };
+  if ('signInRequired' in body) {
+    return { status: 'sign_in', applicationName: body.applicationName, publisherName: body.publisherName };
+  }
+  return { status: 'ok', data: body };
 }
 
-// ── Pre-relay install lifecycle (public, no-auth — keyed on the link) ──────
+// ── Pre-relay install lifecycle (keyed on the link, owner or vendor only) ──
 
 /**
  * Fire-and-forget launch signal: the install page reports the customer
@@ -119,6 +127,7 @@ export async function launchInstall(installLinkId: string): Promise<void> {
   try {
     await fetch(`${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}/launched`, {
       method: 'POST',
+      credentials: 'include',
       cache: 'no-store',
     });
   } catch {
@@ -152,14 +161,11 @@ export class InstallRetryError extends Error {
  * INSTALL_ALREADY_SUCCEEDED when the deployment was ever installed
  * successfully.
  */
-export async function retryInstallAttempt(
-  installLinkId: string,
-  token?: string | undefined,
-): Promise<RetryInstallResult> {
+export async function retryInstallAttempt(installLinkId: string): Promise<RetryInstallResult> {
   const response = await fetch(`${serverApiUrl()}/api/install/${encodeURIComponent(installLinkId)}/retry`, {
     method: 'POST',
+    credentials: 'include',
     cache: 'no-store',
-    ...(token ? { headers: { 'x-deployz-token': token } } : {}),
   });
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);

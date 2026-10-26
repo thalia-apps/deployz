@@ -1,5 +1,5 @@
 /** How long a freshly issued invitation stays valid. */
-const INSTALL_LINK_TTL_DAYS = 30;
+const INSTALL_LINK_TTL_DAYS = 7;
 
 /** The expiry a newly issued (or re-issued) invitation gets. */
 export function installLinkExpiryFrom(now: Date): Date {

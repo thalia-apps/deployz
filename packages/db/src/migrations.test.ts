@@ -73,7 +73,7 @@ describe('migrations', () => {
     await expect(client!.exec(sql.replaceAll('--> statement-breakpoint', ''))).resolves.toBeDefined();
   });
 
-  it('creates all 27 core tables', async () => {
+  it('creates all 30 core tables', async () => {
     const { rows } = await client!.query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables
        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
@@ -88,9 +88,12 @@ describe('migrations', () => {
       'billing_reconciliation_events',
       'billing_subscriptions',
       'custom_domains',
+      'customer_email_challenges',
+      'customer_sessions',
       'customers',
       'deploy_links',
       'deployment_jobs',
+      'deployment_owners',
       'deployment_resources',
       'deployment_stack_events',
       'deployments',

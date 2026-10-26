@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // progress. This test asserts the redesigned de-emphasized copy.
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined, toString: () => '' }) }));
 
 const mocks = vi.hoisted(() => ({
   fetchPublicInstallData: vi.fn(),
@@ -51,6 +51,7 @@ function resolvedData(overrides: Record<string, unknown> = {}): Record<string, u
     },
     quickCreateUrl: QUICK_CREATE,
     alreadyInstalled: true,
+    viewer: { kind: 'customer', email: 'owner@example.com' },
     deploymentId: 'dep-1',
     deploymentState: 'PROVISIONING',
     domain: null,

@@ -81,6 +81,7 @@ import migration0051 from '../../../db/drizzle/0051_release_confirmation.sql';
 import migration0052 from '../../../db/drizzle/0052_infrastructure_size_tiers.sql';
 import migration0053 from '../../../db/drizzle/0053_deployment_billing_paused.sql';
 import migration0054 from '../../../db/drizzle/0054_hot_path_indexes.sql';
+import migration0055 from '../../../db/drizzle/0055_customer_access.sql';
 import journal from '../../../db/drizzle/meta/_journal.json';
 import { migrationsUpToDate } from './migration-check.js';
 
@@ -150,6 +151,7 @@ const MIGRATION_SQL: Record<string, string> = {
   '0052_infrastructure_size_tiers': migration0052,
   '0053_deployment_billing_paused': migration0053,
   '0054_hot_path_indexes': migration0054,
+  '0055_customer_access': migration0055,
 };
 
 interface RdsSecret {

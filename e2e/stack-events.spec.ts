@@ -12,7 +12,7 @@ import { fetchInstallCredentials } from './simulation/relay-harness.js';
 // (apps/web/src/components/infrastructure-events.tsx).
 
 import { makeApplicationDeployable } from './seed-ready-manifest.js';
-import { installLinkToken } from './install-link.js';
+import { sessionCookieHeader } from './install-link.js';
 
 const API_URL = `http://localhost:${process.env.API_PORT ?? 3001}`;
 
@@ -199,7 +199,7 @@ test('progress events: a batch ingest shows one active phase, expands to raw eve
   await signUp(page);
   const { deploymentId, installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
   // DZ-AUDIT-013: the relay presents the server-minted credential from the Quick Create URL.
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   // ── 1. Register the relay and fetch the INSTALL command — flips the job
@@ -306,7 +306,7 @@ test('failure path: a genuine CREATE_FAILED stack event stays behind the technic
   const rawReason = 'Instance class db.t3.micro is not supported in this Availability Zone';
   await signUp(page);
   const { deploymentId, installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
@@ -379,7 +379,7 @@ test('success path: CloudFormation completion alone advances to VERIFYING, never
   const stackName = `deployz-stack-events-ok-${suffix}`;
   await signUp(page);
   const { deploymentId, installLinkId, installationId, enrollmentCode } = await seedDeployment(page, suffix);
-  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await installLinkToken(page.request, installLinkId));
+  const { relayCredential } = await fetchInstallCredentials(API_URL, installLinkId, await sessionCookieHeader(page.request));
   const relayAuth = { Authorization: `Bearer ${relayCredential}` };
 
   const registerResponse = await page.request.post(`${API_URL}/api/relay/register`, {
