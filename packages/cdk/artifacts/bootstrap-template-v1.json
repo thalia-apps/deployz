@@ -803,7 +803,8 @@
                 "ecs:ListTaskDefinitions",
                 "ecs:RunTask",
                 "ecs:StopTask",
-                "ecs:DeregisterTaskDefinition"
+                "ecs:DeregisterTaskDefinition",
+                "cloudformation:DescribeStacks"
               ],
               "Effect": "Allow",
               "Resource": "*"
@@ -1690,6 +1691,14 @@
                 ]
               },
               "Sid": "RelayPendingCommandState"
+            },
+            {
+              "Action": "cloudformation:DescribeStacks",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "AWS::StackId"
+              },
+              "Sid": "RelayReadOwnStack"
             },
             {
               "Action": "ecs:DeregisterTaskDefinition",
@@ -2661,7 +2670,7 @@
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
           },
-          "S3Key": "eecb6729d35f5ec8d618676ff19b79108688892b65f736919039d28d115a55fc.zip"
+          "S3Key": "268bbc0ad7156650ccddb8483aee59baf76f1228da06dde822c0f8817b0e5147.zip"
         },
         "Environment": {
           "Variables": {
