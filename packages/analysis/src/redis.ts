@@ -16,6 +16,7 @@ import {
   isRuntimeSourcePath,
   listProductionComposeFiles,
   parsePackageJsons,
+  siblingAppFilter,
 } from './detectors.js';
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -127,7 +128,8 @@ const GEMFILE_REGEX = /(?:^|\/)Gemfile$/;
 const GOMOD_REGEX = /(?:^|\/)go\.mod$/;
 const COMPOSER_JSON_REGEX = /(?:^|\/)composer\.json$/;
 const README_REGEX = /(?:^|\/)README(?:\.[\w.-]+)?$/i;
-const REDISS_SCHEME_REGEX = /rediss:\/\//i;
+// A connection URL with a host, never a scheme that a message lists as allowed (`"must use redis:// or rediss://"`).
+const REDISS_SCHEME_REGEX = /rediss:\/\/[\w$[{:@]/i;
 
 // ── package.json helpers (workspace-aware; dependencies vs devDependencies) ──
 
@@ -846,8 +848,11 @@ function evaluateCompatibility(tree: FileTree): RedisCompatibility {
  * used is compatible with Deployz's managed Redis profile.
  *
  * Pure function: same input → same output every time. No AI, no network.
+ * Evidence in a sibling app that the image does not hold is not this app's.
  */
-export function assessRedis(tree: FileTree): RedisRequirement {
+export function assessRedis(repository: FileTree): RedisRequirement {
+  const isSiblingApp = siblingAppFilter(repository);
+  const tree: FileTree = Object.fromEntries(Object.entries(repository).filter(([path]) => !isSiblingApp(path)));
   const signals: Signal[] = [];
   const connectionEnvVars = new Set<string>();
 

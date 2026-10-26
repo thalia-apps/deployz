@@ -7,8 +7,7 @@ import {
   isRuntimeSourcePath,
   listDockerfileCandidates,
   extractCmdScriptPaths,
-  CMD_REGEX,
-  ENTRYPOINT_REGEX,
+  dockerfileImageCommand,
   CMD_CHAIN_MAX_DEPTH,
   type FileTree,
   TREE_PATHS,
@@ -759,6 +758,9 @@ const SCHEDULE_FILE_REGEX =
 // to tell a consumer apart from the web process. Case-sensitive on purpose —
 // that is the detectors' own pattern.
 const PROCFILE_REGEX = /(?:^|\/)Procfile$/;
+// A supervisord config that the start path names runs its programs in the web
+// container too (detectors.ts mainCommandRunsWorker, linkding's `run_huey`).
+const SUPERVISORD_CONFIG_REGEX = /(?:^|\/)supervisord?[\w.-]*\.conf$/;
 
 // The extension-less scripts an s6-overlay image runs at start (`/init`): a
 // service's `run` or `up` file and a `cont-init.d` step. detectStartupMigrationEvidence
@@ -786,6 +788,7 @@ function isRelevantPath(path: string): boolean {
   if (DEPLOYMENT_DESCRIPTOR_REGEX.test(path)) return true;
   if (SCHEDULE_FILE_REGEX.test(path)) return true;
   if (PROCFILE_REGEX.test(path)) return true;
+  if (SUPERVISORD_CONFIG_REGEX.test(path)) return true;
   if (S6_SCRIPT_REGEX.test(path)) return true;
   const isRoot = !path.includes('/');
   if (isRoot) {
@@ -857,6 +860,8 @@ function relevancePriority(path: string, protectedPaths: ReadonlySet<string>): n
   if (DOCKERFILE_REGEX.test(path)) return 0;
   if (COMPOSE_REGEX.test(path)) return 0;
   if (ENV_SAMPLE_REGEX.test(path)) return 0;
+  // `next start` runs it at boot: its env guards stop the start (detectors.ts NEXT_CONFIG_FILE_REGEX).
+  if (/(?:^|\/)next\.config\.[cm]?[jt]s$/i.test(path)) return 3;
   if (!isRuntimeSourcePath(path)) return 7; // tests, specs, fixtures, scripts, docs, tool configs
   // One per runnable ASP.NET project, where it maps its endpoints: a module-heavy
   // repository has more `.csproj` manifests than the cap holds (OrchardCore).
@@ -947,8 +952,14 @@ export async function fetchRepositoryTreeEntries(
   }
 
   const data = (await response.json()) as { tree?: GitTreeEntry[]; truncated?: boolean };
-  return data.tree ?? [];
+  const entries = data.tree ?? [];
+  if (data.truncated === true) truncatedListings.add(entries);
+  return entries;
 }
+
+// GitHub cuts the recursive listing of a very large repository (twenty) and
+// says so with `truncated`. Such a listing is not the full path list.
+const truncatedListings = new WeakSet<GitTreeEntry[]>();
 
 // Resolves a branch's current head commit sha — the Task 6 commit-SHA
 // analysis cache uses this to decide whether a re-analysis would produce the
@@ -1074,10 +1085,9 @@ async function resolveCmdChainProtectedPaths(
   if (dockerfileContent === null) return protectedPaths;
 
   const dockerDir = dockerfilePath.includes('/') ? dockerfilePath.split('/').slice(0, -1).join('/') : '';
-  const cmd = CMD_REGEX.exec(dockerfileContent)?.[1] ?? '';
-  const entryInstruction = ENTRYPOINT_REGEX.exec(dockerfileContent)?.[1] ?? '';
+  const { cmd, entrypoint } = dockerfileImageCommand(dockerfileContent);
   const visited = new Set<string>();
-  let frontier = extractCmdScriptPaths(`${cmd} ${entryInstruction}`, knownPaths, dockerDir, visited);
+  let frontier = extractCmdScriptPaths(`${cmd ?? ''} ${entrypoint ?? ''}`, knownPaths, dockerDir, visited);
 
   for (let depth = 0; depth < CMD_CHAIN_MAX_DEPTH && frontier.length > 0; depth += 1) {
     const next: string[] = [];
@@ -1154,11 +1164,14 @@ export async function buildFileTreeForAnalysis(
       tree[entry.path] = '';
     }
   }
-  // Every tracked path, so a detector can tell a missing file from an unfetched one.
-  Object.defineProperty(tree, TREE_PATHS, {
-    value: entries.filter((entry) => entry.type === 'blob').map((entry) => entry.path),
-    enumerable: false,
-  });
+  // Every tracked path, so a detector can tell a missing file from an unfetched
+  // one. A truncated listing is not every path, so it is not attached.
+  if (!truncatedListings.has(entries)) {
+    Object.defineProperty(tree, TREE_PATHS, {
+      value: entries.filter((entry) => entry.type === 'blob').map((entry) => entry.path),
+      enumerable: false,
+    });
+  }
 
   return tree;
 }

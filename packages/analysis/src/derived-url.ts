@@ -15,8 +15,8 @@ import {
   SAMPLE_PATH_EVIDENCE,
 } from './detectors.js';
 
-/** `<APP>_PUBLIC_URL`, `<APP>_BASE_URL`, `<APP>_APP_URL`, `<APP>_SITE_URL`, `<APP>_ROOT_URL`, `<APP>_EXTERNAL_URL`. */
-const APP_PREFIXED_URL_NAME_REGEX = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:PUBLIC|BASE|APP|SITE|ROOT|EXTERNAL)_URL$/;
+/** `<APP>_PUBLIC_URL`, `<APP>_BASE_URL`, `<APP>_APP_URL`, `<APP>_SITE_URL`, `<APP>_ROOT_URL`, `<APP>_EXTERNAL_URL`, also as one word (`<APP>_SERVICE_PUBLICURL`). */
+const APP_PREFIXED_URL_NAME_REGEX = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*_(?:PUBLIC|BASE|APP|SITE|ROOT|EXTERNAL)_?URL$/;
 
 /** A third-party service or backing resource: its URL is never this app's own address. */
 const PROVIDER_PREFIX_REGEX =

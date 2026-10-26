@@ -1,0 +1,154 @@
+id: new-32
+repository: sissbruecker/linkding
+commit: 27b7303baf41bb28babc610ac8eaa486e1ddfab5
+summary: >-
+  linkding is a self-hosted bookmark manager (Django, Python 3.13, uwsgi, Huey task queue).
+  It is meant to run as one Docker container (docker/default.Dockerfile, CMD ./bootstrap.sh) with
+  /etc/linkding/data mounted; SQLite is the default and PostgreSQL is supported via LD_DB_ENGINE.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]   # judgement call, see crossReview
+  reason: >-
+    Set LD_DB_ENGINE=postgres plus LD_DB_HOST/LD_DB_DATABASE/LD_DB_USER/LD_DB_PASSWORD/LD_DB_PORT to the RDS
+    instance, so durable data is in PostgreSQL. Build with --target linkding. Migrations run at boot.
+    Redis is not used. The background worker runs inside the same container. PostgreSQL holds bookmarks and
+    users, but /etc/linkding/data still holds user-uploaded bookmark files (enabled by default), snapshot/PDF
+    assets and the secret key; upstream docs say to mount it as a volume and has no S3. Without a volume
+    those files are lost on task replacement; LD_DISABLE_ASSET_UPLOAD=true avoids the user-data loss in the
+    default build (snapshots are off unless the plus image sets LD_ENABLE_SNAPSHOTS). Favicons and previews are regenerable.
+    LD_SUPERUSER_NAME/LD_SUPERUSER_PASSWORD create the first login.
+dockerfile:
+  accept: [docker/default.Dockerfile, docker/alpine.Dockerfile]   # same app, same stages; default is the primary build
+  reject: []
+  target: linkding
+  context: .
+  evidence:
+    - {path: docker/default.Dockerfile, line: 51, quote: "FROM python:3.13.7-slim-trixie AS linkding"}
+    - {path: docker/default.Dockerfile, line: 95, quote: "FROM linkding AS linkding-plus"}
+    - {path: scripts/run-docker.sh, line: 5, quote: "docker build -f \"docker/$variant.Dockerfile\" --target linkding"}
+    - {path: .dockerignore, line: 2, quote: "*"}
+runtime: {accept: [python]}
+port:
+  accept: [9090]
+  evidence:
+    - {path: docker/default.Dockerfile, line: 74, quote: "EXPOSE 9090"}
+    - {path: bootstrap.sh, line: 5, quote: "LD_SERVER_PORT=\"${LD_SERVER_PORT:-9090}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: bootstrap.sh, line: 4, quote: "LD_SERVER_HOST=\"${LD_SERVER_HOST:-[::]}\""}
+    - {path: bootstrap.sh, line: 39, quote: "exec uwsgi --http $LD_SERVER_HOST:$LD_SERVER_PORT uwsgi.ini"}
+startCommand:
+  source: image
+  accept: ["./bootstrap.sh"]
+healthPath:
+  accept: ["/health"]   # "/" redirects to login, so not listed
+  evidence:
+    - {path: bookmarks/urls.py, line: 111, quote: "path(\"health\", health_view, name=\"health\")"}
+    - {path: bookmarks/views/health.py, line: 12, quote: "connections[\"default\"].ensure_connection()"}
+    - {path: docker/default.Dockerfile, line: 80, quote: "CMD curl -f http://localhost:${LD_SERVER_PORT:-9090}/${LD_CONTEXT_PATH}health"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {LD_DB_ENGINE: postgres}
+  connectionVars: [LD_DB_HOST, LD_DB_PORT, LD_DB_DATABASE, LD_DB_USER, LD_DB_PASSWORD, LD_DB_OPTIONS]
+  evidence:
+    - {path: bookmarks/settings/base.py, line: 263, quote: "LD_DB_ENGINE = os.getenv(\"LD_DB_ENGINE\", \"sqlite\")"}
+    - {path: bookmarks/settings/base.py, line: 271, quote: "if LD_DB_ENGINE == \"postgres\":"}
+    - {path: docker/default.Dockerfile, line: 27, quote: "uv sync --no-dev --group postgres"}
+    - {path: docs/src/content/docs/options.md, line: 333, quote: "The password must be configured when using a database other than SQLite"}
+migrations:
+  mode: startup
+  accept: ["python manage.py migrate"]
+  evidence:
+    - {path: bootstrap.sh, line: 19, quote: "python manage.py migrate"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: bookmarks/settings/base.py, line: 179, quote: "\"huey_class\": \"huey.SqliteHuey\""}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: bootstrap.sh, line: 36, quote: "if [ \"$LD_DISABLE_BACKGROUND_TASKS\" != \"True\" ]; then"}
+    - {path: supervisord-tasks.conf, line: 9, quote: "command=python manage.py run_huey -f"}
+    - {path: bookmarks/settings/base.py, line: 180, quote: "\"filename\": os.path.join(BASE_DIR, \"data\", \"tasks.sqlite3\")"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: bookmarks/services/tasks.py, line: 354, quote: "# Snapshots are no longer created by a periodic task, keeping the task"}
+    - {path: bookmarks/settings/base.py, line: 331, quote: "LD_DISABLE_ASSET_UPLOAD = os.getenv(\"LD_DISABLE_ASSET_UPLOAD\", False) in ("}
+storage:
+  local: required   # with postgres the folder still holds uploaded assets and secretkey.txt; no S3 support (accept DEPLOYABLE only if uploads are disabled or loss is tolerated)
+  paths: [/etc/linkding/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: bookmarks/settings/base.py, line: 302, quote: "LD_FAVICON_FOLDER = os.path.join(BASE_DIR, \"data\", \"favicons\")"}
+    - {path: bookmarks/settings/base.py, line: 323, quote: "LD_ASSET_FOLDER = os.path.join(BASE_DIR, \"data\", \"assets\")"}
+    - {path: bookmarks/settings/prod.py, line: 19, quote: "open(os.path.join(BASE_DIR, \"data\", \"secretkey.txt\"))"}
+    - {path: docker-compose.yml, line: 8, quote: "/etc/linkding/data"}
+    - {path: docs/src/content/docs/installation.md, line: 53, quote: "-v {host-data-folder}:/etc/linkding/data"}
+    - {path: docs/src/content/docs/backups.md, line: 11, quote: "`assets` - folder that contains HTML snapshots of bookmarks"}
+    - {path: docs/src/content/docs/backups.md, line: 21, quote: "If you are using a different database, such as Postgres, you'll have to back up the database and other contents of the data folder manually."}
+    - {path: bookmarks/views/contexts.py, line: 591, quote: "self.uploads_enabled = not settings.LD_DISABLE_ASSET_UPLOAD"}
+env:
+  required:
+    - {name: LD_DB_ENGINE, secret: false, buildTime: false, note: "postgres; else SQLite on ephemeral disk"}
+    - {name: LD_DB_HOST, secret: false, buildTime: false, note: "default localhost, wrong on Fargate"}
+    - {name: LD_DB_PASSWORD, secret: true, buildTime: false, note: "no default; docs: must be set for non-SQLite"}
+    - {name: LD_SUPERUSER_NAME, secret: false, buildTime: false, note: "else no login user exists"}
+    - {name: LD_SUPERUSER_PASSWORD, secret: true, buildTime: false, note: "else the user has an unusable password"}
+  optional: [LD_DB_USER, LD_DB_DATABASE, LD_DB_PORT, LD_DB_OPTIONS, LD_DISABLE_ASSET_UPLOAD, LD_CSRF_TRUSTED_ORIGINS, LD_USE_X_FORWARDED_HOST, HOST_NAME, LD_CONTEXT_PATH, LD_DISABLE_BACKGROUND_TASKS, LD_ENABLE_SNAPSHOTS, LD_ENABLE_OIDC, LD_ENABLE_AUTH_PROXY, LD_DISABLE_URL_VALIDATION, LD_SERVER_PORT, LD_SESSION_COOKIE_AGE]
+  buildTime: []
+  evidence:
+    - {path: bookmarks/management/commands/create_initial_superuser.py, line: 15, quote: "superuser_name = os.getenv(\"LD_SUPERUSER_NAME\", None)"}
+    - {path: bookmarks/settings/base.py, line: 253, quote: "trusted_origins = os.getenv(\"LD_CSRF_TRUSTED_ORIGINS\", \"\")"}
+    - {path: bookmarks/settings/base.py, line: 264, quote: "LD_DB_HOST = os.getenv(\"LD_DB_HOST\", \"localhost\")"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite as durable storage: only the default; LD_DB_ENGINE=postgres removes it."
+    - "Treating the volume as a hard blocker: with LD_DB_ENGINE=postgres the app boots and works without it; only uploaded files, snapshot/PDF assets and secretkey.txt (sessions) are lost. Do not claim the folder holds only regenerable data: uploads are user data."
+    - "Redis: none. The task queue is SQLite-backed Huey in the same container."
+    - "Separate worker service: bootstrap.sh starts run_huey under supervisord inside the web container."
+    - "docker-compose.yml: one service that pulls a prebuilt image; no extra services."
+    - "linkding-plus stage (chromium, node): optional snapshot feature, only used when LD_ENABLE_SNAPSHOTS is true."
+vendorQuestions:
+  legitimate:
+    - "Initial superuser name and password (the repo cannot know them)."
+    - "Public https URL for LD_CSRF_TRUSTED_ORIGINS if login over the ALB fails the CSRF origin check (depends on proxy setup, not verified by running)."
+  unnecessary:
+    - "Which port or bind address (9090, [::] in bootstrap.sh)."
+    - "Health path (/health exists)."
+    - "Whether to run migrations (bootstrap.sh does)."
+    - "Whether Redis or a worker service is needed."
+    - "Which database engine is supported (postgres via LD_DB_ENGINE)."
+traps:
+  - "Last stage of default.Dockerfile is linkding-plus (chromium + node, larger) -> build --target linkding (docker/default.Dockerfile:95)"
+  - "ublock-build is a helper stage, not the app (docker/default.Dockerfile:86)"
+  - "Default DB is SQLite at data/db.sqlite3 -> set LD_DB_ENGINE=postgres on Fargate (bookmarks/settings/base.py:284)"
+  - "LD_DB_HOST defaults to localhost -> must point to RDS (bookmarks/settings/base.py:264)"
+  - "secretkey.txt is generated in data/ at boot (bootstrap.sh:17); each new task gets a new key, so sessions reset and several tasks would not share sessions -> one task is the safe setting"
+  - "uwsgi stats socket 127.0.0.1:9191 is internal, not the app port (uwsgi.ini:13)"
+  - "Bootstrap runs as root, uwsgi drops to www-data; no USER directive (uwsgi.ini:14)"
+  - "Static files are served by uwsgi static-map, not a separate service (uwsgi.ini:5)"
+  - "LD_SUPERVISOR_MANAGED is experimental and optional (bootstrap.sh:32)"
+  - "psycopg[binary] is in the dev group only; production image uses the postgres group (pyproject.toml:29, :42)"
+  - "HEALTHCHECK in the Dockerfile uses curl; ECS/ALB checks /health the same way (docker/default.Dockerfile:79)"
+openQuestions:
+  - "CSRF behind the ALB: settings set no SECURE_PROXY_SSL_HEADER; whether login over https needs LD_CSRF_TRUSTED_ORIGINS or LD_USE_X_FORWARDED_HOST was not verified by running (code reading only)."
+  - "First boot: uwsgi starts only after migrate finishes, so /health is unavailable during migration; ALB grace period length not measured."
+crossReview:
+  - {field: outcome.accept, change: "added DEPLOYABLE_WITH_CHANGES (judgement call: DEPLOYABLE if uploads are disabled or loss tolerated)", evidence: "docs/src/content/docs/installation.md:53 volume in the documented run command; docs/src/content/docs/backups.md:7-21 data folder holds all non-DB data, Postgres users back it up manually; bookmarks/views/contexts.py:591 uploads enabled by default; no S3 setting in bookmarks/settings/base.py"}
+  - {field: outcome.reason, change: "removed claim that disk data is only regenerable/optional", evidence: "bookmarks/services/assets.py writes uploads to LD_ASSET_FOLDER (base.py:323); upload is on unless LD_DISABLE_ASSET_UPLOAD"}
+  - {field: storage.local, change: "conditional -> required, evidence added", evidence: "installation.md:53, backups.md:11,21"}
+  - {field: blockers.mustNot, change: "rewrote volume/EFS entry: not a boot blocker but not 'only regenerable data'", evidence: "backups.md:11; contexts.py:591"}
+  - {field: env.optional, change: "added LD_DISABLE_ASSET_UPLOAD", evidence: "bookmarks/settings/base.py:331"}
+  - {field: scheduledJobs.evidence, change: "replaced task decorator citation with periodic-task evidence", evidence: "bookmarks/services/tasks.py:354 plus no periodic_task/crontab use outside tests"}
+  - {field: evidence line numbers, change: "options.md 331->333; create_initial_superuser.py 38->15; supervisord-tasks.conf 6->9; uwsgi.ini 53->13, 55->14, 47->5; pyproject.toml 30->29; base.py 282->284; Dockerfile:80 quote prefix", evidence: "re-read each file"}
+  - {field: env.required.LD_DB_PASSWORD, change: "note cites docs", evidence: "options.md:333"}
+  - {field: all, change: "verified", evidence: "49 citations checked"}

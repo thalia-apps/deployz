@@ -1276,8 +1276,9 @@ function dockerfileCopiesPath(dockerfileLines: string[], dockerfilePath: string,
  */
 export function checkMultiProcessImage(tree: FileTree): RejectionFinding {
   const selected = listDockerfileCandidates(tree)[0];
-  const dockerfile = selected === undefined ? '' : (tree[selected] ?? '').replace(/^\s*#.*$/gm, '');
-  const lines = dockerfile.replace(/\\\s*\r?\n\s*/g, ' ').split('\n');
+  // The image that `docker build` produces: a trailing dev all-in-one stage (twenty-app-dev) is not it.
+  const dockerfile = selected === undefined ? '' : productionStageText(tree[selected] ?? '');
+  const lines = dockerfile.split('\n');
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS] ?? Object.keys(tree);
   const copied = (path: string): boolean => selected !== undefined && dockerfileCopiesPath(lines, selected, path);
   if (/s6-overlay|S6_OVERLAY|\bs6-svscan\b/i.test(dockerfile)) {

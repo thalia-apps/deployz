@@ -7,6 +7,7 @@ import { main as fetch } from './exam-fetch.js';
 import { main as fixtures } from './fixtures-cli.js';
 import { main as full } from './full-cli.js';
 import { main as observe } from './observe/cli.js';
+import { main as truth } from './truth/cli.js';
 
 const COMMANDS: Record<string, (argv: string[]) => Promise<unknown> | unknown> = {
   analyse: async (argv) => {
@@ -22,6 +23,9 @@ const COMMANDS: Record<string, (argv: string[]) => Promise<unknown> | unknown> =
   preflight: () => preflight(),
   stability: (argv) => {
     process.exitCode = stability(argv);
+  },
+  truth: (argv) => {
+    process.exitCode = truth(argv);
   },
 };
 

@@ -418,7 +418,13 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 67 (AI startup-migration evidence): an AI startup migration stores
 // the rules' evidence shape, so the finding names the file and line. Stored
 // v66 rows read "Migrations run at startup: undefined (undefined)".
-export const ANALYSIS_VERSION = 67;
+// Version 68 (2026-10 corpus): the start command is the production stage's
+// last CMD (never a HEALTHCHECK CMD); PHP env enums, `next.config` boot guards,
+// viper fatal guards and `${ARG:?}` build args are read; Redis evidence of an
+// app the image does not hold is ignored; a start path that runs the queue
+// consumer asks no worker question; a root HEALTHCHECK accepts redirects.
+// Stored v67 rows miss those variables and keep a strict `/` health check.
+export const ANALYSIS_VERSION = 68;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -1275,10 +1281,12 @@ export function resolveWorkerCommands(tree: FileTree): ResolvedWorkerCommand[] {
 
 export interface ContractFieldUpdates {
   containerPort?: number;
-  healthPath?: string;
+  // A root check (`/` probed by the image's own HEALTHCHECK) clears a saved
+  // detected path, so the manifest keeps its redirect-accepting default.
+  healthPath?: string | null;
   // Startup mode clears a stale detected command (never a vendor one) —
-  // see the DEPLOY-029 handling below — so this is the one field that can
-  // be explicitly nulled out, not just left absent.
+  // see the DEPLOY-029 handling below — so it can be explicitly nulled out,
+  // not just left absent.
   migrationCommand?: string | null;
   workerCommand?: string;
   databaseRequired?: boolean;
@@ -1372,7 +1380,9 @@ function deriveContractFieldUpdates(
     // convention, or the "/health" default when only a Dockerfile
     // HEALTHCHECK / package.json script was found) — see detectors.ts.
     if (health?.detected && health.path) {
-      updates.healthPath = health.path;
+      // A saved `/` would be an explicit path whose check refuses the
+      // redirect that a login page answers (cal.com `/` → `/auth/login`).
+      updates.healthPath = health.mode === 'root' ? null : health.path;
     }
   }
 

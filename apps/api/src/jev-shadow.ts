@@ -50,7 +50,7 @@ export interface JevShadowParams {
   /** The §35 contract fields this run persists (merged over `application`). */
   contractFieldUpdates: {
     containerPort?: number;
-    healthPath?: string;
+    healthPath?: string | null;
     migrationCommand?: string | null;
     workerCommand?: string;
     databaseRequired?: boolean;
@@ -146,7 +146,7 @@ function effectiveRow(params: JevShadowParams): ManifestApplicationRow {
     migrationCommand:
       updates.migrationCommand !== undefined ? updates.migrationCommand : params.application.migrationCommand,
     containerPort: updates.containerPort ?? params.application.containerPort,
-    healthPath: updates.healthPath ?? params.application.healthPath,
+    healthPath: updates.healthPath !== undefined ? updates.healthPath : params.application.healthPath,
     workerCommand: updates.workerCommand ?? params.application.workerCommand,
     databaseRequired: updates.databaseRequired ?? params.application.databaseRequired,
     storageRequired: updates.storageRequired ?? params.application.storageRequired,

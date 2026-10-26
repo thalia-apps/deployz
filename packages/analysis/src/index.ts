@@ -55,8 +55,7 @@ export {
   // `detectStartupMigrationEvidence` follows, so it can protect those exact
   // paths from the ANALYSIS_MAX_FILES trim.
   extractCmdScriptPaths,
-  CMD_REGEX,
-  ENTRYPOINT_REGEX,
+  dockerfileImageCommand,
   CMD_CHAIN_MAX_DEPTH,
   collectDependencyNames,
 } from './detectors.js';

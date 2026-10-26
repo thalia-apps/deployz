@@ -40,6 +40,7 @@ import {
   detectDockerfileMissingCopySources,
   dockerfileSelectionTied,
   pathInRuntimeImage,
+  START_COMMAND_WORKER,
   unusableMigrationScript,
 } from './detectors.js';
 
@@ -187,9 +188,10 @@ function buildRedisFinding(redis: RedisRequirement): DetectorFinding {
   };
 }
 
-// Node job libraries and `worker_threads` run inside the web process by default. A repository
-// whose only worker evidence is one of these needs no separate worker process; a declared
-// worker process, a queue worker command or a Compose worker service still does.
+// Node job libraries and `worker_threads` run inside the web process by default, and so does a
+// queue consumer that the image's start command runs. A repository whose only worker evidence is
+// one of these needs no separate worker process; a declared worker process, a queue worker
+// command or a Compose worker service still does.
 const IN_PROCESS_WORKER_PATTERNS: ReadonlySet<string> = new Set([
   'bull',
   'bullmq',
@@ -198,6 +200,7 @@ const IN_PROCESS_WORKER_PATTERNS: ReadonlySet<string> = new Set([
   'pg-boss',
   'graphile-worker',
   'worker_threads',
+  START_COMMAND_WORKER,
 ]);
 
 /**
@@ -382,6 +385,8 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   if (healthFinding?.detected) {
     metadata['healthPath'] = healthFinding.path ?? null;
     metadata['healthMode'] = healthFinding.mode ?? 'explicit';
+    // The image's own check of `/` (`wget --spider`, `curl -f`) passes on a redirect too.
+    if (healthFinding.mode === 'root') metadata['healthRedirectsAccepted'] = true;
   } else if (
     ((tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS] ?? Object.keys(tree)).some(
       (path) => HEALTH_HANDLER_FILE_REGEX.test(path) && isRuntimeSourcePath(path),

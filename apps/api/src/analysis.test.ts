@@ -548,6 +548,34 @@ describe('analysis — migration/worker command resolution (deploy-safe, workspa
     expect(row.migrationCommand).toBeNull();
   });
 
+  // A saved `/` is an explicit path: its ALB check accepts only 200, and a
+  // login page answers `/` with a redirect (cal.com `/` → `/auth/login`).
+  it('clears a detected `/` health path when the image HEALTHCHECK probes the root, and keeps a vendor `/`', async () => {
+    const files = {
+      Dockerfile: 'FROM node:20\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nHEALTHCHECK CMD wget --spider http://localhost:3000 || exit 1\nCMD ["node", "server.js"]\n',
+      'package.json': JSON.stringify({ name: 'root-health', dependencies: { express: '^4.18.0' } }),
+    };
+    const detected = await insertApplication(db, orgId, {
+      githubInstallationId: 'install-1',
+      repoFullName: 'acme/root-health',
+      defaultBranch: 'main',
+      healthPath: '/',
+      detectedMetadata: { vendorOverrides: [] },
+    });
+    await runApplicationAnalysis(makeDeps(buildTreeFetch(files)), detected.id);
+    expect((await loadApplication(db, detected.id)).healthPath).toBeNull();
+
+    const vendor = await insertApplication(db, orgId, {
+      githubInstallationId: 'install-1',
+      repoFullName: 'acme/root-health-vendor',
+      defaultBranch: 'main',
+      healthPath: '/',
+      detectedMetadata: { vendorOverrides: ['healthPath'] },
+    });
+    await runApplicationAnalysis(makeDeps(buildTreeFetch(files)), vendor.id);
+    expect((await loadApplication(db, vendor.id)).healthPath).toBe('/');
+  });
+
   it('keeps a vendor override saved while the analysis was still fetching the repository', async () => {
     const application = await insertApplication(db, orgId, {
       githubInstallationId: 'install-1',

@@ -96,8 +96,11 @@ Repository (GitHub tree, bounded)
   sibling front end's `react-scripts build`. The Compose port comes from an
   application service, never from a database, cache or proxy service.
 - **Runtime precision:** the image is the production stage of the selected
-  Dockerfile. This stage is the last stage that is not a dev, test or build
-  stage, together with the stages it is built from. A Dockerfile in a test,
+  Dockerfile. This stage is the last stage that is not a dev, test, build or
+  nightly stage (also with a number: `pr-test2`), together with the stages it
+  is built from. The start command is the last CMD and the last ENTRYPOINT of
+  this stage and its lineage. A HEALTHCHECK `CMD` and the CMD of another stage
+  are never the start command. A Dockerfile in a test,
   example or dev-container directory, a base image (system packages only, no
   CMD, ENTRYPOINT, EXPOSE or COPY) and a Dockerfile that starts a dev server
   are never selected (a dev server is `npm run dev`, `next dev`, `nodemon`,
@@ -137,7 +140,10 @@ Repository (GitHub tree, bounded)
   them, or when a front web server hides the app behind a prefix. In these
   cases the detector reports no path. Without a path the health check
   probes `/` and also accepts a redirect (`health.redirectsAccepted`, ALB
-  matcher 200-399), and the vendor is not asked. The vendor is asked only
+  matcher 200-399), and the vendor is not asked. A HEALTHCHECK of the
+  production stage that probes `/` gives the same root check, and the
+  analysis does not save `/` as the health path (a saved path is explicit and
+  accepts only 200, but a login page answers `/` with a redirect). The vendor is asked only
   when a health handler file exists whose route was not resolved
   (`HealthController`, `HealthAction`, `health_check.ex`; a prefixed check
   such as `RedisHealthCheck.cs` checks a dependency and does not count).
@@ -165,7 +171,8 @@ Repository (GitHub tree, bounded)
   code from another image, not from the commit (outline copies its build and
   `node_modules` from the floating `outlinewiki/outline-base` image), unless
   another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
-  file list, a second candidate Dockerfile with a CMD or ENTRYPOINT that
+  file list (GitHub cuts the listing of a very large repository and says
+  `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
   directory never reject. A Dockerfile that copies `.git`, or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
@@ -254,7 +261,9 @@ Repository (GitHub tree, bounded)
   `JOBS_PROVIDER=local`), an image that installs its own Redis server, or
   code that sets the connection itself. An env sample comment that says
   Redis is required overrides this evidence. The result is then
-  `medium` confidence and the manifest does not request Redis.
+  `medium` confidence and the manifest does not request Redis. Evidence in
+  an app directory that the image does not hold (a sibling app, see
+  `docs/environment-variables.md`) does not count.
 - **AI fallback** (`repository-ai.ts`): asked only when a real question is
   open (multiple Dockerfiles, monorepo target, unknown start/build command
   or port, unclear database or Redis requirement), with at most eight files
@@ -504,7 +513,8 @@ JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
 service and declared workers; also a multi-process image: s6-overlay or
-supervisord with two or more services, or a start script on the
+supervisord with two or more services in the production stage (a trailing
+dev all-in-one stage does not count), or a start script on the
 CMD/ENTRYPOINT chain that puts two or more long-running servers in the
 background with `&`, such as Homarr's `redis-server &` and
 `node server.js &`; an nginx, apache, httpd or caddy front end and a
@@ -540,7 +550,10 @@ as its own service. Worker-like code with no declared start command is
 that is never provisioned from weak evidence such as a queue library
 alone. A Node job library (Bull, BullMQ, Agenda, Bree, pg-boss,
 graphile-worker) or `worker_threads` alone raises no question: these jobs
-run in the web process (`workerNeedsProcess` is false). Celery, RQ, Sidekiq
+run in the web process (`workerNeedsProcess` is false). A queue consumer that
+the image's start path runs (the start script, or a supervisord config that it
+names, such as linkding's `manage.py run_huey`) runs in the web container too
+and raises no question. Celery, RQ, Sidekiq
 and every declared worker still do. `reconcileReadiness` applies the vendor's
 container port, start command, migration choice, health path and Dockerfile
 path as a view, so the page, the persisted

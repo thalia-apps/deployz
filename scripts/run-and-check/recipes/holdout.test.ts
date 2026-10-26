@@ -28,6 +28,8 @@ const HOLDOUT_IDS = [
   'new-29',
   'new-30',
   'new-31',
+  'new-38',
+  'new-39',
 ];
 const recipesDirectory = dirname(fileURLToPath(import.meta.url));
 

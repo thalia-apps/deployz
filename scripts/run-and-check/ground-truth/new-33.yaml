@@ -1,0 +1,148 @@
+id: new-33
+repository: usememos/memos
+commit: 6387991fdd1d1ae491b8435708357fa334e19f3a
+summary: >
+  Memos is a self-hosted note-taking app: a Go backend (single static binary, gRPC/REST API) that serves a
+  React SPA embedded with go:embed. Self-hosting is one container (neosmemo/memos image) with SQLite by default
+  and optional PostgreSQL or MySQL.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The only Dockerfile fails at build without the VERSION build arg, and it does not build the frontend (the
+    SPA is built in CI with `pnpm release` and copied into server/frontend/dist before the Go build; .dockerignore
+    excludes /web/). From a plain source archive the image builds only if VERSION is passed, and then serves the
+    placeholder "No embeddable frontend found." instead of the UI. Vendor must add a frontend stage and a
+    VERSION default (or Deployz must pass a VERSION build arg, e.g. 26.10.0). Runtime needs
+    MEMOS_DRIVER=postgres and MEMOS_DSN (SQLite is ephemeral on Fargate). Attachment storage defaults to LOCAL
+    (/var/opt/memos/assets) even with Postgres, so uploads are lost on task replacement unless the instance
+    storage setting is changed to DATABASE or S3 (admin UI, or a mounted /etc/secrets instance-setting file).
+dockerfile:
+  accept: [scripts/Dockerfile]
+  reject: []
+  target: null            # last stage (monolithic) is the app
+  context: .
+  evidence:
+    - {path: scripts/Dockerfile, line: 20, quote: ': "${VERSION:?Pass VERSION from scripts/release_version.sh development-version or a release tag}"'}
+    - {path: scripts/Dockerfile, line: 15, quote: "# Please build frontend first, so that the static files are available."}
+    - {path: .dockerignore, line: 12, quote: "/web/"}
+    - {path: web/package.json, line: 11, quote: "\"release\": \"vite build --mode release --outDir=../server/frontend/dist --emptyOutDir\""}
+    - {path: server/frontend/frontend.go, line: 20, quote: "//go:embed dist/*"}
+    - {path: server/frontend/dist/index.html, line: 8, quote: "No embeddable frontend found."}
+runtime: {accept: [go]}
+port:
+  accept: [5230]
+  evidence:
+    - {path: scripts/Dockerfile, line: 52, quote: 'MEMOS_PORT="5230"'}
+    - {path: scripts/Dockerfile, line: 55, quote: "EXPOSE 5230"}
+    - {path: cmd/memos/main.go, line: 57, quote: 'viper.SetDefault("port", 8081)  (code default; image overrides to 5230)'}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/server.go, line: 132, quote: 'address = fmt.Sprintf("%s:%d", s.Profile.Addr, s.Profile.Port)'}
+    - {path: cmd/memos/main.go, line: 60, quote: 'rootCmd.Flags().String("addr", "", "address of server")  (empty = all interfaces)'}
+startCommand:
+  source: image
+  accept: []
+healthPath:
+  accept: ["/healthz"]    # 200 only while the DB answers (2s ping), else 503; "/" is 200 only once a real frontend is embedded
+  evidence:
+    - {path: server/server.go, line: 86, quote: 'mux.Handle("/healthz", httphandler.GET(httphandler.Func('}
+    - {path: server/server.go, line: 94, quote: 'return httphandler.Text(w, http.StatusOK, "Service ready.")'}
+database:
+  status: required
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {MEMOS_DRIVER: postgres}
+  connectionVars: [MEMOS_DSN, MEMOS_DSN_FILE]   # DSN is a libpq URL, e.g. postgres://user:pass@host:5432/memos?sslmode=require
+  evidence:
+    - {path: cmd/memos/main.go, line: 56, quote: 'viper.SetDefault("driver", "sqlite")'}
+    - {path: cmd/memos/main.go, line: 64, quote: '"database driver (sqlite, mysql, postgres)"'}
+    - {path: cmd/memos/main.go, line: 96, quote: 'viper.SetEnvPrefix("memos")  (so MEMOS_DRIVER, MEMOS_DSN)'}
+    - {path: store/db/postgres/postgres.go, line: 27, quote: 'sql.Open("postgres", profile.DSN)'}
+    - {path: internal/profile/profile.go, line: 114, quote: 'if p.Driver == "sqlite" && p.DSN == "" {  -> memos_prod.db in data dir'}
+    - {path: scripts/entrypoint.sh, line: 50, quote: 'file_env "MEMOS_DSN"'}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: cmd/memos/main.go, line: 156, quote: 'if err := storeInstance.Migrate(ctx); err != nil {'}
+    - {path: store/migrator.go, line: 100, quote: 'func (s *Store) Migrate(ctx context.Context) error {'}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: store/cache/cache.go, line: 60, quote: "CleanupInterval: 5 * time.Minute,  (in-process cache only; no redis/valkey in any Go file or go.mod, repo grep)"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/server.go, line: 170, quote: 'runner := memopayload.NewRunner(...)  (one-off backfill goroutine in the web process)'}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: server/api/upload_session.go, line: 108, quote: 'ticker := time.NewTicker(time.Minute)  (in-process cleanup)'}
+storage:
+  local: required   # default attachment storage is LOCAL even with Postgres; durable only if the instance storage setting is DATABASE or S3
+  paths: [/var/opt/memos]
+  s3: native
+  s3SelectBy: {instance_storage_setting: "admin UI setting, or mounted /etc/secrets/memos-instance-setting-<label>.json, storage type S3"}
+  evidence:
+    - {path: store/instance_setting.go, line: 378, quote: "defaultInstanceStorageType      = storepb.InstanceStorageSetting_LOCAL"}
+    - {path: server/api/attachment_service_storage.go, line: 82, quote: "if defaultStorage.Type == storepb.StorageType_STORAGE_TYPE_LOCAL {"}
+    - {path: proto/store/instance_setting.proto, line: 91, quote: "STORAGE_TYPE_S3 = 3;"}
+    - {path: proto/store/instance_setting.proto, line: 87, quote: "STORAGE_TYPE_DATABASE = 1;"}
+    - {path: server/api/attachment_service_storage.go, line: 83, quote: 'filepathTemplate := "assets/{timestamp}_{uuid}_{filename}"'}
+    - {path: docs/design/configuration-provisioning.md, line: 74, quote: "Memos scans direct children of `/etc/secrets`."}
+env:
+  required:
+    - {name: MEMOS_DRIVER, secret: false, buildTime: false, note: "set to postgres; default sqlite is ephemeral on Fargate"}
+    - {name: MEMOS_DSN, secret: true, buildTime: false, note: "Postgres connection string"}
+    # not env-selectable: attachment storage type (admin UI or /etc/secrets/memos-instance-setting-<label>.json); default LOCAL
+  optional: [MEMOS_PORT, MEMOS_ADDR, MEMOS_DATA, MEMOS_INSTANCE_URL, MEMOS_LOG_LEVEL, MEMOS_RATE_LIMIT, MEMOS_TRUSTED_PROXIES, MEMOS_DEMO, MEMOS_UNIX_SOCK, MEMOS_DSN_FILE, MEMOS_UID, MEMOS_GID, MEMOS_WEBHOOK_PRIVATE_NETWORK_ALLOWLIST, TZ]
+  buildTime: [VERSION]    # required ARG, format YY.MM.N or YY.MM.D-dev.<sha7>, e.g. 26.10.0; COMMIT optional
+  evidence:
+    - {path: scripts/Dockerfile, line: 17, quote: "ARG TARGETOS TARGETARCH VERSION COMMIT=unknown"}
+    - {path: internal/version/version.go, line: 19, quote: "var buildVersion = regexp.MustCompile(`^[1-9][0-9]\\.(0[1-9]|1[0-2])..."}
+    - {path: cmd/memos/main.go, line: 71, quote: '"trusted-proxies", []string{"private"}  (ALB in private subnet covered by default)'}
+    - {path: internal/version/version.go, line: 55, quote: "missing build version: use go run -buildvcs=true ./cmd/memos or inject internal/version.Version"}
+blockers:
+  expected:
+    - "Frontend not built by the Dockerfile (needs Node/pnpm stage; /web/ is in .dockerignore), so the UI is missing from the image"
+    - "Required build arg VERSION has no default, so docker build fails"
+    - "Attachment storage defaults to LOCAL (/var/opt/memos/assets): with Postgres only the database persists; uploads are lost on task replacement until storage is set to DATABASE or S3 in the instance setting"
+  mustNot:
+    - "VOLUME /var/opt/memos: not a boot blocker; Postgres holds the data, but attachments are LOCAL by default (see expected blockers)"
+    - "SQLite: not a blocker, Postgres is supported (MEMOS_DRIVER=postgres)"
+    - "Redis, workers, scheduler: none exist"
+    - "Root start in entrypoint: it drops to UID 10001 itself"
+vendorQuestions:
+  legitimate:
+    - "Is the placeholder-only embedded frontend intended for this build path? (CI builds it with pnpm release; the Dockerfile alone cannot confirm)"
+    - "Which VERSION value to pass (any value matching the calendar-version regex works)"
+  unnecessary:
+    - "Which port, health path or bind address (5230, /healthz, all interfaces)"
+    - "Which database, or whether migrations need a separate step (Postgres; run at boot)"
+    - "Whether Redis or a worker is needed (no)"
+traps:
+  - "scripts/compose.yaml uses image neosmemo/memos:stable, not a build; SQLite volume example only -> not a build source (scripts/compose.yaml:3)"
+  - "Dockerfile is under scripts/, not repo root -> use -f scripts/Dockerfile with context . (scripts/Dockerfile:1)"
+  - "Code default port is 8081 but image sets MEMOS_PORT=5230 -> use 5230 (cmd/memos/main.go:57 vs scripts/Dockerfile:52)"
+  - "server/frontend/dist/index.html is a tracked placeholder, rest of dist/ is gitignored -> go build succeeds but serves no UI (.gitignore:11)"
+  - "Postgres alone does not make attachments durable: storage type is a DB setting defaulting to LOCAL (store/instance_setting.go:378)"
+  - "S3 and OAuth are configured via DB settings or /etc/secrets JSON files, not env vars -> do not require S3_* env (docs/design/configuration-provisioning.md:74)"
+  - "Dockerfile uses --platform=$BUILDPLATFORM and TARGETOS/TARGETARCH args -> needs BuildKit (scripts/Dockerfile:1,17)"
+openQuestions:
+  - "Whether Deployz passes build args (VERSION); if not, the build cannot succeed unmodified, so outcome may be NOT_DEPLOYABLE without a vendor Dockerfile change."
+  - "Whether MEMOS_INSTANCE_URL is needed for correct external links/CORS behind the ALB; code reads it optionally (server/api/instance_service.go:72), not verified as required."
+crossReview:
+  - {field: storage.local, change: "conditional -> required; Postgres does not move attachments off local disk", evidence: "store/instance_setting.go:378 defaultInstanceStorageType = LOCAL; server/api/attachment_service_storage.go:82-83 writes assets/ under the data dir"}
+  - {field: blockers.expected / blockers.mustNot / outcome.reason / traps, change: "added the silent attachment data-loss trap (DB or S3 storage setting needed)", evidence: "store/instance_setting.go:378; proto/store/instance_setting.proto:84-91"}
+  - {field: env.required, change: "comment that storage type has no env var", evidence: "grep of instance-setting loading: only DB setting or /etc/secrets file (docs/design/configuration-provisioning.md:74)"}
+  - {field: dockerfile.evidence, change: ".dockerignore line 13 -> 12; added web/package.json:11 showing the release build writes server/frontend/dist", evidence: ".dockerignore:12; web/package.json:11"}
+  - {field: bindAllInterfaces.evidence, change: "server/server.go 127 -> 132", evidence: "server/server.go:132"}
+  - {field: redis.evidence, change: "cache.go:201 did not support the claim; replaced", evidence: "store/cache/cache.go:60; go.mod and Go sources contain no redis/valkey (grep -i)"}
+  - {field: env.evidence, change: "added runtime version check", evidence: "internal/version/version.go:55-58 (boot fails without a valid injected version)"}
+  - {field: dockerfile / frontend, change: "confirmed unchanged: Dockerfile does not build the frontend from a source archive", evidence: "scripts/Dockerfile:1-27 has only a Go backend stage; .dockerignore:12 /web/; .gitignore dist/ so only server/frontend/dist/index.html placeholder is tracked"}
+  - {field: all, change: "verified", evidence: "31 citations checked"}
