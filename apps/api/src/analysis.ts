@@ -434,8 +434,10 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Version 70 (2026-10 corpus round 3): a documentation site image ranks below
 // the app image; the start script the image runs names database bindings
 // (`file_env 'MB_DB_CONNECTION_URI'`); a health check script URL may set the
-// scheme and a base path from variables. Stored v69 rows can build the docs
-// image or ask for the database variable.
+// scheme and a base path from variables; a subdirectory Dockerfile that copies
+// its whole context from a directory with no project file builds from the
+// root. Stored v69 rows can build the docs image or the wrong context, or ask
+// for the database variable.
 export const ANALYSIS_VERSION = 70;
 
 export interface AnalysisRunnerDeps {

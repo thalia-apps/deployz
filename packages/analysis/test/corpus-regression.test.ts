@@ -1,6 +1,6 @@
 /**
  * Regressions from the 2026-10 analysis corpus (linkding, memos, vikunja,
- * shlink, docmost, cal.com, authentik, metabase, vaultwarden;
+ * shlink, docmost, cal.com, authentik, metabase, vaultwarden, miniflux;
  * scripts/run-and-check/ground-truth/). Each case is
  * a small tree with the shape that the real repository has, and a negative
  * case that must keep the old answer.
@@ -10,11 +10,13 @@ import { describe, expect, it } from 'vitest';
 import { analyseRepo } from '../src/analyser.js';
 import { isDerivedUrlEnvVariable } from '../src/derived-url.js';
 import {
+  detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
   detectEnvVarModel,
   detectStartupCommand,
   detectWorker,
   selectedDockerfile,
+  TREE_PATHS,
   type FileTree,
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
@@ -501,5 +503,24 @@ describe('a health check script that builds its URL from variables (vaultwarden)
 
   it('does not read a URL on another host', () => {
     expect(normalizeDeploymentManifest(analyseRepo(tree('https://example.com/alive')), {}).health.path).not.toBe('/alive');
+  });
+});
+
+describe('a Dockerfile beside no project file that copies its whole context (miniflux)', () => {
+  const tree = (extra: string[]): FileTree => {
+    const files: FileTree = {
+      'packaging/docker/alpine/Dockerfile': 'FROM golang:alpine AS build\nADD . /go/src/app\nWORKDIR /go/src/app\nRUN make miniflux\nFROM alpine\nCOPY --from=build /go/src/app/miniflux /usr/bin/miniflux\nCMD ["/usr/bin/miniflux"]\n',
+      Makefile: 'miniflux:\n\tgo build -o miniflux main.go\n',
+      'go.mod': 'module miniflux.app/v2\n',
+    };
+    return Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+  };
+
+  it('builds from the repository root', () => {
+    expect(detectDockerfileBuildContext(tree([])).value).toBe('.');
+  });
+
+  it('keeps the Dockerfile directory when it holds the project', () => {
+    expect(detectDockerfileBuildContext(tree(['packaging/docker/alpine/go.mod'])).detected).toBe(false);
   });
 });

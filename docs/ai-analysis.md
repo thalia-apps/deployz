@@ -118,7 +118,12 @@ Repository (GitHub tree, bounded)
   stage (an artifact, upload, export, publish, lint, build or test stage) and
   an earlier named stage is the production stage, the analysis records
   `dockerfileBuildTarget`. The build then runs `docker build --target <stage>`
-  (not for a vendor-overridden Dockerfile). The runtime comes from the
+  (not for a vendor-overridden Dockerfile). A Dockerfile in a subdirectory
+  builds from its own directory, unless it is written for the repository root
+  (`dockerfileBuildContext` `.`): it runs `turbo prune`, copies a workspace
+  root file, a path under its own directory or a path that only the root has,
+  or copies the whole context from a directory with no project file (miniflux
+  `packaging/docker/alpine/`: `ADD . /go/src/app`, then `make miniflux`). The runtime comes from the
   production stage and the stages it is built `FROM` (leaf to root);
   `COPY --from` counts only when that lineage names no runtime image. A
   `go.mod` with no Go source and a `package.json` with no dependencies are

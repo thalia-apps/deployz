@@ -6202,6 +6202,9 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
 // own directory.
 const WORKSPACE_ROOT_FILES = new Set(['turbo.json', 'pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'rush.json']);
 const TURBO_PRUNE_REGEX = /\bturbo\s+prune\b/;
+// A build manifest directly in a directory (`go.mod`, `Makefile`, `package.json`).
+const PROJECT_FILE_REGEX =
+  /^(?:Makefile|go\.mod|package\.json|pyproject\.toml|requirements\.txt|setup\.py|Cargo\.toml|pom\.xml|build\.gradle(?:\.kts)?|Gemfile|composer\.json|mix\.exs|[\w.-]+\.csproj)$/;
 
 /**
  * Detect a Dockerfile kept in a subdirectory that is written for the
@@ -6236,6 +6239,12 @@ export function detectDockerfileBuildContext(tree: FileTree): DetectorFinding {
       const rootOnly = source !== '.' && exists(source) && !exists(`${directory}/${source}`);
       if (source === directory || source.startsWith(`${directory}/`) || WORKSPACE_ROOT_FILES.has(source) || rootOnly) {
         evidence.add(`COPY ${source}`);
+      }
+      // The whole context of a directory with no project file (miniflux `packaging/docker/alpine/`:
+      // `ADD . /go/src/app`, then `make miniflux`) holds nothing to build; the root holds the project.
+      if (source === '.' && paths !== undefined) {
+        const projectFiles = (prefix: string) => paths.some((path) => path.startsWith(prefix) && PROJECT_FILE_REGEX.test(path.slice(prefix.length)));
+        if (!projectFiles(`${directory}/`) && projectFiles('')) evidence.add('COPY . (no project file beside the Dockerfile)');
       }
     }
   }

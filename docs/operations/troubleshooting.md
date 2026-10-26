@@ -197,8 +197,9 @@ present; check `unboundSecretKeys` in the CONFIG_UPDATE result.
 **A build fails with an opaque checksum or "Cannot find module" error.**
 The source tarball has no `.git` directory (a Dockerfile that copies `.git`
 is now rejected at analysis), or the build context is wrong (a monorepo
-Dockerfile builds from its own directory unless `docker/Dockerfile` or a
-vendor override says otherwise). The release's build-failure page shows the
+Dockerfile builds from its own directory unless it is `docker/Dockerfile`,
+the analysis finds it is written for the repository root, or a vendor
+override says otherwise). The release's build-failure page shows the
 CodeBuild log.
 
 **A build fails with a Docker Hub 429.** Anonymous pulls are rate-limited
