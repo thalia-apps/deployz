@@ -233,8 +233,11 @@ export const env = {
   githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
   githubAppInstallUrl: process.env.GITHUB_APP_INSTALL_URL,
   emailFrom: process.env.EMAIL_FROM,
-  sesAccessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
-  sesSecretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
+  // Trimmed: a key pasted into a GitHub secret with a trailing newline puts
+  // the newline in the SigV4 authorization header, and Node refuses to send
+  // the request (ERR_INVALID_CHAR), so no email leaves production.
+  sesAccessKeyId: process.env.AWS_SES_ACCESS_KEY_ID?.trim() || undefined,
+  sesSecretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY?.trim() || undefined,
   // Public HTTPS URL of the published bootstrap template. Written by the
   // publisher (`pnpm --filter @deployz/cdk run publish:bootstrap`) into the
   // control-plane stack's environment. Unset means no install link can be
