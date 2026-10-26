@@ -1,0 +1,130 @@
+id: new-51
+repository: pocketbase/pocketbase
+commit: 9d281ccaba65f2686eb7b0b614ccda72d1116a1b
+summary: >-
+  PocketBase is a Go backend in one binary (embedded SQLite, REST API, admin UI, auth, file storage). The repo has
+  no Dockerfile. The app keeps all data in SQLite files in the local pb_data directory. SQLite is the only database
+  and there is no Postgres or MySQL option. Uploaded files can go to S3, but the database cannot.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >-
+    The database is SQLite in pb_data/data.db and pb_data/auxiliary.db. No other engine exists. Fargate disk is
+    ephemeral, so every restart or redeploy loses all data and users. Settings, collections and accounts live in
+    these files. S3 storage only covers uploaded files and backups. The repo also has no Dockerfile, so the vendor
+    must write one. A deploy with an ephemeral disk would start but would not keep data, so it is not a valid answer.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .goreleaser.yaml, reason: "release build config for binaries, not a Dockerfile"}
+    - {path: .github/workflows/release.yaml, reason: "CI release workflow, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: .goreleaser.yaml, line: 13, quote: "main: ./examples/base"}
+    - {path: .goreleaser.yaml, line: 18, quote: "CGO_ENABLED=0"}
+runtime: {accept: [go]}
+port:
+  accept: [8090]
+  evidence:
+    - {path: cmd/serve.go, line: 35, quote: "httpAddr = \"127.0.0.1:8090\""}
+    - {path: cmd/serve.go, line: 22, quote: "default to 127.0.0.1:8090"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: cmd/serve.go, line: 35, quote: "httpAddr = \"127.0.0.1:8090\""}
+    - {path: cmd/serve.go, line: 66, quote: "TCP address to listen for the HTTP server"}
+startCommand:
+  source: explicit
+  accept: ["serve --http=0.0.0.0:8090", "serve --http 0.0.0.0:8090"]
+healthPath:
+  accept: ["/api/health"]
+  evidence:
+    - {path: apis/health.go, line: 13, quote: "subGroup := rg.Group(\"/health\")"}
+    - {path: apis/base.go, line: 39, quote: "apiGroup := pbRouter.Group(\"/api\")"}
+    - {path: apis/health.go, line: 25, quote: "Message: \"API is healthy.\","}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: go.mod, line: 25, quote: "modernc.org/sqlite"}
+    - {path: core/base.go, line: 49, quote: "dataDBFilename string = \"data.db\""}
+    - {path: core/base.go, line: 50, quote: "auxDBFilename  string = \"auxiliary.db\""}
+    - {path: pocketbase.go, line: 92, quote: "filepath.Join(baseDir, \"pb_data\")"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: apis/serve.go, line: 67, quote: "app.RunAllMigrations()"}
+    - {path: core/base.go, line: 439, quote: "app.RunSystemMigrations()"}
+    - {path: examples/base/main.go, line: 62, quote: "true,"}
+    - {path: examples/base/main.go, line: 63, quote: "\"enable/disable auto migrations\""}
+redis:
+  status: none
+  evidence:
+    - {path: go.mod, line: 25, quote: "modernc.org/sqlite"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: core/base.go, line: 219, quote: "cron:                cron.New(),"}
+scheduledJobs:
+  status: embedded
+  items: [internal cron jobs inside the server process]
+  evidence:
+    - {path: core/base.go, line: 643, quote: "// Cron returns the app cron instance."}
+    - {path: core/base.go, line: 1451, quote: "app.Cron().Add(\"__pbDBOptimize__\""}
+storage:
+  local: required
+  paths: [pb_data, pb_data/storage, pb_data/backups, pb_migrations, pb_hooks, pb_public]
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: pocketbase.go, line: 92, quote: "filepath.Join(baseDir, \"pb_data\")"}
+    - {path: core/base.go, line: 40, quote: "LocalStorageDirName       string = \"storage\""}
+    - {path: core/base.go, line: 751, quote: "app.settings.S3.Enabled"}
+    - {path: core/settings_model.go, line: 427, quote: "type S3Config struct {"}
+    - {path: core/base.go, line: 49, quote: "dataDBFilename string = \"data.db\""}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence:
+    - {path: pocketbase.go, line: 229, quote: "\"encryptionEnv\","}
+    - {path: core/settings_model.go, line: 265, quote: "os.Getenv(app.EncryptionEnv())"}
+blockers:
+  expected:
+    - "SQLite is the only database and its files must stay on durable local disk (pb_data); Deployz has only ephemeral container disk"
+    - "The repo has no Dockerfile"
+  mustNot:
+    - "Redis must not be required or reported"
+    - "A worker or scheduler process must not be required: the cron runs inside the server"
+    - "Postgres or MySQL must not be provisioned: the app cannot use them"
+    - "S3 must not be reported as a fix for the database: it covers uploaded files and backups only"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8090 is the serve default)"
+    - "Who runs migrations? (serve runs all migrations at start: apis/serve.go:67)"
+    - "Which health path? (/api/health)"
+    - "Is a worker needed? (no)"
+traps:
+  - "S3 settings -> S3 holds uploaded files and backups only; data.db and auxiliary.db stay on local disk (core/base.go:751, core/base.go:49)"
+  - "Default listen address is 127.0.0.1:8090 -> a container needs serve --http=0.0.0.0:8090 or the load balancer cannot reach it (cmd/serve.go:35)"
+  - "ui/dist is committed -> go build ./examples/base needs no npm step (ui/embed.go:11)"
+  - ".goreleaser.yaml and the release workflow build binaries -> they are not a Dockerfile (.goreleaser.yaml:13)"
+  - "/ has no route unless a pb_public directory exists -> do not use / as health path; the admin UI is at /_/ (examples/base/main.go:115)"
+  - "Pure-Go SQLite (modernc) -> CGO is not needed, but the database is still a local file (go.mod:25)"
+openQuestions:
+  - "A vendor who accepts data loss on each restart, or who runs one task with an added durable volume outside Deployz, could run the app; Deployz offers no durable disk"
+crossReview:
+  - {field: traps ("/" has no route), change: "citation apis/serve.go:84 (the /_/ admin UI route) -> examples/base/main.go:115 (the catch-all route that serves pb_public); text kept", evidence: "examples/base/main.go:115 e.Router.GET(\"/{path...}\", apis.Static(os.DirFS(publicDir), indexFallback))"}
+  - {field: migrations.evidence, change: "added apis/serve.go:67; Serve runs all migrations (system and app) before it listens, so mode startup is right", evidence: "apis/serve.go:67 err := app.RunAllMigrations()"}
+  - {field: vendorQuestions.unnecessary, change: "migration answer now cites RunAllMigrations in serve", evidence: "apis/serve.go:67"}
+  - {field: scheduledJobs.evidence, change: "added a concrete cron job citation", evidence: "core/base.go:1451 app.Cron().Add(\"__pbDBOptimize__\""}
+  - {field: outcome, change: "none: NOT_DEPLOYABLE kept. No Dockerfile or compose file in git (git ls-files), SQLite is the only engine, data.db and auxiliary.db are local; S3 covers only uploads and backups", evidence: "core/base.go:49; core/base.go:751"}
+  - {field: port/healthPath/startCommand, change: "none: serve defaults to 127.0.0.1:8090, /api/health returns 200 without auth, / has no route unless pb_public exists", evidence: "cmd/serve.go:35; apis/health.go:25"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

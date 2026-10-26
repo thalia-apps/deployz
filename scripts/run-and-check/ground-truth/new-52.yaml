@@ -1,0 +1,140 @@
+id: new-52
+repository: dani-garcia/vaultwarden
+commit: 0f44744ef86a2a7bea615af1c024044ce5736187
+summary: >
+  Vaultwarden, an unofficial Bitwarden-compatible password server written in Rust (Rocket, Diesel). The root
+  Dockerfile is a symlink to docker/Dockerfile.debian. It builds the Rust binary from source with sqlite, mysql and
+  postgresql drivers, and takes the web vault from a published image. The container listens on port 80 (ROCKET_PORT).
+  The default database is SQLite in /data (ephemeral on Fargate), so a Deployz deploy must set DATABASE_URL to
+  PostgreSQL or MySQL. Attachments, sends and the RSA signing key are files in /data. S3 storage needs the optional
+  `s3` cargo feature, which the default image build does not enable.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The default image starts and answers /alive, but it stores the database in SQLite on ephemeral disk. Set
+    DATABASE_URL to the managed PostgreSQL or MySQL and set DOMAIN to the public https URL. The vault works with these
+    two values. Attachments, sends and the RSA key stay on ephemeral disk unless the image is built with the s3
+    feature (build arg DB=sqlite,mysql,postgresql,s3) and DATA_FOLDER is an s3:// URI. Without S3, users sign in again
+    after each restart and lose attachments and sends.
+dockerfile:
+  accept: [Dockerfile, docker/Dockerfile.debian, docker/Dockerfile.alpine]
+  reject:
+    - {path: docker/Dockerfile.j2, reason: "template that renders the Debian and Alpine Dockerfiles, not a build file"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "docker/Dockerfile.debian"}
+    - {path: docker/Dockerfile.debian, line: 170, quote: "FROM --platform=$TARGETPLATFORM docker.io/library/debian:trixie-slim"}
+    - {path: docker/Dockerfile.debian, line: 196, quote: "COPY docker/healthcheck.sh docker/start.sh /"}
+    - {path: docker/Dockerfile.debian, line: 115, quote: "xx-cargo build --features ${DB}"}
+    - {path: .dockerignore, line: 7, quote: "!docker/start.sh"}
+    - {path: docker/Dockerfile.alpine, line: 152, quote: "COPY docker/healthcheck.sh docker/start.sh /"}
+runtime: {accept: [rust]}
+port:
+  accept: [80]
+  evidence:
+    - {path: docker/Dockerfile.debian, line: 174, quote: "ROCKET_PORT=80"}
+    - {path: docker/Dockerfile.debian, line: 190, quote: "EXPOSE 80"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/Dockerfile.debian, line: 173, quote: "ROCKET_ADDRESS=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["/start.sh"]
+  evidence:
+    - {path: docker/Dockerfile.debian, line: 203, quote: "CMD [\"/start.sh\"]"}
+    - {path: docker/start.sh, line: 29, quote: "exec /vaultwarden"}
+healthPath:
+  accept: ["/alive"]
+  # /alive returns the current time as JSON with 200. It takes a DbConn, so it also checks the database. No redirect.
+  evidence:
+    - {path: src/api/web.rs, line: 245, quote: "#[get(\"/alive\")]"}
+    - {path: src/main.rs, line: 583, quote: ".mount([basepath, \"/\"].concat(), api::web_routes())"}
+    - {path: docker/healthcheck.sh, line: 65, quote: "/alive"}
+database:
+  status: optional
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://user:password@host:5432/database_name"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: src/config.rs, line: 523, quote: "format!(\"sqlite://{}\""}
+    - {path: .env.template, line: 66, quote: "# DATABASE_URL=postgresql://user:password@host[:port]/database_name"}
+    - {path: .env.template, line: 60, quote: "# DATABASE_URL=mysql://user:password@host[:port]/database_name"}
+    - {path: docker/Dockerfile.debian, line: 94, quote: "ARG DB=sqlite,mysql,postgresql"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/db/mod.rs, line: 202, quote: "postgresql_migrations::run_migrations(&db_url)?;"}
+    - {path: src/db/mod.rs, line: 198, quote: "mysql_migrations::run_migrations(&db_url)?;"}
+redis:
+  status: none
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: src/main.rs, line: 661, quote: "fn schedule_jobs"}
+scheduledJobs:
+  status: embedded
+  items: [send purge, trash purge, incomplete 2FA notices, emergency access, event cleanup, auth request purge]
+  evidence:
+    - {path: src/main.rs, line: 679, quote: "CONFIG.send_purge_schedule()"}
+    - {path: src/config.rs, line: 564, quote: "\"0 5 0 * * *\""}
+storage:
+  local: conditional
+  paths: [/data/attachments, /data/sends, /data/rsa_key, /data/icon_cache, /data/tmp, /data/config.json]
+  s3: native
+  s3SelectBy: {DATA_FOLDER: "s3://<bucket>/data?region=<region>", TMP_FOLDER: "/tmp/vaultwarden", TEMPLATES_FOLDER: "/tmp/vaultwarden/templates"}
+  # S3 needs the cargo feature `s3`. The default image build does not enable it (ARG DB). Build with DB=sqlite,mysql,postgresql,s3.
+  # The ECS task role gives the credentials: the S3 operator uses the AWS default credential chain.
+  evidence:
+    - {path: src/config.rs, line: 521, quote: "data_folder:            String, false,  def,    \"data\".to_owned();"}
+    - {path: src/config.rs, line: 527, quote: "attachments_folder:"}
+    - {path: src/config.rs, line: 535, quote: "rsa_key_filename:"}
+    - {path: .env.template, line: 21, quote: "s3://bucket-name/path/to/folder"}
+    - {path: .env.template, line: 23, quote: "make sure to set TMP_FOLDER"}
+    - {path: Cargo.toml, line: 41, quote: "s3 = ["}
+    - {path: .env.template, line: 24, quote: "TEMPLATES_FOLDER"}
+    - {path: src/storage.rs, line: 64, quote: "S3 support is not enabled"}
+    - {path: src/storage.rs, line: 190, quote: "DefaultCredentialsChain::builder()"}
+    - {path: src/auth.rs, line: 91, quote: "Rsa::generate(2048)"}
+    - {path: docker/Dockerfile.debian, line: 189, quote: "VOLUME /data"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "Deployz provides it from the managed database. The default is SQLite on ephemeral disk."}
+    - {name: DOMAIN, secret: false, buildTime: false, note: "Public https URL. The web vault needs https. Default is http://localhost and links in email and WebAuthn use it."}
+  optional: [ADMIN_TOKEN, DISABLE_ADMIN_TOKEN, SIGNUPS_ALLOWED, SHOW_PASSWORD_HINT, DATA_FOLDER, TMP_FOLDER, TEMPLATES_FOLDER, ROCKET_PORT, SMTP_HOST, SMTP_FROM, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, DATABASE_MAX_CONNS, LOG_LEVEL]
+  buildTime: [DB]
+  evidence:
+    - {path: src/config.rs, line: 592, quote: "\"http://localhost\".to_owned()"}
+    - {path: src/config.rs, line: 669, quote: "admin_token:            Pass,   true,   option;"}
+    - {path: .env.template, line: 255, quote: "# SIGNUPS_ALLOWED=true"}
+    - {path: docker/Dockerfile.debian, line: 94, quote: "ARG DB=sqlite,mysql,postgresql"}
+blockers:
+  expected: []
+  mustNot: ["persistent local disk is required (the database can be PostgreSQL and S3 can hold files)", "Redis is required", "a second container is required", "a worker service is required (the scheduler runs inside the server)"]
+vendorQuestions:
+  legitimate: ["Which public https domain to use for DOMAIN", "Should the admin page be on (set ADMIN_TOKEN)", "Allow public sign-ups (SIGNUPS_ALLOWED)"]
+  unnecessary: ["Which port the app listens on", "Which start command to use", "Which health path to use", "Which migration command to run"]
+traps:
+  - "Dockerfile in the root -> a symlink to docker/Dockerfile.debian, not a separate build (Dockerfile:1)"
+  - "Deployz sets PORT -> the app ignores PORT and reads ROCKET_PORT, which the image sets to 80 (docker/Dockerfile.debian:174)"
+  - "VOLUME /data -> the default SQLite database and files live there and are lost on Fargate; use DATABASE_URL (docker/Dockerfile.debian:189)"
+  - "web-vault is copied from a published image (FROM ... AS vault) -> it is pulled at build time, not built from this repo (docker/Dockerfile.debian:30)"
+  - "S3 data folder is documented in .env.template -> it works only if the image is built with the s3 feature, which the default DB build arg omits (docker/Dockerfile.debian:94)"
+  - "Port 3012 websocket in old docs -> notifications are served on the main port at /notifications (src/main.rs:589)"
+  - "/ (root) -> serves the web vault HTML; /alive is the explicit health route (src/api/web.rs:245)"
+openQuestions:
+  - "Can Deployz pass the build arg DB with the s3 feature? If not, attachments and sends stay on ephemeral disk."
+crossReview:
+  - {field: dockerfile.reject, change: "added docker/Dockerfile.j2 as a template, not a build file", evidence: "docker/Dockerfile.j2:1; docker/Dockerfile.debian and docker/Dockerfile.alpine are rendered from it"}
+  - {field: storage.s3SelectBy, change: "added TEMPLATES_FOLDER as a local path: with an s3 DATA_FOLDER the templates folder defaults to the S3 path, and the docs say to set it locally", evidence: ".env.template:23-24; src/config.rs:533 templates_folder joins data_folder"}
+  - {field: storage.evidence, change: "added Cargo.toml:41 (the s3 cargo feature exists) and .env.template:24 (TEMPLATES_FOLDER)", evidence: "Cargo.toml:41; .env.template:24"}
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES kept; the default is SQLite on ephemeral disk, so DATABASE_URL must be set; S3 files need a custom build arg", evidence: "src/config.rs:523; docker/Dockerfile.debian:94"}
+  - {field: healthPath, change: "none: /alive confirmed (200 JSON, no redirect, DbConn checks the DB); the mount path follows the DOMAIN path, so DOMAIN must be a root URL", evidence: "src/api/web.rs:245; src/main.rs:583; docker/healthcheck.sh:65"}
+  - {field: port / startCommand / redis / workers / migrations, change: "none: ROCKET_PORT=80 in both images, CMD /start.sh execs /vaultwarden, no Redis code in src, the job scheduler runs in the server process, migrations run in from_config", evidence: "docker/Dockerfile.debian:174,203; docker/start.sh:29; src/db/mod.rs:198-202"}
+  - {field: all, change: verified, evidence: "38 citations checked"}

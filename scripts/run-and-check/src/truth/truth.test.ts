@@ -90,6 +90,14 @@ describe('compareWithTruth', () => {
     );
   });
 
+  it('counts a name Deployz binds to the database as supplied', () => {
+    const urlTruth = { ...truth, database: { ...truth.database, selectBy: { DATABASE_URL: 'postgresql://...' } } } as GroundTruth;
+    const unbound = compareWithTruth(urlTruth, analysis({ environment: { variables: [] } }));
+    expect(unbound.find((r) => r.field === 'database.selectBy.DATABASE_URL')?.verdict).toBe('MISMATCH');
+    const bound = compareWithTruth(urlTruth, analysis({ database: { postgres: true, envBindings: [{ name: 'DATABASE_URL', kind: 'url' }] } }));
+    expect(bound.find((r) => r.field === 'database.selectBy.DATABASE_URL')?.verdict).toBe('MATCH');
+  });
+
   it('reports optional Redis that the manifest provisions', () => {
     expect(mismatches(analysis({ redis: { required: true, envBindings: [] } }))).toContain('MISMATCH redis');
   });

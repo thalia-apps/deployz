@@ -1,0 +1,165 @@
+id: new-57
+repository: coollabsio/coolify
+commit: e200927ffdf46d9736c887d925781cf86cffbb48
+summary: >
+  Coolify is a self-hosted deployment control plane (Laravel 12 / PHP 8.4, Livewire, Vite assets). The production
+  image (docker/production/Dockerfile) builds from source and runs nginx, PHP-FPM, Horizon, the scheduler, Reverb
+  websockets and a terminal server under s6-overlay in one container. It needs PostgreSQL and Redis. Its purpose is to
+  manage Docker hosts over SSH, so the default "localhost" server (host.docker.internal) does not work on Fargate.
+  The control plane itself starts with env values only.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  # judgement call: NOT_DEPLOYABLE is primary (several supervised processes in one image; the vendor would have to split them into a web process and declared workers). DEPLOYABLE_WITH_CHANGES is accepted as the alternative reading under the Deployz readiness policy, which classes this blocker as a repository change (the gate still blocks the deployment).
+  reason: >
+    The image runs s6-overlay with several long-running services in one container: nginx and PHP-FPM, Horizon
+    (the queue worker), the scheduler worker, Reverb (websockets) and the terminal server. The Deployz MVP does not
+    support an image that supervises several long-running processes (docs/product/mvp-scope.md, "several supervised
+    processes (s6-overlay, supervisord ...)"). Without that limit the app could run: it needs no Docker socket (it
+    reaches Docker hosts over SSH) and no persistent disk, and Postgres, Redis and APP_KEY are all available.
+dockerfile:
+  accept: [docker/production/Dockerfile]
+  reject:
+    - {path: docker/development/Dockerfile, reason: "development image (mounted source, dev tools); not for production"}
+    - {path: docker/coolify-helper/Dockerfile, reason: "helper image that Coolify runs on managed servers; not the control plane"}
+    - {path: docker/testing-host/Dockerfile, reason: "SSH test host for the test suite"}
+    - {path: docker/tmp-php/Dockerfile, reason: "temporary PHP build helper"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/production/Dockerfile, line: 99, quote: "FROM serversideup/php:${SERVERSIDEUP_PHP_VERSION}"}
+    - {path: docker/production/Dockerfile, line: 68, quote: "RUN npm run build"}
+    - {path: docker/production/Dockerfile, line: 194, quote: "COPY --chown=www-data:www-data storage ./storage"}
+    - {path: docker/production/Dockerfile, line: 212, quote: "COPY --chmod=755 docker/production/etc/s6-overlay/ /etc/s6-overlay/"}
+runtime: {accept: [php]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: docker/production/etc/nginx/site-opts.d/http.conf, line: 1, quote: "listen 8080 default_server;"}
+    - {path: docker-compose.prod.yml, line: 47, quote: "curl --fail http://127.0.0.1:8080/api/health"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/production/etc/nginx/site-opts.d/http.conf, line: 1, quote: "listen 8080 default_server;"}
+startCommand:
+  source: image
+  accept: []
+healthPath:
+  accept: ["/api/health"]
+  # "/" is the Livewire dashboard behind auth, so it redirects to /login (not 2xx). /api/health has no auth and returns "OK".
+  evidence:
+    - {path: routes/api.php, line: 46, quote: "Route::get('/health', [OtherController::class, 'healthcheck']);"}
+    - {path: app/Http/Controllers/Api/OtherController.php, line: 271, quote: "return response('OK');"}
+    - {path: docker-compose.prod.yml, line: 47, quote: "curl --fail http://127.0.0.1:8080/api/health"}
+    - {path: routes/web.php, line: 197, quote: "Route::get('/', Dashboard::class)->name('dashboard');"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  # The default DB_HOST is the compose service name coolify-db, so the vendor (or Deployz) must set DB_HOST.
+  evidence:
+    - {path: config/database.php, line: 78, quote: "'default' => env('DB_CONNECTION', 'pgsql')"}
+    - {path: config/database.php, line: 27, quote: "'host' => env('DB_HOST', 'coolify-db'),"}
+    - {path: config/database.php, line: 31, quote: "'password' => env('DB_PASSWORD', ''),"}
+    - {path: config/session.php, line: 21, quote: "'driver' => env('SESSION_DRIVER', 'database'),"}
+migrations:
+  mode: startup
+  accept: ["php artisan start:migration"]
+  evidence:
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/db-migration/up, line: 9, quote: "start:migration"}
+    - {path: config/constants.php, line: 68, quote: "'is_migration_enabled' => env('MIGRATION_ENABLED', true),"}
+redis:
+  status: required
+  evidence:
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'redis'),"}
+    - {path: config/cache.php, line: 18, quote: "'default' => env('CACHE_DRIVER', 'redis'),"}
+    - {path: config/database.php, line: 144, quote: "'host' => env('REDIS_HOST', 'coolify-redis'),"}
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/horizon/run, line: 11, quote: "exec php artisan horizon"}
+workers:
+  status: embedded
+  commands: []
+  # Horizon (queue worker), schedule:work, Reverb and the terminal server are s6 services in the same container. No separate worker service is needed.
+  evidence:
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/horizon/run, line: 11, quote: "exec php artisan horizon"}
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/scheduler-worker/run, line: 11, quote: "exec php artisan schedule:work"}
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/reverb/run, line: 22, quote: "exec php artisan reverb:start"}
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/terminal-server/run, line: 6, quote: "exec node /terminal/terminal-server.js"}
+scheduledJobs:
+  status: embedded
+  items: ["schedule:work in the same container"]
+  evidence:
+    - {path: docker/production/etc/s6-overlay/s6-rc.d/scheduler-worker/run, line: 11, quote: "exec php artisan schedule:work"}
+storage:
+  local: ephemeral
+  paths: [/var/www/html/storage/app/ssh, /var/www/html/storage/app/backups, /var/www/html/storage/app/applications, /var/www/html/storage/app/databases, /var/www/html/storage/app/services, /var/www/html/storage/app/images]
+  s3: none
+  s3SelectBy: {}
+  # SSH keys are stored in the DB and written to the disk on demand; deployment files and DB backups are staging files.
+  # The compose file mounts host paths for them, but the app recreates them. S3 is only a user-configured backup target in the UI.
+  evidence:
+    - {path: config/filesystems.php, line: 59, quote: "'ssh-keys' => ["}
+    - {path: config/filesystems.php, line: 72, quote: "'backups' => ["}
+    - {path: app/Models/PrivateKey.php, line: 205, quote: "public function storeInFileSystem()"}
+    - {path: docker-compose.prod.yml, line: 17, quote: "- /data/coolify/ssh:/var/www/html/storage/app/ssh"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel key, format base64:<32 random bytes>; .env.production leaves it empty and the installer generates it"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "default coolify-db is the compose service name; set the RDS host"}
+    - {name: DB_PORT, secret: false, buildTime: false, note: "default 5432"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "default coolify"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "default coolify"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "default is empty"}
+    - {name: REDIS_HOST, secret: false, buildTime: false, note: "default coolify-redis is the compose service name"}
+    - {name: REDIS_PASSWORD, secret: true, buildTime: false, note: "ElastiCache auth if enabled; unset means no password"}
+    - {name: ROOT_USER_EMAIL, secret: false, buildTime: false, note: "with ROOT_USER_PASSWORD creates the root user at first start; without both, the first registration in the first 10 minutes after start creates it"}
+    - {name: ROOT_USER_PASSWORD, secret: true, buildTime: false, note: "min 8 chars, mixed case, number, symbol, not a leaked password"}
+  optional: [APP_ID, APP_NAME, APP_URL, APP_ENV, ROOT_USERNAME, REDIS_PORT, REDIS_USERNAME, PUSHER_APP_ID, PUSHER_APP_KEY, PUSHER_APP_SECRET, PUSHER_BACKEND_PORT, SESSION_SECURE_COOKIE, MIGRATION_ENABLED, SEEDER_ENABLED, HORIZON_ENABLED, SCHEDULER_ENABLED, HORIZON_MAX_PROCESSES, PHP_MEMORY_LIMIT, AUTOUPDATE, REGISTRY_URL]
+  buildTime: []
+  evidence:
+    - {path: config/app.php, line: 179, quote: "'key' => env('APP_KEY'),"}
+    - {path: .env.production, line: 3, quote: "APP_KEY="}
+    - {path: database/seeders/RootUserSeeder.php, line: 24, quote: "! env('ROOT_USER_EMAIL')"}
+    - {path: app/Support/RootSetupWindow.php, line: 14, quote: "public const MINUTES = 10;"}
+    - {path: config/reverb.php, line: 76, quote: "'key' => env('PUSHER_APP_KEY', 'coolify'),"}
+    - {path: config/session.php, line: 171, quote: "'secure' => env('SESSION_SECURE_COOKIE'),"}
+blockers:
+  expected:
+    - "Several supervised long-running processes in one image (s6-overlay: horizon, scheduler-worker, reverb, terminal-server): unsupported-multi-service under the MVP boundary"
+  mustNot:
+    - "No Docker socket is mounted or needed: the production compose file has no docker.sock mount; Coolify reaches Docker hosts over SSH"
+    - "Local storage/app directories must not block: SSH keys come from the DB and the rest is staging data"
+    - "The docker-compose files list postgres and redis as services: Deployz provides them as managed RDS and ElastiCache"
+    - "The old coolify-realtime/soketi service must not be required: realtime runs inside the main container (Reverb on 6001, proxied by nginx at /app/)"
+vendorQuestions:
+  legitimate:
+    - "Which remote Docker server(s) Coolify must manage: the seeded localhost server (host.docker.internal) does not exist on Fargate; add a server with SSH in the UI"
+    - "Root user e-mail and password, and the public URL (APP_URL) are deployment-specific"
+  unnecessary:
+    - "Which Dockerfile (docker/production/Dockerfile)"
+    - "Which port (8080)"
+    - "Who runs migrations (the s6 db-migration service at start)"
+    - "Whether a queue worker or scheduler process is needed (embedded in the image)"
+    - "Whether Redis or Postgres is needed (both, defaults in config)"
+traps:
+  - "docker-compose.prod.yml bind-mounts /data/coolify/source/.env and host paths -> the app also reads plain process env vars; the .env file is optional (docker-compose.prod.yml:14)"
+  - "Compose maps ports 8000, 6001 and 6002 -> the web server in the image listens on 8080; 6001 (Reverb) and 6002 (terminal) are proxied by nginx at /app/ and /terminal/ws (docker/production/etc/nginx/site-opts.d/http.conf:1)"
+  - "Root path / looks like a health URL -> it is the auth-guarded dashboard and redirects to login; use /api/health (routes/web.php:197, routes/api.php:46)"
+  - "ProductionSeeder creates a localhost server on host.docker.internal -> it is unreachable on Fargate; not a deploy failure (database/seeders/ProductionSeeder.php:119)"
+  - "Dockerfile has no EXPOSE, CMD or ENTRYPOINT -> the serversideup/php base image starts s6-overlay, which starts every service in the s6 bundle (docker/production/Dockerfile:212)"
+  - "Dockerfile is multi-stage but the last stage is the production image -> no target is needed (docker/production/Dockerfile:99)"
+  - "Dockerfile pulls arch-specific node images for TARGETARCH -> works on x86_64 (docker/production/Dockerfile:54)"
+  - "HORIZON_ENABLED=false or SCHEDULER_ENABLED=false in the .env file turns off Horizon or the scheduler -> defaults are on and they must stay on (docker/production/etc/s6-overlay/s6-rc.d/horizon/run:5)"
+openQuestions:
+  - "Whether the s6 services see container env vars: yes. The base image serversideup/php 8.4-fpm-nginx-alpine-v5.0.3 sets S6_KEEP_ENV=1 in its Dockerfile (src/variations/fpm-nginx/Dockerfile, read from the upstream project, not from this repo), so the run scripts that lack with-contenv still inherit the task env. Laravel reads process env when no .env file exists."
+  - "Whether Coolify is useful without a local Docker host is a product judgement; the deployment itself works, so only DEPLOYABLE and DEPLOYABLE_WITH_CHANGES are accepted."
+crossReview:
+  - {field: outcome, change: "removed NOT_DEPLOYABLE. The control plane needs no Docker socket (it uses SSH: SshMultiplexingHelper, ssh-keys disk) and no persistent disk (keys come from the DB, written on demand). Everything it needs is env, Postgres and Redis. The missing localhost server is a use choice. DEPLOYABLE and DEPLOYABLE_WITH_CHANGES kept", evidence: "app/Helpers/SshMultiplexingHelper.php:434; config/filesystems.php:59-61; app/Models/PrivateKey.php:205; docker/production/etc/s6-overlay/s6-rc.d/db-migration/up"}
+  - {field: openQuestions (s6 env), change: "resolved: the base image sets S6_KEEP_ENV=1, so the services without with-contenv (horizon, scheduler-worker, reverb, terminal-server, nginx run via with-contenv) see the container env. Not a blocker; Deployz env reaches Horizon", evidence: "upstream serversideup/docker-php v5.0.3 src/variations/fpm-nginx/Dockerfile 'S6_KEEP_ENV=1'; docker/production/Dockerfile:3 ARG SERVERSIDEUP_PHP_VERSION=8.4-fpm-nginx-alpine-v5.0.3"}
+  - {field: storage.paths, change: "added databases, services and images dirs (also mounted by the compose file, ephemeral staging data)", evidence: "docker-compose.prod.yml:17-23"}
+  - {field: healthPath, change: "none: /api/health confirmed. RouteServiceProvider mounts api.php under prefix api, the api middleware group has only throttle and bindings (no auth), the controller returns OK. TrustProxies trusts all, and no host or HTTPS redirect applies", evidence: "app/Providers/RouteServiceProvider.php:30-32; app/Http/Kernel.php:88-92; app/Http/Middleware/TrustProxies.php:15"}
+  - {field: database / redis / port / dockerfile / migrations, change: "none: pgsql default, sslmode prefer (works with RDS), phpredis with no TLS option, port 8080, one final stage, all COPY sources are tracked paths, migrate runs in the db-migration oneshot with --isolated", evidence: "config/database.php:38; app/Console/Commands/Migration.php:16; docker/production/Dockerfile:182-197"}
+  - {field: all, change: verified, evidence: "36 citations checked"}
+  - {field: outcome / blockers (orchestrator), change: "[DEPLOYABLE, DEPLOYABLE_WITH_CHANGES] -> [NOT_DEPLOYABLE]; the multi-process s6 image is outside the documented MVP boundary, so it is now an expected blocker and no longer a mustNot. The technical facts (no Docker socket, no durable disk) stay", evidence: "docs/product/mvp-scope.md (Not supported: an image that runs several supervised processes); docker/production/Dockerfile:3"}
+  - {field: outcome (orchestrator), change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES], the same policy reading as new-45 and new-47", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES (local-file-storage, unsupported-multi-service are CODE_CHANGE)"}

@@ -1,0 +1,183 @@
+id: new-54
+repository: twentyhq/twenty
+commit: 188d4abd9c01c38a0acdb6557cf46ce182320c92
+summary: >
+  Twenty is an open-source CRM (NestJS server plus React front end, Yarn/Nx monorepo). The production image comes from
+  packages/twenty-docker/twenty/Dockerfile with `--target twenty` (server and front end in one image). The last stage of
+  the file is `twenty-app-dev`, an all-in-one dev image with Postgres, Redis and ClickHouse inside it, so a target is
+  mandatory. The app needs PostgreSQL and Redis (BullMQ queues, cache). The official compose file also runs a second
+  `worker` service from the same image with `yarn worker:prod`; background jobs, cron jobs and mail/calendar sync run
+  there. File storage is local by default (ephemeral on Fargate) and S3 is native, with the task role as credentials.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Works on Deployz with these non-default choices: build target `twenty`, PostgreSQL, Redis, STORAGE_TYPE=S_3 with
+    STORAGE_S3_NAME and STORAGE_S3_REGION, and one extra worker service (`yarn worker:prod`) with
+    DISABLE_DB_MIGRATIONS=true and DISABLE_CRON_JOBS_REGISTRATION=true. No second application container is needed.
+dockerfile:
+  accept: [packages/twenty-docker/twenty/Dockerfile]
+  reject:
+    - {path: packages/twenty-docker/twenty-postgres-spilo/Dockerfile, reason: "builds a Postgres image, not the app"}
+    - {path: .github/oss-scanner/Dockerfile, reason: "CI scanner tooling, not the app"}
+  target: twenty
+  context: .
+  evidence:
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 189, quote: "FROM twenty-server AS twenty"}
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 191, quote: "COPY --chown=1000 --from=twenty-front-build /app/packages/twenty-front/build /app/packages/twenty-server/dist/front"}
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 235, quote: "FROM node-base AS twenty-app-dev"}
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 186, quote: "docker build --target twenty -f packages/twenty-docker/twenty/Dockerfile ."}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 1628, quote: "NODE_PORT = 3000;"}
+    - {path: packages/twenty-server/src/main.ts, line: 126, quote: "await app.listen(twentyConfigService.get('NODE_PORT'));"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 9, quote: "- \"3000:3000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/twenty-server/src/main.ts, line: 126, quote: "app.listen(twentyConfigService.get('NODE_PORT'))"}
+startCommand:
+  source: image
+  accept: ["node dist/main"]
+  # The image ENTRYPOINT is /app/entrypoint.sh (migrations, cron registration), then it runs the CMD `node dist/main`.
+  evidence:
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 168, quote: "CMD [\"node\", \"dist/main\"]"}
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 169, quote: "ENTRYPOINT [\"/app/entrypoint.sh\"]"}
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 52, quote: "exec \"$@\""}
+healthPath:
+  accept: ["/healthz"]
+  # /healthz is the Nest HealthController (ApiPath.Health). The guard is PublicEndpointGuard, so no login is needed.
+  # check() runs an empty indicator list, so it returns 200 once the server is up. The official compose file uses it.
+  evidence:
+    - {path: packages/twenty-shared/src/types/ApiPath.ts, line: 16, quote: "Health = 'healthz',"}
+    - {path: packages/twenty-server/src/engine/core-modules/health/controllers/health.controller.ts, line: 8, quote: "@Controller(ApiPath.Health)"}
+    - {path: packages/twenty-server/src/engine/core-modules/health/controllers/health.controller.ts, line: 13, quote: "@UseGuards(PublicEndpointGuard, NoPermissionGuard)"}
+    - {path: packages/twenty-server/src/engine/core-modules/health/controllers/health.controller.ts, line: 16, quote: "return this.health.check([]);"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 59, quote: "test: curl --fail http://localhost:3000/healthz"}
+    - {path: packages/twenty-server/src/engine/core-modules/frontend/utils/is-frontend-document-request.util.ts, line: 14, quote: "(prefix) => pathname === `/${prefix}` || pathname.startsWith(`/${prefix}/`),"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [PG_DATABASE_URL]
+  # PG_DATABASE_URL has no default and is validated as a postgres URL. The first start runs setup-db, which creates the
+  # schemas and the uuid-ossp, unaccent and citext extensions; the DB user must be allowed to do so (RDS master user is).
+  evidence:
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 1465, quote: "PG_DATABASE_URL: string;"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 12, quote: "PG_DATABASE_URL: postgres://"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 120, quote: "image: postgres:16"}
+    - {path: packages/twenty-server/src/database/scripts/setup-db.ts, line: 18, quote: "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""}
+    - {path: packages/twenty-server/src/database/scripts/setup-db.ts, line: 28, quote: "CREATE EXTENSION IF NOT EXISTS \"citext\""}
+    - {path: packages/twenty-server/src/database/scripts/setup-db.ts, line: 44, quote: "if (process.env.IS_FDW_ENABLED !== 'true') {"}
+migrations:
+  mode: startup
+  accept: ["yarn database:init:prod", "yarn command:prod upgrade"]
+  # The ENTRYPOINT runs init (empty DB only) and `yarn command:prod upgrade` on every start of the server, unless
+  # DISABLE_DB_MIGRATIONS=true. The worker service must set DISABLE_DB_MIGRATIONS=true so only the server migrates.
+  evidence:
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 5, quote: "if [ \"${DISABLE_DB_MIGRATIONS}\" = \"true\" ]; then"}
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 13, quote: "has_schema=$(psql -tAc"}
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 16, quote: "yarn database:init:prod"}
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 23, quote: "if ! yarn command:prod upgrade; then"}
+    - {path: packages/twenty-server/package.json, line: 12, quote: "\"database:init:prod\": \"node dist/database/scripts/setup-db.js && yarn database:migrate:prod --force --include-slow\","}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 75, quote: "DISABLE_DB_MIGRATIONS: \"true\" # it already runs on the server"}
+redis:
+  status: required
+  evidence:
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 1551, quote: "REDIS_URL: string;"}
+    - {path: packages/twenty-server/src/engine/core-modules/message-queue/message-queue.module-factory.ts, line: 18, quote: "const driverType = MessageQueueDriverType.BullMQ;"}
+    - {path: packages/twenty-server/src/engine/core-modules/redis-client/redis-client.service.ts, line: 44, quote: "throw new Error('REDIS_URL must be defined');"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 14, quote: "REDIS_URL: ${REDIS_URL:-redis://redis:6379}"}
+workers:
+  status: independent
+  commands: ["yarn worker:prod"]
+  # The server only enqueues jobs. BullMQ jobs (mail and calendar sync, workflows, webhooks, cron jobs, data import) run in
+  # the worker process, which the image CMD does not start. The official compose and Helm chart both run it as its own service.
+  evidence:
+    - {path: packages/twenty-docker/docker-compose.yml, line: 65, quote: "worker:"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 69, quote: "command: [\"yarn\", \"worker:prod\"]"}
+    - {path: packages/twenty-server/package.json, line: 11, quote: "\"worker:prod\": \"node dist/queue-worker/queue-worker\","}
+    - {path: packages/twenty-server/src/queue-worker/queue-worker.ts, line: 17, quote: "NestFactory.createApplicationContext(QueueWorkerModule"}
+scheduledJobs:
+  status: independent
+  items: [cron:register:all registers BullMQ repeatable jobs (messaging and calendar import, workflow triggers, cleanup, domain checks, signing key rotation)]
+  # The server entrypoint registers them once (DISABLE_CRON_JOBS_REGISTRATION unset); the worker process runs them.
+  evidence:
+    - {path: packages/twenty-docker/twenty/entrypoint.sh, line: 41, quote: "if yarn command:prod cron:register:all; then"}
+    - {path: packages/twenty-server/src/database/commands/cron-register-all.command.ts, line: 44, quote: "name: 'cron:register:all',"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 76, quote: "DISABLE_CRON_JOBS_REGISTRATION: \"true\" # it already runs on the server"}
+storage:
+  local: conditional
+  paths: [/app/packages/twenty-server/.local-storage]
+  s3: native
+  s3SelectBy: {STORAGE_TYPE: S_3, STORAGE_S3_NAME: "<bucket>", STORAGE_S3_REGION: "<region>"}
+  # The default is STORAGE_TYPE=LOCAL; the S3 value is S_3 (the .env.example default is the lowercase "local", which the loader also upper-cases) (uploads, avatars, attachments, workspace files). S3 needs only bucket and region.
+  # STORAGE_S3_ACCESS_KEY_ID and SECRET are optional: without them the AWS default credential chain (ECS task role) is used.
+  evidence:
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 622, quote: "STORAGE_TYPE: StorageDriverType = StorageDriverType.LOCAL;"}
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 630, quote: "STORAGE_LOCAL_PATH = '.local-storage';"}
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 665, quote: "omit to use the default AWS credential chain"}
+    - {path: packages/twenty-server/src/engine/core-modules/file-storage/file-storage-driver.factory.ts, line: 84, quote: ": fromNodeProviderChain({ clientConfig: { region } }),"}
+    - {path: packages/twenty-server/src/engine/core-modules/file-storage/interfaces/file-storage.interface.ts, line: 2, quote: "S_3 = 'S_3',"}
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/decorators/cast-to-upper-snake-case.decorator.ts, line: 9, quote: "return snakeCase(value.trim()).toUpperCase();"}
+    - {path: packages/twenty-docs/developers/self-host/capabilities/setup.mdx, line: 337, quote: "Set `STORAGE_TYPE=S_3`"}
+    - {path: packages/twenty-docker/docker-compose.yml, line: 7, quote: "- server-local-data:/app/packages/twenty-server/.local-storage"}
+    - {path: packages/twenty-docker/twenty/Dockerfile, line: 163, quote: "RUN mkdir -p /app/.local-storage"}
+env:
+  required:
+    - {name: PG_DATABASE_URL, secret: true, buildTime: false, note: "postgres:// URL with the password inside; use a password without special characters"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "redis:// URL; server and worker both need it"}
+    - {name: SERVER_URL, secret: false, buildTime: false, note: "public HTTPS URL of the app; the default is http://localhost:3000"}
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "random value (openssl rand -base64 32); the server throws without it or APP_SECRET; APP_SECRET is the legacy alternative"}
+    - {name: STORAGE_TYPE, secret: false, buildTime: false, note: "set S_3 (the enum value and the docs form; the loader upper-snake-cases the value, so S3 also works); the default LOCAL is ephemeral on Fargate"}
+    - {name: STORAGE_S3_NAME, secret: false, buildTime: false, note: "bucket name; needed when STORAGE_TYPE=S3"}
+    - {name: STORAGE_S3_REGION, secret: false, buildTime: false, note: "bucket region; needed when STORAGE_TYPE=S3"}
+  optional: [APP_SECRET, FALLBACK_ENCRYPTION_KEY, NODE_PORT, DISABLE_DB_MIGRATIONS, DISABLE_CRON_JOBS_REGISTRATION, STORAGE_S3_ENDPOINT, STORAGE_S3_ACCESS_KEY_ID, STORAGE_S3_SECRET_ACCESS_KEY, STORAGE_S3_PRESIGNED_URL_ENABLED, REDIS_CACHE_PREFIX, PG_SSL_ALLOW_SELF_SIGNED, FRONTEND_URL, TRUST_PROXY, EMAIL_DRIVER, EMAIL_SMTP_HOST, AUTH_GOOGLE_ENABLED, AUTH_MICROSOFT_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: packages/twenty-server/src/engine/core-modules/secret-encryption/utils/resolve-encryption-keys-or-throw.util.ts, line: 25, quote: "No encryption key configured: set ENCRYPTION_KEY (or APP_SECRET for legacy deployments)."}
+    - {path: packages/twenty-docker/.env.example, line: 12, quote: "SERVER_URL=http://localhost:3000"}
+    - {path: packages/twenty-docker/.env.example, line: 15, quote: "# ENCRYPTION_KEY=replace_me_with_a_random_string"}
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 1663, quote: "SERVER_URL = 'http://localhost:3000';"}
+    - {path: packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts, line: 1491, quote: "PG_SSL_ALLOW_SELF_SIGNED = false;"}
+blockers:
+  expected: []
+  mustNot:
+    - "Local storage default must not block: S3 is native (STORAGE_TYPE=S_3) and the task role gives the credentials"
+    - "The worker must not be reported as a second required application container: it is the same image with another command (yarn worker:prod)"
+    - "The all-in-one twenty-app-dev stage (Postgres, Redis, ClickHouse inside) must not be reported as an unsupported multi-service image: use the twenty target"
+    - "ClickHouse must not be required: ANALYTICS_ENABLED defaults to false and the compose file has no ClickHouse"
+    - "Redis must not be reported as unsupported: Deployz provides it"
+vendorQuestions:
+  legitimate:
+    - "Email: EMAIL_DRIVER and SMTP settings (or leave logging only); the repo does not say which mail provider the vendor uses"
+    - "Google or Microsoft sign-in and mail/calendar sync need OAuth client IDs; optional"
+  unnecessary:
+    - "Which Dockerfile or target? (packages/twenty-docker/twenty/Dockerfile, target twenty)"
+    - "Which port? (NODE_PORT default 3000)"
+    - "Who runs migrations? (the image entrypoint runs them at start)"
+    - "Is a worker needed? (yes, yarn worker:prod, from the official compose file)"
+    - "Health path? (/healthz)"
+    - "Local or S3 storage? (S3 with STORAGE_TYPE=S_3, the task role gives access)"
+traps:
+  - "Last stage twenty-app-dev (all-in-one with Postgres, Redis, ClickHouse, s6, EXPOSE 2020) -> do not build the last stage; use --target twenty (Dockerfile:189, Dockerfile:235)"
+  - "Targets twenty-server and twenty-server-aws have no front end -> twenty includes it (Dockerfile:94, Dockerfile:191)"
+  - "ENTRYPOINT is entrypoint.sh, CMD is node dist/main -> the start command is the image one; a worker service overrides CMD only, and must set DISABLE_DB_MIGRATIONS=true (Dockerfile:168, docker-compose.yml:75)"
+  - "docker-compose.yml shows db and redis as separate containers -> Deployz managed RDS and ElastiCache replace them (docker-compose.yml:119, docker-compose.yml:134)"
+  - "EXPOSE 2020 and NODE_PORT=2020 belong to the dev stage only -> the server default is 3000 (Dockerfile:322, config-variables.ts:1628)"
+  - "Front end build uses NODE_OPTIONS max-old-space-size=8192 -> the build needs much memory (Dockerfile:85)"
+  - "Entrypoint needs psql; the twenty-server stage installs postgresql18-client -> the image already has it (Dockerfile:106)"
+  - "Cron registration runs in the entrypoint but the jobs execute in the worker -> without a worker, scheduled jobs and queued jobs never run (docker-compose.yml:69)"
+openQuestions:
+  - "RDS PostgreSQL may force SSL; the app turns SSL on only with PG_SSL_ALLOW_SELF_SIGNED=true (rejectUnauthorized false), so the vendor may need that variable or sslmode in the URL (core.datasource.ts:74-75)"
+  - "The worker also needs the entrypoint env (PG_DATABASE_URL, REDIS_URL, storage, ENCRYPTION_KEY) with the same values as the server"
+crossReview:
+  - {field: storage.s3SelectBy / env.STORAGE_TYPE / outcome.reason, change: "STORAGE_TYPE value S3 -> S_3. The enum value and the self-host docs use S_3. The config decorator upper-snake-cases the input, so S3 also resolves to S_3, but S_3 is the documented form. Added two evidence items", evidence: "file-storage.interface.ts:2; cast-to-upper-snake-case.decorator.ts:9; packages/twenty-docs/developers/self-host/capabilities/setup.mdx:337"}
+  - {field: healthPath.evidence, change: "added evidence that the front end catch-all skips API paths, so /healthz is not swallowed by the SPA document handler", evidence: "packages/twenty-server/src/engine/core-modules/frontend/utils/is-frontend-document-request.util.ts:14"}
+  - {field: openQuestions, change: "line ref core.datasource.ts:75 -> 74-75 (the ssl key is on line 74)", evidence: "packages/twenty-server/src/database/typeorm/core/core.datasource.ts:74"}
+  - {field: dockerfile, change: "none: every COPY source exists in git at the commit (.yarn/releases, .yarn/patches, packages/twenty-server/patches and scripts, twenty-oxlint-rules, twenty-client-sdk, front-component-renderer, entrypoint.sh); the only other Dockerfiles are the spilo Postgres image and the oss-scanner; target twenty is right because the last stage is twenty-app-dev", evidence: "Dockerfile:10-60 COPY lines; git ls-tree checks"}
+  - {field: workers / redis / migrations / database, change: "none: independent worker is the official compose design (own service, yarn worker:prod); Redis has no default and BullMQ is hard-coded; entrypoint migrates unless DISABLE_DB_MIGRATIONS=true; PG_DATABASE_URL is the only DB variable", evidence: "docker-compose.yml:65-76; message-queue.module-factory.ts:18; entrypoint.sh:5; config-variables.ts:1465"}
+  - {field: all, change: verified, evidence: "51 citations checked (+3 added)"}

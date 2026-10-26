@@ -1,0 +1,165 @@
+id: new-50
+repository: metabase/metabase
+commit: ffebfcef22eb61d78da575fc9aa5e585e449d0f8
+summary: >
+  Metabase business-intelligence server (Clojure backend, ClojureScript and TypeScript frontend, one Jetty process).
+  The root Dockerfile builds the uberjar from source (bun, Clojure CLI, JDK 25) and runs it on a JRE image.
+  The application database defaults to an H2 file in the container, so a Deployz deploy must select PostgreSQL.
+  The build needs a VERSION build argument.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds from source and the image starts the server. The image default is the H2 file database
+    at /metabase.db, which is ephemeral on Fargate. The vendor must set MB_DB_CONNECTION_URI to a Postgres URI (the engine
+    comes from the URI), or MB_DB_TYPE=postgres with MB_DB_* values. Metabase does not read DATABASE_URL. The build also needs
+    the VERSION build argument: with it empty, `bin/build.sh :version` passes the key `:version` without a value to the
+    Clojure CLI (not run, so the exact error is unverified). Redis, workers and local disk are not needed.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: bin/docker/Dockerfile, reason: "COPY ./metabase.jar from a local build; the jar is not in git"}
+    - {path: bin/docker/Dockerfile_ubuntu, reason: "same jar-copy variant on an Ubuntu base; the jar is not in git"}
+    - {path: .devcontainer/Dockerfile, reason: dev container}
+    - {path: dev/docker/claude-code/Dockerfile, reason: dev tooling}
+    - {path: modules/drivers/clickhouse/.docker/clickhouse/single_node_tls/Dockerfile, reason: test database for a driver}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 5, quote: "FROM node:22-bullseye AS builder"}
+    - {path: Dockerfile, line: 35, quote: "bin/build.sh :version ${VERSION}"}
+    - {path: Dockerfile, line: 44, quote: "FROM eclipse-temurin:25-jre-alpine AS runner"}
+    - {path: Dockerfile, line: 68, quote: "COPY --from=builder /home/node/target/uberjar/metabase.jar /app/"}
+    - {path: bin/docker/Dockerfile, line: 28, quote: "COPY ./metabase.jar ./run_metabase.sh /app/"}
+runtime: {accept: [java]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 72, quote: "EXPOSE 3000"}
+    - {path: src/metabase/config/core.clj, line: 54, quote: ":mb-jetty-port                   \"3000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: bin/docker/run_metabase.sh, line: 3, quote: "if [ -z \"$MB_JETTY_HOST\" ]; then"}
+    - {path: bin/docker/run_metabase.sh, line: 4, quote: "export MB_JETTY_HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["/app/run_metabase.sh"]   # the image ENTRYPOINT; it execs java -jar /app/metabase.jar
+healthPath:
+  accept: ["/api/health", "/readyz", "/livez"]
+  # /api/health and /readyz return 200 only when the app is initialised and the app DB answers, else 503 while migrations run.
+  # /livez always returns 200 with no DB check. All three skip the HTTPS redirect, so no 301 appears behind the load balancer.
+  # GET / is 200 without a redirect on a fresh instance (the HTTPS redirect is off by default), also while the app initialises
+  # (it then serves the init page), so it is not a readiness check. Do not accept it.
+  evidence:
+    - {path: src/metabase/server/routes.clj, line: 121, quote: "(GET \"/api/health\" [] health-handler)"}
+    - {path: src/metabase/server/routes.clj, line: 123, quote: "(GET \"/readyz\" [] health-handler)"}
+    - {path: src/metabase/server/routes.clj, line: 125, quote: "(GET \"/livez\" [] livez-handler)"}
+    - {path: src/metabase/server/routes.clj, line: 65, quote: "{:status 503, :body {:status \"initializing\""}
+    - {path: src/metabase/server/middleware/ssl.clj, line: 15, quote: "#{\"/api/health\" \"/livez\" \"/readyz\"})"}
+    - {path: src/metabase/server/routes.clj, line: 118, quote: "(GET \"/\" [] index/index)"}
+    - {path: src/metabase/server/routes/index.clj, line: 141, quote: "(load-init-template)))"}
+    - {path: src/metabase/server/settings.clj, line: 75, quote: ":default    false"}
+database:
+  status: required
+  engines: [h2, postgres, mysql]
+  default: h2
+  deployzEngine: postgres
+  # MB_DB_CONNECTION_URI alone is enough: the engine comes from the URI scheme (env.clj:60) and `postgres://user:pass@host:port/db`
+  # is accepted (data_source.clj:114-116). The other way is MB_DB_TYPE=postgres plus MB_DB_HOST/PORT/DBNAME/USER/PASS.
+  selectBy: {MB_DB_CONNECTION_URI: "postgres://user:password@host:5432/dbname"}
+  connectionVars: [MB_DB_CONNECTION_URI, MB_DB_TYPE, MB_DB_HOST, MB_DB_PORT, MB_DB_DBNAME, MB_DB_USER, MB_DB_PASS]
+  evidence:
+    - {path: src/metabase/config/core.clj, line: 49, quote: ":mb-db-type                      \"h2\""}
+    - {path: src/metabase/config/core.clj, line: 50, quote: ":mb-db-file                      \"metabase.db\""}
+    - {path: src/metabase/app_db/env.clj, line: 58, quote: "(mu/defn- env->db-type :- [:enum :postgres :mysql :h2]"}
+    - {path: src/metabase/app_db/env.clj, line: 60, quote: "(or (some-> mb-db-connection-uri raw-connection-string->type)"}
+    - {path: src/metabase/app_db/data_source.clj, line: 114, quote: "(str/starts-with? s \"postgres:\")   (str/replace-first #\"^postgres:\" \"postgresql:\")"}
+    - {path: src/metabase/app_db/data_source.clj, line: 116, quote: "strings like `postgres://user:password@host:port` for legacy"}
+    - {path: src/metabase/app_db/env.clj, line: 131, quote: "(defmethod env-defaults :postgres"}
+    - {path: src/metabase/app_db/env.clj, line: 134, quote: ":mb-db-port 5432})"}
+    - {path: src/metabase/app_db/env.clj, line: 173, quote: "WARNING: Using Metabase with an H2 application database is not recommended for production deployments."}
+    - {path: bin/docker/run_metabase.sh, line: 91, quote: "db_file=${MB_DB_FILE:-/metabase.db}"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/metabase/config/core.clj, line: 51, quote: ":mb-db-automigrate               \"true\""}
+    - {path: src/metabase/app_db/core.clj, line: 155, quote: "auto-migrate? (config/config-bool :mb-db-automigrate)]"}
+redis:
+  status: none
+  evidence:
+    - {path: src/metabase/config/core.clj, line: 65, quote: ":mb-qp-cache-backend             \"db\""}
+    - {path: deps.edn, line: 26, quote: "clojurewerkz/quartzite"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: bin/docker/run_metabase.sh, line: 67, quote: "exec /bin/sh -c \"exec java $JAVA_OPTS -jar /app/metabase.jar $@\""}
+    - {path: deps.edn, line: 26, quote: "clojurewerkz/quartzite"}
+scheduledJobs:
+  status: embedded
+  items: [Quartz scheduler inside the Metabase process, backed by the app DB]
+  evidence:
+    - {path: deps.edn, line: 26, quote: "clojurewerkz/quartzite"}
+    - {path: src/metabase/app_db/env.clj, line: 83, quote: ";; we need to enable MVCC for Quartz JDBC backend to work!"}
+storage:
+  local: ephemeral
+  paths: [/metabase.db, /plugins, target/log]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: bin/docker/run_metabase.sh, line: 91, quote: "db_file=${MB_DB_FILE:-/metabase.db}"}
+    - {path: Dockerfile, line: 62, quote: "mkdir -p /plugins && chmod a+rwx /plugins"}
+    - {path: bin/docker/run_metabase.sh, line: 10, quote: "JAVA_OPTS=\"${JAVA_OPTS} -Dlogfile.path=target/log\""}
+env:
+  required:
+    - {name: MB_DB_CONNECTION_URI, secret: true, buildTime: false, note: "Postgres URI, for example postgres://user:password@host:5432/dbname (it holds the password); the engine comes from the URI. Instead of it, set MB_DB_TYPE=postgres with MB_DB_HOST, MB_DB_PORT, MB_DB_DBNAME, MB_DB_USER and MB_DB_PASS (secret). The image default h2 is a local file and is lost on restart"}
+    - {name: VERSION, secret: false, buildTime: true, note: "build argument for `bin/build.sh :version`, for example v0.63.18; with it empty the Clojure CLI gets the key :version without a value (not run, so unverified)"}
+  optional: [MB_DB_TYPE, MB_DB_HOST, MB_DB_PORT, MB_DB_DBNAME, MB_DB_USER, MB_DB_PASS, MB_EDITION, MB_ENCRYPTION_SECRET_KEY, MB_SESSION_SECRET_KEY, MB_SITE_URL, MB_JETTY_HOST, MB_JETTY_PORT, MB_DB_AUTOMIGRATE, MB_EMAIL_SMTP_HOST, MB_EMAIL_SMTP_PORT, MB_EMAIL_SMTP_USERNAME, MB_EMAIL_SMTP_PASSWORD, MB_EMAIL_FROM_ADDRESS, JAVA_OPTS, JAVA_TIMEZONE, MB_DB_SSL_CERT]
+  buildTime: [VERSION, MB_EDITION]
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "ARG MB_EDITION=oss"}
+    - {path: Dockerfile, line: 8, quote: "ARG VERSION"}
+    - {path: docs/developers-guide/build.md, line: 171, quote: "--build-arg VERSION=vx.x.x ."}
+    - {path: src/metabase/app_db/env.clj, line: 45, quote: "[:mb-db-type"}
+    - {path: src/metabase/app_db/env.clj, line: 48, quote: "[:mb-db-connection-uri"}
+    - {path: src/metabase/util/encryption.clj, line: 60, quote: "(validate-and-hash-secret-key (env/env :mb-encryption-secret-key)))"}
+    - {path: src/metabase/session/models/session.clj, line: 30, quote: "(encryption/validate-and-hash-secret-key (env/env :mb-session-secret-key) \"MB_SESSION_SECRET_KEY\"))"}
+    - {path: docs/installation-and-operation/security-best-practices-self-hosting.md, line: 19, quote: "one for `MB_ENCRYPTION_SECRET_KEY`, and one for `MB_SESSION_SECRET_KEY`"}
+blockers:
+  expected: []
+  mustNot:
+    - "H2 default must not block: Postgres and MySQL are supported through MB_DB_TYPE"
+    - "Redis, Elasticsearch, Kafka or a second container must not be reported: Metabase is one process with the app DB as its only service"
+    - "Persistent local disk must not be reported: with an external app DB there is no durable local state"
+    - "Quartz scheduler must not be reported as a worker: it runs inside the web process"
+    - "The source build (bun, Clojure, JDK) must not block: it is a normal multi-stage build, only slow and memory heavy"
+vendorQuestions:
+  legitimate:
+    - "Which VERSION value to pass as the build argument (the repo has no default; the build only labels the version)"
+    - "Which databases the BI users will connect to (set up inside the Metabase UI after first start, not at deploy time)"
+  unnecessary:
+    - "Which port? (3000 in image and defaults)"
+    - "Who runs migrations? (the server migrates the app DB at boot)"
+    - "Is a worker or Redis needed? (neither)"
+    - "Health path? (/api/health)"
+traps:
+  - "bin/docker/Dockerfile copies ./metabase.jar built outside the image -> use the root Dockerfile, which builds the jar in the builder stage (Dockerfile:68, bin/docker/Dockerfile:28)"
+  - "Default MB_DB_TYPE is h2 with a file in /metabase.db -> a default to override with Postgres (config/core.clj:49, run_metabase.sh:91)"
+  - "The image has no CMD; the ENTRYPOINT script does the work and runs as root, then drops to a metabase user with su (run_metabase.sh:175)"
+  - "Metabase does not read DATABASE_URL; it reads MB_DB_CONNECTION_URI (engine taken from the URI) or MB_DB_TYPE with MB_DB_* (app_db/env.clj:45-61)"
+  - "GET / is 200 without a redirect, also while the app initialises (init page) -> a weak check; use /api/health or /readyz (server/routes.clj:118, server/routes/index.clj:141)"
+  - ".dockerignore lists .git, so the build cannot read git data; version info falls back to '?' and the VERSION build argument sets the tag (.dockerignore:1, bin/build/src/build/version_properties.clj:21)"
+  - "/api/health returns 503 with status initializing while migrations run on first boot -> allow a long start period (server/routes.clj:65)"
+  - "No JVM heap option is set in the entrypoint -> the JVM sizes the heap from container memory; give the task enough memory (run_metabase.sh:8-16)"
+  - "software.amazon.awssdk/s3 in deps.edn is used only by an enterprise Python transforms feature, not for app file storage (deps.edn:203)"
+openQuestions:
+  - "Whether MB_ENCRYPTION_SECRET_KEY and MB_SESSION_SECRET_KEY should count as required: the server boots without them; the self-hosting security guide recommends both"
+  - "MB_SITE_URL is not needed to boot; Metabase can set it in the UI at setup, and the HTTPS redirect needs it to start with https"
+  - "Exact memory and build time of the source build were not measured; nothing was run"
+crossReview:
+  - {field: database.selectBy / connectionVars / env.required, change: "MB_DB_TYPE -> MB_DB_CONNECTION_URI. The URI alone selects Postgres (the type is read from the URI scheme; postgres:// with user:pass@ is normalised), so a URL binding on that name is enough and MB_DB_TYPE is only needed for the MB_DB_HOST/PORT/DBNAME/USER/PASS way. Moved MB_DB_TYPE and the parts to optional, listed the URI as the secret required variable, noted the alternative", evidence: "src/metabase/app_db/env.clj:60; src/metabase/app_db/data_source.clj:114-116,127; docs/installation-and-operation/configuring-application-database.md:44"}
+  - {field: env.required VERSION / outcome.reason, change: "kept as required build argument. ARG VERSION has no default, so the shell expands it to empty and the command becomes `bin/build.sh :version`, which runs `clojure -X... :version` with no value (bin/build.sh forwards its arguments unchanged). build.clj falls back to a snapshot version only if the key is absent. I cannot run it, so the exact CLI error is unverified (wording softened). Example changed to v0.63.18 as in the build guide", evidence: "Dockerfile:8,35; bin/build.sh:27; bin/build/src/build.clj:104-108; docs/developers-guide/build.md:171"}
+  - {field: healthPath, change: "none: / is 200 without a redirect on a fresh instance (redirect-all-requests-to-https default false; the redirect also needs an https site-url) but it is 200 even while initialising (init page), so it stays out of accept. Added the evidence and a trap", evidence: "src/metabase/server/routes.clj:118; src/metabase/server/routes/index.clj:139-141; src/metabase/server/settings.clj:71-75; src/metabase/server/middleware/ssl.clj:41-52"}
+  - {field: dockerfile, change: "none: every COPY source of the root Dockerfile is tracked in git (bin/docker/DigiCertGlobalRootG2.crt.pem, blocked.certs, run_metabase.sh, bun.lock); .dockerignore excludes .git, test/*, hooks/* but nothing the build needs", evidence: "Dockerfile:24,49,64,69; .dockerignore:1-25"}
+  - {field: all, change: verified, evidence: "46 citations checked"}

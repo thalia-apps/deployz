@@ -1,0 +1,400 @@
+{
+  "id": "new-50",
+  "commit": "ffebfcef22eb61d78da575fc9aa5e585e449d0f8",
+  "analyser": "ai@r3-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "bun run build:cljs && bun run build:js",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/app/run_metabase.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/lint/oxlint/config.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CYPRESS_GUI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CYPRESS_GUI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CYPRESS_MB_ALL_FEATURES_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CYPRESS_MB_ALL_FEATURES_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CYPRESS_MB_PRO_CLOUD_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CYPRESS_MB_PRO_CLOUD_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CYPRESS_MB_PRO_SELF_HOSTED_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CYPRESS_MB_PRO_SELF_HOSTED_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CYPRESS_MB_STARTER_CLOUD_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CYPRESS_MB_STARTER_CLOUD_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CYPRESS_TESTING_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CYPRESS_TESTING_TYPE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GENERATE_SNAPSHOTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GENERATE_SNAPSHOTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINT_CSS_MODULES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/lint/oxlint/config.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MB_EDITION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MB_EDITION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MB_EMAIL_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MB_EMAIL_SMTP_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MB_EMAIL_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MB_EMAIL_SMTP_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MB_EMAIL_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MB_EMAIL_SMTP_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MB_EMAIL_SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MB_EMAIL_SMTP_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MB_LOG_ANALYTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/metabase/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MB_LOG_CHARTS_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/metabase/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METASTORE_DEV_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares METASTORE_DEV_SERVER_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/metabase/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORYBOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/metabase/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TZ"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WEBPACK_BUNDLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/src/metabase/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07234128,
+        "promptTokens": 15938,
+        "completionTokens": 466
+      },
+      "latencyMs": 7853
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "MB_DB_CONNECTION_URI",
+        "answer": "value",
+        "reasons": [
+          "no cited line supports the claim (bin/docker/run_metabase.sh:50, dev/docker-compose.yml:50)"
+        ],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7857,
+    "questions": 2,
+    "generatedAt": "2026-10-26T13:07:18.803Z",
+    "failedChecks": 1,
+    "promptVersion": 16
+  }
+}

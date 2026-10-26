@@ -1,0 +1,173 @@
+id: new-53
+repository: chatwoot/chatwoot
+commit: adcb69429c209ef009041e007ada03614bbbc6ce
+summary: >
+  Chatwoot customer support platform (Ruby on Rails 7 API plus Vue dashboard, built with Vite). Production
+  runs as two processes from one image: the Rails web server and a Sidekiq worker. It needs PostgreSQL with
+  the pgvector extension and Redis. The production Dockerfile (docker/Dockerfile) builds from source with a git
+  checkout, but a RUN step needs a .git directory (git rev-parse HEAD, no guard), so a build from a source archive
+  fails. It also sets no CMD or ENTRYPOINT, so the vendor must give the start command. Uploads use local disk by default; S3 is
+  native through ActiveStorage.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The only production Dockerfile fails to build from a source archive: docker/Dockerfile:90 runs
+    "git rev-parse HEAD > /app/.git_sha" with no "|| true", and a source archive has no .git (exit 128). The vendor
+    must change the Dockerfile (guard or remove that step and the .git_sha copy), or Deployz must build from a
+    git checkout; with that fix the app is DEPLOYABLE_WITH_CHANGES, else NOT_DEPLOYABLE.
+    The image has no start command: set "bundle exec rails server -b 0.0.0.0 -p 3000". Schema setup and migrations
+    are a separate command (rails db:chatwoot_prepare) that nothing runs at boot. A Sidekiq worker service is
+    needed. Redis is required. The default ActiveStorage service is local disk, which is ephemeral, so set
+    ACTIVE_STORAGE_SERVICE=amazon with a bucket. PostgreSQL must allow the vector extension (RDS does).
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/dockerfiles/rails.Dockerfile, reason: "development image: FROM chatwoot:development, an image built elsewhere"}
+    - {path: docker/dockerfiles/vite.Dockerfile, reason: "development Vite server image: FROM chatwoot:development"}
+    - {path: .devcontainer/Dockerfile, reason: dev container}
+    - {path: .devcontainer/Dockerfile.base, reason: dev container base}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 3, quote: "FROM ruby:3.4.4-alpine3.21 AS pre-builder"}
+    - {path: docker/Dockerfile, line: 99, quote: "FROM ruby:3.4.4-alpine3.21"}
+    - {path: docker/Dockerfile, line: 77, quote: "COPY . /app"}
+    - {path: docker/Dockerfile, line: 85, quote: "bundle exec rake assets:precompile"}
+    - {path: docker/Dockerfile, line: 90, quote: "RUN git rev-parse HEAD > /app/.git_sha"}
+    - {path: docker/Dockerfile, line: 151, quote: "COPY --from=pre-builder /app/.git_sha /app/.git_sha"}
+    - {path: docker/dockerfiles/rails.Dockerfile, line: 1, quote: "FROM chatwoot:development"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: docker/Dockerfile, line: 155, quote: "EXPOSE 3000"}
+    - {path: docker-compose.production.yaml, line: 22, quote: "command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker-compose.production.yaml, line: 22, quote: "'-b', '0.0.0.0'"}
+startCommand:
+  source: explicit
+  accept: ["rails server", "rails s "]
+  # docker/Dockerfile ends at EXPOSE 3000 with no CMD and no ENTRYPOINT. The reference command is in docker-compose.production.yaml
+  # (entrypoint docker/entrypoints/rails.sh, which waits for Postgres and runs bundle install, then execs the command; not needed on Deployz).
+  evidence:
+    - {path: docker-compose.production.yaml, line: 22, quote: "command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']"}
+    - {path: docker-compose.production.yaml, line: 21, quote: "entrypoint: docker/entrypoints/rails.sh"}
+    - {path: Procfile, line: 2, quote: "bin/rails server -p $PORT -e $RAILS_ENV"}
+healthPath:
+  accept: ["/health"]
+  # HealthController inherits ActionController::Base, so it skips authentication and app callbacks. It returns 200 with {"status":"woot"}.
+  # The Rails root "/" serves the dashboard and may redirect, so do not use it.
+  evidence:
+    - {path: config/routes.rb, line: 45, quote: "get '/health', to: 'health#show'"}
+    - {path: app/controllers/health_controller.rb, line: 3, quote: "class HealthController < ActionController::Base"}
+    - {path: app/controllers/health_controller.rb, line: 5, quote: "render json: { status: 'woot' }"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD]
+  evidence:
+    - {path: config/database.yml, line: 2, quote: "adapter: postgresql"}
+    - {path: config/database.yml, line: 29, quote: "ENV.fetch('POSTGRES_DATABASE', 'chatwoot_production')"}
+    - {path: docker/entrypoints/helpers/pg_database_url.rb, line: 4, quote: "# Let DATABASE_URL env take presedence over individual connection params."}
+    - {path: db/schema.rb, line: 19, quote: "enable_extension \"vector\""}
+    - {path: db/migrate/20250104200055_create_captain_tables.rb, line: 3, quote: "the 'vector' extension is mandatory to run the application"}
+    - {path: docker-compose.production.yaml, line: 38, quote: "image: pgvector/pgvector:pg16"}
+migrations:
+  mode: command
+  accept: ["bundle exec rails db:chatwoot_prepare", "rails db:chatwoot_prepare"]
+  # Nothing in the image or the web command runs it. The Procfile release phase runs it. It loads the schema and seeds on an empty database, else it migrates.
+  evidence:
+    - {path: lib/tasks/db_enhancements.rake, line: 17, quote: "task chatwoot_prepare: :load_config do"}
+    - {path: Procfile, line: 1, quote: "bundle exec rails db:chatwoot_prepare"}
+    - {path: docker/entrypoints/rails.sh, line: 24, quote: "bundle install"}
+redis:
+  status: required
+  evidence:
+    - {path: lib/redis/config.rb, line: 14, quote: "ENV.fetch('REDIS_URL', 'redis://127.0.0.1:6379')"}
+    - {path: config/cable.yml, line: 2, quote: "adapter: redis"}
+    - {path: config/environments/production.rb, line: 59, quote: "config.active_job.queue_adapter = :sidekiq"}
+workers:
+  status: independent
+  commands: ["bundle exec sidekiq -C config/sidekiq.yml"]
+  evidence:
+    - {path: docker-compose.production.yaml, line: 34, quote: "command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']"}
+    - {path: Procfile, line: 3, quote: "bundle exec sidekiq -C config/sidekiq.yml"}
+    - {path: config/environments/production.rb, line: 59, quote: "config.active_job.queue_adapter = :sidekiq"}
+scheduledJobs:
+  status: embedded
+  items: [dispatch_conversation_monitors_job, internal_check_new_versions_job]
+  evidence:
+    - {path: config/schedule.yml, line: 1, quote: "https://github.com/ondrejbartas/sidekiq-cron"}
+    - {path: config/initializers/sidekiq.rb, line: 78, quote: "Sidekiq.server?"}
+storage:
+  local: conditional
+  paths: [/app/storage]
+  s3: native
+  s3SelectBy: {ACTIVE_STORAGE_SERVICE: amazon, S3_BUCKET_NAME: "<bucket>", AWS_REGION: "<region>"}
+  evidence:
+    - {path: config/environments/production.rb, line: 43, quote: "ENV.fetch('ACTIVE_STORAGE_SERVICE', 'local')"}
+    - {path: config/storage.yml, line: 7, quote: "root: <%= Rails.root.join(\"storage\") %>"}
+    - {path: config/storage.yml, line: 15, quote: "ENV.fetch('S3_BUCKET_NAME', '')"}
+    - {path: config/storage.yml, line: 14, quote: "ENV.fetch('AWS_REGION', '')"}
+    - {path: config/storage.yml, line: 12, quote: "ENV.fetch('AWS_ACCESS_KEY_ID', '')"}
+    - {path: docker-compose.production.yaml, line: 8, quote: "storage_data:/app/storage"}
+env:
+  required:
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "random hex; the build uses a placeholder only to precompile assets"}
+    - {name: FRONTEND_URL, secret: false, buildTime: false, note: "public https URL; used for links and default_url_options"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "default is redis://127.0.0.1:6379, which is wrong on Fargate"}
+    - {name: POSTGRES_HOST, secret: false, buildTime: false, note: "or DATABASE_URL; default localhost. Also POSTGRES_PORT, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD"}
+    - {name: ACTIVE_STORAGE_SERVICE, secret: false, buildTime: false, note: "amazon; default local is ephemeral. Also S3_BUCKET_NAME and AWS_REGION"}
+  optional: [REDIS_PASSWORD, RAILS_ENV, RAILS_LOG_TO_STDOUT, FORCE_SSL, ENABLE_ACCOUNT_SIGNUP, DEFAULT_LOCALE, MAILER_SENDER_EMAIL, SMTP_ADDRESS, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_DOMAIN, SMTP_AUTHENTICATION, RAILS_MAX_THREADS, WEB_CONCURRENCY, SIDEKIQ_CONCURRENCY, POSTGRES_STATEMENT_TIMEOUT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, ASSET_CDN_HOST, INSTALLATION_ENV]
+  buildTime: []
+  evidence:
+    - {path: config/secrets.yml, line: 22, quote: "secret_key_base: <%= ENV[\"SECRET_KEY_BASE\"] %>"}
+    - {path: .env.example, line: 17, quote: "FRONTEND_URL=http://0.0.0.0:3000"}
+    - {path: config/environments/production.rb, line: 105, quote: "default_url_options = { host: ENV['FRONTEND_URL'] }"}
+    - {path: .env.example, line: 163, quote: "ACTIVE_STORAGE_SERVICE=local"}
+    - {path: docker/Dockerfile, line: 85, quote: "SECRET_KEY_BASE=precompile_placeholder"}
+    - {path: docker/Dockerfile, line: 119, quote: "ARG RAILS_ENV=production"}
+blockers:
+  expected:
+    - "docker/Dockerfile:90 runs git rev-parse HEAD without a guard; a source archive has no .git, so the build fails (exit 128) until the Dockerfile is changed"
+  mustNot:
+    - "pgvector must not block: RDS PostgreSQL supports the vector extension and the migration enables it"
+    - "Redis must not be called optional or unsupported: ElastiCache Redis is available"
+    - "Sidekiq must not be reported as a second application container: it is a worker service of the same image"
+    - "Local storage (/app/storage) must not block: ActiveStorage supports S3 natively"
+    - "Missing CMD in the image must not make the app undeployable: the compose file gives the command"
+    - "The vite.Dockerfile and rails.Dockerfile dev images must not be reported as missing base image blockers"
+vendorQuestions:
+  legitimate:
+    - "SMTP settings for outbound email: the repo does not say which mail provider the vendor uses"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile? (docker/Dockerfile)"
+    - "Which database engine? (PostgreSQL only)"
+    - "Whether a worker is needed (Sidekiq is needed; command in Procfile and compose)"
+    - "Health path? (/health)"
+traps:
+  - "docker/Dockerfile has no CMD or ENTRYPOINT -> the start command must be explicit; use the compose command (docker/Dockerfile:155, docker-compose.production.yaml:22)"
+  - "docker/dockerfiles/rails.Dockerfile has a CMD but is a dev image on top of chatwoot:development -> do not use (docker/dockerfiles/rails.Dockerfile:1,9)"
+  - "docker/Dockerfile line 90 runs git rev-parse HEAD and needs .git in the build context; .dockerignore does not exclude .git, but a source archive has no .git, so this RUN fails the build (no || true). The final stage then copies /app/.git_sha (docker/Dockerfile:90,151). The app itself does not need the file: config/initializers/git_sha.rb falls back to 'unknown' (docker/Dockerfile:90)"
+  - "docker/entrypoints/rails.sh waits for pg_isready and runs bundle install; it is for compose and dev, and is not needed on Deployz (docker/entrypoints/rails.sh:24)"
+  - "docker-compose.production.yaml binds Postgres, Redis and Rails to 127.0.0.1 and uses volumes -> a self-host layout, not the Deployz topology (docker-compose.production.yaml:16)"
+  - "Procfile release phase runs db:chatwoot_prepare -> the image does not; run it as a migration command (Procfile:1)"
+  - "Procfile web uses $PORT and ip_lookup:setup -> the image port is fixed 3000 with -p 3000 (Procfile:2)"
+  - "config/storage.yml lists GCS, Azure and S3-compatible services -> use amazon (S3) on AWS (config/storage.yml:10)"
+  - "RAILS_ENV=production and RAILS_SERVE_STATIC_FILES=true are image defaults -> Rails serves the precompiled assets itself, no nginx needed (docker/Dockerfile:16,119)"
+openQuestions:
+  - "The amazon ActiveStorage service passes empty strings when AWS_ACCESS_KEY_ID is unset. Whether the AWS SDK then falls back to the ECS task role was not run or verified"
+  - "Whether the first-run db:chatwoot_prepare needs a long statement timeout on a small RDS (the Procfile sets POSTGRES_STATEMENT_TIMEOUT=600s)"
+crossReview:
+  - {field: outcome.accept, change: "[DEPLOYABLE_WITH_CHANGES] -> [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]; reason starts with the build failure", evidence: "docker/Dockerfile:90 unguarded RUN git rev-parse HEAD (git is installed at line 34, but a source archive has no .git so it exits 128); no build arg avoids it; no .gitattributes"}
+  - {field: blockers.expected, change: "[] -> the unguarded git rev-parse build failure", evidence: "docker/Dockerfile:90"}
+  - {field: dockerfile.evidence, change: "added lines 90 and 151", evidence: "docker/Dockerfile:90,151"}
+  - {field: summary / traps, change: "summary and trap now say the build fails from a source archive; added the git_sha.rb fallback", evidence: "config/initializers/git_sha.rb:2-12 (File.directory?('.git') guard, then .git_sha, then 'unknown')"}
+  - {field: startCommand / healthPath / port / database / migrations / redis / workers / storage / env, change: "none: challenged against the code, no error found", evidence: "docker/Dockerfile:155 no CMD; config/environments/production.rb:46 FORCE_SSL default false so /health gets no redirect; app/controllers/health_controller.rb:3-5; config/database.yml:2-31; lib/tasks/db_enhancements.rake:17; docker-compose.production.yaml:22,34"}
+  - {field: all, change: verified, evidence: "45 citations checked (all exact)"}
