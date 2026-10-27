@@ -1,0 +1,210 @@
+{
+  "id": "new-114",
+  "commit": "a1f5650effe7703ade6f82758ec43c2c75c9eca9",
+  "analyser": "ai@r5-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "front",
+        "api/Gemfile",
+        "api/Gemfile.lock",
+        "front/.env.sh",
+        "api"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"./runner.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": "bundle exec sidekiq -C config/sidekiq/sidekiq.yml"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "bundle exec sidekiq -C config/sidekiq/sidekiq.yml",
+        "source": "docker/Procfile"
+      },
+      {
+        "id": "clock",
+        "command": "bundle exec clockwork ./clock.rb",
+        "source": "docker/Procfile"
+      },
+      {
+        "id": "api-worker",
+        "command": "./scripts/start.worker.sh",
+        "source": "docker-compose.yml api-worker"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/runner.sh declares DATABASE_URL",
+            "read in events-processor/cache/cache.go",
+            "read in events-processor/processors/main_processor.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LAGO_KAFKA_BOOTSTRAP_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in events-processor/cache/consumer.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker/runner.sh declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies front, api/Gemfile, api/Gemfile.lock, front/.env.sh, api, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.069795,
+        "promptTokens": 14835,
+        "completionTokens": 558
+      },
+      "latencyMs": 9638
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9639,
+    "questions": 1,
+    "generatedAt": "2026-10-27T13:56:35.424Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

@@ -544,7 +544,9 @@ describe('round 5 corpus (langflow, litellm, activepieces, budibase, onyx, monic
 
   it('keeps a PHP route behind the image Apache server (snipe-it)', () => {
     const routes = "Route::withoutMiddleware(['web'])->get(\n    '/health',\n    [HealthController::class, 'get']\n);\n";
-    expect(detectHealthEndpoint(laravel({ 'routes/web.php': routes })).path).toBe('/health');
+    const image = 'FROM ubuntu:24.04\nRUN apt-get install -y apache2 libapache2-mod-php8.3 php8.3-mysql\nRUN echo export APACHE_RUN_USER=docker >> /etc/apache2/envvars\nCOPY . /var/www/html\nCMD ["/startup.sh"]\nEXPOSE 80\n';
+    expect(detectHealthEndpoint(laravel({ Dockerfile: image, 'routes/web.php': routes })).path).toBe('/health');
+    expect(detectHealthEndpoint({ Dockerfile: image.replace('php8.3-mysql', 'nodejs'), 'server.js': "app.get('/health', (req, res) => res.send('ok'));\n" }).detected).toBe(false);
   });
 
   it('prefixes routes/api.php with the prefix that the RouteServiceProvider maps (invoiceninja)', () => {
