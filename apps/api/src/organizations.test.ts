@@ -1397,3 +1397,154 @@ describe('every mutating organization/invitation/account route returns 401 witho
     expect(errorEnvelopeSchema.parse(response.json()).error.code).toBe('UNAUTHORIZED');
   });
 });
+
+// ── Concurrent and repeated membership changes ──────────────────────────────
+describe('membership changes under concurrency keep one owner and answer each invitation once', () => {
+  let client: PGlite | undefined;
+  let db: Db;
+  let auth: Auth;
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    client = new PGlite();
+    await applyMigrations(client);
+    db = createDb(client);
+    auth = createAuth(db, { emailVerificationFixtureMode: true });
+    const { emailSender } = createRecordingEmailSender();
+    app = await buildServer({ auth, db, emailSender });
+  }, 60_000);
+
+  afterAll(async () => {
+    await app?.close();
+    await client?.close();
+  });
+
+  it('two concurrent ownership transfers leave exactly one owner', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `race-owner-${crypto.randomUUID()}@example.com`);
+    const first = await signUpAndGetOrg(auth, db, `race-first-${crypto.randomUUID()}@example.com`);
+    const second = await signUpAndGetOrg(auth, db, `race-second-${crypto.randomUUID()}@example.com`);
+    const firstId = await addMember(db, owner.organizationId, first.userId, 'member');
+    const secondId = await addMember(db, owner.organizationId, second.userId, 'member');
+
+    const responses = await Promise.all(
+      [firstId, secondId].map((memberId) =>
+        postJson(app, '/api/organization/transfer-ownership', { memberId }, { cookie: owner.cookie }),
+      ),
+    );
+    expect(responses.map((r) => r.statusCode).sort()).toEqual([204, 403]);
+
+    const members = await db.select().from(schema.member).where(eq(schema.member.organizationId, owner.organizationId));
+    expect(members.filter((m) => m.role === 'owner')).toHaveLength(1);
+    expect(members.find((m) => m.userId === owner.userId)!.role).toBe('admin');
+  });
+
+  it('a transfer to a member removed after the check changes nobody', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `gone-owner-${crypto.randomUUID()}@example.com`);
+    const target = await signUpAndGetOrg(auth, db, `gone-target-${crypto.randomUUID()}@example.com`);
+    const targetId = await addMember(db, owner.organizationId, target.userId, 'member');
+    await db.delete(schema.member).where(eq(schema.member.id, targetId));
+
+    const response = await postJson(app, '/api/organization/transfer-ownership', { memberId: targetId }, { cookie: owner.cookie });
+    expect(response.statusCode).toBe(404);
+    const [ownerRow] = await db
+      .select()
+      .from(schema.member)
+      .where(and(eq(schema.member.organizationId, owner.organizationId), eq(schema.member.userId, owner.userId)));
+    expect(ownerRow!.role).toBe('owner');
+  });
+
+  it('concurrent invitations to one address create one invitation and a 409, never a 500', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `dup-invite-owner-${crypto.randomUUID()}@example.com`);
+    const email = `dup-invitee-${crypto.randomUUID()}@example.com`;
+    const responses = await Promise.all(
+      [0, 1].map(() => postJson(app, '/api/organization/invitations', { email }, { cookie: owner.cookie })),
+    );
+    expect(responses.map((r) => r.statusCode).sort()).toEqual([201, 409]);
+    const rows = await db.select().from(schema.invitation).where(eq(schema.invitation.email, email));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('a double accept joins once and answers the repeat with 409', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `double-accept-owner-${crypto.randomUUID()}@example.com`);
+    const email = `double-accept-${crypto.randomUUID()}@example.com`;
+    const invite = await postJson(app, '/api/organization/invitations', { email }, { cookie: owner.cookie });
+    const invitationId = (invite.json() as { id: string }).id;
+    const invitee = await signUpAndGetOrg(auth, db, email);
+
+    const responses = await Promise.all(
+      [0, 1].map(() => postJson(app, `/api/invitations/${invitationId}/accept`, {}, { cookie: invitee.cookie })),
+    );
+    expect(responses.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    const rows = await db
+      .select()
+      .from(schema.member)
+      .where(and(eq(schema.member.organizationId, owner.organizationId), eq(schema.member.userId, invitee.userId)));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('a revoked invitation cannot be accepted and stays canceled', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `revoked-owner-${crypto.randomUUID()}@example.com`);
+    const email = `revoked-${crypto.randomUUID()}@example.com`;
+    const invite = await postJson(app, '/api/organization/invitations', { email }, { cookie: owner.cookie });
+    const invitationId = (invite.json() as { id: string }).id;
+    const invitee = await signUpAndGetOrg(auth, db, email);
+
+    const revoke = await app.inject({
+      method: 'DELETE',
+      url: `/api/organization/invitations/${invitationId}`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(revoke.statusCode).toBe(204);
+    const accept = await postJson(app, `/api/invitations/${invitationId}/accept`, {}, { cookie: invitee.cookie });
+    expect(accept.statusCode).toBe(409);
+
+    const [row] = await db.select().from(schema.invitation).where(eq(schema.invitation.id, invitationId));
+    expect(row!.status).toBe('canceled');
+    const rows = await db
+      .select()
+      .from(schema.member)
+      .where(and(eq(schema.member.organizationId, owner.organizationId), eq(schema.member.userId, invitee.userId)));
+    expect(rows).toHaveLength(0);
+  });
+
+  it('an expired pending invitation can still be revoked', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `expired-revoke-owner-${crypto.randomUUID()}@example.com`);
+    const invite = await postJson(
+      app,
+      '/api/organization/invitations',
+      { email: `expired-revoke-${crypto.randomUUID()}@example.com` },
+      { cookie: owner.cookie },
+    );
+    const invitationId = (invite.json() as { id: string }).id;
+    await db
+      .update(schema.invitation)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(schema.invitation.id, invitationId));
+
+    const revoke = await app.inject({
+      method: 'DELETE',
+      url: `/api/organization/invitations/${invitationId}`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(revoke.statusCode).toBe(204);
+  });
+
+  it('removing a member keeps their last active organization when it is another one', async () => {
+    const owner = await signUpAndGetOrg(auth, db, `pointer-owner-${crypto.randomUUID()}@example.com`);
+    const removed = await signUpAndGetOrg(auth, db, `pointer-removed-${crypto.randomUUID()}@example.com`);
+    const memberId = await addMember(db, owner.organizationId, removed.userId, 'member');
+    await db
+      .update(schema.user)
+      .set({ lastActiveOrganizationId: removed.organizationId })
+      .where(eq(schema.user.id, removed.userId));
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/organization/members/${memberId}`,
+      headers: { cookie: owner.cookie },
+    });
+    expect(response.statusCode).toBe(204);
+    const [userRow] = await db.select().from(schema.user).where(eq(schema.user.id, removed.userId));
+    expect(userRow!.lastActiveOrganizationId).toBe(removed.organizationId);
+  });
+});

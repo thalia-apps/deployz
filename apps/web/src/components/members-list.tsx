@@ -142,6 +142,7 @@ function MemberRow({
             <div className="flex items-center gap-1.5">
               <select
                 data-testid="member-role-select"
+                aria-label={`Role for ${member.name}`}
                 value={member.role === 'owner' ? 'admin' : member.role}
                 disabled={rowBusy}
                 aria-busy={roleSaving || undefined}

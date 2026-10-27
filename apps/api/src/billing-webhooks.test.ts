@@ -350,12 +350,14 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     const t0 = new Date('2026-01-01T00:00:00.000Z');
     const t10 = new Date('2026-01-01T00:00:10.000Z');
+    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
 
     const later = subscriptionEvent({
       eventId: 'evt_test_6a',
       eventType: 'subscription.updated',
       occurredAt: t10.toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId,
       subscriptionId: 'sub_test_6',
       status: 'past_due',
     });
@@ -369,7 +371,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.created',
       occurredAt: t0.toISOString(),
       organizationId: org.organizationId,
-      checkoutIntentId: await seedPendingIntent(db, org.organizationId),
+      checkoutIntentId,
       subscriptionId: 'sub_test_6',
       status: 'active',
     });
@@ -389,6 +391,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
   it('maps paused / resumed / canceled / past_due through the status vocabulary', async () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     let t = new Date('2026-02-01T00:00:00.000Z').getTime();
+    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
     const post = async (eventId: string, eventType: string, status: string) => {
       t += 1000;
       const event = subscriptionEvent({
@@ -396,6 +399,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
         eventType,
         occurredAt: new Date(t).toISOString(),
         organizationId: org.organizationId,
+        checkoutIntentId,
         subscriptionId: 'sub_test_7',
         status,
       });
@@ -422,12 +426,14 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     const org = await signUpAndGetOrg(auth, db, nextEmail());
     const t0 = new Date('2026-03-01T00:00:00.000Z');
     const t1 = new Date('2026-03-02T00:00:00.000Z');
+    const checkoutIntentId = await seedPendingIntent(db, org.organizationId);
 
     const scheduled = subscriptionEvent({
       eventId: 'evt_test_8a',
       eventType: 'subscription.updated',
       occurredAt: t0.toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId,
       subscriptionId: 'sub_test_8',
       status: 'active',
       scheduledChange: { action: 'cancel', effective_at: '2026-04-01T00:00:00.000Z' },
@@ -446,6 +452,7 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       eventType: 'subscription.updated',
       occurredAt: t1.toISOString(),
       organizationId: org.organizationId,
+      checkoutIntentId,
       subscriptionId: 'sub_test_8',
       status: 'active',
       scheduledChange: null,
@@ -707,6 +714,58 @@ describe('POST /api/billing/webhook (Paddle)', () => {
 
       expect(result.outcome).toBe('PROCESSED');
       expect((await getSubscriptionRow(db, org.organizationId))?.providerSubscriptionId).toBe('sub_bind_ok');
+    });
+
+    it.each(['subscription.updated', 'subscription.canceled', 'subscription.past_due'])(
+      'ignores a %s event whose customData names an organization with no PENDING intent',
+      async (eventType) => {
+        const victim = await signUpAndGetOrg(auth, db, nextEmail());
+
+        const result = await send(
+          subscriptionEvent({
+            eventId: `evt_bind_later_${eventType}`,
+            eventType,
+            occurredAt: new Date().toISOString(),
+            organizationId: victim.organizationId,
+            subscriptionId: `sub_bind_later_${eventType}`,
+            status: 'active',
+          }),
+        );
+
+        expect(result.outcome).toBe('IGNORED');
+        expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+      },
+    );
+
+    it('follows the organization on file, not customData, for a known subscription', async () => {
+      const owner = await signUpAndGetOrg(auth, db, nextEmail());
+      const victim = await signUpAndGetOrg(auth, db, nextEmail());
+      await send(
+        subscriptionEvent({
+          eventId: 'evt_on_file_created',
+          eventType: 'subscription.created',
+          occurredAt: '2026-06-01T00:00:00.000Z',
+          organizationId: owner.organizationId,
+          checkoutIntentId: await seedPendingIntent(db, owner.organizationId),
+          subscriptionId: 'sub_on_file',
+          status: 'active',
+        }),
+      );
+
+      const result = await send(
+        subscriptionEvent({
+          eventId: 'evt_on_file_updated',
+          eventType: 'subscription.updated',
+          occurredAt: '2026-06-02T00:00:00.000Z',
+          organizationId: victim.organizationId,
+          subscriptionId: 'sub_on_file',
+          status: 'past_due',
+        }),
+      );
+
+      expect(result.outcome).toBe('PROCESSED');
+      expect(await getSubscriptionRow(db, victim.organizationId)).toBeNull();
+      expect((await getSubscriptionRow(db, owner.organizationId))?.status).toBe('PAST_DUE');
     });
   });
 

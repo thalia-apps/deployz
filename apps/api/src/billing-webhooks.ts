@@ -101,9 +101,10 @@ async function isPendingCheckoutOf(
  * this fallback only ever resolves those through `customData`.
  *
  * A checkout can be opened in the browser with client-chosen `customData`, so
- * a subscription.created / activated event may bind a new subscription to an
- * organization only when its `customData` names that organization's PENDING
- * checkout intent (and, when the event carries one, that intent's transaction).
+ * a subscription event follows the organization already on file for its
+ * subscription, and binds a subscription not yet on file only when its
+ * `customData` names that organization's PENDING checkout intent (and, when
+ * the event carries one, that intent's transaction) — whatever the event type.
  */
 async function resolveOrganizationId(
   tx: RuntimeDb,
@@ -111,22 +112,22 @@ async function resolveOrganizationId(
 ): Promise<string | undefined> {
   const data = event.data as { id: string; customData?: unknown; transactionId?: string | null };
   const fromCustomData = organizationIdFromCustomData(data.customData);
-  if (fromCustomData) {
-    if (
-      (event.eventType !== EventName.SubscriptionCreated &&
-        event.eventType !== EventName.SubscriptionActivated) ||
-      (await isPendingCheckoutOf(tx, fromCustomData, data))
-    ) {
-      return fromCustomData;
-    }
-  }
-
   const [existing] = await tx
     .select({ organizationId: schema.billingSubscriptions.organizationId })
     .from(schema.billingSubscriptions)
     .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.id))
     .limit(1);
-  return existing?.organizationId;
+
+  if (!SUBSCRIPTION_SNAPSHOT_EVENTS.has(event.eventType)) {
+    return fromCustomData ?? existing?.organizationId;
+  }
+  if (existing) {
+    return existing.organizationId;
+  }
+  if (fromCustomData && (await isPendingCheckoutOf(tx, fromCustomData, data))) {
+    return fromCustomData;
+  }
+  return undefined;
 }
 
 /** Paddle's subscription status -> Deployz's. Exported for the Phase 15

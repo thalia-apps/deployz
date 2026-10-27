@@ -80,6 +80,10 @@ export function createAuth(
         });
       },
     },
+    // A GitHub sign-in never links into an account whose e-mail was never
+    // verified: otherwise whoever registered that address first with a
+    // password would keep access to the real owner's account.
+    account: { accountLinking: { requireLocalEmailVerified: true } },
     socialProviders: {
       github: {
         clientId: env.githubClientId,

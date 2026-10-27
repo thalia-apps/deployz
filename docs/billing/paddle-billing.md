@@ -100,12 +100,12 @@ create two deployments. Only now does a deployment row — and therefore an
 install link — exist.
 
 A checkout can be opened in the browser with client-chosen `customData`, so
-the handler trusts `customData.organizationId` for a new
-`subscription.created` / `subscription.activated` only when `customData.checkoutIntentId`
+every subscription event follows the organization already on file for its
+subscription id. For a subscription not yet on file, of any event type, the
+handler trusts `customData.organizationId` only when `customData.checkoutIntentId`
 names that organization's PENDING intent (and, when the event carries a
-transaction id, that intent's transaction). Otherwise the event falls back to
-the subscription-id lookup and is IGNORED (`organization not found`) when no
-row exists.
+transaction id, that intent's transaction). Otherwise the event is IGNORED
+(`organization not found`).
 
 ### 3. Going live → billing starts (Phases 2, 9)
 
