@@ -978,6 +978,52 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).toHaveProperty(['ghost/core/shared/config/env/config.production.json']);
   });
 
+  // activepieces: 600+ `packages/pieces/community/<piece>/package.json` sort before
+  // `packages/server/api/package.json`.
+  it('keeps the shallower server manifest inside the cap when plugin manifests fill it', async () => {
+    const pieces = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
+      path: `packages/pieces/community/piece${i}/package.json`,
+      type: 'blob' as const,
+      sha: `sha-piece-${i}`,
+      size: 10,
+    }));
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [...pieces, { path: 'packages/server/api/package.json', type: 'blob', sha: 'sha-server', size: 10 }],
+        });
+      }
+      return makeFetchResponse(200, { content: Buffer.from('x').toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(Object.keys(tree)).toHaveLength(ANALYSIS_MAX_FILES);
+    expect(tree).toHaveProperty(['packages/server/api/package.json']);
+  });
+
+  // invoiceninja maps `routes/api.php` with `Route::prefix('')` in its RouteServiceProvider.
+  it('keeps the Laravel route service provider above ordinary source', async () => {
+    const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
+      path: `app/Models/Model${i}.php`,
+      type: 'blob' as const,
+      sha: `sha-model-${i}`,
+      size: 10,
+    }));
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [...sources, { path: 'app/Providers/RouteServiceProvider.php', type: 'blob', sha: 'sha-provider', size: 10 }],
+        });
+      }
+      return makeFetchResponse(200, { content: Buffer.from('x').toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(tree).toHaveProperty(['app/Providers/RouteServiceProvider.php']);
+  });
+
   it('fetches framework config files that read env vars and keeps them above ordinary source', async () => {
     const sources = Array.from({ length: ANALYSIS_MAX_FILES + 5 }, (_, i) => ({
       path: `src/feature${i}.ts`,

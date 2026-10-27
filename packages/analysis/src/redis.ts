@@ -728,6 +728,31 @@ function collectConnectionVars(tree: FileTree): ConnectionVars {
   return { status: resolve(true), untypedStatus: resolve(false), documentedRequired };
 }
 
+/**
+ * A setting the code compares with `'redis'` (`if WEBSOCKET_MANAGER == 'redis'`)
+ * whose own default is another backend or empty (`os.getenv('WEBSOCKET_MANAGER', '')`):
+ * the app runs without Redis until the setting selects it.
+ */
+function sourceRedisSelectorDefault(tree: FileTree): string | null {
+  const sources = Object.entries(tree).filter(([path]) => isSourceFile(path) && isRuntimeSourcePath(path));
+  const compared = new Set<string>();
+  for (const [, content] of sources) {
+    for (const match of content.matchAll(/\b([A-Z][A-Z0-9_]*)\s*={2,3}\s*['"]redis['"]/g)) compared.add(match[1]!);
+  }
+  for (const name of compared) {
+    const defaultPattern = new RegExp(
+      String.raw`\b${name}\s*=\s*os\.(?:getenv|environ\.get)\(\s*['"]${name}['"]\s*,\s*['"]([^'"]*)['"]|process\.env\.${name}\s*(?:\|\||\?\?)\s*['"]([^'"]*)['"]`,
+    );
+    for (const [path, content] of sources) {
+      const match = defaultPattern.exec(content);
+      if (!match) continue;
+      const value = match[1] ?? match[2] ?? '';
+      if (!/redis/i.test(value)) return `${name} defaults to ${value === '' ? 'no backend' : value} in ${path}; Redis runs only when it selects redis`;
+    }
+  }
+  return null;
+}
+
 /** Why the repository's Redis is optional, or null when nothing says so. */
 function findOptionalReason(tree: FileTree, status: ConnectionStatus, documentedRequired: boolean): string | null {
   // A sample that says Redis is required settles it, whatever else is selectable.
@@ -755,6 +780,8 @@ function findOptionalReason(tree: FileTree, status: ConnectionStatus, documented
   if (selectedOther && !selectors.some((d) => /redis/i.test(d.value))) {
     return `${selectedOther.name}=${selectedOther.value} in ${selectedOther.path} is not Redis by default`;
   }
+  const sourceSelector = sourceRedisSelectorDefault(tree);
+  if (sourceSelector) return sourceSelector;
 
   for (const [path, content] of Object.entries(tree)) {
     if (!isRuntimeSourcePath(path)) continue;

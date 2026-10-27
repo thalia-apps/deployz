@@ -1,0 +1,201 @@
+{
+  "id": "new-119",
+  "commit": "0ee2929472fdc7f8206a865f456a949d2b2eccee",
+  "analyser": "ai@r5-final-B",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "v3",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "v3/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"engine\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HASURA_BIGQUERY_SERVICE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in .circleci/config.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dc-agents/reference/src/index.ts",
+            "read in dc-agents/sqlite/src/index.ts",
+            "read in community/boilerplates/auth-servers/passportjs-jwt-roles/app.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/tests-py/context.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry"
+    ],
+    "unsupported": [
+      "Unsupported infrastructure: Terraform configuration is present (server/test-manual/alloydb/alloydb.tf, server/test-manual/alloydb/bastion.tf, server/test-manual/alloydb/network.tf). Deployz provisions infrastructure itself and cannot run alongside customer IaC."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: Terraform configuration is present (server/test-manual/alloydb/alloydb.tf, server/test-manual/alloydb/bastion.tf, server/test-manual/alloydb/network.tf). Deployz provisions infrastructure itself and cannot run alongside customer IaC."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: HASURA_BIGQUERY_SERVICE_KEY. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05420052,
+        "promptTokens": 10617,
+        "completionTokens": 614
+      },
+      "latencyMs": 9240
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9607,
+    "questions": 2,
+    "generatedAt": "2026-10-27T14:47:26.852Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

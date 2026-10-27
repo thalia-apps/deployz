@@ -1,0 +1,148 @@
+id: new-101
+repository: open-webui/open-webui
+commit: 33c1978d5bad52a31df75ea55143025dfad18d16
+summary: >
+  Open WebUI, a self-hosted chat UI for LLMs. One image from the root Dockerfile: a Node stage builds the Svelte
+  frontend, then a Python 3.12 stage runs FastAPI with uvicorn (bash start.sh). One web process serves UI and API on
+  port 8080. By default it uses SQLite, a local Chroma vector store and local file uploads under /app/backend/data
+  (all ephemeral on Fargate). It can use PostgreSQL (DATABASE_URL), pgvector in the same Postgres (VECTOR_DB=pgvector)
+  and native S3 (STORAGE_PROVIDER=s3).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    A Deployz deploy must set DATABASE_URL to Postgres, VECTOR_DB=pgvector and STORAGE_PROVIDER=s3, and must set
+    WEBUI_SECRET_KEY. Without these the app uses SQLite, Chroma and local disk, which are ephemeral. All three
+    alternatives are native, so no blocker. Redis is needed only for more than one task. The image is large
+    (CPU torch and embedding models downloaded at build), which is a build-time cost, not a blocker.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker-compose.yaml, reason: "compose file, not a Dockerfile; local run with an Ollama service"}
+    - {path: docker-compose.data.yaml, reason: "compose override for a data volume, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 59, quote: "FROM python:3.12-slim-trixie AS base"}
+    - {path: Dockerfile, line: 28, quote: "FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build"}
+    - {path: Dockerfile, line: 234, quote: "CMD [ \"bash\", \"start.sh\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 213, quote: "EXPOSE 8080"}
+    - {path: Dockerfile, line: 78, quote: "PORT=8080"}
+    - {path: backend/start.sh, line: 33, quote: "PORT=\"${PORT:-8080}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/start.sh, line: 34, quote: "HOST=\"${HOST:-0.0.0.0}\""}
+startCommand:
+  source: image
+  accept: ["bash start.sh", "uvicorn open_webui.main:app"]
+healthPath:
+  accept: ["/health"]
+  # /health returns {"status": true} with no auth and no dependency check. /ready checks startup, DB and Redis (503 if not ready) and is also unauthenticated.
+  evidence:
+    - {path: backend/open_webui/main.py, line: 3075, quote: "@app.get('/health')"}
+    - {path: backend/open_webui/main.py, line: 3080, quote: "@app.get('/ready')"}
+    - {path: Dockerfile, line: 215, quote: "HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health"}
+database:
+  status: required
+  engines: [sqlite, postgres, mysql, sqlcipher]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://user:pass@host:5432/db"}
+  connectionVars: [DATABASE_URL, "DATABASE_TYPE/DATABASE_USER/DATABASE_PASSWORD/DATABASE_HOST/DATABASE_PORT/DATABASE_NAME"]
+  evidence:
+    - {path: backend/open_webui/env.py, line: 271, quote: "DATABASE_URL = os.getenv('DATABASE_URL', f'sqlite:///{DATA_DIR}/webui.db')"}
+    - {path: backend/open_webui/env.py, line: 273, quote: "DATABASE_TYPE = os.getenv('DATABASE_TYPE')"}
+    - {path: backend/open_webui/env.py, line: 300, quote: "if 'postgres://' in DATABASE_URL:"}
+    - {path: backend/requirements.txt, line: 115, quote: "psycopg2-binary==2.9.12"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/open_webui/config.py, line: 76, quote: "command.upgrade(alembic_cfg, 'head')"}
+    - {path: backend/open_webui/config.py, line: 82, quote: "if ENABLE_DB_MIGRATIONS:"}
+    - {path: backend/open_webui/env.py, line: 157, quote: "ENABLE_DB_MIGRATIONS = os.getenv('ENABLE_DB_MIGRATIONS', 'True').lower() == 'true'"}
+redis:
+  status: conditional
+  selectBy: {REDIS_URL: "redis://host:6379/0", WEBSOCKET_MANAGER: redis}
+  evidence:
+    - {path: backend/open_webui/env.py, line: 381, quote: "REDIS_URL = os.getenv('REDIS_URL', '')"}
+    - {path: backend/open_webui/env.py, line: 476, quote: "WEBSOCKET_MANAGER = os.getenv('WEBSOCKET_MANAGER', '')"}
+    - {path: backend/open_webui/main.py, line: 424, quote: "if WEBSOCKET_MANAGER == 'redis':"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: backend/start.sh, line: 99, quote: "UVICORN_WORKERS=\"${UVICORN_WORKERS:-1}\""}
+    - {path: backend/open_webui/main.py, line: 436, quote: "app.state.scheduler_worker_loop = asyncio.create_task(scheduler_worker_loop(app))"}
+scheduledJobs:
+  status: embedded
+  items: [automations scheduler loop]
+  evidence:
+    - {path: backend/open_webui/main.py, line: 434, quote: "from open_webui.utils.automations import scheduler_worker_loop"}
+storage:
+  local: conditional
+  paths: [/app/backend/data, /app/backend/data/uploads, /app/backend/data/vector_db, /app/backend/data/cache]
+  s3: native
+  s3SelectBy: {STORAGE_PROVIDER: s3}
+  evidence:
+    - {path: backend/open_webui/config.py, line: 156, quote: "STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')"}
+    - {path: backend/open_webui/config.py, line: 180, quote: "UPLOAD_DIR = DATA_DIR / 'uploads'"}
+    - {path: backend/open_webui/config.py, line: 512, quote: "CHROMA_DATA_PATH = f'{DATA_DIR}/vector_db'"}
+    - {path: backend/open_webui/config.py, line: 509, quote: "VECTOR_DB = os.getenv('VECTOR_DB', 'pgvector' if USE_SLIM else 'chroma')"}
+    - {path: backend/open_webui/retrieval/vector/factory.py, line: 60, quote: "case VectorType.PGVECTOR:"}
+    - {path: backend/open_webui/config.py, line: 655, quote: "PGVECTOR_DB_URL = os.getenv('PGVECTOR_DB_URL', DATABASE_URL)"}
+    - {path: backend/open_webui/storage/provider.py, line: 119, quote: "if S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY:"}
+    - {path: backend/open_webui/storage/provider.py, line: 129, quote: "# If no explicit credentials are provided, fall back to default AWS credentials"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql://... for RDS; default is SQLite in the container (ephemeral). Contains the password"}
+    - {name: VECTOR_DB, secret: false, buildTime: false, note: "set to pgvector; default chroma writes to local disk (ephemeral). PGVECTOR_DB_URL defaults to DATABASE_URL"}
+    - {name: STORAGE_PROVIDER, secret: false, buildTime: false, note: "set to s3 with S3_BUCKET_NAME and S3_REGION_NAME; S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY are optional, the default AWS credential chain (ECS task role) is used when both are absent"}
+    - {name: WEBUI_SECRET_KEY, secret: true, buildTime: false, note: "start.sh generates a random key into a local file when unset; the file is lost on each task start and sessions break with several tasks. Set a fixed value"}
+    - {name: WEBUI_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for OAuth redirects and links (default empty)"}
+  optional: [PGVECTOR_CREATE_EXTENSION, S3_BUCKET_NAME, S3_REGION_NAME, S3_KEY_PREFIX, S3_ENDPOINT_URL, REDIS_URL, WEBSOCKET_MANAGER, UVICORN_WORKERS, OPENAI_API_KEY, OPENAI_API_BASE_URL, OLLAMA_BASE_URL, ENABLE_OLLAMA_API, ENABLE_SIGNUP, WEBUI_AUTH, CORS_ALLOW_ORIGIN, DATABASE_POOL_SIZE, ENABLE_DB_MIGRATIONS]
+  buildTime: []
+  evidence:
+    - {path: backend/open_webui/env.py, line: 788, quote: "if WEBUI_AUTH and WEBUI_SECRET_KEY == '':"}
+    - {path: backend/start.sh, line: 45, quote: "head -c \"$WEBUI_SECRET_KEY_LENGTH\" /dev/random | base64 > \"$KEY_FILE\""}
+    - {path: backend/open_webui/config.py, line: 1689, quote: "WEBUI_URL = os.getenv('WEBUI_URL', '')"}
+    - {path: backend/open_webui/config.py, line: 243, quote: "ENABLE_OLLAMA_API = os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true'"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: Postgres is native through DATABASE_URL"
+    - "Chroma local vector store must not block: VECTOR_DB=pgvector uses the same RDS Postgres (the app creates the pgvector extension)"
+    - "Local /app/backend/data must not block: S3 is native for uploads and Postgres holds the rest; cache and models can re-download"
+    - "Ollama must not be required: it is an optional external endpoint (USE_OLLAMA build arg is off by default); OpenAI-compatible APIs work"
+    - "Redis must not be required: it is needed only for several tasks or websocket fan-out"
+    - "start.sh must not be treated as a worker or second service: it launches one uvicorn process"
+    - "CUDA/GPU build args must not block: the default build is CPU-only"
+vendorQuestions:
+  legitimate:
+    - "Which LLM backend: OpenAI-compatible API key and base URL, or an external Ollama; none is set by default so the app has no models until configured"
+    - "Whether signup and admin policy are acceptable: the first user to register becomes admin on a fresh public instance"
+  unnecessary:
+    - "Which port? (8080 in image and start.sh)"
+    - "Who runs migrations? (the app runs alembic at import time)"
+    - "Is a worker process needed? (no, one process)"
+    - "Health path? (/health)"
+    - "Which Dockerfile? (only the root Dockerfile)"
+traps:
+  - "docker-compose.yaml starts an Ollama service and volumes -> local run only, not the production topology"
+  - "Default VECTOR_DB chroma and SQLite look like local-disk blockers -> pgvector and Postgres are native alternatives (backend/open_webui/config.py:509, backend/open_webui/env.py:271)"
+  - "ARG USE_OLLAMA/USE_CUDA/USE_SLIM -> build-time variants; defaults build the standard CPU image. USE_SLIM cannot bundle local processing tools (Dockerfile:140)"
+  - "Dockerfile sets WEBUI_SECRET_KEY empty -> start.sh generates a local key file, so the value must be set explicitly (Dockerfile:94, backend/start.sh:45)"
+  - "Image HEALTHCHECK uses /health with jq -> an ALB health check only needs a 200 from /health (Dockerfile:215)"
+  - "Dockerfile downloads embedding and whisper models at build -> long, large build (several GB) with internet access, not a runtime dependency (Dockerfile:178)"
+  - "Frontend build in the first stage and backend in the second -> one image, last stage is the app, no --target needed (Dockerfile:59)"
+openQuestions:
+  - "Memory and build time of the default (non-slim) image on Fargate are not measured; the image bundles torch and sentence-transformers and loads the embedding model in the web process"
+  - "S3_REGION_NAME defaults to None and the boto3 client is built without a region (config.py:161, storage/provider.py:122); set it to the bucket region to be safe. Not tested on AWS"
+crossReview:
+  - {field: openQuestions (S3 region), change: "reworded: the code default is None and the client gets region_name=None; the region is passed only from S3_REGION_NAME, so set it to the bucket region", evidence: "backend/open_webui/config.py:161; backend/open_webui/storage/provider.py:122"}
+  - {field: "database, migrations, redis, workers, storage, healthPath, port, dockerfile", change: "none: all challenged against the code and confirmed (alembic upgrade head at import time unless ENABLE_DB_MIGRATIONS=false; /health is a plain unauthenticated route returning status true; every COPY source exists in git; pgvector falls back to DATABASE_URL and the app raises if it is not Postgres)", evidence: "backend/open_webui/config.py:65-83; backend/open_webui/config.py:655-658; backend/open_webui/main.py:3075; Dockerfile:43-46"}
+  - {field: all, change: verified, evidence: "35 citations checked"}

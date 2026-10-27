@@ -1,0 +1,164 @@
+id: new-117
+repository: snipe/snipe-it
+commit: 845ffe82796343c5c3b2eecc872f287941050c57
+summary: >
+  Snipe-IT IT asset management (Laravel, PHP 8.3, Apache with mod_php). The root Dockerfile builds one image from
+  ubuntu:24.04 (Apache, PHP, Composer install; front-end assets are committed, no Node build). The image starts
+  /startup.sh, which runs `php artisan migrate --force` and then supervisord (Apache plus a one-minute scheduler loop,
+  both in the same container). The image has only the MySQL PHP driver, so the database is MySQL. Uploads go to
+  local disk by default; S3 is native through PRIVATE_FILESYSTEM_DISK and PUBLIC_FILESYSTEM_DISK.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One image, one HTTP port (80), MySQL 8, migrations at startup, scheduler embedded. A deploy must set APP_KEY, the
+    DB_* variables, APP_URL, and select S3 (the default local disk is ephemeral). S3 keys are optional, so the ECS task
+    role can work. Redis is optional. Passport OAuth keys are files in /var/lib/snipeit/keys (ephemeral), so API OAuth
+    tokens need PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY or are lost on restart.
+dockerfile:
+  accept: [Dockerfile, Dockerfile.alpine]
+  reject:
+    - {path: Dockerfile.fpm-alpine, reason: "php-fpm image with no web server; needs a second nginx container (not a single-container app)"}
+    - {path: dev.docker-compose.yml, reason: "development compose, not a Dockerfile"}
+    - {path: docker-compose.yml, reason: "compose with a separate database service, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "FROM ubuntu:24.04"}
+    - {path: Dockerfile, line: 117, quote: "composer install --no-dev"}
+    - {path: Dockerfile, line: 139, quote: "CMD [\"/startup.sh\"]"}
+    - {path: Dockerfile.alpine, line: 93, quote: "CMD [\"/startup.sh\"]"}
+    - {path: Dockerfile.fpm-alpine, line: 104, quote: "CMD [ \"/startup.sh\", \"php-fpm\" ]"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 141, quote: "EXPOSE 80"}
+    - {path: docker/000-default.conf, line: 1, quote: "<VirtualHost *:80>"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/000-default.conf, line: 1, quote: "<VirtualHost *:80>"}
+startCommand:
+  source: image
+  accept: ["/startup.sh"]
+healthPath:
+  accept: ["/health"]
+  # /health is outside the web middleware group and the auth group, and CheckForSetup (global) skips it, so it answers before the first setup; it returns JSON 200 when the DB query works and storage/logs is writable, else 500. / redirects to /login or /setup.
+  evidence:
+    - {path: routes/web.php, line: 1078, quote: "'/health',"}
+    - {path: app/Http/Middleware/CheckForSetup.php, line: 12, quote: "'health',"}
+    - {path: app/Http/Controllers/HealthController.php, line: 32, quote: "DB::select('select 2 + 2')"}
+    - {path: app/Http/Controllers/HealthController.php, line: 59, quote: "'status' => 'ok',"}
+database:
+  status: required
+  engines: [mysql, mariadb, pgsql, sqlsrv, sqlite]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  # The config has a pgsql connection, but the image installs php8.3-mysql only (no pdo_pgsql), so PostgreSQL does not work in the stock image.
+  evidence:
+    - {path: config/database.php, line: 96, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: docker/docker.env, line: 15, quote: "DB_CONNECTION=mysql"}
+    - {path: Dockerfile, line: 20, quote: "php8.3-mysql"}
+    - {path: config/database.php, line: 170, quote: "'pgsql' => ["}
+migrations:
+  mode: startup
+  accept: ["php artisan migrate --force"]
+  evidence:
+    - {path: docker/startup.sh, line: 165, quote: "php artisan migrate --force"}
+    - {path: docker/startup.sh, line: 175, quote: "exec supervisord -c /supervisord.conf"}
+redis:
+  status: optional
+  selectBy: {REDIS_HOST: host, SESSION_DRIVER: redis, CACHE_DRIVER: redis}
+  evidence:
+    - {path: .env.example, line: 177, quote: "CACHE_DRIVER=file"}
+    - {path: .env.example, line: 151, quote: "SESSION_DRIVER=file"}
+    - {path: .env.example, line: 184, quote: "REDIS_HOST=null"}
+    - {path: Dockerfile, line: 26, quote: "php8.3-redis"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: .env.example, line: 178, quote: "QUEUE_CONNECTION=sync"}
+    - {path: docker/supervisord.conf, line: 4, quote: "[program:apache]"}
+scheduledJobs:
+  status: embedded
+  items: [inventory-alerts, expiring-alerts, expected-checkin, upcoming-audits, backup, pull-inventory, push-inventory]
+  evidence:
+    - {path: docker/supervisord.conf, line: 14, quote: "[program:run_schedule]"}
+    - {path: docker/supervisord.conf, line: 16, quote: "artisan schedule:run; sleep 1m; done"}
+    - {path: app/Console/Kernel.php, line: 24, quote: "$schedule->command('snipeit:backup')->weekly();"}
+storage:
+  local: conditional
+  paths: [/var/lib/snipeit/data/private_uploads, /var/lib/snipeit/data/uploads, /var/lib/snipeit/dumps, /var/lib/snipeit/keys]
+  s3: native
+  s3SelectBy: {PRIVATE_FILESYSTEM_DISK: s3_private, PUBLIC_FILESYSTEM_DISK: s3_public, PRIVATE_AWS_BUCKET: bucket, PRIVATE_AWS_DEFAULT_REGION: region, PUBLIC_AWS_BUCKET: bucket, PUBLIC_AWS_DEFAULT_REGION: region, PUBLIC_S3_PROXY: "true"}
+  # Disk keys PRIVATE_AWS_ACCESS_KEY_ID / SECRET default to null; Laravel then uses the AWS SDK default credential chain (task role). The public disk has its own PUBLIC_AWS_BUCKET and PUBLIC_AWS_DEFAULT_REGION (the same bucket can be used, with PUBLIC_AWS_BUCKET_ROOT to separate); PUBLIC_S3_PROXY=true serves public images through the app, so the bucket can stay private.
+  evidence:
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('PRIVATE_FILESYSTEM_DISK', 'local'),"}
+    - {path: config/filesystems.php, line: 61, quote: "'key' => env('PUBLIC_AWS_ACCESS_KEY_ID'),"}
+    - {path: config/filesystems.php, line: 80, quote: "'key' => env('PRIVATE_AWS_ACCESS_KEY_ID'),"}
+    - {path: config/filesystems.php, line: 148, quote: "if (env('PUBLIC_S3_PROXY', false)) {"}
+    - {path: config/filesystems.php, line: 139, quote: "$config['disks']['public'] = $config['disks'][env('PUBLIC_FILESYSTEM_DISK', 'local_public')];"}
+    - {path: Dockerfile, line: 98, quote: "ln -fs \"/var/lib/snipeit/data/private_uploads\""}
+    - {path: Dockerfile, line: 131, quote: "VOLUME [\"/var/lib/snipeit\"]"}
+    - {path: config/filesystems.php, line: 65, quote: "'bucket' => env('PUBLIC_AWS_BUCKET'),"}
+    - {path: config/passport.php, line: 14, quote: "'private_key' => env('PASSPORT_PRIVATE_KEY'),"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "startup.sh prints a message and exits when it is not set; generate a base64 Laravel key"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "MySQL host; with DB_PORT, DB_DATABASE, DB_USERNAME. docker.env defaults point to old Docker link variables, so set them explicitly"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "MySQL password"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; the app forces the root URL and the https scheme from it"}
+    - {name: PRIVATE_FILESYSTEM_DISK, secret: false, buildTime: false, note: "s3_private, with PRIVATE_AWS_BUCKET and PRIVATE_AWS_DEFAULT_REGION; keys optional (task role); default local disk is ephemeral"}
+    - {name: PUBLIC_FILESYSTEM_DISK, secret: false, buildTime: false, note: "s3_public, with PUBLIC_AWS_BUCKET and PUBLIC_AWS_DEFAULT_REGION (same bucket as the private disk is fine) and PUBLIC_S3_PROXY=true so the bucket can stay private; default local_public is ephemeral"}
+  optional: [DB_PORT, DB_DATABASE, DB_USERNAME, DB_SSL, DB_SSL_IS_PAAS, DB_SSL_CA_PATH, APP_FORCE_TLS, APP_TRUSTED_PROXIES, APP_TRUSTED_HEADERS, APP_TIMEZONE, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, SESSION_DRIVER, CACHE_DRIVER, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, PASSPORT_PRIVATE_KEY, PASSPORT_PUBLIC_KEY, PUBLIC_AWS_BUCKET, PUBLIC_AWS_DEFAULT_REGION, PRIVATE_AWS_ACCESS_KEY_ID, PRIVATE_AWS_SECRET_ACCESS_KEY, PHP_UPLOAD_LIMIT]
+  buildTime: []
+  evidence:
+    - {path: docker/startup.sh, line: 47, quote: "Please re-run this container with an environment variable"}
+    - {path: docker/docker.env, line: 16, quote: "DB_HOST=${MYSQL_PORT_3306_TCP_ADDR}"}
+    - {path: app/Providers/AppServiceProvider.php, line: 74, quote: "URL::forceRootUrl(config('app.url'));"}
+    - {path: app/Providers/AppServiceProvider.php, line: 68, quote: "$url->forceScheme('https');"}
+    - {path: app/Http/Controllers/DashboardController.php, line: 66, quote: "oauth-private.key"}
+    - {path: config/trustedproxy.php, line: 55, quote: "'headers' => env('APP_TRUSTED_HEADERS', ''),"}
+blockers:
+  expected: []
+  mustNot:
+    - "VOLUME /var/lib/snipeit must not block: uploads, backups and keys have S3 or env alternatives"
+    - "supervisord must not count as several services: Apache and the scheduler loop run in one container"
+    - "The schedule loop must not need a separate scheduled job: it is embedded in the image"
+    - "PostgreSQL absence in the image must not block: MySQL 8 is a supported engine"
+    - "Redis must not be required: file cache and file sessions are the default"
+    - "The docker-compose files must not add services: the app needs only MySQL"
+    - "A Node or asset build must not be needed: compiled assets are committed under public/"
+vendorQuestions:
+  legitimate:
+    - "Whether S3 for private uploads and a public bucket or PUBLIC_S3_PROXY is wanted"
+    - "Whether API OAuth tokens (Passport) are used; if so PASSPORT_PRIVATE_KEY and PASSPORT_PUBLIC_KEY must be set"
+  unnecessary:
+    - "Which port? (80 in Dockerfile and vhost)"
+    - "Who runs migrations? (startup.sh runs php artisan migrate --force)"
+    - "Is a queue worker needed? (QUEUE_CONNECTION=sync)"
+    - "Is a scheduler needed? (supervisord runs schedule:run every minute)"
+    - "Which health path? (/health)"
+traps:
+  - "docker/docker.env is copied to .env and uses MYSQL_PORT_3306_TCP_ADDR style link variables -> real env variables override them; set DB_HOST and the other DB_* explicitly (Dockerfile:93, docker/docker.env:16)"
+  - "config/database.php has a pgsql connection -> the image has no pdo_pgsql, so use MySQL (Dockerfile:20)"
+  - "Dockerfile.alpine is also a single-container image, but it has no supervisord and no scheduler loop (it ends with exec httpd) -> with it add a scheduled job `php artisan schedule:run`; the root Dockerfile embeds the scheduler (Dockerfile.alpine:93, docker/startup_alpine.sh:150)"
+  - "Procfile is a Heroku start command -> not used by the Docker build (Procfile:1)"
+  - "Dockerfile.fpm-alpine -> php-fpm only, needs a web server container (Dockerfile.fpm-alpine:104)"
+  - "/ redirects to /login or the setup page -> use /health (routes/web.php:1078)"
+  - "SESSION_DRIVER=file and CACHE_DRIVER=file -> fine for one task; several tasks need database or Redis sessions (docker/docker.env:61-62)"
+  - "startup.sh exits with code 0 and no server when APP_KEY is missing -> the task stops and restarts (docker/startup.sh:45-50)"
+openQuestions:
+  - "Passport keys: DashboardController runs passport:install when storage/oauth-*.key files are missing, which writes new key files and new OAuth client rows on a fresh task; with PASSPORT_PRIVATE_KEY/PASSPORT_PUBLIC_KEY set the env keys are used, so tokens survive, but the extra client rows are still created per new task (DashboardController.php:66)"
+  - "The first-run /setup wizard is public until the first admin exists; whether to accept this on a public URL is a vendor choice"
+  - "Whether the ALB needs APP_TRUSTED_PROXIES and APP_TRUSTED_HEADERS: APP_URL with https:// already forces https links"
+crossReview:
+  - {field: storage.s3SelectBy / env PUBLIC_FILESYSTEM_DISK, change: "the public disk reads its own PUBLIC_AWS_BUCKET and PUBLIC_AWS_DEFAULT_REGION, so 'PUBLIC_S3_PROXY reuses the private bucket' was incomplete: added both vars to s3SelectBy, rewrote the note and the s3 comment (the same bucket name may be used); added a config/filesystems.php:65 citation", evidence: "config/filesystems.php:64-69,139,148-150; app/Http/Controllers/StorageProxyController.php:24"}
+  - {field: dockerfile.accept / traps, change: "kept Dockerfile.alpine accepted (it builds from the archive) but added a trap: it has no supervisord and no scheduler, unlike the root Dockerfile", evidence: "Dockerfile.alpine:93; docker/startup_alpine.sh:150; docker/supervisord.conf:14"}
+  - {field: healthPath, change: "none: /health stays; added evidence that the global CheckForSetup skips it, so no 302 to /setup before the first admin", evidence: "app/Http/Middleware/CheckForSetup.php:12; app/Http/Kernel.php:56"}
+  - {field: openQuestions, change: "added: passport:install reruns on each fresh task while key files are missing", evidence: "app/Http/Controllers/DashboardController.php:66-68"}
+  - {field: database, change: "none: only php8.3-mysql in the image; DB_SSL options are optional, MySQL TLS is not forced", evidence: "Dockerfile:20; config/database.php:44"}
+  - {field: all, change: verified, evidence: "38 citations checked, plus 3 added and rechecked"}

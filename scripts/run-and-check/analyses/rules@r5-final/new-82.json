@@ -1,0 +1,2139 @@
+{
+  "id": "new-82",
+  "commit": "80265fcfe110f0aea056fcb3566d322986014b78",
+  "analyser": "rules@r5-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "api",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "api/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/bin/bash\", \"/entrypoint.sh\"]",
+      "port": 5001
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "BAIDU_VECTOR_DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USERNAME",
+          "kind": "username"
+        },
+        {
+          "name": "TENCENT_VECTOR_DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "TENCENT_VECTOR_DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "TENCENT_VECTOR_DB_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "CELERY_BROKER_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DIFY_AGENT_REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "EVENT_BUS_REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALIYUN_OSS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares ALIYUN_OSS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "API_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares API_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_TRACING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ARCHIVE_STORAGE_ARCHIVE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares ARCHIVE_STORAGE_ARCHIVE_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ARCHIVE_STORAGE_EXPORT_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares ARCHIVE_STORAGE_EXPORT_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BAIDU_OBS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares BAIDU_OBS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BAIDU_VECTOR_DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares BAIDU_VECTOR_DB_DATABASE"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_BROKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares CELERY_BROKER_URL",
+            "docker/.env.example declares CELERY_BROKER_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "CONSOLE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COUCHBASE_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares COUCHBASE_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares DB_DATABASE",
+            "docker/.env.example declares DB_DATABASE"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares DB_HOST",
+            "docker/.env.example declares DB_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "api/.env.example declares DB_PASSWORD",
+            "docker/.env.example declares DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares DB_PORT",
+            "docker/.env.example declares DB_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares DB_USERNAME",
+            "docker/.env.example declares DB_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DIFY_AGENT_REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares DIFY_AGENT_REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DIFY_AGENT_STUB_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOTENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_ACTIVE_TIMEOUT_SECONDS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_SHELLCTL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_TEMPLATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_SANDBOX_GATEWAY_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_SANDBOX_GATEWAY_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_SANDBOX_GATEWAY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_SANDBOX_PROXY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_SANDBOX_SNAPSHOT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EVENT_BUS_REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares EVENT_BUS_REDIS_URL",
+            "docker/.env.example declares EVENT_BUS_REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "FILE_SECRET_SETTINGS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "GOOGLE_STORAGE_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares GOOGLE_STORAGE_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent-runtime/cmd/runner/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HUAWEI_OBS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares HUAWEI_OBS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INIT_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INNER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INNER_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_SANDBOX_AUTH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOCAL_SANDBOX_ENDPOINT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOCAL_SANDBOX_HOME_SNAPSHOT_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_SANDBOX_MATERIALIZED_HOME_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_SANDBOX_WORKSPACE_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODEL_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ALLOW_EMBED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ALLOW_INLINE_STYLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ALLOW_UNSAFE_DATA_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_AMPLITUDE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_API_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BATCH_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_COOKIEYES_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_CSP_WHITELIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DEPLOY_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_UPLOAD_IMAGE_AS_ICON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_ACCESS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_AGENT_V2",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_SINGLE_DOLLAR_LATEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_WEBSITE_FIRECRAWL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_WEBSITE_JINAREADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_WEBSITE_WATERCRAWL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_IS_MARKETPLACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_LOOP_NODE_MAX_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MARKDOWN_FORM_FIELD_NAME_MAX_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MARKETPLACE_API_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MARKETPLACE_URL_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_ITERATIONS_NUM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_PARALLEL_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_TOOLS_NUM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_TREE_DEPTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_PUBLIC_API_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "web/.env.example declares NEXT_PUBLIC_SENTRY_DSN",
+            "read in web/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SITE_ABOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SOCKET_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPPORT_EMAIL_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPPORT_MAIL_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TEXT_GENERATION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TOP_K_MAX_VALUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_UPLOAD_IMAGE_AS_ICON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_WEB_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_WORKFLOW_GENERATION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_FIELD_ID_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_FIELD_ID_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_FIELD_ID_PLAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_FIELD_ID_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_FIELD_ID_WORKSPACE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZENDESK_WIDGET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OBSERVABILITY_DOTENV",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OCI_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares OCI_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENSHELL_BEARER_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_DRIVER_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_EGRESS_ALLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_EXEC_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_GATEWAY_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_INSECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_READY_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_SANDBOX_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_SHARED_MOUNT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_SHELLCTL_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_SHELLCTL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_TLS_CA_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_TLS_CLIENT_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_TLS_CLIENT_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENSHELL_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_CONNECT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_KEEPALIVE_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_MAX_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_POOL_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_READ_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_WRITE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUGIN_DAEMON_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUGIN_DAEMON_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUGIN_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares PLUGIN_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PLUGIN_STORAGE_OSS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares PLUGIN_STORAGE_OSS_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares REDIS_HOST",
+            "docker/.env.example declares REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "api/.env.example declares REDIS_PASSWORD",
+            "docker/.env.example declares REDIS_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares REDIS_PORT",
+            "docker/.env.example declares REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares REDIS_USERNAME",
+            "docker/.env.example declares REDIS_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RUNTIME_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_EVENT_STREAM_MAX_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_RETENTION_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares S3_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares S3_ENDPOINT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares S3_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANDBOX_FILES_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SANDBOX_METERING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDBOX_METERING_FULL_SCAN_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDBOX_METERING_MAX_PAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDBOX_METERING_OVERLAP_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SERVER_CONSOLE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts",
+            "read in web/config/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SETTINGS_CLS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SHELL_REDACT_PATTERNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHUTDOWN_GRACE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STREAM_TEXT_DELTA_COALESCING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STREAM_TEXT_DELTA_MAX_CHARS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STUB_UPLOAD_FILE_SIZE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUPABASE_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares SUPABASE_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TENCENT_COS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares TENCENT_COS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TENCENT_VECTOR_DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares TENCENT_VECTOR_DB_DATABASE"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TENCENT_VECTOR_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares TENCENT_VECTOR_DB_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TENCENT_VECTOR_DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares TENCENT_VECTOR_DB_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "TRAJECTORY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_EXPORT_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_INCLUDE_CONTENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_MAX_EXPORT_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_MAX_QUEUE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_OTLP_HEADERS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRAJECTORY_OTLP_TRACES_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_SCHEDULE_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_SERVICE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRAJECTORY_TRACE_CONTEXT_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VARIABLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent/src/dify_agent/server/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOLCENGINE_TOS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "api/.env.example declares VOLCENGINE_TOS_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WEBAPP_ACCESS_PREFLIGHT_PROXY_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "WEBAPP_ACCESS_PREFLIGHT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares WEB_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "XDG_DATA_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dify-agent-runtime/internal/server/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "resend",
+      "sendgrid",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.yaml defines 7 application services (api, web, sandbox, local_sandbox, plugin_daemon, agent_backend, agent_ssrf_proxy). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.yaml defines 7 application services (api, web, sandbox, local_sandbox, plugin_daemon, agent_backend, agent_ssrf_proxy). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DOTENV_SETTINGS, E2B_ACTIVE_TIMEOUT_SECONDS, ENV_SETTINGS, FILE_SECRET_SETTINGS, INIT_SETTINGS, and 7 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 11,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,168 @@
+id: new-115
+repository: invoiceninja/invoiceninja
+commit: 15ea35ea63f367eba33c04b7acd9ab1227853537
+summary: >
+  Invoice Ninja v5 is a self-hosted invoicing app: a Laravel (PHP 8.2+) API and web server. The Flutter web
+  client is committed in public/ and the Blade/Vite assets in public/build, so no JS build is needed for those.
+  The React client (the default UI for self-host) is not in git: public/react is ignored and react/head.blade.php
+  is empty. The repository has no Dockerfile (the official image is built in a separate repository and pulled from Docker Hub). It needs a
+  MySQL database, runs migrations by a command, and has an optional queue worker and a required once-per-minute
+  scheduler, all from the same code.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz: one PHP web process, MySQL 8 (the only supported database), optional Redis,
+    S3 through the task role, and worker or scheduler commands from the same image. But the repository has no
+    Dockerfile, so Deployz cannot build an image from the archive; the vendor must add one (PHP-FPM or Apache,
+    composer install, Chromium for snappdf PDFs, a writable storage and .env). With a Dockerfile added it is
+    DEPLOYABLE_WITH_CHANGES; NOT_DEPLOYABLE is also valid for the repository as it stands. Runtime needs
+    APP_KEY, APP_URL, DB_* variables, a migrate command, FILESYSTEM_DISK=s3 for durable uploads and a
+    schedule:run job. The default UI is React, whose assets are not in git: the vendor must add the release build or
+    set accounts.set_react_as_default_ap = 0 to use the committed Flutter client.
+dockerfile:
+  accept: []
+  reject:
+    - {path: README.md, reason: "links to the Docker Hub image invoiceninja/invoiceninja, a pre-built registry image that is not built from this repository"}
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 51, quote: "* [Docker File](https://hub.docker.com/r/invoiceninja/invoiceninja/)"}
+runtime: {accept: [php]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+healthPath:
+  accept: ["/health"]
+  # routes/api.php is mounted with prefix '' so /health is at the root. It returns 200 JSON with no auth and no DB check; it is
+  # throttled to 20 requests per minute per client IP. "/" redirects to /setup (302) until the first account exists, and
+  # redirects to https when REQUIRE_HTTPS is true. /api/v1/ping needs a token. /api/v1/health_check is under the API group and
+  # returns system data.
+  evidence:
+    - {path: routes/api.php, line: 563, quote: "Route::get('/health', function () {"}
+    - {path: routes/api.php, line: 568, quote: "})->middleware('throttle:20,1');"}
+    - {path: app/Providers/RouteServiceProvider.php, line: 262, quote: "->middleware('api')"}
+    - {path: routes/web.php, line: 24, quote: "Route::get('/', [BaseController::class, 'flutterRoute'])->middleware('guest');"}
+    - {path: app/Http/Controllers/BaseController.php, line: 1384, quote: "if (config('ninja.require_https') && ! request()->isSecure()) {"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  evidence:
+    - {path: config/database.php, line: 16, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: .env.example, line: 12, quote: "DB_CONNECTION=mysql"}
+    - {path: app/Http/Controllers/SetupController.php, line: 120, quote: "'DB_CONNECTION' => 'mysql',"}
+    - {path: database/schema/mysql-schema.sql, line: 10, quote: "CREATE TABLE `accounts` ("}
+    - {path: config/database.php, line: 59, quote: "'pgsql' => ["}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force"]
+  # The first-run web wizard (/setup) also runs migrate, db:seed and creates the first account. With a preconfigured DB a
+  # one-off command run is the clean path: migrate --force, db:seed --force, then ninja:create-account.
+  evidence:
+    - {path: app/Http/Controllers/SetupController.php, line: 160, quote: "Artisan::call('migrate', ['--force' => true]);"}
+    - {path: app/Http/Controllers/SetupController.php, line: 169, quote: "(new CreateAccount($request->all(), $request->getClientIp()))->handle();"}
+    - {path: app/Console/Commands/CreateAccount.php, line: 43, quote: "protected $signature = 'ninja:create-account {--email=} {--password=}';"}
+    - {path: routes/web.php, line: 26, quote: "Route::get('setup', [SetupController::class, 'index'])->middleware('guest');"}
+redis:
+  status: optional
+  selectBy: {CACHE_DRIVER: redis, QUEUE_CONNECTION: redis, SESSION_DRIVER: redis}
+  evidence:
+    - {path: .env.example, line: 25, quote: "CACHE_DRIVER=file"}
+    - {path: .env.example, line: 26, quote: "QUEUE_CONNECTION=sync"}
+    - {path: .env.example, line: 27, quote: "SESSION_DRIVER=file"}
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+workers:
+  status: optional-independent
+  commands: ["php artisan queue:work"]
+  # Default queue is sync, so jobs run in the web request and no worker is needed. With QUEUE_CONNECTION=redis or database a
+  # separate worker process is needed. The built-in "queue:work database" scheduler entry is skipped when IS_DOCKER is set.
+  evidence:
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+    - {path: app/Console/Kernel.php, line: 171, quote: "if (config('queue.default') == 'database' && Ninja::isSelfHost()"}
+    - {path: app/Console/Kernel.php, line: 172, quote: "queue:work database --stop-when-empty"}
+scheduledJobs:
+  status: required
+  items: ["php artisan schedule:run every minute (recurring invoices, reminders, auto-bill, subscriptions, exchange rates)"]
+  evidence:
+    - {path: app/Console/Kernel.php, line: 73, quote: "$schedule->job(new RecurringInvoicesCron())->hourly()"}
+    - {path: app/Console/Kernel.php, line: 133, quote: "$schedule->job(new AutoBillCron())->dailyAt(config('ninja.auto_bill_time'))"}
+storage:
+  local: conditional
+  paths: [storage/app/public, storage/app, storage/logs, storage/framework]
+  s3: native
+  s3SelectBy: {FILESYSTEM_DISK: s3}
+  # The s3 disk reads AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from env, but both are optional values (null by default);
+  # the Laravel S3 driver then uses the AWS SDK default credential chain, so the ECS task role works (Laravel behaviour, not in this repo).
+  evidence:
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DISK', 'public'),"}
+    - {path: config/filesystems.php, line: 107, quote: "'key' => env('AWS_ACCESS_KEY_ID'),"}
+    - {path: config/filesystems.php, line: 110, quote: "'bucket' => env('AWS_BUCKET'),"}
+    - {path: app/Jobs/Util/UploadFile.php, line: 68, quote: "$this->disk = $disk ?? config('filesystems.default');"}
+    - {path: app/Models/Document.php, line: 180, quote: "$url = Storage::disk($this->disk)->url($this->url);"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel encryption key (base64:...); the .env.example value is a shared sample and must not be used; the web wizard would run key:generate and write .env"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL, no trailing slash"}
+    - {name: "DB_HOST / DB_PORT / DB_DATABASE / DB_USERNAME / DB_PASSWORD", secret: false, buildTime: false, note: "MySQL connection; the password is secret; default host localhost does not work"}
+    - {name: FILESYSTEM_DISK, secret: false, buildTime: false, note: "s3 for durable uploads, with AWS_BUCKET and AWS_DEFAULT_REGION; the default public disk is local and ephemeral"}
+    - {name: TRUSTED_PROXIES, secret: false, buildTime: false, note: "the ALB terminates TLS; set to * (or the VPC range) so the app sees https, else REQUIRE_HTTPS redirects can loop"}
+    - {name: PRECONFIGURED_INSTALL, secret: false, buildTime: false, note: "true so the setup wizard does not ask for DB values; DB comes from the environment"}
+    - {name: SESSION_DRIVER, secret: false, buildTime: false, note: "file default keeps sessions on local disk; use database or redis if more than one task runs"}
+  optional: [REQUIRE_HTTPS, QUEUE_CONNECTION, CACHE_DRIVER, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, MAIL_FROM_NAME, PDF_GENERATOR, SNAPPDF_CHROMIUM_PATH, LOG_CHANNEL, NINJA_ENVIRONMENT, IS_DOCKER, INTERNAL_QUEUE_ENABLED, MULTI_DB_ENABLED, APP_DEBUG, ERROR_EMAIL, SCOUT_DRIVER, NINJA_AUTO_BILL_TIME]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 3, quote: "APP_KEY=base64:RR++yx2rJ9kdxbdh3+AmbHLDQu+Q76i++co9Y8ybbno="}
+    - {path: .env.example, line: 36, quote: "REQUIRE_HTTPS=false"}
+    - {path: config/ninja.php, line: 26, quote: "'require_https' => env('REQUIRE_HTTPS', true),"}
+    - {path: config/ninja.php, line: 52, quote: "'trusted_proxies' => env('TRUSTED_PROXIES', false),"}
+    - {path: config/ninja.php, line: 57, quote: "'preconfigured_install' => env('PRECONFIGURED_INSTALL', false),"}
+    - {path: app/Http/Middleware/TrustProxies.php, line: 53, quote: "$this->proxies = config('ninja.trusted_proxies');"}
+    - {path: .env.example, line: 46, quote: "PDF_GENERATOR=hosted_ninja"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository (README.md:51 only links the Docker Hub image); Deployz cannot build an image from the archive. The vendor must add a PHP Dockerfile."
+    - "The default React UI is not buildable from git: public/react is gitignored and resources/views/react/head.blade.php is empty, so a repo-built image shows a blank page unless the React release build is added or set_react_as_default_ap is set to 0 (Flutter, committed in public/)."
+  mustNot:
+    - "MySQL requirement must not block: Deployz offers RDS MySQL 8"
+    - "Queue worker and scheduler must not count as a second image: they run the same code with a different command"
+    - "Redis must not be required: cache, queue and session default to file or sync"
+    - "Local storage directories must not block: S3 is native through FILESYSTEM_DISK=s3"
+    - "Committed public/main.dart.js (Flutter) and public/build (Vite output) must not be reported as a missing frontend build"
+    - "A PostgreSQL config entry in config/database.php must not be reported as Postgres support: setup and schema are MySQL"
+vendorQuestions:
+  legitimate:
+    - "Which PDF engine to use: the default hosted_ninja calls an external service; snappdf needs Chromium inside the image"
+    - "Whether an email service (SMTP) is needed for sending invoices"
+  unnecessary:
+    - "Which database? (MySQL; DB_CONNECTION default mysql)"
+    - "Is a Vite or Flutter build needed? (Flutter and public/build are committed; only the React client is missing)"
+    - "Health path? (/health)"
+    - "Who runs migrations? (php artisan migrate --force, a one-off command, or the /setup wizard)"
+traps:
+  - "README.md:51 Docker File link -> the image is built elsewhere and pulled from Docker Hub; not a Dockerfile in this repository"
+  - ".env.example APP_KEY -> a shared sample key committed to the repository; set a new secret (.env.example:3)"
+  - ".env.example REQUIRE_HTTPS=false but config default is true -> behind the ALB set TRUSTED_PROXIES so https is detected (config/ninja.php:26)"
+  - "/ redirects to /setup before the first account exists, and /api/v1/ping needs a token -> use /health (routes/web.php:24, routes/api.php:563)"
+  - "/health is throttled to 20 requests per minute per IP -> sufficient for ALB checks (routes/api.php:568)"
+  - "config/database.php has a pgsql connection -> the setup wizard, schema dump and migrations target MySQL (SetupController.php:120)"
+  - "PDF_GENERATOR=hosted_ninja in .env.example -> PDFs are made by an external service unless snappdf or another engine is set (PdfService.php:354)"
+  - "public/react/ looks like the React client but holds one PNG; the folder is gitignored (.gitignore:4) and react/head.blade.php is empty -> the default React UI has no assets in git"
+  - "vendor/ is not in the repository (gitignored) -> composer install must run in the image build"
+openQuestions:
+  - "Whether DB_CONNECTION=pgsql works end to end: config exists but the schema dump and the setup wizard are MySQL only; judged MySQL-only here"
+  - "Whether the setup wizard needs a writable .env even with PRECONFIGURED_INSTALL=true (SetupController writes env values; SystemHealth checks is_writable .env at SystemHealth.php:365); a one-off migrate plus ninja:create-account avoids it"
+  - "Which port and web server the vendor image uses: nothing in the repository sets it"
+crossReview:
+  - {field: summary / blockers.mustNot / vendorQuestions.unnecessary, change: "claim 'React client assets are committed in public/' -> false: public/react holds one PNG, is gitignored, and react/head.blade.php is empty; set_react_as_default_ap defaults to 1 so the self-host UI is React. Reworded the summary and outcome reason, added a second blockers.expected item, replaced the false mustNot, and added a trap", evidence: ".gitignore:4 /public/react; database/migrations/2022_06_16_025156_add_react_switching_flag.php:24; app/Http/Controllers/BaseController.php:1429; resources/views/react/head.blade.php (0 bytes)"}
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES or NOT_DEPLOYABLE kept; no Dockerfile in git (git ls-files has none), so the build cannot start from the archive", evidence: "README.md:51"}
+  - {field: healthPath, change: "none: /health is in the api group (no auth, no https redirect), returns 200 JSON", evidence: "routes/api.php:563; app/Providers/RouteServiceProvider.php:262"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

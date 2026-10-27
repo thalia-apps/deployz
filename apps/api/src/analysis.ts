@@ -449,7 +449,17 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // state; the file cap protects the start chain of the content-selected image.
 // Stored v70 rows can name no health path, build the dev image, or miss the
 // local-state blocker.
-export const ANALYSIS_VERSION = 71;
+// Version 72 (2026-10 corpus round 5): shallower package manifests keep their
+// slot in the file cap; only NVIDIA GPU libraries (not hosted-API clients)
+// need a GPU; a PHP image with only the MySQL driver is MySQL; CouchDB and
+// Python OpenSearch/Elasticsearch clients are unsupported stores; datastore
+// support images, `docker_example/` and a trailing CI-script stage are not the
+// app image; Laravel `/up`, Apache-fronted PHP, Laravel API prefixes and
+// FastAPI router prefixes name the health path; a sidecar's port and a dev
+// Compose port are not the app port; `CMD ["--help"]` is no start command.
+// Stored v71 rows can miss the database or Redis, carry a false GPU blocker,
+// or pick the wrong image, port or health path.
+export const ANALYSIS_VERSION = 72;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

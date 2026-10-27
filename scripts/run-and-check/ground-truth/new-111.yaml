@@ -1,0 +1,151 @@
+id: new-111
+repository: Budibase/budibase
+commit: ce4f62d5582a60de6e84dbf5077e28bde224f5e2
+summary: >
+  Budibase low-code platform (Node.js/TypeScript yarn + lerna monorepo, Svelte builder). Self-hosted topology is several
+  processes: app server (packages/server), worker (packages/worker), CouchDB, Redis, MinIO/S3, nginx proxy and LiteLLM.
+  Both service Dockerfiles copy CI-built packages/*/dist, and the all-in-one hosting/single/Dockerfile also copies dist and
+  bundles CouchDB (base image), Redis, MinIO, nginx, LiteLLM and a Postgres server. CouchDB is the required primary
+  store and is not supported by Deployz.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data store is CouchDB (apps, users, config, all app data), which Deployz does not provide. No Dockerfile builds
+    from the repo archive alone: every image COPYs packages/server/dist and packages/worker/dist, which are .gitignored build
+    output made by a yarn/lerna build outside Docker. The topology also needs two app images (app and worker) or the
+    all-in-one image that runs CouchDB, MinIO, Redis and nginx in one container with a volume at /data.
+dockerfile:
+  accept: []
+  reject:
+    - {path: packages/server/Dockerfile, reason: "COPY packages/server/dist and packages/server/dist/yarn.lock; dist is CI build output (dist/ is gitignored), absent from the repo archive; also needs BUDIBASE_VERSION build arg"}
+    - {path: packages/worker/Dockerfile, reason: "COPY packages/worker/dist; dist is CI build output; second application image, separate from the app server"}
+    - {path: hosting/single/Dockerfile, reason: "all-in-one image: base budibase/database:2.1.0 (CouchDB) from a registry, copies server/worker dist and server/client/builder build output, bundles Redis, MinIO, nginx, LiteLLM and Postgres; VOLUME /data"}
+    - {path: hosting/couchdb/Dockerfile, reason: "builds the CouchDB database image, not the app"}
+    - {path: hosting/proxy/Dockerfile, reason: "nginx proxy image, a separate service"}
+    - {path: hosting/tests/Dockerfile, reason: "test helper image"}
+    - {path: packages/server/scripts/integrations/mssql/data/Dockerfile, reason: "test data image for MSSQL integration tests"}
+  target: null
+  context: .
+  evidence:
+    - {path: packages/server/Dockerfile, line: 64, quote: "COPY packages/server/dist/ dist/"}
+    - {path: packages/server/Dockerfile, line: 51, quote: "COPY packages/server/dist/yarn.lock ."}
+    - {path: packages/worker/Dockerfile, line: 49, quote: "COPY packages/worker/dist/ dist/"}
+    - {path: hosting/single/Dockerfile, line: 31, quote: "COPY packages/server/dist packages/server/dist"}
+    - {path: hosting/single/Dockerfile, line: 2, quote: "ARG BASEIMG=budibase/database:2.1.0"}
+    - {path: hosting/single/Dockerfile, line: 147, quote: "VOLUME /data"}
+    - {path: .gitignore, line: 53, quote: "dist/"}
+    - {path: packages/server/package.json, line: 15, quote: "postbuild"}
+runtime: {accept: [node]}
+port:
+  accept: [4001]
+  evidence:
+    - {path: packages/server/Dockerfile, line: 80, quote: "EXPOSE 4001"}
+    - {path: packages/server/Dockerfile, line: 10, quote: "ENV PORT=4001"}
+    - {path: hosting/single/runner.sh, line: 133, quote: "export APP_PORT=\"${APP_PORT:-4001}\""}
+    - {path: packages/worker/src/index.ts, line: 143, quote: "parseInt(env.PORT || \"4002\")"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/server/src/koa.ts, line: 111, quote: "server.listen(env.PORT || 0)"}
+startCommand:
+  source: image
+  accept: ["./docker_run.sh", "node --enable-source-maps dist/index.js", "./runner.sh"]
+healthPath:
+  accept: ["/health"]
+  # app server /health returns 200 only when startup state is ready (503 otherwise). Worker also has /health (200).
+  evidence:
+    - {path: packages/server/src/api/index.ts, line: 23, quote: "router.get(\"/health\", async ctx => {"}
+    - {path: packages/server/src/api/index.ts, line: 30, quote: "if (getState() !== \"ready\") {"}
+    - {path: packages/worker/src/api/index.ts, line: 169, quote: "router.get(\"/health\", ctx => (ctx.status = 200))"}
+database:
+  status: required
+  engines: [couchdb]
+  default: couchdb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [COUCH_DB_URL, COUCH_DB_SQL_URL]
+  evidence:
+    - {path: packages/backend-core/src/environment.ts, line: 157, quote: "COUCH_DB_URL: process.env.COUCH_DB_URL || \"http://localhost:4005\","}
+    - {path: packages/backend-core/src/db/couch/connections.ts, line: 4, quote: "parseCouchConnection(env.COUCH_DB_URL"}
+    - {path: hosting/docker-compose.yaml, line: 10, quote: "COUCH_DB_URL: http://${COUCH_DB_USER}:${COUCH_DB_PASSWORD}@couchdb-service:5984"}
+    - {path: hosting/docker-compose.yaml, line: 113, quote: "image: budibase/database:2.1.0"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/server/src/startup/index.ts, line: 225, quote: "workspaceMigrations.init()"}
+    - {path: packages/server/src/startup/index.ts, line: 296, quote: "STATE = \"ready\""}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "host:6379"}
+  evidence:
+    - {path: packages/backend-core/src/environment.ts, line: 170, quote: "REDIS_URL: process.env.REDIS_URL || \"localhost:6379\","}
+    - {path: hosting/docker-compose.yaml, line: 22, quote: "REDIS_URL: redis-service:6379"}
+    - {path: hosting/single/runner.sh, line: 434, quote: "pm2 start ./runner.sh --name redis-server --interpreter bash -- redis-server"}
+workers:
+  status: independent
+  commands: ["yarn run:docker (packages/worker, SERVICE=worker-service)"]
+  evidence:
+    - {path: hosting/docker-compose.yaml, line: 44, quote: "image: budibase/worker"}
+    - {path: packages/worker/Dockerfile, line: 62, quote: "ENV SERVICE=worker-service"}
+    - {path: hosting/single/runner.sh, line: 589, quote: "pm2 start --name worker \"yarn run:docker\""}
+scheduledJobs:
+  status: embedded
+  items: [automation cron triggers via Bull queue in the app server]
+  evidence:
+    - {path: packages/server/src/api/index.ts, line: 25, quote: "automationQueue.getBullQueue().isReady()"}
+storage:
+  local: ephemeral
+  paths: [/data, /data/minio, /data/couch]
+  s3: native
+  s3SelectBy: {USE_S3: "1", MINIO_URL: unset}
+  evidence:
+    - {path: packages/backend-core/src/objectStore/objectStore.ts, line: 140, quote: "if (env.MINIO_URL) {"}
+    - {path: packages/backend-core/src/objectStore/objectStore.ts, line: 124, quote: "accessKeyId: env.MINIO_ACCESS_KEY!,"}
+    - {path: packages/backend-core/src/environment.ts, line: 177, quote: "AWS_REGION: process.env.AWS_REGION || \"eu-west-1\","}
+    - {path: hosting/single/runner.sh, line: 440, quote: "if [[ -z \"${USE_S3}\" ]]; then"}
+env:
+  required:
+    - {name: COUCH_DB_URL, secret: true, buildTime: false, note: "URL of an external CouchDB with credentials; Deployz cannot provide it"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "signs sessions; shared by app and worker"}
+    - {name: API_ENCRYPTION_KEY, secret: true, buildTime: false, note: "encryption key; falls back to JWT_SECRET"}
+    - {name: INTERNAL_API_KEY, secret: true, buildTime: false, note: "app-to-worker calls"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "host:port of Redis"}
+    - {name: WORKER_URL, secret: false, buildTime: false, note: "URL of the separate worker service"}
+    - {name: BUDIBASE_VERSION, secret: false, buildTime: true, note: "build arg; the Dockerfiles fail without it (RUN test -n)"}
+  optional: [MINIO_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, AWS_REGION, USE_S3, REDIS_PASSWORD, BB_ADMIN_USER_EMAIL, BB_ADMIN_USER_PASSWORD, LITELLM_URL, LITELLM_MASTER_KEY, CLUSTER_MODE, OFFLINE_MODE, SELF_HOSTED]
+  buildTime: [BUDIBASE_VERSION]
+  evidence:
+    - {path: packages/server/Dockerfile, line: 73, quote: "RUN test -n \"$BUDIBASE_VERSION\""}
+    - {path: packages/backend-core/src/environment.ts, line: 149, quote: "JWT_SECRET: process.env.JWT_SECRET"}
+    - {path: packages/backend-core/src/environment.ts, line: 181, quote: "INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,"}
+blockers:
+  expected:
+    - "CouchDB is the required primary datastore (all apps, users, config); Deployz offers only PostgreSQL, MySQL, Redis and S3"
+    - "No Dockerfile builds from the repo archive: server, worker and single images COPY packages/*/dist, built outside Docker by yarn/lerna (dist/ is gitignored)"
+    - "Needs two application images (app server and worker) plus CouchDB and nginx proxy; or the all-in-one image that needs a /data volume, CouchDB, MinIO and Redis in one container"
+  mustNot:
+    - "PostgreSQL in hosting/single/Dockerfile and docker-compose must not count as the app DB: it is only for LiteLLM metadata"
+    - "MinIO must not be the reported storage blocker alone: S3 is supported by the object store code (USE_S3, no MINIO_URL)"
+    - "Redis must not be the reason for rejection: ElastiCache is available"
+    - "pm2 must not count as several services: it only supervises processes (cluster mode is optional via CLUSTER_MODE)"
+vendorQuestions:
+  legitimate:
+    - "Is there a supported way to run Budibase with a CouchDB-compatible managed service on AWS?"
+  unnecessary:
+    - "Which port? (4001 in the server Dockerfile; worker uses PORT)"
+    - "Health path? (/health on server and worker)"
+    - "Who runs migrations? (the server prepares its state at startup)"
+traps:
+  - "hosting/single/Dockerfile looks like one self-contained image -> it bundles CouchDB, Redis, MinIO, nginx, LiteLLM and Postgres with pm2, needs prebuilt dist, and keeps data in /data (hosting/single/Dockerfile:147)"
+  - "packages/server/Dockerfile looks like a normal Node build -> it only copies prebuilt dist; no build step runs inside Docker (packages/server/Dockerfile:64)"
+  - "ENV COUCH_DB_URL=https://couchdb.budi.live:5984 in the server Dockerfile -> a vendor default, not a database the user can use (packages/server/Dockerfile:11)"
+  - "hosting/docker-compose.yaml has a Postgres service -> used only by LiteLLM (hosting/docker-compose.yaml:137)"
+  - "EXPOSE 4001 in the worker Dockerfile -> the worker listens on PORT or 4002 by default (packages/worker/src/index.ts:143)"
+  - "worker Dockerfile COPYs packages/server/pm2.config.js -> cross-package copy, still needs worker dist (packages/worker/Dockerfile:51)"
+openQuestions:
+  - "Whether a repo-level build (yarn build) outside Docker could be accepted as the build step: out of Deployz scope, build context has no CI artefacts"
+crossReview:
+  - {field: migrations.evidence, change: "added the startup call that runs workspace migrations in the app server at boot", evidence: "packages/server/src/startup/index.ts:225"}
+  - {field: outcome / dockerfile.accept / database / redis / workers / healthPath / port, change: "none: all confirmed. dist, builder and client are not in git (packages/server/.gitignore:8 ignores dist), CMD is ./docker_run.sh in server and worker, /health is mounted on the root router and returns 503 until STATE is ready", evidence: "packages/server/Dockerfile:91; packages/server/src/api/index.ts:23-33; packages/worker/src/api/index.ts:169"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

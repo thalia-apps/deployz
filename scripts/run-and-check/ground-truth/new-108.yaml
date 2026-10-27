@@ -1,0 +1,160 @@
+id: new-108
+repository: activepieces/activepieces
+commit: 280f6bb396f1fa55aed9267ca022429fd138a461
+summary: >
+  Activepieces workflow automation (Node.js 24, Fastify API, React web app, bun/turbo monorepo). The root
+  Dockerfile builds one image holding the API, the built web app (served by the API) and the worker. The entrypoint
+  runs API and worker in one container by default (AP_CONTAINER_TYPE=WORKER_AND_APP). It needs PostgreSQL and Redis
+  (BullMQ queues); files go to the database by default and can go to S3 with the task role.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One image, one HTTP port, API plus embedded worker, migrations run at boot. A deploy must set PostgreSQL, Redis,
+    AP_ENCRYPTION_KEY, AP_JWT_SECRET and AP_FRONTEND_URL. Nothing blocks. S3 is optional (AP_S3_USE_IRSA=true uses the
+    task role). The change count is small, so both DEPLOYABLE and DEPLOYABLE_WITH_CHANGES are fair.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.worker, reason: "worker-only image (AP_CONTAINER_TYPE=WORKER, no HTTP server); the main Dockerfile already runs the worker in the same container or with AP_CONTAINER_TYPE=WORKER"}
+    - {path: .devcontainer/Dockerfile, reason: "development container, not the production app image"}
+    - {path: docker-compose.yml, reason: "compose file, not a Dockerfile; it only wires the published image with Postgres and Redis"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 127, quote: "FROM base AS run"}
+    - {path: Dockerfile, line: 163, quote: "ENTRYPOINT [\"tini\", \"--\", \"./docker-entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 91, quote: "RUN NODE_OPTIONS=--max-old-space-size=4096 npx turbo run build --filter=web --filter=@activepieces/engine --filter=api --filter=worker"}
+    - {path: Dockerfile.worker, line: 68, quote: "ENV AP_CONTAINER_TYPE=WORKER"}
+runtime: {accept: [node]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 164, quote: "EXPOSE 80"}
+    - {path: docker-entrypoint.sh, line: 8, quote: "export AP_PORT=\"${AP_PORT:-80}\""}
+    - {path: packages/server/api/src/app/helper/system/system.ts, line: 27, quote: "[AppSystemProp.PORT]: '3000',"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/server/api/src/main.ts, line: 16, quote: "host: '::',"}
+startCommand:
+  source: image
+  accept: ["./docker-entrypoint.sh"]
+healthPath:
+  accept: ["/api/v1/health"]
+  # Public route, 200 {status: Healthy} or 503 when the database check fails (app mode) or the worker is not yet registered.
+  # "/" also returns 200 (static index.html), but it does not test the app.
+  evidence:
+    - {path: packages/server/api/src/app/health/health.module.ts, line: 9, quote: "await app.register(healthController, { prefix: '/v1/health' })"}
+    - {path: packages/server/api/src/app/health/health.module.ts, line: 17, quote: "security: securityAccess.public(),"}
+    - {path: packages/server/api/src/app/health/health.module.ts, line: 23, quote: "StatusCodes.SERVICE_UNAVAILABLE"}
+    - {path: Dockerfile, line: 161, quote: "curl -fsS \"http://localhost:${AP_PORT:-80}/api/v1/health\""}
+database:
+  status: required
+  engines: [postgres, pglite]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [AP_POSTGRES_URL, "AP_POSTGRES_HOST/AP_POSTGRES_PORT/AP_POSTGRES_DATABASE/AP_POSTGRES_USERNAME/AP_POSTGRES_PASSWORD", AP_POSTGRES_USE_SSL, AP_POSTGRES_SSL_CA]
+  evidence:
+    - {path: packages/server/api/src/app/helper/system/system.ts, line: 22, quote: "[AppSystemProp.DB_TYPE]: DatabaseType.POSTGRES,"}
+    - {path: packages/server/api/src/app/database/postgres-connection.ts, line: 967, quote: "const url = system.get(AppSystemProp.POSTGRES_URL)"}
+    - {path: packages/server/api/src/app/database/postgres-connection.ts, line: 980, quote: "const database = system.getOrThrow(AppSystemProp.POSTGRES_DATABASE)"}
+    - {path: packages/server/api/src/app/database/postgres-connection.ts, line: 471, quote: "const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/server/api/src/main.ts, line: 60, quote: "if (system.isApp()) {"}
+    - {path: packages/server/api/src/main.ts, line: 64, quote: "fn: async () => initializeDatabase({ runMigrations: true }),"}
+    - {path: packages/server/api/src/app/database/index.ts, line: 10, quote: "await backgroundMigrationRunner.runMigrationsWithCatchup"}
+redis:
+  status: required
+  selectBy: {AP_REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: packages/server/api/src/app/helper/system/system.ts, line: 57, quote: "[AppSystemProp.REDIS_TYPE]: RedisType.STANDALONE,"}
+    - {path: packages/server/api/src/app/database/redis/default-redis.ts, line: 14, quote: "if (isNil(url)) {"}
+    - {path: packages/server/api/src/app/database/redis/default-redis.ts, line: 30, quote: "assertNotNullOrUndefined(host, 'Host is required')"}
+    - {path: packages/server/api/src/app/database/redis/default-redis.ts, line: 36, quote: "const useSsl = settings.REDIS_USE_SSL ?? false"}
+    - {path: packages/server/api/src/app/database/redis/memory-redis.ts, line: 22, quote: "redisMemoryServer = new RedisMemoryServer()"}
+    - {path: packages/server/api/src/app/workers/job-queue/bullboard.ts, line: 44, quote: "new BullMQAdapter(queue)"}
+workers:
+  status: embedded
+  commands: []
+  # Default WORKER_AND_APP runs API and worker as two node processes in one container; the worker talks to the API on 127.0.0.1.
+  # Optional separate worker services run the same image with AP_CONTAINER_TYPE=WORKER (needs AP_FRONTEND_URL and AP_WORKER_TOKEN or AP_JWT_SECRET).
+  evidence:
+    - {path: docker-entrypoint.sh, line: 7, quote: "export AP_CONTAINER_TYPE=\"${AP_CONTAINER_TYPE:-WORKER_AND_APP}\""}
+    - {path: docker-entrypoint.sh, line: 41, quote: "AP_CONTAINER_TYPE=APP node --enable-source-maps \"$APP_SCRIPT\" &"}
+    - {path: docker-entrypoint.sh, line: 43, quote: "node --enable-source-maps \"$WORKER_SCRIPT\" &"}
+    - {path: packages/server/worker/src/lib/config/configs.ts, line: 11, quote: "return `http://127.0.0.1:${port}/api/`"}
+scheduledJobs:
+  status: embedded
+  items: ["BullMQ repeating jobs (flow triggers, run retention at 23:50 daily)"]
+  evidence:
+    - {path: packages/server/api/src/app/flows/flow-run/flow-run-module.ts, line: 84, quote: "cron: '50 23 * * *',"}
+    - {path: packages/server/api/src/app/workers/job-queue/job-queue.ts, line: 39, quote: "pattern: scheduleOptions.cronExpression,"}
+storage:
+  local: ephemeral
+  paths: [~/.activepieces, /tmp/cache]
+  s3: native
+  s3SelectBy: {AP_FILE_STORAGE_LOCATION: S3, AP_S3_USE_IRSA: "true", AP_S3_BUCKET: bucket-name, AP_S3_REGION: region}
+  evidence:
+    - {path: packages/server/api/src/app/helper/system/system.ts, line: 47, quote: "[AppSystemProp.FILE_STORAGE_LOCATION]: FileLocation.DB,"}
+    - {path: packages/server/api/src/app/file/file.service.ts, line: 361, quote: "return FileLocation.DB"}
+    - {path: packages/server/api/src/app/file/s3-helper.ts, line: 196, quote: "const useIRSA = system.getBoolean(AppSystemProp.S3_USE_IRSA)"}
+    - {path: packages/server/api/src/app/file/s3-helper.ts, line: 213, quote: "if (!useIRSA) {"}
+    - {path: packages/server/api/src/app/helper/system-validator.ts, line: 302, quote: "fileStorageLocation === FileLocation.S3"}
+    - {path: Dockerfile.worker, line: 69, quote: "ENV AP_CACHE_BASE_PATH=/tmp/cache"}
+env:
+  required:
+    - {name: AP_ENCRYPTION_KEY, secret: true, buildTime: false, note: "32 hex chars (openssl rand -hex 16); startup fails without it (self-generated only with REDIS_TYPE=MEMORY, on local disk). Changing it breaks stored connections"}
+    - {name: AP_JWT_SECRET, secret: true, buildTime: false, note: "startup fails without it; the entrypoint also derives AP_WORKER_TOKEN from it"}
+    - {name: "AP_POSTGRES_HOST / AP_POSTGRES_PORT / AP_POSTGRES_DATABASE / AP_POSTGRES_USERNAME / AP_POSTGRES_PASSWORD", secret: false, buildTime: false, note: "or AP_POSTGRES_URL; the password is secret; set AP_POSTGRES_USE_SSL=true for TLS (AP_POSTGRES_SSL_CA gives the CA)"}
+    - {name: "AP_REDIS_HOST / AP_REDIS_PORT", secret: false, buildTime: false, note: "or AP_REDIS_URL; set AP_REDIS_USE_SSL=true for TLS; AP_REDIS_PASSWORD if auth is on. Default type STANDALONE needs a real Redis"}
+    - {name: AP_FRONTEND_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for webhook, OAuth redirect and email links (no default)"}
+  optional: [AP_PORT, AP_CONTAINER_TYPE, AP_FILE_STORAGE_LOCATION, AP_S3_USE_IRSA, AP_S3_BUCKET, AP_S3_REGION, AP_S3_ENDPOINT, AP_S3_USE_SIGNED_URLS, AP_API_KEY, AP_EXECUTION_MODE, AP_EXECUTION_DATA_RETENTION_DAYS, AP_TELEMETRY_ENABLED, AP_TEMPLATES_SOURCE_URL, AP_SMTP_HOST, AP_SMTP_PORT, AP_SMTP_USERNAME, AP_SMTP_PASSWORD, AP_SMTP_SENDER_EMAIL, AP_WEBHOOK_TIMEOUT_SECONDS, AP_FLOW_TIMEOUT_SECONDS, AP_WORKER_TOKEN, AP_POSTGRES_POOL_SIZE]
+  buildTime: []
+  evidence:
+    - {path: packages/server/api/src/app/helper/system-validator.ts, line: 333, quote: "AP_ENCRYPTION_KEY is missing or invalid."}
+    - {path: packages/server/api/src/app/helper/system-validator.ts, line: 351, quote: "AP_JWT_SECRET is undefined, please define it in the environment variables"}
+    - {path: packages/server/api/src/app/helper/jwt-utils.ts, line: 87, quote: "must be defined"}
+    - {path: docker-entrypoint.sh, line: 14, quote: "if [ -z \"$AP_WORKER_TOKEN\" ] && [ -n \"$AP_JWT_SECRET\" ]; then"}
+    - {path: packages/server/api/src/app/helper/network-utils.ts, line: 78, quote: "new URL(system.get(AppSystemProp.FRONTEND_URL) ?? '')"}
+    - {path: .env.example, line: 15, quote: "AP_FRONTEND_URL=http://localhost:8080"}
+blockers:
+  expected: []
+  mustNot:
+    - "Dockerfile.worker must not be reported as a second required image: the main image already runs the worker (WORKER_AND_APP) and also accepts AP_CONTAINER_TYPE=WORKER"
+    - "Two node processes in the entrypoint must not count as a sidecar or second service: they run in one container from one image"
+    - "Redis must not be treated as an unsupported service: ElastiCache Redis (Valkey) is available"
+    - "Build-time tools (bun, deno, isolated-vm, iptables, libcap2) must not be reported as blockers: they install in the image build"
+    - "Local disk must not block: files default to the database and S3 is native"
+    - "REDIS_TYPE=MEMORY (embedded redis-memory-server) must not be chosen: use ElastiCache; memory Redis loses queues on restart and only suits one instance"
+    - "Sandbox execution modes (isolate, iptables, capabilities) must not block: the default AP_EXECUTION_MODE is UNSANDBOXED"
+vendorQuestions:
+  legitimate:
+    - "Public URL: which domain should AP_FRONTEND_URL use? The repo cannot know it"
+    - "Execution mode: should flows run sandboxed? Sandbox modes need extra Linux privileges that Fargate may not give; the default UNSANDBOXED runs user code in the app container"
+  unnecessary:
+    - "Which port? (80 by default via the entrypoint)"
+    - "Who runs migrations? (the app runs them at boot under a Redis lock)"
+    - "Is a separate worker needed? (embedded by default)"
+    - "Health path? (/api/v1/health)"
+    - "Which database? (PostgreSQL is the default and the only production engine)"
+traps:
+  - ".env.example sets AP_POSTGRES_HOST=postgres and AP_REDIS_HOST=redis -> compose host names; replace with the managed services (.env.example:19, .env.example:24)"
+  - "Dockerfile.worker looks like the main image but is a worker-only image with no HTTP server (Dockerfile.worker:68)"
+  - "Dockerfile HEALTHCHECK exits 0 for WORKER containers -> the health probe only applies to the app (Dockerfile:161)"
+  - "Default PORT in code is 3000, but the entrypoint sets AP_PORT=80, so the real port is 80 (docker-entrypoint.sh:8)"
+  - "The first stage base is not the final stage; the last stage run is the app, no --target needed (Dockerfile:127)"
+  - "Dockerfile build downloads bun and deno from GitHub releases; the build needs internet and 4 GB of Node heap (Dockerfile:39, Dockerfile:91)"
+  - "AP_S3_ACCESS_KEY_ID and AP_S3_SECRET_ACCESS_KEY look required, but are only read when AP_S3_USE_IRSA is not true (s3-helper.ts:213)"
+  - "The entrypoint exits with code 1 if either the API or the worker process stops, so the task restarts (docker-entrypoint.sh:48-53)"
+openQuestions:
+  - "RDS TLS: with AP_POSTGRES_USE_SSL=true the code passes only the optional CA to pg; without AP_POSTGRES_SSL_CA the default Node trust store may not verify the RDS certificate (postgres-connection.ts:470-478). Whether Deployz supplies the RDS CA bundle is not known from the repo"
+crossReview:
+  - {field: healthPath, change: "none: /api/v1/health is public; 503 only when the database check fails in APP mode (the worker check applies only when the process is a worker); the WORKER_AND_APP entrypoint starts the API as AP_CONTAINER_TYPE=APP", evidence: "packages/server/api/src/app/health/health.service.ts:33-44; docker-entrypoint.sh:41"}
+  - {field: env.required AP_FRONTEND_URL, change: "none: confirmed required; domain-helper uses getOrThrow and appPostBoot logs the public URL after listen, so a missing value stops the start", evidence: "packages/server/api/src/app/helper/domain-helper.ts:9; packages/server/api/src/app/app.ts:488"}
+  - {field: env.required AP_ENCRYPTION_KEY / AP_JWT_SECRET, change: "none: both are required unless REDIS_TYPE is MEMORY; the key must match 32 alphanumeric chars", evidence: "packages/server/api/src/app/helper/encryption.ts:72-81; packages/server/api/src/app/helper/jwt-utils.ts:72-89; packages/server/api/src/app/helper/system-validator.ts:332"}
+  - {field: dockerfile, change: "none: every COPY source (.npmrc, bun.lock, bunfig.toml, package.json, docker-entrypoint.sh, LICENSE, default.cf) is tracked in git; .dockerignore does not remove any of them", evidence: "git ls-files; .dockerignore"}
+  - {field: all, change: verified, evidence: "43 citations checked"}

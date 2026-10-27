@@ -216,7 +216,7 @@ export function isRuntimeSourcePath(path: string): boolean {
 // Compose files that describe dev/test/example tooling rather than the app's
 // own production deployment shape — by path segment or by filename flavour.
 const NON_PRODUCTION_COMPOSE_SEGMENT_REGEX =
-  /(?:^|\/)(?:development|dev|test|testing|tests|[\w.-]+[._-]tests?|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
+  /(?:^|\/)(?:development|develop|dev|test|testing|tests|[\w.-]+[._-]tests?|suites?|e2e|ci|[\w.-]*examples?|[\w.-]*samples?|demos?|local|\.devcontainer|playwright|benchmarks?|devenv|docs?|contrib|build|debug)(?:\/|$)/i;
 const NON_PRODUCTION_COMPOSE_FILENAME_REGEX =
   /(?:docker-compose|compose)[.-](?:dev|development|test|testing|override|local|example|sample|ci|e2e|debug|demo|build)(?:[.-][\w.-]+)?\.ya?ml$/i;
 const COMPOSE_FILE_REGEX = /(?:^|\/)(?:docker-compose|compose)(?:\.(?:prod|production))?\.ya?ml$/i;
@@ -388,7 +388,7 @@ export function composeServices(tree: FileTree): { file: string; services: Compo
  * (Stage A COMP-026).
  */
 export const INFRA_COMPOSE_IMAGE_REGEX =
-  /postgres|postgis|pgvector|pgadmin|adminer|mysql|mariadb|mssql|sqlserver|sql-edge|oracle|cockroach|mongo|redis|valkey|keydb|elasticsearch|opensearch|rabbitmq|kafka|zookeeper|nats|minio|seaweedfs|garage|memcached|localstack|azurite|mailhog|mailpit|maildev|mailcatcher|smtp|postfix|clickhouse|dynamodb|meilisearch|typesense|qdrant|weaviate|milvus|chroma|nginx|caddy|traefik|haproxy|httpd|keycloak|gotenberg|tika|browserless|chrome|chromium|playwright|searxng|rustfs|ollama|vllm|prometheus|grafana|loki|jaeger|tempo|otel|temporalio|paradedb|pgautoupgrade|getsentry\/spotlight|pictrs|spicedb|authzed|cubejs|hashicorp\/vault/i;
+  /postgres|postgis|pgvector|pgadmin|adminer|mysql|mariadb|mssql|sqlserver|sql-edge|oracle|cockroach|mongo|redis|valkey|keydb|elasticsearch|opensearch|rabbitmq|kafka|zookeeper|nats|minio|seaweedfs|garage|memcached|localstack|azurite|mailhog|mailpit|maildev|mailcatcher|smtp|postfix|clickhouse|cassandra|scylla|couchdb|couchbase|neo4j|influxdb|etcd|dynamodb|meilisearch|typesense|qdrant|weaviate|milvus|chroma|nginx|caddy|traefik|haproxy|httpd|keycloak|gotenberg|tika|browserless|chrome|chromium|playwright|searxng|rustfs|ollama|vllm|prometheus|grafana|loki|jaeger|tempo|otel|temporalio|paradedb|pgautoupgrade|getsentry\/spotlight|pictrs|spicedb|authzed|cubejs|hashicorp\/vault/i;
 
 // A bare language runtime image or a front-end/ORM dev server is a tool the
 // stack runs next to the app (a build helper, a dev server, a database
@@ -422,6 +422,23 @@ export function composeApplicationServices(tree: FileTree): { file: string; serv
         !INFRA_COMPOSE_BODY_REGEX.test(s.body),
     ),
   };
+}
+
+/**
+ * The production Compose application services, the ones that wait on a database
+ * or cache service of the file first (`waitingOnly`: only those, when there are
+ * any): khoj `server` before its `sandbox` and VNC
+ * `computer` sidecars.
+ */
+function composeAppServicesInOrder(tree: FileTree, options: { waitingOnly?: boolean } = {}): ComposeService[] {
+  const apps = composeApplicationServices(tree)?.services ?? [];
+  const appNames = new Set(apps.map((service) => service.name));
+  const infraNames = (composeServices(tree)?.services ?? []).map((service) => service.name).filter((name) => !appNames.has(name));
+  const waitsOnInfra = (service: ComposeService): boolean =>
+    /^\s*depends_on:/m.test(service.body) && infraNames.some((name) => new RegExp(`^\\s+-?\\s*${name}:?\\s*$`, 'm').test(service.body));
+  const waiting = apps.filter(waitsOnInfra);
+  if (options.waitingOnly && waiting.length > 0) return waiting;
+  return [...waiting, ...apps.filter((service) => !waiting.includes(service))];
 }
 
 /** Dependency-bearing manifests for the non-Node languages §11.5 reads. */
@@ -618,7 +635,7 @@ const EXACT_DOCKERFILE_NAME_REGEX = /(?:^|\/)dockerfile$/i;
 // is never the image Deployz should build — it ranks below every other
 // candidate regardless of depth (Stage A COMP-007, COMP-027).
 const DEV_DOCKERFILE_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|devenv|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|meilisearch|mysql|mariadb|minio|gotenberg)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|devenv|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|opensearch|meilisearch|mysql|mariadb|minio|gotenberg|couchdb|mongo|clickhouse|rabbitmq|kafka)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$/i;
 
 // A variant of the same image for other hardware or a bundled-process layout
 // ranks below the plain one (`dev/build-arm`, `docker/multi-process`).
@@ -635,6 +652,8 @@ const DEV_RUNTIME_REGEX =
 /** A stage name that marks tooling, never the production runtime image. */
 // A trailing number names a variant of the same stage (`pr-test2`); a nightly
 // stage builds an unreleased channel of the app.
+// A stage whose own command runs a CI script (superset `showtime`: `CMD ["/app/docker/entrypoints/docker-ci.sh"]`).
+const CI_COMMAND_REGEX = /^\s*(?:CMD|ENTRYPOINT)\b[^\n]*[-_/]ci[-_.]/im;
 const NON_RUNTIME_STAGE_NAME_REGEX =
   /(?:^|[-_.])(?:dev|development|devel|test|tests|debug|local|e2e|ci|build|builder|deps|dependencies|base|fetch|prep|assets|plugins?|nightly)\d*(?:[-_.]|$)/i;
 
@@ -687,6 +706,7 @@ function stageLineageText(stages: DockerfileStage[], index: number): string {
 function productionStageIndex(stages: DockerfileStage[]): number {
   for (let i = stages.length - 1; i >= 0; i -= 1) {
     const name = stages[i]!.name;
+    if (CI_COMMAND_REGEX.test(stages[i]!.body)) continue;
     if ((name === null || !NON_RUNTIME_STAGE_NAME_REGEX.test(name)) && /^\s*(?:CMD|ENTRYPOINT|EXPOSE)\b/im.test(stageLineageText(stages, i))) return i;
   }
   return stages.length - 1;
@@ -696,14 +716,17 @@ function productionStageIndex(stages: DockerfileStage[]): number {
 // exits (or waits on a terminal) when it receives no script or sub-command. An init
 // process (`["/usr/bin/tini", "--"]`, mastodon) only runs the CMD it is given.
 const BARE_OS_IMAGE_REGEX = /^(?:docker\.io\/)?(?:library\/)?(?:debian|ubuntu|alpine|busybox|fedora|centos|rockylinux|almalinux|amazonlinux)(?:[:@]|$)/i;
+// A CMD that only asks for the usage or the version (kestra `CMD ["--help"]`): the vendor must name the command.
+const HELP_ONLY_CMD_REGEX = /^\s*CMD\s+(?:\[\s*"(?:--help|-h|help|--version|version)"\s*\]|(?:--help|-h|help|--version|version))\s*$/i;
 const LAUNCHER_ONLY_ENTRYPOINT_REGEX =
   /^\s*ENTRYPOINT\s+\[\s*"(?:bundle"\s*,\s*"exec|uv"\s*,\s*"run|poetry"\s*,\s*"run|pipenv"\s*,\s*"run|npx|node|python3?|ruby|(?:[\w./-]*\/)?(?:tini|dumb-init)(?:"\s*,\s*"(?:-g|-s|--))*)"\s*\]\s*$/im;
 
 /**
  * Why the image `docker build` produces has no default command that starts a server, or
  * null. Two sound cases: a final-stage lineage with no `CMD` and no `ENTRYPOINT` on a
- * bare OS base (its default command is a shell that exits at once), and an `ENTRYPOINT`
- * that is only a launcher (`["bundle", "exec"]`) with no `CMD` to give it a command.
+ * bare OS base (its default command is a shell that exits at once), an `ENTRYPOINT`
+ * that is only a launcher (`["bundle", "exec"]`) with no `CMD` to give it a command,
+ * and a `CMD` that only prints the usage (`["--help"]`).
  */
 export function detectNoDefaultServerCommand(content: string): string | null {
   const stages = parseDockerfileStages(normalizeDockerfile(content));
@@ -728,13 +751,17 @@ export function detectNoDefaultServerCommand(content: string): string | null {
   if (!hasCmd && launcher !== undefined && LAUNCHER_ONLY_ENTRYPOINT_REGEX.test(launcher)) {
     return `${launcher} has no CMD, so the launcher starts with no command`;
   }
+  const command = lines.match(/^\s*CMD\b.*$/gim)?.at(-1)?.trim();
+  if (command !== undefined && HELP_ONLY_CMD_REGEX.test(command)) {
+    return `${command} only prints the usage, so the container exits at once`;
+  }
   return null;
 }
 
 // Directories whose Dockerfiles build a test image, a dev container or an
-// example, never the application (a `dev/` build directory still can).
+// example (`docker_example/`), never the application (a `dev/` build directory still can).
 const NON_APP_DOCKERFILE_DIR_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|examples?|samples?|docs?|benchmarks?|playwright)(?:\/|$)/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright)(?:\/|$)/i;
 
 // A `dev/` build directory can hold the production Dockerfile; it counts only
 // when the image starts something (a tooling image has no CMD, ENTRYPOINT or EXPOSE).
@@ -1033,7 +1060,8 @@ function exposedPorts(dockerfile: string): string[] {
       if (literal?.[1]) values.push(literal[1]);
       else if (withDefault?.[2]) values.push(withDefault[2]);
       else if (variable?.[1]) {
-        const assignment = new RegExp(`^\\s*(?:ENV|ARG)\\s+${variable[1]}[=\\s]+["']?(\\d{2,5})\\b`, 'm').exec(dockerfile);
+        // Also one key of a multi-key `ENV A="x" \ SUPERSET_PORT="8088"` (continuations are joined).
+        const assignment = new RegExp(`^\\s*(?:ENV|ARG)\\s+(?:[^\\n]*\\s)?${variable[1]}[=\\s]+["']?(\\d{2,5})\\b`, 'm').exec(dockerfile);
         if (assignment?.[1]) values.push(assignment[1]);
       }
     }
@@ -1240,7 +1268,7 @@ export function detectPort(tree: FileTree): DetectorFinding {
   // 6. The application service's production Compose port mapping
   //    (host:container — the container side). A database, cache or proxy
   //    service's mapping is never the application's port.
-  for (const mapping of composeApps?.services.flatMap((service) => service.ports) ?? []) {
+  for (const mapping of composeAppServicesInOrder(tree).flatMap((service) => service.ports)) {
     const match = COMPOSE_PORT_MAPPING_REGEX.exec(`- ${mapping}`);
     if (match?.[1]) {
       return result(
@@ -1596,6 +1624,27 @@ function sourceGroup(tree: FileTree, path: string): string {
 }
 
 /**
+ * The prefix of a FastAPI route on an `APIRouter` (`@api.get("/health")`): the router's
+ * own `prefix=` and the one `include_router(api, prefix="/api")` mounts it at. A router
+ * name mounted at two prefixes gives no mount prefix.
+ */
+function fastApiRouterPrefix(tree: FileTree, content: string, routeIndex: number): string {
+  const router = /@(\w+)\.\s*$/.exec(content.slice(Math.max(0, routeIndex - 60), routeIndex))?.[1];
+  if (router === undefined) return '';
+  const declaration = new RegExp(`^${router}\\s*=\\s*APIRouter\\(([^)]*)\\)`, 'm').exec(content);
+  if (!declaration) return '';
+  const own = /\bprefix\s*=\s*["']([^"']*)["']/.exec(declaration[1] ?? '')?.[1] ?? '';
+  const mounts = new Set<string>();
+  for (const [path, source] of Object.entries(tree)) {
+    if (!path.endsWith('.py') || !source || !isRuntimeSourcePath(path)) continue;
+    for (const include of source.matchAll(new RegExp(`include_router\\(\\s*(?:[\\w.]+\\.)?${router}\\s*,\\s*prefix\\s*=\\s*["']([^"']*)["']`, 'g'))) {
+      mounts.add(include[1]!);
+    }
+  }
+  return `${mounts.size === 1 ? [...mounts][0]! : ''}${own}`.replace(/\/+$/, '');
+}
+
+/**
  * Detect the health endpoint. In order of trust: the probe of the selected
  * Dockerfile's HEALTHCHECK or of a production Compose app service; an exact
  * dedicated route registered by the application (with its framework prefix
@@ -1682,7 +1731,7 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   }
 
   // 1b. A production Compose application service's healthcheck that probes a URL.
-  for (const service of composeApplicationServices(tree)?.services ?? []) {
+  for (const service of composeAppServicesInOrder(tree, { waitingOnly: true })) {
     const healthcheck = /healthcheck:[\s\S]*?test:[^\n]*/.exec(service.body)?.[0] ?? '';
     const composePath = healthcheckProbePath(healthcheck, tree);
     if (composePath !== null) {
@@ -1725,6 +1774,9 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
       label: 'actuator health (spring-boot-actuator)',
     });
   }
+  const routeProvider = Object.entries(tree).find(([path]) => /(?:^|\/)app\/Providers\/RouteServiceProvider\.php$/.test(path))?.[1] ?? '';
+  const mappedApiPrefix = /Route::prefix\(\s*['"]([^'"]*)['"]\s*\)[^;]*?routes\/api\.php/.exec(routeProvider)?.[1];
+  const laravelApiPrefix = mappedApiPrefix === undefined ? '/api' : mappedApiPrefix.replace(/^\/*(?=.)/, '/').replace(/\/+$/, '');
   for (const [path, content] of Object.entries(tree)) {
     // Rust (actix `#[get("/healthz")]`, axum `.route("/health", get(…))`) names its routes the same way.
     if (!(LANGUAGE_SOURCE_REGEX.test(path) || path.endsWith('.rs')) || !content || !isRuntimeSourcePath(path)) continue;
@@ -1753,13 +1805,14 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
       // An included Django urlconf (`app_name = …`) is mounted under a prefix this file does not show.
       if (djangoCall && /^\s*app_name\s*=/m.test(content)) continue;
       let routePath = raw.startsWith('/') ? raw : `/${raw}`;
-      // Laravel API routes are served under /api; the file says so.
-      if (/(?:^|\/)routes\/api\.php$/i.test(path) && !routePath.startsWith('/api')) {
-        routePath = `/api${routePath}`;
+      // Laravel API routes are served under /api, unless the RouteServiceProvider maps them with its own prefix.
+      if (/(?:^|\/)routes\/api\.php$/i.test(path) && !routePath.startsWith(laravelApiPrefix)) {
+        routePath = `${laravelApiPrefix}${routePath}`;
       }
       if (javaPrefixes.length > 0 && !routePath.startsWith(javaPrefixes[0]!)) {
         routePath = `${javaPrefixes[0]!.replace(/\/+$/, '')}${routePath}`;
       }
+      if (path.endsWith('.py')) routePath = `${fastApiRouterPrefix(tree, content, match.index ?? 0)}${routePath}`;
       addCandidate(
         { path: routePath, priority: HEALTH_PATH_PRIORITY.ROUTE_REGISTRATION, source: 'source', label: `health route (${path})`, file: path },
         { relativeFramework: djangoCall },
@@ -1774,6 +1827,13 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
       if (!HEALTH_PATH_SEGMENT_REGEX.test(match[1]!)) continue;
       addCandidate({ path: match[1]!, priority: HEALTH_PATH_PRIORITY.ROUTE_REGISTRATION, source: 'source', label: `health path check (${path})`, file: path });
     }
+  }
+
+  // Laravel 11 framework health route: `->withRouting(health: '/up')` in bootstrap/app.php.
+  for (const [path, content] of Object.entries(tree)) {
+    if (!/(?:^|\/)bootstrap\/app\.php$/.test(path) || !content || !isRuntimeSourcePath(path)) continue;
+    const declared = /->withRouting\([^)]*\bhealth:\s*['"](\/[^'"]*)['"]/.exec(content)?.[1];
+    if (declared) addCandidate({ path: declared, priority: HEALTH_PATH_PRIORITY.ROUTE_REGISTRATION, source: 'source', label: `Laravel health route (${path})`, file: path });
   }
 
   // ── Phoenix (Elixir): routes are declared inside `scope "/api/v1" do` ────
@@ -1877,13 +1937,14 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   const routeGroups = new Set(scoped.flatMap((candidate) => (candidate.file === undefined ? [] : [sourceGroup(tree, candidate.file)])));
   // Behind a web server that fronts the app on port 80 (an all-in-one image),
   // the app's own routes sit under a proxy prefix the source does not show.
+  // A PHP app is not fronted: Apache or nginx is its own server, and the routes sit at the document root.
   const fronted = FRONT_SERVER_REGEX.test(runtimeText) && exposedPorts(runtimeText).includes('80');
   // Several apps register a route: only the one the start command names is the image's.
   const startText = routeGroups.size > 1 ? startCommandText(tree, runtimeText) : '';
   const namedGroups = [...routeGroups].filter((group) => group !== '' && startText.includes(group.slice(0, -1)));
   const confident = scoped.filter((candidate) => {
     if (candidate.file === undefined) return true;
-    if (fronted) return false;
+    if (fronted && !/\.php$/.test(candidate.file)) return false;
     return routeGroups.size <= 1 || (namedGroups.length === 1 && sourceGroup(tree, candidate.file) === namedGroups[0]);
   });
 
@@ -2029,6 +2090,9 @@ const RUST_PG_FEATURE_REGEX = /(?:diesel|sqlx|sea-orm)[^\n]*\bpostgres(?:ql)?\b|
 const LARAVEL_CONFIG_REGEX = /(?:^|\/)config\/database\.php$/;
 const LARAVEL_PGSQL_CONNECTION_REGEX = /['"]driver['"]\s*=>\s*['"]pgsql['"]/;
 const PHP_PG_EXTENSION_REGEX =/(?:docker-php-ext-install|install-php-extensions)\b[^\n]*\bpdo_pgsql\b/;
+// The PHP database drivers an image installs, as an extension or a distribution package (`php8.3-mysql`).
+const PHP_IMAGE_MYSQL_DRIVER_REGEX = /\bphp[\d.]*-mysql\b|(?:docker-php-ext-install|install-php-extensions)\b[^\n]*\b(?:pdo_mysql|mysqli)\b/;
+const PHP_IMAGE_PG_DRIVER_REGEX = /\bphp[\d.]*-pgsql\b|(?:docker-php-ext-install|install-php-extensions)\b[^\n]*\bpdo_pgsql\b/;
 
 /**
  * Language-level PostgreSQL evidence (drivers declared in Python/Ruby/Go
@@ -2050,6 +2114,9 @@ function detectLanguagePostgres(tree: FileTree): string[] {
     }
     if (!detected.includes(name)) detected.push(name);
   }
+  // A selected image with a MySQL PHP driver and no PostgreSQL one cannot reach PostgreSQL.
+  const image = selectedDockerfile(tree)?.content.replace(/\\\r?\n/g, ' ') ?? '';
+  const imageOnlyMysqlPhp = PHP_IMAGE_MYSQL_DRIVER_REGEX.test(image) && !PHP_IMAGE_PG_DRIVER_REGEX.test(image);
   for (const [path, content] of Object.entries(tree)) {
     if (!content) continue;
     if (/(?:^|\/)Cargo\.toml$/.test(path) && RUST_PG_FEATURE_REGEX.test(content) && !detected.includes('postgres feature (Rust)')) {
@@ -2060,8 +2127,9 @@ function detectLanguagePostgres(tree: FileTree): string[] {
       detected.push('pdo_pgsql (PHP)');
     }
     // A Laravel app that lists a `pgsql` connection supports PostgreSQL next to
-    // its default engine, so a MySQL default does not make MySQL the only engine.
-    if (LARAVEL_CONFIG_REGEX.test(path) && LARAVEL_PGSQL_CONNECTION_REGEX.test(content) && !detected.includes('pgsql connection (Laravel)')) {
+    // its default engine, so a MySQL default does not make MySQL the only engine —
+    // unless the selected image has only a MySQL PHP driver.
+    if (LARAVEL_CONFIG_REGEX.test(path) && LARAVEL_PGSQL_CONNECTION_REGEX.test(content) && !imageOnlyMysqlPhp && !detected.includes('pgsql connection (Laravel)')) {
       detected.push('pgsql connection (Laravel)');
     }
   }
@@ -6296,7 +6364,7 @@ export function detectDockerfileBuildTarget(tree: FileTree): DetectorFinding {
   if (!dockerfile) return { detector: 'dockerfile-build-target', detected: false };
   const stages = parseDockerfileStages(normalizeDockerfile(dockerfile.content));
   const last = stages[stages.length - 1];
-  if (last?.name == null || !(NON_RUNTIME_STAGE_NAME_REGEX.test(last.name) || TOOLING_LAST_STAGE_REGEX.test(last.name))) {
+  if (last?.name == null || !(NON_RUNTIME_STAGE_NAME_REGEX.test(last.name) || TOOLING_LAST_STAGE_REGEX.test(last.name) || CI_COMMAND_REGEX.test(last.body))) {
     return { detector: 'dockerfile-build-target', detected: false };
   }
   const target = stages[productionStageIndex(stages)];

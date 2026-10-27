@@ -1,0 +1,3025 @@
+{
+  "id": "new-54",
+  "commit": "188d4abd9c01c38a0acdb6557cf46ce182320c92",
+  "analyser": "rules@r5-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "packages/twenty-docker/twenty/Dockerfile"
+    },
+    "build": {
+      "command": "npx rimraf dist && npx vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/main\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "PG_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "LOGIC_FUNCTION_LAMBDA_LAYER_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "STORAGE_S3_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": "yarn worker:prod"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "yarn worker:prod",
+        "source": "packages/twenty-docker/docker-compose.yml worker"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCESS_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_CATALOG_STORAGE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_BALANCED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_EXTRA_FAST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_EXTRA_SMART",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_FAST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_MODELS_DEFAULT_SMART",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_STREAM_SHUTDOWN_DRAIN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_USER_CREDITS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_REQUESTS_TO_TWENTY_ICONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANALYTICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "API_ACCESS_LOG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMITING_LONG_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMITING_LONG_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMITING_SHORT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMITING_SHORT_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_ACCESS_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_API_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_API_RATE_LIMITING_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_JOB_ENQUEUE_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_JOB_ENQUEUE_RATE_LIMITING_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_REFRESH_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPLICATION_REGISTRATION_JOB_ENQUEUE_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_CLAIM_GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_CLAIM_GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_REGISTRY_CDN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_REGISTRY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_REGISTRY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COOKIE_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COOKIE_SAME_SITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_APIS_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_APIS_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_PASSWORD_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SES_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SES_ACCOUNT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SES_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SES_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SES_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_FREE_TRIAL_WITHOUT_CREDIT_CARD_DURATION_IN_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_FREE_TRIAL_WITH_CREDIT_CARD_DURATION_IN_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITHOUT_CREDIT_CARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_MAX_ADMIN_CREDIT_GRANT_MICRO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PLANS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_PLAN_REQUIRED_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_ROLLOVER_TOTAL_CAP_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_STRIPE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_STRIPE_PUBLISHABLE_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_SUBSCRIPTION_RENEWAL_REMINDER_DAYS_BEFORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_TRIAL_WITHOUT_CREDIT_CARD_REMINDER_DAYS_BEFORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_TRIAL_WITH_CREDIT_CARD_REMINDER_DAYS_BEFORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BILLING_USAGE_CAP_CLICKHOUSE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_STORAGE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALENDAR_BOOKING_PAGE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CALENDAR_PROVIDER_GOOGLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CALENDAR_PROVIDER_MICROSOFT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_DCV_DELEGATION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_PUBLIC_DOMAIN_ZONE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_ZONE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CODE_INTERPRETER_IDLE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CODE_INTERPRETER_SESSION_MAX_AGE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CODE_INTERPRETER_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMMON_QUERY_COMPLEXITY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_SUBDOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DPA_DEPLOYMENT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAILING_DOMAIN_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SEND_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SEND_RATE_LIMITING_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SEND_WORKSPACE_DAILY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SEND_WORKSPACE_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SEND_WORKSPACE_RATE_LIMITING_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_NO_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_VERIFICATION_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ENTERPRISE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTERPRISE_VALIDITY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVENT_SINKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALLBACK_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "FILE_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_INDEX_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_MAP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GRAPHQL_MAX_FIELDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GRAPHQL_MAX_ROOT_RESOLVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HEALTH_METRICS_TIME_WINDOW_IN_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAP_SMTP_ALLOW_SELF_SIGNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INBOUND_EMAIL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITATION_SENDING_BY_EMAIL_THROTTLE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITATION_SENDING_BY_EMAIL_THROTTLE_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITATION_SENDING_BY_WORKSPACE_THROTTLE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITATION_SENDING_BY_WORKSPACE_THROTTLE_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVITATION_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_ATTACHMENT_PREVIEW_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_BILLING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_CONFIG_VARIABLES_IN_DB_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_CONNECTED_ACCOUNT_WEBHOOK_SUBSCRIPTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_EMAIL_VERIFICATION_REQUIRED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_FEATURE_FLAG_MANAGEMENT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_IMAP_SMTP_CALDAV_CONNECTION_TEST_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_IMAP_SMTP_CALDAV_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_MAPS_AND_ADDRESS_AUTOCOMPLETE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_MULTIWORKSPACE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_ONBOARDING_AI_CHAT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_OPENAI_REASONING_SUMMARY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGGER_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGGER_IS_BUFFER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts",
+            "read in packages/twenty-server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_EXEC_THROTTLE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_EXEC_THROTTLE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_LAYER_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_LAYER_BUCKET_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_RESOURCE_TAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LAMBDA_SUBHOSTING_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIC_FUNCTION_LEGACY_ROUTE_CUTOFF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOGIN_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_CATALOG_SYNC_CRON_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_NUMBER_OF_WORKSPACES_DELETED_PER_EXECUTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_TARBALL_UPLOAD_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGING_GMAIL_PUBSUB_TOPIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGING_GMAIL_PUBSUB_VERIFICATION_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGING_MESSAGES_GET_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGING_PROVIDER_GMAIL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGING_PROVIDER_MICROSOFT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "METER_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METER_EXPORT_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METER_TEMPORALITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MISTRAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MUTATION_MAXIMUM_AFFECTED_RECORDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/environment/environment.module.ts",
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts",
+            "read in packages/twenty-server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_TLS_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-front/codegen-metadata.cjs",
+            "read in packages/twenty-front/codegen.cjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONBOARDING_BOOK_CALL_MIN_EMPLOYEE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONBOARDING_IMPORT_CONTACTS_CREDITS_REWARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONBOARDING_INVITE_TEAM_CREDITS_REWARD_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONBOARDING_INVITE_TEAM_MAX_INVITES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUTBOUND_HTTP_SAFE_MODE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD_RESET_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PEOPLE_DATA_LABS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_DATABASE_PRIMARY_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_DATABASE_REPLICA_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_DATABASE_REPLICA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "packages/twenty-server/.env.example declares PG_DATABASE_URL",
+            "packages/twenty-docker/twenty/Dockerfile declares PG_DATABASE_URL",
+            "packages/twenty-docker/twenty/entrypoint.sh declares PG_DATABASE_URL",
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PG_POOL_ALLOW_EXIT_ON_IDLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_POOL_IDLE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_POOL_MAX_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PG_SSL_ALLOW_SELF_SIGNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAYGROUND_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_DOMAIN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SERVER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-front/codegen-admin.cjs",
+            "read in packages/twenty-front/codegen-metadata.cjs",
+            "read in packages/twenty-front/codegen.cjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "packages/twenty-server/.env.example declares REDIS_URL",
+            "packages/twenty-docker/twenty/Dockerfile declares REDIS_URL",
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REFRESH_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REFRESH_TOKEN_REUSE_GRACE_PERIOD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_DOMAIN_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_WEBHOOK_SIGNING_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH_ILIKE_FALLBACK_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_FRONT_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_FRONT_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_PROFILES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_KEEP_ALIVE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_ABSOLUTE_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_IDLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_OUTBOUND_SNS_TOPIC_ARN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_SNS_TOPIC_ARN_ALLOWLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SHORT_TERM_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHOULD_SEED_STANDARD_RECORD_PAGE_LAYOUTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIGNING_KEY_ROTATION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIGN_IN_PREFILLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts",
+            "read in packages/twenty-server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_KEY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts",
+            "read in packages/twenty-server/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_LOCAL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_PRESIGNED_URL_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_PRESIGNED_URL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_PRESIGNED_URL_EXPIRES_IN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "STORAGE_S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set a value that stores files outside the container",
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts",
+            "read in packages/twenty-docker/twenty/Dockerfile"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUPPORT_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPPORT_FRONT_CHAT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPPORT_FRONT_HMAC_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TATAMI_SES_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TATAMI_SNS_TOPIC_ARN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TWENTY_API_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-client-sdk/src/metadata/generated/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TWENTY_COMPANION_DEV_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-companion/src/main/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TWO_FACTOR_AUTHENTICATION_RECOVERY_CODE_EXPIRES_IN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPEORM_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPESAFE_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "USAGE_LIMIT_DEFAULTS_BY_PLAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USAGE_ROLLUP_FLUSH_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_CALL_RATE_LIMITING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_CALL_RATE_LIMITING_TTL_IN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_ENABLED_QUEUES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_EXCLUDED_QUEUES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_EXEC_HARD_THROTTLE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_EXEC_HARD_THROTTLE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_EXEC_SOFT_THROTTLE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_EXEC_SOFT_THROTTLE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_AGNOSTIC_TOKEN_EXPIRES_IN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_AUTO_LOGIN_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_INACTIVE_DAYS_BEFORE_DELETION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_INACTIVE_DAYS_BEFORE_NOTIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_INACTIVE_DAYS_BEFORE_SOFT_DELETION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_RECORD_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_SCHEMA_DDL_LOCKED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_STORAGE_LIMIT_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/twenty-server/src/engine/core-modules/twenty-config/config-variables.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "packages/twenty-docker/k8s/terraform/main.tf"
+    ],
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: STORAGE_TYPE, TWENTY_API_URL. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (packages/twenty-docker/k8s/terraform/main.tf). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "buildTarget": "twenty-aws",
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

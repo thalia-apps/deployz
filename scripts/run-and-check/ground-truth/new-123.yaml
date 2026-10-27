@@ -1,0 +1,160 @@
+id: new-123
+repository: apache/superset
+commit: 61a784eea53cba2756d4fecebe3a8a497fcf844e
+summary: >
+  Apache Superset BI platform (Flask + gunicorn, React frontend built with npm/webpack in the same Dockerfile). The root
+  Dockerfile is multi-stage and its LAST stage (showtime) is a CI image without a Postgres driver, so the build needs
+  `--target superset` (batteries-included image with Postgres, MySQL drivers and Chromium). The image CMD starts only gunicorn
+  on 8088; the metadata DB migration (`superset db upgrade`, `superset init`, first admin) is a separate command. The default
+  metadata DB is SQLite in the container, so a deploy must set a Postgres or MySQL URI and a secret key through env.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One web image (target superset, port 8088) plus RDS Postgres. Required changes: build target superset, env
+    SUPERSET_SECRET_KEY and SUPERSET__SQLALCHEMY_DATABASE_URI, and a one-off command `superset db upgrade && superset init` plus an admin user.
+    Redis, Celery workers and beat (alerts, reports, async queries, thumbnails) are optional and are enabled only by a Python config file
+    (superset_config.py), so the core web and SQL Lab work without them. DEPLOYABLE is acceptable if the platform sets the target and migration command itself.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: dockerize.Dockerfile, reason: "builds the dockerize helper tool from alpine, not the app"}
+    - {path: superset-websocket/Dockerfile, reason: "separate image for the optional websocket server; the root image already bundles it"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+  target: superset
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 337, quote: "FROM lean AS superset"}
+    - {path: Dockerfile, line: 437, quote: "FROM lean AS showtime"}
+    - {path: Dockerfile, line: 355, quote: "/app/docker/pip-install.sh --requires-build-essential .[postgres,mysql,fastmcp]"}
+    - {path: Dockerfile, line: 428, quote: "FROM lean AS ci"}
+    - {path: Dockerfile, line: 374, quote: "FROM python-common AS dev"}
+runtime: {accept: [python]}
+port:
+  accept: [8088]
+  evidence:
+    - {path: Dockerfile, line: 222, quote: "SUPERSET_PORT=\"8088\""}
+    - {path: Dockerfile, line: 289, quote: "EXPOSE ${SUPERSET_PORT}"}
+    - {path: docker/entrypoints/run-server.sh, line: 31, quote: "${SUPERSET_PORT:-8088}"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/entrypoints/run-server.sh, line: 31, quote: "${SUPERSET_BIND_ADDRESS:-0.0.0.0}"}
+startCommand:
+  source: image
+  accept: ["/app/docker/entrypoints/run-server.sh", "gunicorn"]
+healthPath:
+  accept: ["/health", "/healthcheck", "/ping"]
+  # health blueprint is registered on the app root with no login; talisman force_https=False so the ALB (HTTP to the task) gets 200 "OK", no redirect.
+  evidence:
+    - {path: superset/views/health.py, line: 26, quote: "@health_blueprint.route(\"/health\")"}
+    - {path: superset/views/health.py, line: 33, quote: "return \"OK\""}
+    - {path: superset/views/health.py, line: 29, quote: "@talisman(force_https=False)"}
+    - {path: superset/initialization/__init__.py, line: 287, quote: "self.superset_app.register_blueprint(health_blueprint)"}
+    - {path: Dockerfile, line: 287, quote: "HEALTHCHECK CMD /app/docker/docker-healthcheck.sh"}
+database:
+  status: required
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {SUPERSET__SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://USER:PASSWORD@HOST:5432/DB"}
+  connectionVars: [SUPERSET__SQLALCHEMY_DATABASE_URI]
+  evidence:
+    - {path: superset/config.py, line: 293, quote: "sqlite:///{os.path.join(DATA_DIR, \"superset.db\")}"}
+    - {path: superset/config.py, line: 3861, quote: "\"SUPERSET__SQLALCHEMY_DATABASE_URI\","}
+    - {path: superset/config.py, line: 3868, quote: "globals()[config_var] = os.environ[env_var]"}
+    - {path: pyproject.toml, line: 263, quote: "postgres = [\"psycopg2-binary==2.9.13\"]"}
+    - {path: pyproject.toml, line: 245, quote: "mysql = [\"mysqlclient>=2.3.0, <3\"]"}
+migrations:
+  mode: command
+  accept: ["superset db upgrade", "superset init", "superset fab create-admin", "docker-init.sh"]
+  evidence:
+    - {path: docker/docker-init.sh, line: 41, quote: "superset db upgrade"}
+    - {path: docker/docker-init.sh, line: 46, quote: "superset fab create-admin"}
+    - {path: docker/docker-init.sh, line: 55, quote: "superset init"}
+    - {path: Dockerfile, line: 288, quote: "CMD [\"/app/docker/entrypoints/run-server.sh\"]"}
+    - {path: docker-compose-non-dev.yml, line: 85, quote: "command: [\"/app/docker/docker-init.sh\"]"}
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: superset/config.py, line: 1502, quote: "CACHE_CONFIG: CacheConfig = {\"CACHE_TYPE\": \"NullCache\"}"}
+    - {path: superset/config.py, line: 2243, quote: "RESULTS_BACKEND: BaseCache | None = None"}
+    - {path: superset/config.py, line: 2048, quote: "broker_url = \"sqla+sqlite:///celerydb.sqlite\""}
+    - {path: docker/pythonpath_dev/superset_config.py, line: 63, quote: "REDIS_HOST = os.getenv(\"REDIS_HOST\", \"redis\")"}
+workers:
+  status: optional-independent
+  commands:
+    - "celery --app=superset.tasks.celery_app:app worker -O fair -l INFO"
+    - "celery --app=superset.tasks.celery_app:app beat -l INFO"
+  evidence:
+    - {path: docker/docker-bootstrap.sh, line: 67, quote: "celery --app=superset.tasks.celery_app:app worker"}
+    - {path: docker/docker-bootstrap.sh, line: 72, quote: "celery --app=superset.tasks.celery_app:app beat"}
+    - {path: docker-compose-non-dev.yml, line: 105, quote: "command: [\"/app/docker/docker-bootstrap.sh\", \"worker\"]"}
+    - {path: superset/config.py, line: 2068, quote: "\"reports.scheduler\": {"}
+scheduledJobs:
+  status: optional
+  items: [reports.scheduler, reports.prune_log, version_history.prune_old_versions, deletion_retention.purge_soft_deleted, deletion_retention.prune_purge_audit]
+  evidence:
+    - {path: superset/config.py, line: 2067, quote: "beat_schedule = {"}
+    - {path: docker/docker-bootstrap.sh, line: 72, quote: "celery --app=superset.tasks.celery_app:app beat"}
+storage:
+  local: ephemeral
+  paths: [/app/superset_home, /app/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: superset/config.py, line: 106, quote: "DATA_DIR = os.environ[\"SUPERSET_HOME\"]"}
+    - {path: Dockerfile, line: 272, quote: "RUN mkdir -p /app/data && chown -R superset:superset /app/data"}
+    - {path: superset/config.py, line: 1691, quote: "There is no implicit"}
+env:
+  required:
+    - {name: SUPERSET_SECRET_KEY, secret: true, buildTime: false, note: "the app exits at boot with the default or empty key; set a random value (openssl rand -base64 42). It also encrypts stored DB passwords, so keep it stable"}
+    - {name: SUPERSET__SQLALCHEMY_DATABASE_URI, secret: true, buildTime: false, note: "full SQLAlchemy URI for the metadata DB (postgresql+psycopg2://...); default is SQLite on local disk (ephemeral). Contains the DB password"}
+    - {name: ADMIN_PASSWORD, secret: true, buildTime: false, note: "used by docker-init.sh for create-admin (user admin); the script default is admin. The target image CMD does not run the init, so the migration command must create the admin with a strong password"}
+  optional: [SUPERSET_CONFIG_PATH, SUPERSET_PORT, SUPERSET_BIND_ADDRESS, SERVER_WORKER_AMOUNT, SERVER_THREADS_AMOUNT, SERVER_WORKER_CLASS, GUNICORN_TIMEOUT, TALISMAN_ENABLED, SUPERSET_APP_ROOT, SUPERSET_LOAD_EXAMPLES, SERVER_STATSD_HOST]
+  buildTime: []
+  evidence:
+    - {path: superset/config.py, line: 289, quote: "SECRET_KEY = os.environ.get(\"SUPERSET_SECRET_KEY\") or CHANGE_ME_SECRET_KEY"}
+    - {path: superset/initialization/__init__.py, line: 1181, quote: "Refusing to start due to insecure SECRET_KEY"}
+    - {path: docker/docker-init.sh, line: 38, quote: "ADMIN_PASSWORD=\"${ADMIN_PASSWORD:-admin}\""}
+    - {path: superset/config.py, line: 2328, quote: "CONFIG_PATH_ENV_VAR = \"SUPERSET_CONFIG_PATH\""}
+    - {path: superset/config.py, line: 422, quote: "ENABLE_PROXY_FIX = False"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: Postgres and MySQL are supported through SUPERSET__SQLALCHEMY_DATABASE_URI"
+    - "Redis must not be required: caches default to NullCache and Celery is optional; the core web and sync SQL Lab work without it"
+    - "Celery worker and beat must not make the app NOT_DEPLOYABLE: they run from the same image with another command and are optional"
+    - "The websocket server (superset-websocket, WEBSOCKET_ENABLE False by default) must not count as a second image: it is bundled in the same image and optional"
+    - "Chromium/Playwright in the image must not block: it is installed in the same Dockerfile (only memory/size cost)"
+    - "dev and docker-compose files (Redis, Postgres, nginx, worker, beat, websocket) must not count as the production topology"
+    - "Analytics sources (customer data warehouses) are external databases the user connects in the UI, not Deployz services"
+vendorQuestions:
+  legitimate:
+    - "Is Alerts & Reports, async SQL Lab or thumbnails needed? These need Redis plus Celery worker and beat and a superset_config.py (not env-configurable)"
+    - "Which admin username, email and password should the first user have?"
+  unnecessary:
+    - "Which port? (8088 in the image)"
+    - "Health path? (/health returns OK)"
+    - "Which Dockerfile? (root Dockerfile; target superset)"
+    - "Which database? (Postgres via SUPERSET__SQLALCHEMY_DATABASE_URI)"
+traps:
+  - "Dockerfile has several stages; with no --target the last stage showtime is built: it has DuckDB but no Postgres driver and its CMD docker-ci.sh runs init with admin/admin (Dockerfile:437-441). Use --target superset (Dockerfile:337)"
+  - "Stage lean (Dockerfile:294) has no psycopg2 or mysqlclient, so Postgres metadata DB fails there; stage superset adds them (Dockerfile:355)"
+  - "Stage dev (Dockerfile:374) is for development with bind mounts and DEV_MODE; not for production"
+  - "docker-compose files run Redis, Postgres, worker, beat, websocket, nginx -> dev/CI topology, not required for the web app"
+  - "Image CMD runs only gunicorn; db upgrade and init are not run at boot (Dockerfile:288, docker-init.sh:41-55), so the first start has an empty/uninitialised metadata DB"
+  - "Default SECRET_KEY is the placeholder CHANGE_ME_...; the app refuses to start unless SUPERSET_SECRET_KEY is set (config.py:289, initialization/__init__.py:1181)"
+  - "docker/pythonpath_dev/superset_config.py is dev only and is not copied into the image (PYTHONPATH /app/pythonpath is empty: Dockerfile:221); production config is env only unless a config file is added"
+  - "ENABLE_PROXY_FIX is False and can be set only in a config file: behind the HTTPS ALB generated absolute URLs may use http (config.py:422)"
+  - "Frontend build runs webpack with max_old_space_size=8192 and npm ci -> the build needs much memory (superset-frontend/package.json:42, Dockerfile:105, Dockerfile:122)"
+openQuestions:
+  - "Whether a superset_config.py layer is needed for ENABLE_PROXY_FIX behind the ALB (OAuth redirects, rate limit by client IP): it cannot be set with env"
+  - "Whether the Deployz build memory is enough for the webpack build (8 GB heap) and Chromium install"
+crossReview:
+  - {field: dockerfile.reject, change: "added superset-websocket/Dockerfile and .devcontainer/Dockerfile", evidence: "git ls-files lists both; Dockerfile:274-285 bundles the websocket in the root image"}
+  - {field: migrations.accept, change: "added docker-init.sh: the script is copied into the image (docker/*.sh) and runs db upgrade, create-admin and init, so an analysis that names it is right", evidence: "Dockerfile:180; docker/docker-init.sh:41,46,55"}
+  - {field: scheduledJobs.items, change: "added version_history.prune_old_versions and deletion_retention.prune_purge_audit (also in beat_schedule)", evidence: "superset/config.py:2080,2091"}
+  - {field: traps line refs, change: "Dockerfile:437-442 -> 437-441 (file ends at 441); npm ci ref added Dockerfile:105", evidence: "Dockerfile:105,122,437-441"}
+  - {field: dockerfile target / healthPath / env / database, change: "none: target superset confirmed (last stage showtime has no Postgres driver: requirements/base.txt has no psycopg2); /health is registered with force_https False and TALISMAN force_https is False in both configs, so no redirect behind the ALB; SECRET_KEY exit and SUPERSET__ env override confirmed; all COPY sources are in git and setup.py tolerates a missing .git", evidence: "Dockerfile:337,437-441; superset/config.py:3038,3087,3134; setup.py:31-36"}
+  - {field: all, change: verified, evidence: "42 citations checked"}

@@ -1,0 +1,147 @@
+id: new-103
+repository: infiniflow/ragflow
+commit: 5966db46ab4abc849a2ad668795ee9cb2e5417ef
+summary: >
+  RAGFlow RAG engine (Go backend binary ragflow_server, React web UI, nginx in the same container). The root
+  Dockerfile image runs nginx on port 80 and several ragflow_server processes (api, syncer, ingestor). It needs
+  a document/vector engine (Elasticsearch by default), a NATS JetStream server, Kvrocks (Redis protocol) and
+  MinIO or other object storage, besides MySQL or Postgres metadata. The Dockerfile build also needs the
+  infiniflow/ragflow_deps image, the runner base images and a .git directory.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The app cannot start without a document engine (elasticsearch, infinity, opensearch, oceanbase, seekdb, serenedb,
+    vastbase or gaussdb), and every one is a separate service that Deployz does not offer. It also needs NATS
+    JetStream (queue and KV store) and Kvrocks. The root Dockerfile cannot build from a repo archive: it needs
+    a pre-built infiniflow/ragflow_deps image and a .git directory.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "builds the app, but needs infiniflow/ragflow_deps:latest bind mounts (not a base image), infiniflow/github_action_runner base images and a .git bind mount for VERSION; none exist in a repo archive build"}
+    - {path: Dockerfile_ci, reason: "CI image on infiniflow/ragflow-base:v2.1 (old Python layout); not the production Go image"}
+    - {path: Dockerfile_base, reason: "base image for CI use, not the app"}
+    - {path: Dockerfile_tei, reason: "text-embeddings-inference model server, not the app"}
+    - {path: deps/Dockerfile, reason: "builds the scratch deps data image (infiniflow/ragflow_deps), not the app"}
+  target: production
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 33, quote: "RUN --mount=type=bind,from=infiniflow/ragflow_deps:latest,source=/huggingface.co,target=/huggingface.co"}
+    - {path: Dockerfile, line: 11, quote: "FROM infiniflow/github_action_runner:latest      AS runner-amd64"}
+    - {path: Dockerfile, line: 200, quote: "RUN --mount=type=bind,source=.git,target=/ragflow/.git"}
+    - {path: Dockerfile, line: 279, quote: "FROM base AS production"}
+    - {path: deps/Dockerfile, line: 2, quote: "docker build -f Dockerfile -t infiniflow/ragflow_deps:latest ."}
+runtime: {accept: [go]}
+port:
+  accept: [80]
+  evidence:
+    - {path: docker/nginx/ragflow.conf, line: 2, quote: "listen 80;"}
+    - {path: docker/nginx/ragflow.conf, line: 18, quote: "location ~ ^/api/v1 {"}
+    - {path: docker/service_conf.yaml.template, line: 5, quote: "http_port: 9380"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/service_conf.yaml.template, line: 4, quote: "host: ${RAGFLOW_HOST:-0.0.0.0}"}
+startCommand:
+  source: image
+  accept: ["./entrypoint.sh"]
+healthPath:
+  accept: ["/api/v1/system/ping"]
+  # nginx proxies only /api/v1 to the Go server, so a bare /health goes to the SPA index. /api/v1/system/ping returns "pong" with no auth
+  # and no dependency check. /api/v1/system/healthz returns 500 when a dependency is down.
+  evidence:
+    - {path: internal/router/router.go, line: 156, quote: "apiNoAuth.GET(\"/system/ping\", r.systemHandler.Ping)"}
+    - {path: internal/handler/system.go, line: 49, quote: "c.String(http.StatusOK, \"pong\")"}
+    - {path: internal/router/router.go, line: 152, quote: "engine.GET(\"/health\", r.systemHandler.Health)"}
+database:
+  status: required
+  engines: [mysql, postgres, gaussdb, oceanbase]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DBNAME]
+  evidence:
+    - {path: docker/.env, line: 40, quote: "DB_TYPE=${DB_TYPE:-mysql}"}
+    - {path: docker/service_conf.yaml.template, line: 34, quote: "host: '${MYSQL_HOST:-mysql}'"}
+    - {path: docker/service_conf.yaml.template, line: 146, quote: "# postgres:"}
+migrations:
+  mode: startup
+  accept: ["bin/ragflow_server --migrate"]
+  evidence:
+    - {path: docker/entrypoint.sh, line: 117, quote: "bin/ragflow_server --migrate"}
+redis:
+  status: required
+  selectBy: {KVROCKS_HOST: kvrocks, KVROCKS_PORT: "6379", REDIS_PASSWORD: secret}
+  evidence:
+    - {path: docker/service_conf.yaml.template, line: 109, quote: "host: '${KVROCKS_HOST:-kvrocks}:${KVROCKS_PORT:-6379}'"}
+    - {path: docker/.env, line: 237, quote: "Kvrocks is the only"}
+    - {path: cmd/ragflow_server.go, line: 572, quote: "if err = kvrocks.Init(ctx); err != nil {"}
+workers:
+  status: embedded
+  # entrypoint.sh starts the syncer and the ingestor in the same container by default (ENABLE_INGESTOR=1, ENABLE_DATASYNC=1); a separate worker service is optional
+  commands: []
+  evidence:
+    - {path: docker/entrypoint.sh, line: 186, quote: "run_with_restart \"ingestor\" bin/ragflow_server --ingestor &"}
+    - {path: docker/entrypoint.sh, line: 179, quote: "run_with_restart \"RAGFlow go server\" bin/ragflow_server --syncer &"}
+    - {path: docker/entrypoint.sh, line: 31, quote: "ENABLE_INGESTOR=1"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: []
+  s3: native
+  s3SelectBy: {STORAGE_IMPL: s3}
+  evidence:
+    - {path: internal/server/config/general_config.go, line: 45, quote: "c.general.StorageEngine = \"minio\""}
+    - {path: internal/server/config/environments.go, line: 187, quote: "case \"minio\", \"s3\", \"oss\", \"gcs\":"}
+    - {path: docker/service_conf.yaml.template, line: 42, quote: "host: '${MINIO_HOST:-minio}:9000'"}
+    - {path: docker/service_conf.yaml.template, line: 157, quote: "#   access_key: 'access_key'"}
+env:
+  required:
+    - {name: DOC_ENGINE, secret: false, buildTime: false, note: "elasticsearch (default), infinity, opensearch, oceanbase, seekdb, serenedb, vastbase or gaussdb; each needs its own service"}
+    - {name: "MYSQL_HOST / MYSQL_PORT / MYSQL_USER / MYSQL_PASSWORD / MYSQL_DBNAME", secret: false, buildTime: false, note: "metadata database; the password is secret"}
+    - {name: "ES_HOST / ELASTIC_PASSWORD", secret: true, buildTime: false, note: "document engine connection (hosts http://es01:9200 default)"}
+    - {name: "KVROCKS_HOST / KVROCKS_PORT / REDIS_PASSWORD", secret: true, buildTime: false, note: "Kvrocks cache and queue backend"}
+    - {name: "NATS_HOST / NATS_PORT", secret: false, buildTime: false, note: "NATS JetStream server for the ingestion queue and KV store"}
+    - {name: "MINIO_HOST / MINIO_USER / MINIO_PASSWORD", secret: true, buildTime: false, note: "object storage; S3 is selectable with STORAGE_IMPL but needs static access keys in the config file"}
+  optional: [DB_TYPE, STORAGE_IMPL, RAGFLOW_HOST, DEVICE, TEI_HOST, OPENSEARCH_PASSWORD, INFINITY_HOST]
+  buildTime: [NEED_MIRROR, GOPROXY]
+  evidence:
+    - {path: docker/.env, line: 36, quote: "DOC_ENGINE=${DOC_ENGINE:-elasticsearch}"}
+    - {path: docker/service_conf.yaml.template, line: 50, quote: "hosts: 'http://${ES_HOST:-es01}:9200'"}
+    - {path: docker/service_conf.yaml.template, line: 127, quote: "mq_type: 'nats'"}
+blockers:
+  expected:
+    - "Document/vector engine (Elasticsearch default; infinity, opensearch, oceanbase, seekdb, serenedb, vastbase, gaussdb) is required for indexing and search; none is a Deployz managed service"
+    - "NATS JetStream server is required for the ingestion queue and KV store; not a Deployz managed service"
+    - "Kvrocks is the only cache/queue backend the Go services use; it is not ElastiCache Redis"
+    - "Root Dockerfile cannot build from a repo archive: infiniflow/ragflow_deps image bind mounts and a .git bind mount"
+  mustNot:
+    - "Several processes in the container (nginx, api, syncer, ingestor) must not count as several images: one image, one entrypoint script"
+    - "Port 9380 or 9381 must not be the ALB port: nginx on port 80 is the public entry"
+    - "MinIO must not be a blocker by itself: STORAGE_IMPL can select s3, gcs or oss"
+    - "ClickHouse must not be a blocker: it is a compose profile (analytics, enterprise engine), not started by default"
+    - "GPU/DEVICE and the TEI embedding image must not block: they are optional"
+vendorQuestions:
+  legitimate:
+    - "Can a deployment use a hosted document engine, a hosted NATS and a hosted Kvrocks, since Deployz cannot run them?"
+  unnecessary:
+    - "Which port? (nginx 80)"
+    - "Who runs migrations? (entrypoint runs bin/ragflow_server --migrate)"
+    - "Health path? (/api/v1/system/ping)"
+traps:
+  - "docker-compose.yml and docker-compose-base.yml list MySQL, MinIO, Elasticsearch, Kvrocks, NATS -> these are the required topology, not optional extras (docker/docker-compose-base.yml:402)"
+  - "DB_TYPE=postgres is allowed -> the metadata DB is flexible but the document engine still blocks (docker/.env:40)"
+  - "Port 9380 in service_conf and Dockerfile layout -> nginx on 80 is the public port (docker/nginx/ragflow.conf:2)"
+  - "Dockerfile has a production stage that builds from source -> it still depends on infiniflow/ragflow_deps and a .git mount (Dockerfile:33, Dockerfile:200)"
+  - "Dockerfile_ci / Dockerfile_base look like app images -> they are CI/base images"
+  - "/health exists in the Go router -> nginx does not proxy it, so it reaches the SPA (internal/router/router.go:152, docker/nginx/ragflow.conf:18)"
+openQuestions:
+  - "ClickHouse is the default analytic engine name in the config (internal/server/config/general_config.go:48); it is not confirmed whether the open-source build needs it at runtime"
+  - "Whether Kvrocks could be replaced by ElastiCache Redis: the code names Kvrocks only; not tested"
+crossReview:
+  - {field: workers.status, change: "independent -> embedded; the image entrypoint starts the syncer and the ingestor in the same container by default, so no separate worker service is needed (they can be turned off with --disable-ingestor and --disable-syncer). commands cleared", evidence: "docker/entrypoint.sh:31 ENABLE_INGESTOR=1; docker/entrypoint.sh:179; docker/entrypoint.sh:186"}
+  - {field: blockers.mustNot, change: "added ClickHouse (profile-gated service in compose base, analytics engine, not started by default); added an open question", evidence: "docker/docker-compose-base.yml:477-479 profiles: clickhouse; internal/engine/clickhouse/clickhouse_ee.go"}
+  - {field: "outcome, dockerfile, port, healthPath, database, migrations, redis, storage", change: "none: challenged and confirmed (Dockerfile bind-mounts infiniflow/ragflow_deps and .git so no archive build; nginx proxies only /api/v1 so /api/v1/system/ping is the no-auth path; migrations run by the entrypoint before the servers; NATS and Kvrocks init are mandatory; DB_TYPE mysql default)", evidence: "Dockerfile:33; Dockerfile:200; docker/nginx/ragflow.conf:18; internal/router/router.go:156; docker/entrypoint.sh:117; internal/engine/nats/nats.go:81"}
+  - {field: all, change: verified, evidence: "29 citations checked"}

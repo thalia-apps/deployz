@@ -904,10 +904,11 @@ const HEALTH_ROUTE_FILE_REGEX =
   /(?:^|\/)(?:health|healthz|healthcheck|heartbeat)(?:\.controller)?(?:\.[jt]sx?|\/(?:route|index|\+server)\.[jt]sx?)$/i;
 // Route and boot files in languages that are not source extensions: Laravel
 // declares its routes, and the framework health route (`health: '/up'`), in
-// `routes/*.php` and `bootstrap/app.php`; ASP.NET maps its endpoints and health
+// `routes/*.php` and `bootstrap/app.php`, and the prefix of `routes/api.php` in
+// `app/Providers/RouteServiceProvider.php`; ASP.NET maps its endpoints and health
 // checks in `Program.cs` or `Startup.cs`. Without them the AI analyst never sees
 // those routes.
-const ROUTE_ENTRY_FILE_REGEX = /(?:^|\/)(?:(?:bootstrap\/app|routes\/[\w.-]+)\.php|Program\.cs|Startup\.cs)$/;
+const ROUTE_ENTRY_FILE_REGEX = /(?:^|\/)(?:(?:bootstrap\/app|routes\/[\w.-]+|app\/Providers\/RouteServiceProvider)\.php|Program\.cs|Startup\.cs)$/;
 // Lockfiles the §18 package-manager detector needs — matched by BASENAME
 // only (not `isRelevantPath`'s path-prefix shapes): their presence is the
 // signal, never their content, so they are never blob-fetched and never
@@ -1004,7 +1005,9 @@ function isLockfilePath(path: string): boolean {
 // the analyser applies), and on a large repository they are numerous enough
 // to push every application source file out of the cap (Stage A COMP-018).
 // Within the application-source tiers, shallower files come first —
-// `src/server.ts` before `src/features/x/y/z.ts`.
+// `src/server.ts` before `src/features/x/y/z.ts`. Manifests too: a plugin
+// collection (`packages/pieces/community/<600 dirs>/package.json`) must not
+// push the server's own `packages/server/api/package.json` out of the cap.
 //
 // Files where an application declares how it starts, listens and routes —
 // the ones the port/health/env detectors need most on a repository with far
@@ -1056,7 +1059,8 @@ function relevancePriority(path: string, protectedPaths: ReadonlySet<string>): n
 function compareRelevance(a: string, b: string, protectedPaths: ReadonlySet<string>): number {
   const priorityDiff = relevancePriority(a, protectedPaths) - relevancePriority(b, protectedPaths);
   if (priorityDiff !== 0) return priorityDiff;
-  return relevancePriority(a, protectedPaths) >= 5 ? a.split('/').length - b.split('/').length : 0;
+  const priority = relevancePriority(a, protectedPaths);
+  return priority >= 5 || priority === 1 ? a.split('/').length - b.split('/').length : 0;
 }
 
 export interface RepositoryRef {

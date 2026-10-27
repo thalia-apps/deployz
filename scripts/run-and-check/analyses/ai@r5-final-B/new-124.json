@@ -1,0 +1,982 @@
+{
+  "id": "new-124",
+  "commit": "d491ad88ce45448fba69cbf462cd629a09dcc0bd",
+  "analyser": "ai@r5-final-B",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/keeper/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/entrypoint.sh\"]",
+      "port": 2181
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_BUILDS_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in ci/jobs/build_clickhouse.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_CONFIG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/project_init.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/secret.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/secret.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SHARED_CREDENTIALS_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in ci/praktika/project_init.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHECK_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py",
+            "read in ci/jobs/stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHPC_CHECK_START_TIMESTAMP",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/performance_tests.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CH_HOSTNAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in rust/chcache/src/config.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CH_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in rust/chcache/src/config.rs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "CH_USER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in rust/chcache/src/config.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CH_USE_LOCAL_CACHE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in rust/chcache/src/config.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CI_LOGS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/build_profile_diff_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CI_LOGS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in ci/jobs/build_profile_diff_job.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CI_LOGS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/build_profile_diff_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_BUILD_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_COMPILE_LOCAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_CPUS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_DOCKER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_FORCE_LOCAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_GVISOR_BINARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_GVISOR_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_MEMORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_PIDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_PIPE_CAPACITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_RUN_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_C_DRIVER_SKIP_DOCKER_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in programs/server/user_defined_executable_function_drivers/c_driver_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMPLIANCE_RESULT_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/integration_test_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DIFF_REVIEW_FORCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_CI_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/hook_cache.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISPLAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCKER_BASE_TAG",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/integration_test_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EVENT_FEED_S3_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/event.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GH_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/revert_ci_regressions.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_ACTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/gh.py",
+            "read in ci/praktika/native_jobs.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_BASE_REF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_EVENT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_HEAD_REF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_PR_NUMBER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REF_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REPOSITORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/cloud_api_docs_nightly.py",
+            "read in ci/jobs/update_silk_submodule.py",
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REPOSITORY_OWNER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/info.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_RUN_ATTEMPT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITHUB_RUN_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_WORKFLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTANCE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTANCE_LIFE_CYCLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTANCE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JOB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py",
+            "read in ci/praktika/_environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KEEPER_INCLUDE_IDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KEEPER_MATRIX_BACKENDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KEEPER_PR_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KEEPER_RUN_FAULT_TESTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "KEEPER_RUN_NO_FAULT_TESTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/revert_ci_regressions.py",
+            "read in ci/praktika/utils.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRAKTIKA_HOST_WORKDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/runner.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRAKTIKA_LOCAL_RUN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/native_jobs.py",
+            "read in ci/praktika/s3.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PRAKTIKA_TEST_ACTIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/native_jobs.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PR_NUMBER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAFTKEEPER_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/keeper_stress_job.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUILDS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/auto_release_job.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCCACHE_ENDPOINT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/build_clickhouse.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SSH_AUTH_SOCK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/jepsen_check.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SSH_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSH_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSH_TTY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/praktika/result.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TWINE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in ci/jobs/build_praktika.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WASI_SDK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/build_wasm_parser.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WAYLAND_DISPLAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .claude/skills/diff-review/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_CONFIG_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ci/jobs/revert_ci_regressions.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: CHPC_CHECK_START_TIMESTAMP, CH_HOSTNAME, CH_PASSWORD, CH_USER, CH_USE_LOCAL_CACHE, and 6 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 12,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07172352,
+        "promptTokens": 17512,
+        "completionTokens": 120
+      },
+      "latencyMs": 3578
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 3579,
+    "questions": 2,
+    "generatedAt": "2026-10-27T14:53:48.818Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

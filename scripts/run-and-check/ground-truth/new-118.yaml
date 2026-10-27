@@ -1,0 +1,170 @@
+id: new-118
+repository: freescout-help-desk/freescout
+commit: 56c4d014cfbd5e0b038cc887d71e0c75fd6c3f1b
+summary: >
+  FreeScout is a self-hosted help desk and shared inbox (PHP, Laravel 5.5, MySQL or PostgreSQL). The branch is the
+  "dist" release branch: composer vendor files are committed. The repository has no Dockerfile, no compose file and
+  no web server config except Apache .htaccess files. One PHP web app (document root public/) plus a scheduler
+  (php artisan schedule:run every minute) that fetches email and starts a queue:work daemon. Attachments are stored on
+  local disk (storage/app); the repository has no S3 client library.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile exists, so the vendor must write one (PHP with Apache or nginx+php-fpm, document root public/, PHP
+    extensions such as gd, imap-less IMAP via webklex, zip, mbstring, pdo_mysql). More important, attachments and
+    customer photos are written to local disk storage/app. FILESYSTEM_DRIVER=s3 needs aws-sdk-php and the flysystem S3
+    adapter, which are not in vendor/ or composer.json; S3 comes from a separate module (freescout-help-desk/S3Storage)
+    that the vendor must add into Modules/ at image build. Without it, durable attachments are impossible on Fargate.
+    A background worker plus scheduler is also needed from the same image. NOT_DEPLOYABLE is the strict answer
+    (no Dockerfile and no durable file store in the repository); DEPLOYABLE_WITH_CHANGES is acceptable if the answer
+    names the missing Dockerfile and the S3 module as vendor changes.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 78, quote: "PHP 7.4 - 8.x"}
+    - {path: .env.example, line: 2, quote: "If you want to use web installer"}
+runtime: {accept: [php]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+healthPath:
+  accept: ["/robots.txt", "/login"]
+  # No server config in the repo. /robots.txt is a static file in public/ (200, no PHP, no check of the app).
+  # /login is the guest login form (200) only if the request carries X-Forwarded-Proto: https or APP_URL starts with
+  # http://; with an https APP_URL, HttpsRedirect answers a plain-HTTP ALB check with a redirect. / redirects to login for guests.
+  evidence:
+    - {path: public/robots.txt, line: 2, quote: "Disallow: /"}
+    - {path: routes/web.php, line: 18, quote: "Route::get(config('app.login_path'), 'Auth\\LoginController@showLoginForm')->name('login');"}
+    - {path: app/Http/Controllers/Auth/LoginController.php, line: 41, quote: "$this->middleware('guest')->except('logout');"}
+    - {path: app/Http/Middleware/HttpsRedirect.php, line: 31, quote: "if (\\Helper::isHttps() && !\\Helper::isConsole()) {"}
+    - {path: app/Http/Middleware/HttpsRedirect.php, line: 35, quote: "return redirect()->secure($request->getRequestUri());"}
+    - {path: app/Misc/Helper.php, line: 2770, quote: "|| ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') == 'https'"}
+    - {path: routes/web.php, line: 37, quote: "Route::get('/'.config('app.dashboard_path'), 'SecureController@dashboard')->name('dashboard');"}
+database:
+  status: required
+  engines: [mysql, pgsql, sqlite, sqlsrv]
+  default: mysql
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION: pgsql}
+  connectionVars: [DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  # MySQL is the default and the documented first choice. PostgreSQL also works with DB_CONNECTION=pgsql (default sslmode prefer).
+  # Deployz provisions PostgreSQL when the app can run on it (docs/ai-analysis.md "Database engine"), so the vendor sets DB_CONNECTION=pgsql.
+  evidence:
+    - {path: config/database.php, line: 16, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: config/database.php, line: 94, quote: "'driver'   => 'pgsql',"}
+    - {path: config/database.php, line: 103, quote: "'sslmode'  => env('DB_PGSQL_SSLMODE', 'prefer'),"}
+    - {path: README.md, line: 79, quote: "MySQL 5.0+ / MariaDB 5.0+ / PostgreSQL"}
+    - {path: .env.example, line: 40, quote: "DB_CONNECTION=mysql"}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force"]
+  # The web installer (public/install.php, /install) writes .env and creates the tables, but it needs a writable .env on disk,
+  # which is lost on task replacement. With APP_KEY set in the environment the installer is skipped and tables must be
+  # created by artisan. Admin user: php artisan freescout:create-user.
+  evidence:
+    - {path: app/Providers/AppServiceProvider.php, line: 73, quote: "if (!\\Config::get('app.key') && !app()->runningInConsole() && !file_exists(storage_path('.installed'))) {"}
+    - {path: app/Providers/AppServiceProvider.php, line: 76, quote: "redirect(\\Helper::getSubdirectory().'/install.php')->send();"}
+    - {path: public/install.php, line: 196, quote: "copy($root_dir.'.env.example', $root_dir.'.env');"}
+    - {path: app/Http/Controllers/SystemController.php, line: 312, quote: "\\Artisan::call('migrate', ['--force' => true], $outputLog);"}
+    - {path: app/Console/Commands/CreateUser.php, line: 15, quote: "protected $signature = 'freescout:create-user"}
+redis:
+  status: none
+  selectBy: {}
+  # Cache, session and queue use file or database drivers. No Redis client (predis) is in vendor/ and composer.json.
+  evidence:
+    - {path: config/cache.php, line: 18, quote: "'default' => env('CACHE_DRIVER', 'file'),"}
+    - {path: config/queue.php, line: 18, quote: "'default' => env('QUEUE_DRIVER', 'database'),"}
+    - {path: config/session.php, line: 19, quote: "'driver' => env('SESSION_DRIVER', 'file'),"}
+workers:
+  status: independent
+  commands: ["php artisan queue:work --queue=emails,default --sleep=5 --tries=1 --timeout=1800", "php artisan schedule:run"]
+  # The queue (default driver: database table) sends replies and notifications. schedule:run (every minute) starts the
+  # queue:work daemon itself and runs freescout:fetch-emails. A web cron URL (/system/cron/{hash}) runs schedule:run inside a web request.
+  evidence:
+    - {path: config/app.php, line: 197, quote: "'queue_work_params' => ['--queue' => 'emails,default', '--sleep' => '5', '--tries' => '1', '--timeout' => '1800'],"}
+    - {path: app/Console/Kernel.php, line: 262, quote: "$schedule->command('queue:work', $queue_work_params)"}
+    - {path: config/queue.php, line: 18, quote: "'default' => env('QUEUE_DRIVER', 'database'),"}
+    - {path: routes/open.php, line: 19, quote: "Route::get('/system/cron/{hash}', ['uses' => 'SystemController@cron'])->name('system.cron');"}
+scheduledJobs:
+  status: independent
+  items: [freescout:fetch-emails every minute, freescout:send-monitor, freescout:fetch-monitor, freescout:update-folder-counters, freescout:check-conv-viewers, freescout:clean-tmp, queue:restart, queue:flush]
+  evidence:
+    - {path: app/Console/Kernel.php, line: 34, quote: "if (!$this->isScheduleRun() && !\\Helper::isRoute('system.cron')) {"}
+    - {path: app/Console/Kernel.php, line: 153, quote: "$fetch_command = $schedule->command($fetch_command_name)"}
+    - {path: app/Http/Controllers/SystemController.php, line: 393, quote: "public function cron(Request $request)"}
+    - {path: app/Misc/Helper.php, line: 2739, quote: "return hash_hmac('sha512', 'web_cron_hash', config('app.key'));"}
+storage:
+  local: required
+  paths: [storage/app, storage/app/attachment, storage/app/public, storage/logs, storage/framework, Modules, storage/.installed]
+  s3: none
+  s3SelectBy: {}
+  # Core code: attachments use disk local_app (storage/app). The s3 disk entry exists but aws-sdk-php is not installed,
+  # so FILESYSTEM_DRIVER=s3 would fail. S3 is offered by a separate module that installs into Modules/ (local disk).
+  evidence:
+    - {path: app/Attachment.php, line: 22, quote: "const DISK = 'local_app';"}
+    - {path: config/filesystems.php, line: 65, quote: "'root'       => storage_path('app'),"}
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DRIVER', 'local'),"}
+    - {path: config/filesystems.php, line: 71, quote: "'driver' => 's3',"}
+    - {path: app/Misc/Helper.php, line: 3394, quote: "return config('filesystems.default') == 'local';"}
+    - {path: composer.json, line: 76, quote: "\"league/flysystem\": \"1.1.4\""}
+    - {path: README.md, line: 43, quote: "Native [S3 storage](https://github.com/freescout-help-desk/S3Storage) support."}
+    - {path: .gitignore, line: 27, quote: "/Modules"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "base64 key (php artisan key:generate); when empty the app redirects every request to /install.php"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for links and forced HTTPS (default http://localhost)"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "MySQL host; DB_PORT, DB_DATABASE, DB_USERNAME also needed"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password (max 50 characters per .env.example)"}
+    - {name: APP_TRUSTED_PROXIES, secret: false, buildTime: false, note: "set to * behind the ALB so the client IP and protocol are read from forwarded headers"}
+  optional: [DB_CONNECTION, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PGSQL_SSLMODE, DB_MYSQL_ATTR_SSL_CA, SESSION_SECURE_COOKIE, APP_TIMEZONE, APP_DEBUG, APP_REMOTE_HOST_WHITE_LIST, APP_FETCH_SCHEDULE, QUEUE_DRIVER, FILESYSTEM_DRIVER, APP_KEY_FILE]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 50, quote: "APP_KEY="}
+    - {path: .env.example, line: 10, quote: "APP_URL=https://example.com"}
+    - {path: .env.example, line: 33, quote: "#APP_TRUSTED_PROXIES=192.168.1.1,192.168.1.2,192.168.1.3"}
+    - {path: config/app.php, line: 3, quote: "$key = env('APP_KEY', null);"}
+    - {path: config/app.php, line: 73, quote: "'url' => env('APP_URL', 'http://localhost'),"}
+    - {path: config/trustedproxy.php, line: 30, quote: "'proxies' => preg_match("}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: the vendor must write one (PHP web server with document root public/, required PHP extensions)"
+    - "Attachments, customer photos and installed modules are written to local disk; the repository has no S3 client library, so there is no durable file store on Fargate without a vendor-added S3 module"
+    - "A scheduler (schedule:run every minute) and a queue:work daemon are needed from the same image; the repository gives no entrypoint or process manager for them"
+  mustNot:
+    - "MySQL or PostgreSQL must not block: both are supported through DB_CONNECTION"
+    - "Redis must not be required: cache, session and queue use file or the database"
+    - "The web installer must not be the production setup path: it writes .env on local disk; use environment variables and artisan"
+    - "Apache .htaccess files must not count as a Dockerfile or deploy config"
+    - "Committed vendor/ directory must not be treated as a missing install step"
+vendorQuestions:
+  legitimate:
+    - "Is the S3Storage module (or another way to keep attachments durable) added to the image? The repository does not contain it"
+    - "Which web server and PHP version go into the Dockerfile? The repository does not say"
+  unnecessary:
+    - "Which database? (MySQL default, PostgreSQL optional via DB_CONNECTION)"
+    - "Is Redis needed? (no)"
+    - "Who creates the .env? (APP_KEY and DB_* come from the environment)"
+traps:
+  - "README says Requirements Nginx / Apache / IIS and shared hosting -> a PHP source tree for manual install, not a container build (README.md:73-79)"
+  - "dist branch commits vendor/ -> no composer install step is needed, but there is still no Dockerfile"
+  - "README lists native S3 storage -> it is a separate module, not in the code; vendor/ has no aws-sdk-php (README.md:43)"
+  - ".env.example says to use the web installer and not to create .env -> the installer needs a writable .env that is lost on task replacement (.env.example:2, public/install.php:196)"
+  - "APP_URL with https:// makes HttpsRedirect redirect plain-HTTP requests that have no X-Forwarded-Proto header -> an ALB check on /login can get a redirect (app/Http/Middleware/HttpsRedirect.php:35)"
+  - "/ for a guest redirects to login, and /system/status needs admin login -> neither is a health path (routes/web.php:115)"
+  - "Scheduler starts queue:work as a background process -> a one-shot scheduled task would end it; a long-running worker is needed"
+openQuestions:
+  - "Whether a vendor-added S3Storage module works with an ECS task role (no static keys) is not known from this repository"
+  - "Whether queue:work started by schedule:run inside the web container is acceptable instead of a separate worker service is a vendor choice"
+crossReview:
+  - {field: outcome, dockerfile, healthPath, database, migrations, redis, workers, storage, env, change: "none: each challenged against the code. No Dockerfile or compose file exists; vendor/ has no aws-sdk-php, flysystem S3 adapter or predis; /robots.txt is static and /login redirects only when APP_URL is https and the request has no X-Forwarded-Proto; queue and session default to database/file; with APP_KEY set the installer is skipped", evidence: "composer.json (no aws/predis); vendor/league has only flysystem and mime-type-detection; app/Http/Middleware/HttpsRedirect.php:31-35; app/Providers/AppServiceProvider.php:73; app/Console/Kernel.php:262"}
+  - {field: all, change: verified, evidence: "44 citations checked"}
+  - {field: database.deployzEngine, change: "mysql -> postgres, selectBy {} -> {DB_CONNECTION: pgsql} (orchestrator): the app supports PostgreSQL, and Deployz provisions PostgreSQL when the app can run on it", evidence: "config/database.php:94, README.md:79"}

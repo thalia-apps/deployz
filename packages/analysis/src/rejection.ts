@@ -371,7 +371,8 @@ export function checkMysql(tree: FileTree): RejectionFinding {
  * manager or a BI tool ships the MongoDB, Elasticsearch and Cassandra
  * clients it connects customers' databases with. The rejection needs the
  * same corroboration a broker client needs (Stage A COMP-002, COMP-032):
- * a service running that database in the production Compose file, a
+ * a service running that database in the production Compose file (by its image
+ * or its name: `couchdb-service` runs `budibase/database`), a
  * connection variable the app reads without a fallback, or (MongoDB) the
  * app's own data model on it.
  */
@@ -382,7 +383,7 @@ function databaseCorroboration(
   modelRegex: RegExp | null,
 ): string | null {
   const compose = composeServices(tree);
-  const service = compose?.services.find((s) => !s.optional && s.image && imageRegex.test(s.image));
+  const service = compose?.services.find((s) => !s.optional && ((s.image && imageRegex.test(s.image)) || imageRegex.test(s.name)));
   if (compose && service) return `a ${service.name} service is defined in ${compose.file}`;
   const key = brokerConnectionRequired(tree, envRegex);
   if (key) return `${key} is required`;
@@ -424,8 +425,10 @@ export function checkMongo(tree: FileTree): RejectionFinding {
   return { detected: false, dependency: 'none', reason: 'No MongoDB dependency detected' };
 }
 
-/** Elasticsearch / OpenSearch: @elastic/elasticsearch, @opensearch-project/opensearch */
+/** Elasticsearch / OpenSearch: @elastic/elasticsearch, @opensearch-project/opensearch, and the Python clients. */
 const ES_DEPS = ['@elastic/elasticsearch', '@opensearch-project/opensearch'] as const;
+const ES_PYTHON_TOKENS = ['elasticsearch', 'elasticsearch-dsl', 'opensearch-py'] as const;
+const PY_MANIFEST_REGEX = /(?:^|\/)(?:requirements[^/]*\.txt|Pipfile|pyproject\.toml|setup\.py)$/;
 const ES_ENV_REGEX = /^(?:ELASTIC(?:SEARCH)?_(?:URL|URI|HOSTS?|NODE|NODES)|ES_(?:URL|HOSTS?|NODE)|OPENSEARCH_(?:URL|HOSTS?|NODE))$/;
 
 /**
@@ -433,8 +436,8 @@ const ES_ENV_REGEX = /^(?:ELASTIC(?:SEARCH)?_(?:URL|URI|HOSTS?|NODE|NODES)|ES_(?
  */
 export function checkElasticsearch(tree: FileTree): RejectionFinding {
   const deps = collectDependencyNames(tree);
-  for (const dep of ES_DEPS) {
-    if (!deps.includes(dep)) continue;
+  const python = ES_PYTHON_TOKENS.filter((token) => findDependencyEvidence(tree, token).some((path) => PY_MANIFEST_REGEX.test(path) && isRuntimeSourcePath(path)));
+  for (const dep of [...ES_DEPS.filter((name) => deps.includes(name)), ...python]) {
     const corroboration = databaseCorroboration(tree, /elasticsearch|opensearch/i, ES_ENV_REGEX, null);
     if (corroboration) {
       return {
@@ -451,9 +454,9 @@ export function checkElasticsearch(tree: FileTree): RejectionFinding {
   };
 }
 
-/** Other unsupported databases: cassandra-driver, neo4j-driver */
-const OTHER_UNSUPPORTED_DB_DEPS = ['cassandra-driver', 'neo4j-driver'] as const;
-const OTHER_DB_ENV_REGEX = /^(?:CASSANDRA_(?:HOSTS?|CONTACT_POINTS|URL)|NEO4J_(?:URI|URL|HOST))$/;
+/** Other unsupported databases: cassandra-driver, neo4j-driver, the CouchDB client nano */
+const OTHER_UNSUPPORTED_DB_DEPS = ['cassandra-driver', 'neo4j-driver', 'nano', '@budibase/nano'] as const;
+const OTHER_DB_ENV_REGEX = /^(?:CASSANDRA_(?:HOSTS?|CONTACT_POINTS|URL)|NEO4J_(?:URI|URL|HOST)|COUCH_?DB_(?:URL|URI|HOST))$/;
 const CLICKHOUSE_TOKENS = [
   '@clickhouse/client',
   'clickhouse-driver',
@@ -477,7 +480,7 @@ export function checkOtherUnsupportedDatabases(tree: FileTree): RejectionFinding
   const deps = collectDependencyNames(tree);
   for (const dep of OTHER_UNSUPPORTED_DB_DEPS) {
     if (!deps.includes(dep)) continue;
-    const corroboration = databaseCorroboration(tree, /cassandra|scylla|neo4j/i, OTHER_DB_ENV_REGEX, null);
+    const corroboration = databaseCorroboration(tree, /cassandra|scylla|neo4j|couchdb/i, OTHER_DB_ENV_REGEX, null);
     if (corroboration) {
       return {
         detected: true,
@@ -1041,7 +1044,13 @@ export function checkGpu(tree: FileTree): RejectionFinding {
   // variant next to the CPU image is an option, not a requirement (Stage A COMP-027).
   const selected = listDockerfileCandidates(tree)[0];
   const docker = selected && /nvidia\/cuda|cuda:|nvidia-smi|--gpus/.test(tree[selected] ?? '') ? [selected] : [];
-  const python = contentMatches(tree, /(?:^|\/)(?:requirements(?:[^/]*)\.txt|pyproject\.toml)$/, /tensorflow-gpu|nvidia-|torch.*cuda|cuda.*torch/);
+  // The NVIDIA GPU runtime libraries only: a hosted-API client (`nvidia-riva-client`,
+  // `langchain-nvidia-ai-endpoints`) runs on a CPU.
+  const python = contentMatches(
+    tree,
+    /(?:^|\/)(?:requirements(?:[^/]*)\.txt|pyproject\.toml)$/,
+    /tensorflow-gpu|\bnvidia-(?:cuda|cudnn|cublas|cufft|curand|cusolver|cusparse|nccl|nvjitlink|nvtx|dali|tensorrt)|torch.*cuda|cuda.*torch/,
+  );
   if (docker.length > 0 || python.length > 0) {
     const evidence = (docker[0] ?? python[0]) ?? '';
     return {

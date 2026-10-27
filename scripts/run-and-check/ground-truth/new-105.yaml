@@ -1,0 +1,161 @@
+id: new-105
+repository: khoj-ai/khoj
+commit: ae229ca894c0b80ad84664afcfdde523b5e87057
+summary: >
+  Khoj, a self-hosted AI assistant (Python 3.10, Django + FastAPI, Next.js web app built with bun and served as static
+  files by the same process). The repo has two Dockerfiles that each build one image with the web app inside.
+  prod.Dockerfile runs gunicorn on 0.0.0.0:42110 and is the correct production image. The app requires PostgreSQL with
+  the pgvector extension and an LLM API key. It has no Redis and no separate worker: the schedulers run in the web process.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One image (prod.Dockerfile) with the gunicorn entrypoint, one HTTP port 42110, PostgreSQL (RDS Postgres 16 with the
+    vector extension), migrations at start, no Redis, no separate worker. A deploy must set the Postgres variables, admin
+    credentials (without them the startup loops forever), the Django secret, KHOJ_DOMAIN and an LLM provider key. The
+    heavy torch and sentence-transformers stack needs a large task size and downloads the embedding model at runtime.
+    DEPLOYABLE_WITH_CHANGES because required env values and the pgvector extension need action; DEPLOYABLE is acceptable
+    if the analyser treats these as only configuration.
+dockerfile:
+  accept: [prod.Dockerfile, Dockerfile]
+  reject:
+    - {path: computer.Dockerfile, reason: "builds the optional Operator desktop sandbox image (khoj-computer), a separate second image, not the app"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+    - {path: src/telemetry/Dockerfile, reason: "separate telemetry server for the vendor, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: prod.Dockerfile, line: 50, quote: "FROM base"}
+    - {path: prod.Dockerfile, line: 64, quote: "ENTRYPOINT [\"gunicorn\", \"-c\", \"gunicorn-config.py\", \"src.khoj.main:app\"]"}
+    - {path: prod.Dockerfile, line: 34, quote: "pip install --no-cache-dir -e .[prod]"}
+    - {path: Dockerfile, line: 64, quote: "ENTRYPOINT [\"python3\", \"src/khoj/main.py\"]"}
+    - {path: Dockerfile, line: 17, quote: "docker.io \\"}
+runtime: {accept: [python]}
+port:
+  accept: [42110]
+  evidence:
+    - {path: gunicorn-config.py, line: 3, quote: "bind = \"0.0.0.0:42110\""}
+    - {path: src/khoj/utils/cli.py, line: 20, quote: "\"--port\", \"-p\", type=int, default=42110"}
+    - {path: Dockerfile, line: 62, quote: "ARG PORT=42110"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: gunicorn-config.py, line: 3, quote: "bind = \"0.0.0.0:42110\""}
+    - {path: src/khoj/utils/cli.py, line: 19, quote: "default=\"127.0.0.1\""}
+startCommand:
+  source: image
+  accept: ["gunicorn -c gunicorn-config.py src.khoj.main:app"]
+  # prod.Dockerfile ENTRYPOINT runs the app. If the plain Dockerfile is used the default host is 127.0.0.1, so the command must be
+  # python3 src/khoj/main.py --host 0.0.0.0 --non-interactive.
+healthPath:
+  accept: ["/api/health"]
+  # /api/health uses requires(["authenticated"], status_code=200): an unauthenticated request gets HTTP 200 (an error body, no redirect).
+  # "/" redirects to /home for unauthenticated users (302), so it is not a good check. "/home" returns 200 but renders the landing page.
+  evidence:
+    - {path: src/khoj/routers/api.py, line: 241, quote: "@api.get(\"/health\", response_class=Response)"}
+    - {path: src/khoj/routers/api.py, line: 242, quote: "@requires([\"authenticated\"], status_code=200)"}
+    - {path: src/khoj/configure.py, line: 331, quote: "app.include_router(api, prefix=\"/api\")"}
+    - {path: src/khoj/routers/web_client.py, line: 27, quote: "return RedirectResponse(url=\"/home\")"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD]
+  evidence:
+    - {path: src/khoj/app/settings.py, line: 180, quote: "\"ENGINE\": \"django.db.backends.postgresql\""}
+    - {path: src/khoj/app/settings.py, line: 123, quote: "DB_HOST = os.getenv(\"POSTGRES_HOST\", \"localhost\")"}
+    - {path: src/khoj/app/settings.py, line: 185, quote: "\"PASSWORD\": os.getenv(\"POSTGRES_PASSWORD\", \"postgres\")"}
+    - {path: src/khoj/database/migrations/0003_vector_extension.py, line: 10, quote: "operations = [VectorExtension()]"}
+    - {path: src/khoj/app/settings.py, line: 127, quote: "USE_EMBEDDED_DB = is_env_var_true(\"USE_EMBEDDED_DB\")"}
+migrations:
+  mode: startup
+  accept: ["python3 src/khoj/manage.py migrate"]
+  evidence:
+    - {path: src/khoj/main.py, line: 53, quote: "call_command(\"migrate\", \"--noinput\")"}
+    - {path: src/khoj/main.py, line: 257, quote: "run(should_start_server=False)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: src/khoj/main.py, line: 156, quote: "state.scheduler = BackgroundScheduler("}
+    - {path: src/khoj/main.py, line: 165, quote: "only elect one schedule leader in a distributed environment"}
+    - {path: gunicorn-config.py, line: 6, quote: "workers = int(os.environ.get(\"GUNICORN_WORKERS\", 6))"}
+scheduledJobs:
+  status: embedded
+  items: [content index update, telemetry upload, stale rate limit cleanup, scheduler wakeup, user automations]
+  evidence:
+    - {path: src/khoj/configure.py, line: 417, quote: "@schedule.repeat(schedule.every(22).to(25).hours)"}
+    - {path: src/khoj/configure.py, line: 459, quote: "@schedule.repeat(schedule.every(31).minutes)"}
+    - {path: src/khoj/main.py, line: 250, quote: "schedule.run_pending()"}
+storage:
+  local: ephemeral
+  paths: [/root/.khoj, /root/.cache/huggingface, /root/.cache/torch/sentence_transformers]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/khoj/routers/storage.py, line: 15, quote: "aws_enabled = AWS_ACCESS_KEY is not None and AWS_SECRET_KEY is not None"}
+    - {path: src/khoj/routers/storage.py, line: 38, quote: "ACL=\"public-read\""}
+    - {path: src/khoj/utils/cli.py, line: 14, quote: "default=\"~/.khoj/khoj.log\""}
+    - {path: docker-compose.yml, line: 60, quote: "khoj_models:/root/.cache/torch/sentence_transformers"}
+    - {path: src/khoj/database/models/__init__.py, line: 558, quote: "bi_encoder = models.CharField(max_length=200, default=\"thenlper/gte-small\")"}
+env:
+  required:
+    - {name: POSTGRES_HOST, secret: false, buildTime: false, note: "default is localhost; must point to the managed database"}
+    - {name: POSTGRES_PORT, secret: false, buildTime: false, note: "default 5432"}
+    - {name: POSTGRES_DB, secret: false, buildTime: false, note: "default khoj"}
+    - {name: POSTGRES_USER, secret: false, buildTime: false, note: "default postgres"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "default postgres; set the real password"}
+    - {name: KHOJ_DJANGO_SECRET_KEY, secret: true, buildTime: false, note: "default is the public string !secret; also signs the session cookie, so set a random value"}
+    - {name: KHOJ_ADMIN_EMAIL, secret: false, buildTime: false, note: "needed on first start: without admin credentials the startup asks on stdin, fails and retries in a loop under gunicorn"}
+    - {name: KHOJ_ADMIN_PASSWORD, secret: true, buildTime: false, note: "see KHOJ_ADMIN_EMAIL"}
+    - {name: KHOJ_DOMAIN, secret: false, buildTime: false, note: "public host name without scheme; sets cookie domain, CSRF trusted origins and CORS. Default khoj.dev breaks login on another host"}
+    - {name: OPENAI_API_KEY, secret: true, buildTime: false, note: "or GEMINI_API_KEY or ANTHROPIC_API_KEY, or an OPENAI_BASE_URL provider; an AI provider key is needed for chat. The admin can also add models at /server/admin"}
+  optional: [KHOJ_ALLOWED_DOMAIN, KHOJ_NO_HTTPS, KHOJ_DEBUG, KHOJ_DEFAULT_CHAT_MODEL, OPENAI_BASE_URL, GEMINI_API_KEY, ANTHROPIC_API_KEY, GUNICORN_WORKERS, GUNICORN_TIMEOUT, KHOJ_TERRARIUM_URL, E2B_API_KEY, KHOJ_SEARXNG_URL, SERPER_DEV_API_KEY, OLOSTEP_API_KEY, FIRECRAWL_API_KEY, EXA_API_KEY, KHOJ_OPERATOR_ENABLED, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_IMAGE_UPLOAD_BUCKET, AWS_USER_UPLOADED_IMAGES_BUCKET_NAME]
+  buildTime: []
+  evidence:
+    - {path: src/khoj/app/settings.py, line: 26, quote: "SECRET_KEY = os.getenv(\"KHOJ_DJANGO_SECRET_KEY\", \"!secret\")"}
+    - {path: src/khoj/app/settings.py, line: 29, quote: "KHOJ_DOMAIN = os.getenv(\"KHOJ_DOMAIN\") or \"khoj.dev\""}
+    - {path: src/khoj/app/settings.py, line: 47, quote: "if not os.getenv(\"KHOJ_DOMAIN\"):"}
+    - {path: src/khoj/utils/initialization.py, line: 35, quote: "email_addr = os.getenv(\"KHOJ_ADMIN_EMAIL\") or input(\"Email: \")"}
+    - {path: src/khoj/utils/initialization.py, line: 257, quote: "while True:"}
+    - {path: src/khoj/utils/initialization.py, line: 47, quote: "openai_api_key = os.getenv(\"OPENAI_API_KEY\""}
+blockers:
+  expected: []
+  mustNot:
+    - "docker-compose.yml services (searxng, terrarium sandbox, khoj-computer, pgvector DB) must not count as required second images: they are optional features or replaced by RDS; prod.Dockerfile is one image"
+    - "docker.io in the plain Dockerfile and the commented docker.sock mount must not count as Docker-in-Docker: only the optional Operator feature uses it"
+    - "pgvector must not be reported as an unsupported vector DB service: it is a Postgres extension (CREATE EXTENSION in migration 0003) on the same RDS PostgreSQL"
+    - "Redis, Celery or a worker process must not be required: schedulers run in the web process"
+    - "Local disk (~/.khoj log, model cache) must not block: the data is in PostgreSQL; the cache is re-downloaded"
+    - "Stripe, Twilio and similar prod extras must not be required to boot"
+vendorQuestions:
+  legitimate:
+    - "Which LLM provider and API key should the instance use (OpenAI, Gemini, Anthropic or an OpenAI-compatible endpoint)?"
+    - "Is the RDS master user allowed to run CREATE EXTENSION vector (pgvector) for the migration?"
+  unnecessary:
+    - "Which port? (42110 in gunicorn-config.py)"
+    - "Who runs migrations? (the app runs migrate at start)"
+    - "Is Redis or a worker needed? (no)"
+    - "Which database? (PostgreSQL only)"
+traps:
+  - "Dockerfile ENTRYPOINT python3 src/khoj/main.py has no host argument -> default host is 127.0.0.1 (src/khoj/utils/cli.py:19), so an ALB cannot reach it; use prod.Dockerfile (gunicorn binds 0.0.0.0) or add --host 0.0.0.0 --non-interactive (Dockerfile:64)"
+  - "docker-compose.yml runs a pgvector Postgres, a Terrarium sandbox, SearxNG and khoj-computer -> self-host demo with optional extras, not the required topology (docker-compose.yml:2-40)"
+  - "KHOJ_ADMIN_EMAIL=username@example.com and KHOJ_DJANGO_SECRET_KEY=secret in docker-compose.yml are examples; real values must be set (docker-compose.yml:71-74)"
+  - "/ redirects to /home for unauthenticated users -> use /api/health, which returns 200 without login (src/khoj/routers/web_client.py:27, src/khoj/routers/api.py:242)"
+  - "gunicorn starts 6 uvicorn workers by default and every worker loads the app, scheduler election and embedding model -> high memory; set GUNICORN_WORKERS lower (gunicorn-config.py:6)"
+  - "the web app in src/interface/web is built inside the Docker image by bun -> no pre-built artefact is needed (prod.Dockerfile:37)"
+  - "ARG PORT has no default in prod.Dockerfile -> EXPOSE is empty unless built with PORT=42110; gunicorn-config.py binds 42110 regardless (prod.Dockerfile:62)"
+openQuestions:
+  - "Whether RDS PostgreSQL 16 lets the app user run CREATE EXTENSION vector: the RDS master user normally can; not verified"
+  - "Memory and CPU: torch 2.6 and sentence-transformers run in every gunicorn worker; the right Fargate size for the default 6 workers is not stated in the repo"
+crossReview:
+  - {field: healthPath, change: "none: /api/health unauthenticated returns 200 (requires status_code=200); / and /home differ; no HTTPS redirect middleware without ssl cert args, so the ALB HTTP probe is not redirected", evidence: "src/khoj/routers/api.py:241-246; src/khoj/configure.py:399; src/khoj/main.py:204-207"}
+  - {field: dockerfile, change: "none: prod.Dockerfile and Dockerfile both build from repo files (pyproject.toml, README.md, src/interface/web/package.json and bun.lock are in git); plain Dockerfile needs --host 0.0.0.0 --non-interactive as the compose command does", evidence: "prod.Dockerfile:26-47; docker-compose.yml:125"}
+  - {field: redis / workers, change: "none: no redis or celery dependency in code or pyproject; background jobs are in-process APScheduler and schedule", evidence: "src/khoj/main.py:156; src/khoj/app/settings.py:255"}
+  - {field: env.required admin credentials, change: "none: under gunicorn the CLI parse ignores gunicorn args, runs interactive, and loops on the stdin error until KHOJ_ADMIN_EMAIL and KHOJ_ADMIN_PASSWORD are set", evidence: "src/khoj/utils/initialization.py:35,257; src/khoj/main.py:138; src/khoj/utils/cli.py:63"}
+  - {field: all, change: verified, evidence: "38 citations checked"}

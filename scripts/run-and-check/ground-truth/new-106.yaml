@@ -1,0 +1,142 @@
+id: new-106
+repository: onyx-dot-app/onyx
+commit: b8c2225f8eb0bb302b363e54d6c6458f0ed796bd
+summary: >
+  Onyx, an open-source AI chat and enterprise search platform. It has a FastAPI backend (Python, port 8080),
+  a separate Next.js web server (Node, port 3000) and, by default, model servers, OpenSearch, Redis and an
+  S3 object store. The web server and the backend are two different images, built from two Dockerfiles
+  with two build contexts (web/ and backend/). The web server calls the backend through INTERNAL_URL.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs two application images (onyx-web-server from web/Dockerfile and onyx-backend from
+    backend/Dockerfile) that run as separate services. Deployz runs one web image. The full topology also needs
+    OpenSearch and two model servers (a third image). The "Onyx Lite" overlay removes OpenSearch, Redis, model
+    servers and the worker, but it still has the web image and the backend image as two services.
+dockerfile:
+  accept: []
+  reject:
+    - {path: backend/Dockerfile, reason: "builds the API image (and the worker image), but not the web UI; the default CMD does nothing; the last stage is a dev stage, so --target runtime is needed"}
+    - {path: web/Dockerfile, reason: "builds the Next.js UI only; it needs the backend as a second service at INTERNAL_URL"}
+    - {path: backend/Dockerfile.model_server, reason: "third image (embedding model server)"}
+    - {path: .devcontainer/Dockerfile, reason: "dev container, not a production image"}
+    - {path: cli/Dockerfile, reason: "builds the Go CLI, not the app"}
+    - {path: backend/onyx/server/features/build/sandbox/image/Dockerfile, reason: "sandbox image for the Craft feature"}
+    - {path: backend/tests/integration/mock_services/mock_connector_server/Dockerfile, reason: "test mock"}
+  target: null
+  context: .
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 50, quote: "context: ../../backend"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 222, quote: "context: ../../web"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 300, quote: "context: ../../backend"}
+    - {path: backend/Dockerfile, line: 225, quote: "CMD [\"tail\", \"-f\", \"/dev/null\"]"}
+    - {path: web/Dockerfile, line: 197, quote: "CMD [\"node\", \"server.js\"]"}
+runtime: {accept: [python, node]}
+port:
+  accept: [8080, 3000]
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 58, quote: "uvicorn onyx.main:app --host 0.0.0.0 --port 8080"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 249, quote: "http://127.0.0.1:3000/"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 58, quote: "--host 0.0.0.0"}
+    - {path: web/Dockerfile, line: 190, quote: "ENV HOSTNAME=\"0.0.0.0\""}
+startCommand:
+  source: explicit
+  accept: ["alembic upgrade head && uvicorn onyx.main:app --host 0.0.0.0 --port 8080", "node server.js"]
+healthPath:
+  accept: ["/health"]
+  # API server only: /health is unauthenticated and returns 200 when the process is up; /health/ready returns 503 when saturated.
+  # The web server has no health route; the compose check requests / and accepts any status below 500.
+  evidence:
+    - {path: backend/onyx/server/auth_check.py, line: 32, quote: "(\"/health\", {\"GET\"}),"}
+    - {path: backend/onyx/server/auth_check.py, line: 34, quote: "(\"/health/ready\", {\"GET\"}),"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 121, quote: "http://localhost:8080/health"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB]
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 90, quote: "POSTGRES_HOST=${POSTGRES_HOST:-relational_db}"}
+    - {path: deployment/docker_compose/docker-compose.onyx-lite.yml, line: 4, quote: "no vector database, no Redis,"}
+migrations:
+  mode: command
+  accept: ["alembic upgrade head"]
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 56, quote: "/bin/sh -c \"alembic upgrade head &&"}
+redis:
+  status: conditional
+  selectBy: {CACHE_BACKEND: postgres, AUTH_BACKEND: postgres, DISABLE_VECTOR_DB: "true"}
+  evidence:
+    - {path: backend/onyx/configs/app_configs.py, line: 98, quote: "\"redis\" (default) or \"postgres\" (only valid when DISABLE_VECTOR_DB=true)."}
+    - {path: deployment/docker_compose/docker-compose.onyx-lite.yml, line: 57, quote: "CACHE_BACKEND=postgres"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 93, quote: "REDIS_HOST=${REDIS_HOST:-cache}"}
+workers:
+  status: independent
+  commands: ["supervisord (celery workers: primary, light, heavy, docfetching, docprocessing, user_file_processing, monitoring, beat)"]
+  evidence:
+    - {path: backend/supervisord.conf, line: 31, quote: "command=celery -A onyx.background.celery.versioned_apps.primary worker"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 138, quote: "image: ${ONYX_BACKEND_IMAGE:-onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}}"}
+scheduledJobs:
+  status: embedded
+  items: [celery beat tasks (connector sync, pruning, cleanup)]
+  evidence:
+    - {path: backend/supervisord.conf, line: 31, quote: "command=celery -A onyx.background.celery.versioned_apps.primary worker"}
+storage:
+  local: ephemeral
+  paths: [/app/file-system]
+  s3: native
+  s3SelectBy: {FILE_STORE_BACKEND: s3}
+  evidence:
+    - {path: backend/onyx/configs/app_configs.py, line: 2080, quote: "FILE_STORE_BACKEND = os.environ.get(\"FILE_STORE_BACKEND\", \"s3\")"}
+    - {path: deployment/docker_compose/docker-compose.onyx-lite.yml, line: 56, quote: "FILE_STORE_BACKEND=postgres"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 89, quote: "FILE_STORE_BACKEND=${FILE_STORE_BACKEND:-s3}"}
+env:
+  required:
+    - {name: POSTGRES_HOST / POSTGRES_PORT / POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB, secret: false, buildTime: false, note: "external Postgres; the password is secret"}
+    - {name: OPENSEARCH_HOST, secret: false, buildTime: false, note: "full mode only; needs OpenSearch, which Deployz cannot host; not needed with DISABLE_VECTOR_DB=true"}
+    - {name: INTERNAL_URL, secret: false, buildTime: false, note: "web server -> backend URL; the backend is a second service"}
+    - {name: DISABLE_VECTOR_DB, secret: false, buildTime: false, note: "true for Lite mode (no OpenSearch, no model servers)"}
+  optional: [AUTH_TYPE, FILE_STORE_BACKEND, CACHE_BACKEND, AUTH_BACKEND, REDIS_HOST, MODEL_SERVER_HOST, S3_ENDPOINT_URL, S3_AWS_ACCESS_KEY_ID, S3_AWS_SECRET_ACCESS_KEY, USE_IAM_AUTH, ENABLE_CRAFT]
+  buildTime: [NEXT_PUBLIC_THEME, NEXT_PUBLIC_DISABLE_LOGOUT, NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED, NODE_OPTIONS]
+  evidence:
+    - {path: deployment/docker_compose/docker-compose.yml, line: 237, quote: "INTERNAL_URL=${INTERNAL_URL:-http://api_server:8080}"}
+    - {path: deployment/docker_compose/docker-compose.yml, line: 91, quote: "OPENSEARCH_HOST=${OPENSEARCH_HOST:-opensearch}"}
+    - {path: web/Dockerfile, line: 51, quote: "ARG NEXT_PUBLIC_THEME"}
+blockers:
+  expected:
+    - "Two application images are needed: web/Dockerfile (Next.js UI) and backend/Dockerfile (FastAPI API); Deployz supports one image per app, and the UI proxies to the API through INTERNAL_URL"
+    - "Default topology needs OpenSearch (vector and keyword index), which Deployz does not support"
+    - "Default topology needs two model server services (a third image, backend/Dockerfile.model_server)"
+    - "Celery workers need supervisord and Redis; the default backend image CMD does nothing (tail -f /dev/null)"
+  mustNot:
+    - "Postgres must not block: RDS PostgreSQL is supported"
+    - "S3 file store must not block: S3 is native (FILE_STORE_BACKEND=s3), and a Postgres file store exists"
+    - "The migration command must not block: it is alembic upgrade head before the API starts"
+    - "docker-compose files must not be treated as a single-image Dockerfile source"
+    - "The vendor's own ECS CloudFormation files under deployment/ must not be used as a reason: they are the vendor's multi-service deploy"
+vendorQuestions:
+  legitimate:
+    - "Does the user need only the chat features (Lite mode, DISABLE_VECTOR_DB=true), or connectors and search (OpenSearch, model servers)?"
+    - "Can the UI and the API run behind one host? The repo needs two images"
+  unnecessary:
+    - "Which port? (8080 API, 3000 web)"
+    - "Who runs migrations? (alembic upgrade head in the API command)"
+    - "Which database? (PostgreSQL)"
+traps:
+  - "backend/Dockerfile last stage is dev, not runtime; the shipped image needs --target runtime (backend/Dockerfile:239)"
+  - "docker-compose.onyx-lite.yml looks like a small topology, but it still has a web image and an API image (docker-compose.onyx-lite.yml:4-8)"
+  - "backend/Dockerfile default CMD is tail -f /dev/null; the API and worker images need their own command (backend/Dockerfile:225)"
+  - "The web server health check requests / and accepts any status below 500; it is not a 2xx check (docker-compose.yml:249)"
+  - "deployment/aws_ecs_fargate/cloudformation has the vendor's own ECS services; it uses EFS, Postgres and Redis containers (not a single-image deploy)"
+openQuestions:
+  - "Whether a Lite deploy with a reverse proxy in one container is acceptable; the repo does not provide it"
+crossReview:
+  - {field: outcome, change: "none: NOT_DEPLOYABLE confirmed; web/ and backend/ are two images, the web app rewrites /api to INTERNAL_URL (default http://localhost:8080) and no shipped single image holds both; Lite mode still has both images", evidence: "web/next.config.js:73-107; deployment/docker_compose/docker-compose.onyx-lite.yml:12-20; deployment/docker_compose/docker-compose.yml:48,222"}
+  - {field: healthPath, change: "none: /health is public (PUBLIC_API_TAGS) and listed as unauthenticated; the web server has no health route", evidence: "backend/onyx/server/manage/get_state.py:188; backend/onyx/server/auth_check.py:32"}
+  - {field: dockerfile.reject backend/Dockerfile, change: "none: last stage is dev, runtime stage is the shipped target, CMD is tail -f /dev/null (trap line numbers 239 and 225 checked)", evidence: "backend/Dockerfile:107,225,239"}
+  - {field: all, change: verified, evidence: "27 citations checked"}

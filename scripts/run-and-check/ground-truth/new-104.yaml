@@ -1,0 +1,162 @@
+id: new-104
+repository: BerriAI/litellm
+commit: cfe0100e1fca613e7b1af27dd1fe4807ca4d1d1a
+summary: >
+  LiteLLM AI gateway / proxy (Python 3.13, FastAPI, uvicorn, Prisma). One server process in one image built from the
+  root Dockerfile (multi-stage; the last stage `runtime` is the app). Entrypoint runs `litellm --port 4000`. Without a
+  database the proxy runs stateless (models only from a config file). With DATABASE_URL (PostgreSQL only) it stores
+  virtual keys, users, models and spend, and runs Prisma migrations at start. Redis, S3 and the admin UI are optional.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The root Dockerfile builds from source and the image CMD starts the app on 4000. Needs LITELLM_MASTER_KEY and, for
+    the admin UI, keys and UI-managed models, a PostgreSQL DATABASE_URL (the app migrates itself at start). No required
+    unsupported service. Both outcomes are accepted: with a managed DB and a master key the deploy is plain; the extra
+    secrets and STORE_MODEL_IN_DB are the small required changes.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker/Dockerfile.database, reason: "variant of the root Dockerfile for a database image; the root Dockerfile is the main production image (excluded by .dockerignore docker/Dockerfile.*)"}
+    - {path: docker/Dockerfile.non_root, reason: "non-root variant; same app, not needed"}
+    - {path: docker/build_from_pip/Dockerfile.build_from_pip, reason: "installs litellm from pip, not from the repo source"}
+    - {path: gateway/Dockerfile, reason: "separate Rust gateway component, not the proxy"}
+    - {path: litellm-rust/crates/gateway/Dockerfile, reason: "separate Rust gateway component, not the proxy"}
+    - {path: backend/Dockerfile, reason: "separate component, not the proxy image"}
+    - {path: ui/Dockerfile, reason: "separate UI image; the root Dockerfile already builds and bundles the admin UI"}
+    - {path: migrations/Dockerfile, reason: "separate migration helper image; the proxy migrates itself at start"}
+    - {path: tests/e2e/claude_code/cron_vm/Dockerfile, reason: "test fixture"}
+    - {path: cookbook/litellm-ollama-docker-image/Dockerfile, reason: "cookbook example"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 132, quote: "FROM $LITELLM_RUNTIME_IMAGE AS runtime"}
+    - {path: Dockerfile, line: 92, quote: "COPY . ."}
+    - {path: Dockerfile, line: 185, quote: "ENTRYPOINT [\"docker/prod_entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 186, quote: "CMD [\"--port\", \"4000\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [4000]
+  evidence:
+    - {path: Dockerfile, line: 183, quote: "EXPOSE 4000/tcp"}
+    - {path: litellm/proxy/proxy_cli.py, line: 774, quote: "default=4000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: litellm/proxy/proxy_cli.py, line: 773, quote: "default=\"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["docker/prod_entrypoint.sh --port 4000", "litellm --port 4000"]
+  evidence:
+    - {path: docker/prod_entrypoint.sh, line: 16, quote: "exec litellm \"$@\""}
+    - {path: Dockerfile, line: 186, quote: "CMD [\"--port\", \"4000\"]"}
+healthPath:
+  accept: ["/health/liveliness", "/health/liveness", "/health/readiness"]
+  # /health/liveliness and /health/liveness are unauthenticated and return 200 without a DB check.
+  # /health/readiness is public and returns 200 with a db status; it returns 503 if the DB is unreachable (when a DB is set).
+  # /health needs an API key (user_api_key_auth) and must not be used. render.yaml uses /health/liveliness.
+  evidence:
+    - {path: litellm/proxy/health_endpoints/_health_endpoints.py, line: 2078, quote: "\"/health/liveliness\","}
+    - {path: litellm/proxy/health_endpoints/_health_endpoints.py, line: 1971, quote: "\"/health/readiness\","}
+    - {path: litellm/proxy/health_endpoints/_health_endpoints.py, line: 1229, quote: "dependencies=[Depends(user_api_key_auth)]"}
+    - {path: render.yaml, line: 13, quote: "healthCheckPath: /health/liveliness"}
+database:
+  status: conditional
+  engines: [postgres]
+  default: none
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, "DATABASE_HOST/DATABASE_USERNAME/DATABASE_PASSWORD/DATABASE_NAME/DATABASE_SCHEMA"]
+  # No database: the proxy still starts (config-file models, master key only). The admin UI, virtual keys, users and
+  # UI-added models need the database (prisma_client is None -> "No connected db."). Postgres only (Prisma schema).
+  evidence:
+    - {path: schema.prisma, line: 3, quote: "url      = env(\"DATABASE_URL\")"}
+    - {path: litellm/proxy/proxy_cli.py, line: 1374, quote: "if os.getenv(\"DATABASE_URL\", None) is not None or os.getenv(\"DIRECT_URL\", None) is not None:"}
+    - {path: litellm/proxy/proxy_cli.py, line: 1317, quote: "# Use helper function to construct DATABASE_URL from individual variables"}
+    - {path: litellm/proxy/utils.py, line: 9306, quote: "database_host: Final = os.getenv(\"DATABASE_HOST\")"}
+    - {path: litellm/proxy/proxy_server.py, line: 11367, quote: "get_secret_bool(\"STORE_MODEL_IN_DB\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: litellm/proxy/proxy_cli.py, line: 1511, quote: "migrated: Final = PrismaManager.setup_database("}
+    - {path: litellm/proxy/db/prisma_client.py, line: 1043, quote: "def setup_database(use_migrate: bool = False, use_v2_resolver: bool = False) -> bool:"}
+redis:
+  status: optional
+  selectBy: {REDIS_HOST: host, REDIS_PORT: "6379", REDIS_PASSWORD: password}
+  # The Redis cache is turned on by litellm_settings.cache in a config file; REDIS_HOST/PORT/PASSWORD or REDIS_URL only give the connection.
+  evidence:
+    - {path: litellm/proxy/proxy_server.py, line: 6614, quote: "if (cache_type == \"redis\" or cache_type == \"redis-semantic\")"}
+    - {path: litellm/proxy/proxy_server.py, line: 6615, quote: "cache_host = get_secret(\"REDIS_HOST\", None)"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: litellm/constants.py, line: 133, quote: "DEFAULT_NUM_WORKERS_LITELLM_PROXY: Final = get_env_int(\"DEFAULT_NUM_WORKERS_LITELLM_PROXY\", 1)"}
+scheduledJobs:
+  status: embedded
+  items: [APScheduler jobs inside the proxy process]
+  evidence:
+    - {path: litellm/proxy/proxy_server.py, line: 8128, quote: "scheduler.add_job("}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # S3 is only an optional logging callback and config-file source, not app storage. It supports an AWS role (s3_aws_role_name).
+  evidence:
+    - {path: litellm/integrations/s3_v2.py, line: 342, quote: "self.s3_bucket_name = params.get(\"s3_bucket_name\") or s3_bucket_name"}
+    - {path: litellm/proxy/proxy_server.py, line: 6314, quote: "bucket_name: Final = os.environ.get(\"LITELLM_CONFIG_BUCKET_NAME\")"}
+env:
+  required:
+    - {name: LITELLM_MASTER_KEY, secret: true, buildTime: false, note: "admin key; set it. Without it all requests are treated as INTERNAL_USER with no admin access and the admin UI refuses; use an sk- prefixed random value"}
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL (or DATABASE_HOST/DATABASE_USERNAME/DATABASE_PASSWORD/DATABASE_NAME); needed for admin UI, virtual keys and UI-managed models"}
+    - {name: STORE_MODEL_IN_DB, secret: false, buildTime: false, note: "set to True so models added in the UI are saved in the database; the image has no config file"}
+    - {name: LITELLM_SALT_KEY, secret: true, buildTime: false, note: "encrypts stored provider keys; if unset the master key is used. Set it once and never change it"}
+    - {name: "provider API keys (for example OPENAI_API_KEY)", secret: true, buildTime: false, note: "needed only for the models the user adds; set through the UI or env"}
+  optional: [UI_USERNAME, UI_PASSWORD, PORT, HOST, CONFIG_FILE_PATH, LITELLM_CONFIG_BUCKET_NAME, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, DISABLE_SCHEMA_UPDATE, DATABASE_URL_READ_REPLICA, USE_DDTRACE]
+  buildTime: []
+  evidence:
+    - {path: litellm/proxy/proxy_server.py, line: 7018, quote: "get_secret(\"LITELLM_MASTER_KEY\", None)"}
+    - {path: litellm/proxy/proxy_server.py, line: 7027, quote: "LITELLM_MASTER_KEY is not set!"}
+    - {path: litellm/proxy/common_utils/encrypt_decrypt_utils.py, line: 35, quote: "salt_key = os.getenv(\"LITELLM_SALT_KEY\", None)"}
+    - {path: litellm/proxy/auth/login_utils.py, line: 134, quote: "os.getenv(\"UI_USERNAME\", \"admin\")"}
+    - {path: litellm/proxy/auth/login_utils.py, line: 135, quote: "os.getenv(\"UI_PASSWORD\", None)"}
+blockers:
+  expected: []
+  mustNot:
+    - "Prisma / Node runtime in a Python image must not block: the Dockerfile bakes the prisma CLI and engines under /opt/prisma"
+    - "pgbouncer binary built in the Dockerfile must not count as a second service: it is a tool inside the same image"
+    - "Redis must not be required: it is optional for multi-instance rate limits and cache"
+    - "S3 must not be required or counted as a static-key blocker: it is an optional logging callback"
+    - "Missing config file must not block: models can be added in the UI with a database"
+    - "docker-compose.yml with Postgres and Prometheus must not be read as required extra services: Prometheus is optional"
+    - "The Rust, UI and enterprise directories must not be reported as extra services: all are built into one image"
+vendorQuestions:
+  legitimate:
+    - "Which LLM providers and models will be used, and who adds them (UI or config)? The repo does not say"
+    - "Is the admin UI login (master key or UI_USERNAME/UI_PASSWORD) acceptable on a public URL?"
+  unnecessary:
+    - "Which port? (4000 in image and CLI default)"
+    - "Who runs migrations? (the proxy does at start when DATABASE_URL is set)"
+    - "Which Dockerfile? (the root one)"
+    - "Is a worker or scheduler process needed? (all embedded)"
+    - "Health path? (/health/liveliness is public)"
+traps:
+  - "/health -> needs an API key (user_api_key_auth); use /health/liveliness or /health/readiness (_health_endpoints.py:1229)"
+  - "docker-compose.yml and render.yaml use a pre-built registry image (docker.litellm.ai/berriai/litellm, ghcr.io/berriai/litellm) -> Deployz must build the root Dockerfile instead (render.yaml:6)"
+  - "docker/entrypoint.sh looks like the container entrypoint -> it is a manual migration helper; the image uses docker/prod_entrypoint.sh (Dockerfile:185)"
+  - "Dockerfile ENTRYPOINT is a relative path docker/prod_entrypoint.sh with WORKDIR /app -> works as is (Dockerfile:185)"
+  - "docker/Dockerfile.* is listed in .dockerignore -> the variants are not part of the build context (.dockerignore:10)"
+  - "Build downloads pgbouncer source and a litellm-admin-agent archive with pinned checksums -> needs outbound network at build, no CI artefacts (Dockerfile:23, Dockerfile:125)"
+  - "Build compiles Rust and the Next.js admin UI -> long, heavy build (Dockerfile:46)"
+openQuestions:
+  - "Whether Prisma accepts RDS forced TLS with the default URL: add ?sslmode=require to DATABASE_URL to be sure (Prisma knows sslmode disable, prefer and require)"
+  - "Memory and build time of the multi-stage build on the Deployz builder (Rust, Next.js, pgbouncer, prisma generate)"
+  - "Whether the DB-less mode is enough for the user: then no DATABASE_URL is needed but a config file must be baked in or given by CONFIG_FILE_PATH"
+crossReview:
+  - {field: redis, change: "added a comment: the Redis cache needs cache true in a config file; the env variables (also REDIS_URL) only set the connection. Status optional kept", evidence: "litellm/proxy/proxy_server.py:6600-6615; litellm/_redis.py:486"}
+  - {field: openQuestions, change: "added the RDS TLS question (Prisma sslmode)", evidence: "litellm/proxy/db/db_url_settings.py:140,224"}
+  - {field: dockerfile.accept, change: "none: all COPY sources exist in git (ui/litellm-dashboard, enterprise, litellm-proxy-extras, docker/*, schema.prisma); the two network downloads (pgbouncer, litellm-admin-agent) have pinned checksums", evidence: "Dockerfile:41-45,76-78,92,124-125,161-163"}
+  - {field: healthPath, change: "none: /health/liveliness, /health/liveness and /health/readiness are public and return 2xx; readiness returns 503 when a configured DB is down", evidence: "litellm/proxy/health_endpoints/_health_endpoints.py:1971-1990,2078-2095"}
+  - {field: env.required LITELLM_MASTER_KEY, change: "none: kept as required; without it the proxy starts but all requests are INTERNAL_USER with no admin access", evidence: "litellm/proxy/proxy_server.py:7027"}
+  - {field: all, change: verified, evidence: "31 citations checked"}
