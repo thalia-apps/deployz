@@ -1,0 +1,148 @@
+id: new-61
+repository: actualbudget/actual
+commit: fd08b56eef24d953e619877dee5990c560f8468e
+summary: >
+  Actual Budget, a local-first personal finance app (yarn monorepo, React web client, Express sync server in
+  packages/sync-server). The server image is built by sync-server.Dockerfile (builds the web client and the server
+  from source, runs `node build/app.js` on port 5006). All durable data is SQLite files on local disk under the
+  data dir (/data): the account database (account.sqlite), one SQLite file per budget (user-files) and the
+  migration state. There is no external database and no S3 support, so a Fargate deploy loses all budgets and
+  accounts on every task restart.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only durable store is SQLite plus blob files on the local disk (ACTUAL_DATA_DIR, default /data). The app
+    has no PostgreSQL, MySQL or S3 option, and Deployz has no persistent volume. The image builds and starts, but
+    every restart or redeploy wipes the account DB and all synced budget files, so the server is not usable as a
+    sync server. The blocker is the storage model, not the build.
+dockerfile:
+  accept: [sync-server.Dockerfile]
+  reject:
+    - {path: Dockerfile, reason: "development container for docker-compose (FROM node ... AS dev, CMD bin/docker-start); mounts the source as a volume, builds nothing"}
+    - {path: packages/sync-server/docker/alpine.Dockerfile, reason: "copies packages/sync-server/build, which is not in the repo; needs CI-built artefacts (the yarn build is not run in the Dockerfile)"}
+    - {path: packages/sync-server/docker/ubuntu.Dockerfile, reason: "same as alpine.Dockerfile: copies a pre-built packages/sync-server/build"}
+    - {path: docker-compose.yml, reason: "dev compose file, not a Dockerfile"}
+    - {path: packages/sync-server/docker-compose.yml, reason: "pulls the pre-built image docker.io/actualbudget/actual-server:latest, not a build"}
+  target: null
+  context: .
+  evidence:
+    - {path: sync-server.Dockerfile, line: 42, quote: "RUN yarn build:server"}
+    - {path: sync-server.Dockerfile, line: 54, quote: "FROM node:24.22.1-bookworm-slim AS prod"}
+    - {path: sync-server.Dockerfile, line: 77, quote: "CMD [\"node\", \"build/app.js\"]"}
+    - {path: Dockerfile, line: 8, quote: "FROM node:24-bookworm AS dev"}
+    - {path: packages/sync-server/docker/alpine.Dockerfile, line: 20, quote: "RUN yarn workspaces focus @actual-app/sync-server --production"}
+    - {path: packages/sync-server/docker/alpine.Dockerfile, line: 56, quote: "COPY --from=builder /app/packages/sync-server/build ./"}
+    - {path: packages/sync-server/docker/ubuntu.Dockerfile, line: 47, quote: "COPY --from=builder /app/packages/sync-server/build ./"}
+    - {path: packages/sync-server/docker-compose.yml, line: 3, quote: "image: docker.io/actualbudget/actual-server:latest"}
+runtime: {accept: [node]}
+port:
+  accept: [5006]
+  evidence:
+    - {path: sync-server.Dockerfile, line: 76, quote: "EXPOSE 5006"}
+    - {path: packages/sync-server/src/load-config.js, line: 106, quote: "default: process.env.PORT ? process.env.PORT : 5006,"}
+    - {path: packages/sync-server/src/load-config.js, line: 107, quote: "env: 'ACTUAL_PORT',"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/sync-server/src/load-config.js, line: 112, quote: "default: '::',"}
+    - {path: packages/sync-server/src/app.ts, line: 236, quote: "app.listen(port, hostname, () => {"}
+startCommand:
+  source: image
+  accept: ["node build/app.js"]
+  evidence:
+    - {path: sync-server.Dockerfile, line: 75, quote: "ENTRYPOINT [\"/usr/bin/tini\", \"-g\", \"--\"]"}
+    - {path: sync-server.Dockerfile, line: 77, quote: "CMD [\"node\", \"build/app.js\"]"}
+healthPath:
+  accept: ["/health"]
+  # /health returns 200 {"status":"UP"} with no auth and no dependency check. It is registered before the static
+  # catch-all. `/` serves index.html with 200 (no redirect) but /health is the explicit endpoint.
+  evidence:
+    - {path: packages/sync-server/src/app.ts, line: 124, quote: "app.get('/health', (_req, res) => {"}
+    - {path: packages/sync-server/src/app.ts, line: 125, quote: "res.status(200).json({ status: 'UP' });"}
+    - {path: packages/sync-server/src/app.ts, line: 179, quote: "app.get('/{*splat}', (req, res) =>"}
+    - {path: packages/sync-server/src/scripts/health-check.ts, line: 21, quote: "fetch(`${protocol}://${hostname}:${config.get('port')}/health`)"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: packages/sync-server/src/db.js, line: 1, quote: "import Database from 'better-sqlite3';"}
+    - {path: packages/sync-server/src/account-db.js, line: 19, quote: "const dbPath = join(resolve(config.get('serverFiles')), 'account.sqlite');"}
+    - {path: packages/sync-server/src/util/paths.ts, line: 33, quote: "return join(resolve(config.get('userFiles')), `group-${groupId}.sqlite`);"}
+migrations:
+  mode: startup
+  accept: ["node build/app.js"]
+  evidence:
+    - {path: packages/sync-server/app.ts, line: 3, quote: "runMigrations()"}
+    - {path: packages/sync-server/app.ts, line: 6, quote: "void import('./src/app.js').then(app => app.run()); // run the app"}
+    - {path: packages/sync-server/src/migrations.ts, line: 54, quote: "stateStore: `${path.join(config.get('dataDir'), '.migrate')}"}
+redis:
+  status: none
+  evidence:
+    - {path: packages/sync-server/src/app.ts, line: 38, quote: "rateLimit({"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: packages/sync-server/src/app.ts, line: 236, quote: "app.listen(port, hostname, () => {"}
+scheduledJobs:
+  status: none
+  items: []
+storage:
+  local: required
+  paths: [/data, /data/server-files, /data/user-files, /data/.migrate]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: packages/sync-server/src/load-config.js, line: 21, quote: "fs.existsSync('/data')"}
+    - {path: packages/sync-server/src/load-config.js, line: 121, quote: ": path.join(defaultDataDir, 'server-files'),"}
+    - {path: packages/sync-server/src/load-config.js, line: 130, quote: ": path.join(defaultDataDir, 'user-files'),"}
+    - {path: packages/sync-server/src/util/paths.ts, line: 22, quote: "const filePath = resolve(userFilesDir, `file-${fileId}.blob`);"}
+    - {path: sync-server.Dockerfile, line: 65, quote: "&& mkdir /data && chown -R ${USERNAME}:${USERNAME} /data"}
+    - {path: packages/sync-server/docker-compose.yml, line: 21, quote: "- ./actual-data:/data"}
+    - {path: packages/sync-server/migrations/1694360000000-create-folders.ts, line: 7, quote: "await fs.mkdir(path);"}
+env:
+  required: []
+  optional: [ACTUAL_DATA_DIR, ACTUAL_PORT, ACTUAL_HOSTNAME, ACTUAL_SERVER_FILES, ACTUAL_USER_FILES, ACTUAL_LOGIN_METHOD, ACTUAL_TRUSTED_PROXIES, ACTUAL_HTTPS_KEY, ACTUAL_HTTPS_CERT, ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB, ACTUAL_UPLOAD_SYNC_ENCRYPTED_FILE_SYNC_SIZE_LIMIT_MB, ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB, ACTUAL_OPENID_DISCOVERY_URL, ACTUAL_OPENID_CLIENT_ID, ACTUAL_OPENID_CLIENT_SECRET, ACTUAL_OPENID_SERVER_HOSTNAME, ACTUAL_TOKEN_EXPIRATION, ACTUAL_USER_CREATION_MODE, ACTUAL_CORS_PROXY_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: packages/sync-server/src/load-config.js, line: 101, quote: "env: 'ACTUAL_DATA_DIR',"}
+    - {path: packages/sync-server/src/load-config.js, line: 167, quote: "env: 'ACTUAL_TRUSTED_PROXIES',"}
+    - {path: packages/sync-server/src/app-account.js, line: 64, quote: "app.post('/bootstrap', authRateLimiter, async (req, res) => {"}
+blockers:
+  expected:
+    - "SQLite is the only durable store: account.sqlite and one SQLite file per budget under the data dir; Deployz has no persistent volume, so data is lost on restart (packages/sync-server/src/account-db.js:19, packages/sync-server/src/util/paths.ts:33)"
+    - "Budget blobs (file-<id>.blob) are written to the local user-files dir; there is no S3 or other object-store option (packages/sync-server/src/util/paths.ts:22)"
+  mustNot:
+    - "The root Dockerfile must not be chosen: it is a development image with the source mounted as a volume"
+    - "packages/sync-server/docker/*.Dockerfile must not be chosen as buildable: they need a pre-built build directory"
+    - "Redis, workers and a scheduler must not be reported as needed: there are none"
+    - "The missing web-client Dockerfile must not be raised: sync-server.Dockerfile builds the web client and serves it from the same Express process"
+    - "The yarn monorepo, the 8 GB NODE_OPTIONS and the git init in the build must not be reported as blockers: they are build details of a working Dockerfile"
+    - "The default hostname '::' must not be reported as loopback-only: it listens on all interfaces"
+vendorQuestions:
+  legitimate:
+    - "Is losing all budgets and accounts on every restart acceptable? (it should not be; a persistent volume is not available)"
+  unnecessary:
+    - "Which port? (5006 in the image and config)"
+    - "Which Dockerfile? (sync-server.Dockerfile is the only one that builds from source)"
+    - "Who runs migrations? (app.ts runs them before the server starts)"
+    - "Health path? (/health)"
+    - "Is a database or Redis needed? (no, only SQLite on disk)"
+traps:
+  - "Root Dockerfile -> development container, not the app image (Dockerfile:1-6, Dockerfile:8)"
+  - "packages/sync-server/docker/alpine.Dockerfile and ubuntu.Dockerfile look like production images but copy a build directory that only CI produces (docker/alpine.Dockerfile:56, docker/ubuntu.Dockerfile:47)"
+  - "packages/sync-server/docker-compose.yml -> uses the published image, not a build from this repo (docker-compose.yml:3)"
+  - "bin/package-browser runs `git clone` of the translations repo at build time when locale is missing -> needs network at build, not a source blocker (bin/package-browser:24)"
+  - "sync-server.Dockerfile seeds a throwaway git repo because lage needs `git ls-tree HEAD`; the build context has no .git, so this is needed and correct (sync-server.Dockerfile:38)"
+  - "Hostname default '::' -> binds IPv6 and IPv4 (dual-stack), not loopback (load-config.js:112)"
+  - "Bootstrap endpoint is unauthenticated until a password is set -> the first visitor to the public URL can claim the server (app-account.js:64)"
+openQuestions:
+  - "Whether a single-user instance with data lost on restart is accepted for a demo: a product choice, not an architecture fact"
+crossReview:
+  - {field: dockerfile, change: "none: git ls-files shows only Dockerfile (dev), sync-server.Dockerfile and two packages/sync-server/docker/*.Dockerfile; every COPY source of sync-server.Dockerfile is in git (.yarn, bin/package-browser, lage.config.js, package manifests), .dockerignore only drops .git and node_modules; alpine and ubuntu files copy a CI-built build dir", evidence: "sync-server.Dockerfile:5-21; .dockerignore; packages/sync-server/docker/alpine.Dockerfile:56"}
+  - {field: outcome / storage, change: "none: SQLite and blob files only, no S3 or external DB option in sync-server src", evidence: "packages/sync-server/src/account-db.js:19; packages/sync-server/src/util/paths.ts:22"}
+  - {field: all, change: verified, evidence: "37 citations checked"}

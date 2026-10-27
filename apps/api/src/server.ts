@@ -3972,6 +3972,11 @@ export async function buildServer({
       throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
     }
     const organizationId = requireSessionOrganizationId(request);
+    // A browser navigation, so a member goes back to the dashboard with the
+    // reason instead of a JSON error page.
+    if (requireRole(request) === 'member') {
+      return reply.redirect(`${env.webUrl}/dashboard/applications?github=forbidden`);
+    }
     const { returnTo } = request.query as { returnTo?: string | undefined };
     const target = new URL(installUrl);
     // GitHub hands `state` back to the Setup URL only from the App's
@@ -4002,6 +4007,10 @@ export async function buildServer({
       throw new ApiError(403, 'SUPPORT_MODE_READ_ONLY', 'Support mode is read-only. Exit support mode to make changes.');
     }
     const organizationId = requireSessionOrganizationId(request);
+    // A member goes back to the dashboard before any binding (#636).
+    if (requireRole(request) === 'member') {
+      return reply.redirect(`${env.webUrl}/dashboard/applications?github=forbidden`);
+    }
     const verifiedState = verifyInstallState(githubStateSecret, state, organizationId, Date.now());
     // Back to the page that started the install, when a valid state names one.
     const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'missing_installation'): string =>
@@ -4039,13 +4048,11 @@ export async function buildServer({
         request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
         return reply.redirect(returnUrl('failed'));
       }
-      // A disconnect ends only through a reconnect that an owner or admin of
-      // this organization started. GitHub also sends the vendor here when
+      // A disconnect ends only through a reconnect this organization started
+      // (members never get here). GitHub also sends the vendor here when
       // they change the installation on GitHub, and that keeps it disconnected.
-      const role = requireRole(request);
-      const reconnectAllowed = verifiedState !== false && (role === 'owner' || role === 'admin');
       status =
-        existing?.status === 'disconnected' && !reconnectAllowed
+        existing?.status === 'disconnected' && !verifiedState
           ? 'disconnected'
           : account.state === 'active'
             ? 'active'
@@ -4197,11 +4204,14 @@ export async function buildServer({
       Promise.all(records.map(verifiedGithubConnection)),
       githubApplicationCounts(organizationId),
     ]);
-    const role = requireRole(request);
+    const canConnect = requireRole(request) !== 'member';
     return {
       installations: verified.map((record) => githubConnectionView(record, counts.get(record.id) ?? 0)),
-      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
-      canManage: role === 'owner' || role === 'admin',
+      canConnect,
+      connectUrl:
+        canConnect && (githubAppInstallUrl ?? env.githubAppInstallUrl)
+          ? `${env.apiUrl}/api/github/connect`
+          : null,
     };
   });
 
@@ -6253,7 +6263,7 @@ export async function buildServer({
       const organizationId = requireSessionOrganizationId(request);
       const application = await loadOwnedApplication(db, id, organizationId);
       const record = await loadGithubConnection(application.githubInstallationId, organizationId);
-      const role = requireRole(request);
+      const canConnect = requireRole(request) !== 'member';
       const view = (status: GithubConnectionStatus | 'not_connected' | 'connected' | 'repository_inaccessible') => ({
         status: status === 'active' ? 'connected' : status,
         repoFullName: application.repoFullName,
@@ -6261,8 +6271,9 @@ export async function buildServer({
         accountLogin: record?.accountLogin ?? null,
         installationId: record?.id ?? null,
         manageUrl: record ? githubManageUrl(record) : null,
-        connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
-        canManage: role === 'owner' || role === 'admin',
+        connectUrl:
+          canConnect && (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
+        canConnect,
       });
       if (!record) return view('not_connected');
       const verified = await verifiedGithubConnection(record);
@@ -8298,6 +8309,9 @@ export async function buildServer({
     };
   });
 
+  const BILLING_ROLE_MESSAGE =
+    'Only an owner or admin can manage billing. Ask one of them to do this.';
+
   // POST /api/billing/checkout — the vendor's first production deployment
   // (Phase 8), or a subscribe-only start (invitation-first flow). Nothing is
   // provisioned here: the request is parked as a checkout intent and answered
@@ -8305,6 +8319,7 @@ export async function buildServer({
   // deployment row appears only when the subscription activates (see
   // onSubscriptionChanged below); a subscribe-only intent creates nothing.
   app.post('/api/billing/checkout', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const body = createCheckoutBodySchema.parse(request.body);
     const organizationId = requireSessionOrganizationId(request);
     // Same fail-closed region gate as POST /api/deployments — a checkout must
@@ -8334,6 +8349,7 @@ export async function buildServer({
   // live there, never on a Deployz screen. The links are for the signed-in
   // organization's own Paddle customer; nothing about the session is cached.
   app.post('/api/billing/portal', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const organizationId = requireSessionOrganizationId(request);
     return createBillingPortalLinks({ db, paddle }, organizationId);
   });

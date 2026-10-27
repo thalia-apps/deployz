@@ -84,7 +84,7 @@ test('keeps the repo picker usable when GitHub will not list repositories', asyn
           },
         ],
         connectUrl: 'https://github.com/apps/deployz-demo/installations/new',
-        canManage: true,
+        canConnect: true,
       },
     }),
   );

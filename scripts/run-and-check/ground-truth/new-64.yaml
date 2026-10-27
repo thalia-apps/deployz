@@ -1,0 +1,159 @@
+id: new-64
+repository: nocodb/nocodb
+commit: 65303532a4255ff824a1623c8c79159ca281fbf8
+summary: >
+  NocoDB (no-code database UI and API; NestJS/Express backend in packages/nocodb, pnpm monorepo, GUI published as the
+  nc-lib-gui npm package). One Node process serves API and UI on port 8080. The repository has NO Dockerfile: the
+  production image nocodb/nocodb is built outside this source tree and every compose file and chart pulls it from
+  a registry. A Deployz build from a source archive has nothing to build from. If a vendor adds a Dockerfile, the app
+  is one container with a PostgreSQL meta DB (NC_DB), optional Redis and S3 attachments through the task role.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile exists anywhere in the tree (git ls-files shows none; the compose files and the Helm chart use
+    image nocodb/nocodb:latest). Deployz cannot pull a registry image, so the plain answer is NOT_DEPLOYABLE.
+    DEPLOYABLE_WITH_CHANGES is also fair: the runtime itself fits Deployz (one HTTP port, PostgreSQL via NC_DB,
+    S3 via task role, startup migrations, Redis optional) once the vendor writes a multi-stage Dockerfile that builds
+    packages/nocodb-sdk and packages/nocodb. Runtime needs NC_DB (or DATABASE_URL); the default is SQLite noco.db.
+dockerfile:
+  accept: []
+  reject:
+    - {path: packages/nocodb/docker/start.sh, reason: "container start script (node docker/main.js), not a Dockerfile; it expects a prebuilt docker/main.js"}
+    - {path: docker-compose/examples/managed-postgres/docker-compose.yml, reason: "compose file that pulls the prebuilt image nocodb/nocodb:latest; builds nothing"}
+    - {path: .github/uffizzi/docker-compose.uffizzi.yml, reason: "preview-environment compose, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker-compose/examples/managed-postgres/docker-compose.yml, line: 4, quote: "image: nocodb/nocodb:latest"}
+    - {path: packages/nocodb/docker/start.sh, line: 3, quote: "node docker/main.js"}
+    - {path: packages/nocodb/package.json, line: 5, quote: "\"main\": \"dist/bundle.js\""}
+    - {path: packages/nocodb/.patches/.gitkeep, line: 2, quote: "# Dockerfile-on-prem:34 and Dockerfile-cloud:18 both do"}
+    - {path: packages/nocodb/pnpm-workspace.yaml, line: 2, quote: "# Dockerfiles copy only packages/nocodb into the build context,"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: packages/nocodb/src/run/docker.ts, line: 33, quote: "server.listen(process.env.PORT || 8080"}
+    - {path: packages/nocodb/src/Noco.ts, line: 84, quote: "process.env.PORT = process.env.PORT || '8080';"}
+    - {path: docker-compose/examples/managed-postgres/docker-compose.yml, line: 16, quote: "- '8080:8080'"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/nocodb/src/run/docker.ts, line: 33, quote: "server.listen(process.env.PORT || 8080"}
+startCommand:
+  source: explicit
+  accept: ["node docker/main.js"]
+  # No Dockerfile, so no image CMD. The upstream image runs docker/start.sh -> node docker/main.js (a bundle built from src/run/docker.ts).
+  # A vendor Dockerfile would run the built bundle; the package main is dist/bundle.js.
+healthPath:
+  accept: ["/api/v1/health"]
+  # Unguarded route, no redirect, returns {message: OK, timestamp, uptime} with no dependency check. / serves the SPA.
+  evidence:
+    - {path: packages/nocodb/src/controllers/utils.controller.ts, line: 223, quote: "@Get('/api/v1/health')"}
+    - {path: packages/nocodb/src/services/utils.service.ts, line: 133, quote: "message: 'OK',"}
+    - {path: docker-compose/examples/managed-postgres/docker-compose.yml, line: 18, quote: "http://localhost:8080/api/v1/health"}
+database:
+  status: required
+  engines: [sqlite3, pg, mysql2]
+  default: sqlite3
+  deployzEngine: postgres
+  selectBy: {NC_DB: "pg://host:5432?u=user&p=password&d=nocodb"}
+  connectionVars: [NC_DB, NC_DATABASE_URL, DATABASE_URL, NC_DB_JSON, NC_DB_JSON_FILE, NC_DATABASE_URL_FILE]
+  evidence:
+    - {path: packages/nocodb/src/utils/nc-config/NcConfig.ts, line: 18, quote: "filename: 'noco.db',"}
+    - {path: packages/nocodb/src/utils/nc-config/NcConfig.ts, line: 142, quote: "metaUrl: process.env.NC_DB,"}
+    - {path: packages/nocodb/src/utils/nc-config/helpers.ts, line: 20, quote: "databaseUrl = process.env.NC_DATABASE_URL || process.env.DATABASE_URL,"}
+    - {path: packages/nocodb/src/utils/nc-config/helpers.ts, line: 26, quote: "process.env.NC_DB = jdbcToXcUrl(databaseUrl);"}
+    - {path: packages/nocodb/src/utils/nc-config/helpers.ts, line: 282, quote: "url.searchParams.forEach((_value, key) => {"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/nocodb/src/meta/meta.service.ts, line: 1166, quote: "// skip migration in worker container"}
+    - {path: packages/nocodb/src/init.ts, line: 11, quote: "await NcUpgrader.upgrade({ ncMeta: Noco._ncMeta });"}
+redis:
+  status: optional
+  selectBy: {NC_REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: packages/nocodb/src/helpers/redisHelpers.ts, line: 14, quote: "process.env.NC_CACHE_REDIS_URL || process.env.NC_REDIS_URL;"}
+    - {path: packages/nocodb/src/modules/jobs/jobs.module.ts, line: 57, quote: "// Fallback Queue (CE only supports fallback queue)"}
+    - {path: packages/nocodb/src/Noco.ts, line: 199, quote: "throw new Error('NC_REDIS_URL is required');"}
+workers:
+  status: optional-independent
+  commands: ["same image with NC_WORKER_CONTAINER=true (needs NC_REDIS_URL)"]
+  # Without Redis, jobs run in the web process through the fallback queue. A separate worker needs Redis and the same image.
+  evidence:
+    - {path: packages/nocodb/src/Noco.ts, line: 197, quote: "if (process.env.NC_WORKER_CONTAINER === 'true') {"}
+    - {path: packages/nocodb/src/modules/jobs/redis/jobs.service.ts, line: 63, quote: "// resume primary instance queue if there is no worker"}
+    - {path: docker-compose/examples/managed-postgres/docker-compose.yml, line: 28, quote: "NC_WORKER_CONTAINER: 'true'"}
+scheduledJobs:
+  status: embedded
+  items: [data export cleanup, migration jobs]
+  evidence:
+    - {path: packages/nocodb/src/modules/jobs/redis/jobs.service.ts, line: 34, quote: "{ jobName: JobTypes.DataExportCleanUp },"}
+storage:
+  local: conditional
+  paths: ["<NC_APP_DATA_DIR or cwd>/noco.db", "<NC_APP_DATA_DIR or cwd>/nc/uploads"]
+  s3: native
+  s3SelectBy: {NC_S3_BUCKET_NAME: bucket, NC_S3_REGION: region}
+  # S3 access key and secret are optional: without both the AWS SDK default credential chain applies, so the ECS task role works.
+  evidence:
+    - {path: packages/nocodb/src/utils/nc-config/helpers.ts, line: 32, quote: "process.env.NC_APP_DATA_DIR || process.env.NC_TOOL_DIR || process.cwd()"}
+    - {path: packages/nocodb/src/plugins/storage/Local.ts, line: 178, quote: "path.join('nc', 'uploads')"}
+    - {path: packages/nocodb/src/helpers/NcPluginMgrv2.ts, line: 157, quote: "process.env.NC_S3_BUCKET_NAME &&"}
+    - {path: packages/nocodb/src/helpers/NcPluginMgrv2.ts, line: 170, quote: "if (process.env.NC_S3_ACCESS_KEY && process.env.NC_S3_ACCESS_SECRET) {"}
+    - {path: packages/nocodb/src/plugins/s3/S3.ts, line: 55, quote: "if (this.input.access_key && this.input.access_secret) {"}
+env:
+  required:
+    - {name: NC_DB, secret: true, buildTime: false, note: "pg://host:port?u=user&p=password&d=database, or DATABASE_URL / NC_DATABASE_URL (converted to NC_DB); without it the app uses SQLite noco.db on ephemeral disk. The URL holds the password. RDS forces TLS: add ssl=true (a plain connection is refused)"}
+    - {name: NC_S3_BUCKET_NAME, secret: false, buildTime: false, note: "with NC_S3_REGION; attachments then go to S3 through the task role; NC_S3_ACCESS_KEY/NC_S3_ACCESS_SECRET are optional (set both or neither)"}
+    - {name: NC_S3_REGION, secret: false, buildTime: false, note: "see NC_S3_BUCKET_NAME"}
+    - {name: NC_SITE_URL, secret: false, buildTime: false, note: "public HTTPS URL for email links, webhooks and OAuth redirects"}
+    - {name: NC_ADMIN_EMAIL, secret: false, buildTime: false, note: "not needed to boot; without NC_ADMIN_EMAIL and NC_ADMIN_PASSWORD the first visitor signs up as super admin, so set both on a public URL"}
+    - {name: NC_ADMIN_PASSWORD, secret: true, buildTime: false, note: "see NC_ADMIN_EMAIL"}
+  optional: [NC_AUTH_JWT_SECRET, NC_REDIS_URL, NC_WORKER_CONTAINER, NC_S3_ENDPOINT, NC_S3_ACCESS_KEY, NC_S3_ACCESS_SECRET, NC_S3_FORCE_PATH_STYLE, NC_S3_ACL, NC_SECURE_ATTACHMENTS, NC_APP_DATA_DIR, NC_DISABLE_TELE, NC_SMTP_HOST, NC_SMTP_PORT, NC_SMTP_FROM, NC_SMTP_USERNAME, NC_SMTP_PASSWORD, NC_JWT_EXPIRES_IN, NC_TRUST_PROXY, PORT]
+  buildTime: []
+  evidence:
+    - {path: packages/nocodb/src/Noco.ts, line: 304, quote: "if (!this.config.auth.jwt.secret) {"}
+    - {path: packages/nocodb/src/Noco.ts, line: 322, quote: "value: (secret = uuidv4()),"}
+    - {path: packages/nocodb/src/utils/nc-config/NcConfig.ts, line: 146, quote: "secret: process.env.NC_AUTH_JWT_SECRET,"}
+    - {path: packages/nocodb/src/helpers/initAdminFromEnv.ts, line: 49, quote: "if (process.env.NC_ADMIN_EMAIL && process.env.NC_ADMIN_PASSWORD) {"}
+    - {path: docker-compose/examples/managed-postgres/docker.env, line: 8, quote: "NC_SITE_URL=https://nocodb.example.com"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: the production image nocodb/nocodb is built outside this tree and only pulled by compose files and the Helm chart. Deployz cannot build or pull it. A vendor must write a multi-stage Dockerfile (build packages/nocodb-sdk, then packages/nocodb; the GUI comes from the nc-lib-gui npm dependency)."
+  mustNot:
+    - "SQLite default must not block: NC_DB selects PostgreSQL (or MySQL)"
+    - "noco.db and nc/uploads local paths must not block: the meta DB is external and attachments go to S3 with NC_S3_BUCKET_NAME"
+    - "Static S3 keys must not be required: NC_S3_ACCESS_KEY and NC_S3_ACCESS_SECRET are optional, the task role works"
+    - "Redis must not be required: the fallback queue and in-memory cache are the CE default"
+    - "A separate worker must not be required: the worker container is optional and needs Redis"
+    - "NC_AUTH_JWT_SECRET must not be required: a random secret is generated and stored in the meta DB"
+    - "MinIO must not be required: it appears only as one optional storage plugin"
+    - "Docker Compose in docker-compose/ (Auto_Upstall, Traefik, Minio, Watchtower) is an install helper, not the production topology"
+vendorQuestions:
+  legitimate:
+    - "Is there a Dockerfile for the production image? This repo has none; the vendor must supply one that builds from the source archive"
+  unnecessary:
+    - "Which port? (8080 in run/docker.ts and Noco.ts)"
+    - "Who runs migrations? (the app migrates the meta DB at boot)"
+    - "Is a worker or scheduler needed? (jobs run in the web process; a worker is optional with Redis)"
+    - "Health path? (/api/v1/health)"
+    - "Is a JWT secret needed? (generated and stored in the DB when NC_AUTH_JWT_SECRET is unset)"
+traps:
+  - "Hinted packages/nocodb/Dockerfile, Dockerfile.local and Dockerfile.timely do not exist at this commit; only docker/start.sh, docker/start-litestream.sh and docker/litestream.yml are under packages/nocodb/docker"
+  - "docker-compose/*/docker-compose.yml use image nocodb/nocodb:latest -> a prebuilt registry image, no build (docker-compose/examples/managed-postgres/docker-compose.yml:4)"
+  - "docker/start-litestream.sh and litestream.yml replicate SQLite to S3 -> a workaround for SQLite, not the Deployz path; use NC_DB with PostgreSQL"
+  - "packages/nocodb/package.json start script runs rspack watch in development -> not a production start command (package.json:25)"
+  - "NC_PORT is read into the config but the listen port comes from PORT (default 8080) -> set PORT, not NC_PORT (src/run/docker.ts:33)"
+  - "/ serves the SPA -> use /api/v1/health, which is unguarded and returns JSON (utils.controller.ts:223)"
+openQuestions:
+  - "RDS forces TLS: with DATABASE_URL, jdbcToXcUrl does not add ssl; whether ssl=true in NC_DB verifies the RDS certificate chain (Node default CA store) was not checked; NODE_TLS_REJECT_UNAUTHORIZED=0 forces ssl true without verification (helpers.ts:278)"
+  - "Whether a vendor Dockerfile can use the published nc-lib-gui 0.301.3 as is, or needs a GUI build from packages/nc-gui (package.json:153)"
+crossReview:
+  - {field: database.evidence, change: "removed the helpers.ts:71 citation (connectionConfig.ssl = true): it is in jdbcToXcConfig, used only by the UI datasource-connect service, not by the meta DB (NC_DB goes through jdbcToXcUrl and metaUrlToDbConfig, which add no ssl). Replaced by helpers.ts:282 (query parameters such as ssl=true are copied to the connection), which supports the 'add ssl=true' note in env NC_DB", evidence: "packages/nocodb/src/utils/nc-config/helpers.ts:36-72,224-282; packages/nocodb/src/services/utils.service.ts:229"}
+  - {field: dockerfile.evidence, change: "added proof that the Dockerfiles exist only outside the tree: .patches/.gitkeep names private Dockerfile-on-prem and Dockerfile-cloud, and pnpm-workspace.yaml says Dockerfiles copy only packages/nocodb. git ls-files shows no Dockerfile anywhere", evidence: "packages/nocodb/.patches/.gitkeep:2; packages/nocodb/pnpm-workspace.yaml:2"}
+  - {field: traps (start script), change: "package.json:31 -> :25; the start script is line 25 ('pnpm run watch:run'), line 31 is watch:run itself", evidence: "packages/nocodb/package.json:25"}
+  - {field: outcome.accept, change: "none: both NOT_DEPLOYABLE and DEPLOYABLE_WITH_CHANGES kept; no Dockerfile, no build-local-docker-image script, no packages/nocodb/Dockerfile* in git (packages/nocodb/docker holds only start.sh, start-litestream.sh, litestream.yml)", evidence: "git ls-files -> no Dockerfile; packages/nocodb/docker/start.sh"}
+  - {field: redis / healthPath / storage, change: "none: Redis optional confirmed (worker mode only throws without a URL); /api/v1/health has no guard and returns JSON; S3 uses the default credential chain without both keys", evidence: "packages/nocodb/src/Noco.ts:197-199; packages/nocodb/src/controllers/utils.controller.ts:222-225; packages/nocodb/src/plugins/s3/S3.ts:55"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

@@ -1,0 +1,150 @@
+id: new-62
+repository: firefly-iii/firefly-iii
+commit: d65e916130c91d8f13ca808ca088d225ddd9a939
+summary: >
+  Firefly III personal finance manager (PHP 8.5, Laravel, Blade views plus a Vue/Vite v3 frontend). The repo has
+  NO Dockerfile, no docker-compose and no container web-server config: the official image lives in the separate
+  firefly-iii/docker repo. The repo is source only: vendor/ is not committed (composer install needed) and the JS
+  bundles (public/v1/js app files, the v3 vite build) are gitignored and built by .github/workflows/release.yml.
+  The app itself is one PHP web process with MySQL (default), PostgreSQL or SQLite, file cache and session by
+  default, sync queue, and an optional cron command. No Redis or worker is required.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile builds the app from this repo, so Deployz cannot build it as is. The right answer names that
+    missing build (the vendor must add a Dockerfile: composer install --no-dev, build of resources/assets/v3, and a
+    PHP web server such as php-fpm with nginx, Apache or FrankenPHP). With such a Dockerfile the architecture fits
+    Deployz well: one web container, RDS MySQL or PostgreSQL, APP_KEY, no Redis, no worker. NOT_DEPLOYABLE (as is)
+    and DEPLOYABLE_WITH_CHANGES (vendor adds the Dockerfile) are both valid.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .ci/php-cs-fixer/composer.json, reason: "code-style tooling for CI, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: .gitignore, line: 3, quote: "/vendor"}
+    - {path: .gitignore, line: 14, quote: "public/build"}
+    - {path: .gitignore, line: 21, quote: "public/v1/js/app.js*"}
+    - {path: .github/workflows/release.yml, line: 159, quote: "composer install --no-dev --no-scripts -q"}
+    - {path: .github/workflows/release.yml, line: 189, quote: "npm run build --workspace=v3 --verbose"}
+    - {path: composer.json, line: 68, quote: "\"php\": \">=8.5\","}
+runtime: {accept: [php]}
+port:
+  # No image in the repo, so the vendor Dockerfile sets the port. 80 and 8080 are the usual PHP image ports.
+  accept: [80, 8080, 8000]
+  evidence:
+    - {path: nginx_app.conf, line: 5, quote: "if ($http_x_forwarded_proto != \"https\") {"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: nginx_app.conf, line: 5, quote: "if ($http_x_forwarded_proto != \"https\") {"}
+startCommand:
+  source: explicit
+  # no image CMD exists; the vendor must supply one with a PHP web server
+  accept: ["php-fpm", "apache2-foreground", "php artisan serve", "frankenphp"]
+  evidence:
+    - {path: nginx_app.conf, line: 14, quote: "rewrite ^(.*)$ /index.php$1 last;"}
+healthPath:
+  # /health is unauthenticated (withoutMiddleware web) and returns 200 'OK' after User::count() (checks the DB).
+  # /up is the Laravel built-in health route (200, no DB check). / redirects to login or register.
+  accept: ["/health", "/up"]
+  evidence:
+    - {path: routes/web.php, line: 112, quote: "Route::get('health', ['uses' => 'HealthcheckController@check', 'as' => 'healthcheck'])->withoutMiddleware(['web']);"}
+    - {path: app/Http/Controllers/System/HealthcheckController.php, line: 40, quote: "User::count(); // sanity check for database health. Will crash if not OK."}
+    - {path: app/Http/Controllers/System/HealthcheckController.php, line: 42, quote: "return response('OK', 200);"}
+    - {path: bootstrap/app.php, line: 73, quote: "health  : '/up',"}
+database:
+  status: required
+  engines: [mysql, pgsql, sqlite]
+  default: mysql
+  deployzEngine: mysql
+  # PostgreSQL also works (DB_CONNECTION=pgsql); MySQL is the default, so DB_CONNECTION can stay mysql.
+  selectBy: {DB_CONNECTION: mysql}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  evidence:
+    - {path: config/database.php, line: 76, quote: "'default'     => env_default_when_empty(env('DB_CONNECTION'), 'mysql'),"}
+    - {path: config/database.php, line: 98, quote: "'pgsql'  => ["}
+    - {path: config/database.php, line: 78, quote: "'sqlite' => ["}
+    - {path: .env.example, line: 94, quote: "DB_CONNECTION=mysql"}
+    - {path: .env.example, line: 116, quote: "PGSQL_SSL_MODE=prefer"}
+migrations:
+  mode: command
+  # no entrypoint in this repo; the separate docker repo entrypoint runs these before start
+  accept: ["php artisan migrate --seed --force", "php artisan firefly-iii:upgrade-database", "php artisan migrate"]
+  evidence:
+    - {path: app/Console/Commands/System/ForcesMigrations.php, line: 81, quote: "Artisan::call('migrate', ['--seed' => true, '--force' => true]);"}
+    - {path: app/Console/Commands/Upgrade/UpgradesDatabase.php, line: 48, quote: "protected $signature   = 'firefly-iii:upgrade-database {--F|force : Force all upgrades.}';"}
+    - {path: composer.json, line: 179, quote: "\"@php artisan firefly-iii:upgrade-database\","}
+    - {path: composer.json, line: 180, quote: "\"@php artisan firefly-iii:laravel-passport-keys\","}
+redis:
+  status: optional
+  selectBy: {CACHE_STORE: redis, SESSION_DRIVER: redis}
+  evidence:
+    - {path: .env.example, line: 129, quote: "CACHE_STORE=file"}
+    - {path: .env.example, line: 130, quote: "SESSION_DRIVER=file"}
+    - {path: config/cache.php, line: 39, quote: "'default' => env_default_when_empty(env('CACHE_STORE', env('CACHE_DRIVER', 'file'))),"}
+    - {path: config/session.php, line: 26, quote: "'driver'          => env('SESSION_DRIVER', 'file'),"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: config/queue.php, line: 37, quote: "'default'     => env('QUEUE_CONNECTION', 'sync'),"}
+    - {path: .env.example, line: 282, quote: "QUEUE_DRIVER=sync"}
+scheduledJobs:
+  status: independent
+  items: ["php artisan firefly-iii:cron (recurring transactions, auto budgets, bill warnings, exchange rates, webhooks, update check)"]
+  evidence:
+    - {path: app/Console/Commands/Tools/Cron.php, line: 50, quote: "protected $signature   = 'firefly-iii:cron"}
+    - {path: .env.example, line: 267, quote: "STATIC_CRON_TOKEN=PLEASE_REPLACE_WITH_32_CHAR_CODE"}
+storage:
+  local: ephemeral
+  paths: [storage/upload, storage/export, storage/app, storage/logs, storage/framework]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: config/filesystems.php, line: 68, quote: "'root'   => storage_path('upload'),"}
+    - {path: config/filesystems.php, line: 58, quote: "'root'   => storage_path('app'),"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "exactly 32 chars; encrypts sessions and data; keep stable across restarts"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "mysql (default) or pgsql; sqlite is ephemeral"}
+    - {name: "DB_HOST / DB_PORT / DB_DATABASE / DB_USERNAME / DB_PASSWORD", secret: false, buildTime: false, note: "the password is secret; PGSQL_SSL_MODE default is prefer"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "external HTTPS URL; used to validate requests and in emails (default http://localhost)"}
+    - {name: TRUSTED_PROXIES, secret: false, buildTime: false, note: "set to ** behind the ALB so HTTPS and client IP are detected"}
+  optional: [STATIC_CRON_TOKEN, SITE_OWNER, DEFAULT_LANGUAGE, TZ, APP_ENV, APP_DEBUG, LOG_CHANNEL, APP_LOG_LEVEL, CACHE_STORE, SESSION_DRIVER, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_FROM, MAIL_USERNAME, MAIL_PASSWORD, PGSQL_SCHEMA, PGSQL_SSL_MODE, COOKIE_SECURE, AUTHENTICATION_GUARD, PASSPORT_PRIVATE_KEY, PASSPORT_PUBLIC_KEY, PHP_MEMORY_LIMIT]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 27, quote: "APP_KEY=SomeRandomStringOf32CharsExactly"}
+    - {path: .env.example, line: 295, quote: "APP_URL=http://localhost"}
+    - {path: .env.example, line: 46, quote: "TRUSTED_PROXIES="}
+    - {path: config/app.php, line: 46, quote: "'key'             => env('APP_KEY'),"}
+blockers:
+  expected:
+    - "No Dockerfile in the repo: the official image is built in the separate firefly-iii/docker repo; the vendor must add one that runs composer install --no-dev and builds resources/assets/v3 (vendor/ and the JS bundles are not committed)"
+  mustNot:
+    - "MySQL as default must not block: Deployz offers RDS MySQL 8 and PostgreSQL 16 (DB_CONNECTION=pgsql)"
+    - "Redis must not be required: cache, session and queue default to file and sync"
+    - "A queue worker must not be required: QUEUE_CONNECTION defaults to sync"
+    - "storage/upload attachments must not block: attachments are an optional feature; local disk loses them on task replacement but the core flow works"
+    - "SQLite support must not be reported as the durable store: it is one option, MySQL is the default"
+vendorQuestions:
+  legitimate:
+    - "Dockerfile: no Dockerfile exists; the vendor must supply one (web server choice, PHP extensions, build of the v3 frontend)"
+    - "Attachments: stored on local disk (storage/upload) with no S3 option in this repo; the vendor decides whether to accept loss on restart"
+  unnecessary:
+    - "Which database? (MySQL default, PostgreSQL supported through DB_CONNECTION)"
+    - "Is Redis or a worker needed? (no; defaults are file and sync)"
+    - "Health path? (/health or /up)"
+traps:
+  - "release.yml suggests a build pipeline -> that is CI release packaging, not a Dockerfile; there is no Dockerfile (.github/workflows/release.yml:159)"
+  - "nginx_app.conf is a PaaS nginx snippet, not a container config (nginx_app.conf:5)"
+  - ".env.example sets DB_CONNECTION=mysql and a compose-style DB host -> override with the RDS endpoint (.env.example:94)"
+  - "/ redirects to login or register -> use /health or /up (routes/web.php:112, bootstrap/app.php:73)"
+  - "STATIC_CRON_TOKEN is only for the cron URL -> not required when the cron command runs as a scheduled job (.env.example:267)"
+openQuestions:
+  - "Whether the official firefly-iii/docker Dockerfile may count as the repo Dockerfile: it is a different repository, so this ground truth says no"
+crossReview:
+  - {field: dockerfile, change: "none: git ls-files has no Dockerfile, compose, Containerfile or Procfile; only .ci composer files, nginx_app.conf and .htaccess; readme links to the docs for Docker", evidence: "readme.md:52; git ls-files over the whole tree"}
+  - {field: storage / redis / workers, change: "none: all filesystems disks use the local driver; cache and session default to file, queue to sync", evidence: "config/filesystems.php:57; config/queue.php:37"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

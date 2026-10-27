@@ -24,7 +24,7 @@ export type GithubState =
   | { status: 'error'; message: string }
   /** `inactive`: the organization has connections, but none is active
    *  (disconnected, or an access issue). Settings is where they are repaired. */
-  | { status: 'empty'; connectUrl: string | null; inactive: boolean }
+  | { status: 'empty'; connectUrl: string | null; canConnect: boolean; inactive: boolean }
   | {
       status: 'loaded';
       connectUrl: string | null;
@@ -44,8 +44,9 @@ interface GithubStateSources {
 export async function loadGithubState(sources: GithubStateSources): Promise<GithubState> {
   let all: GithubInstallation[];
   let connectUrl: string | null;
+  let canConnect: boolean | undefined;
   try {
-    ({ installations: all, connectUrl } = await sources.fetchInstallations());
+    ({ installations: all, connectUrl, canConnect } = await sources.fetchInstallations());
   } catch {
     return { status: 'error', message: "We couldn't reach GitHub. Try again in a moment." };
   }
@@ -53,7 +54,7 @@ export async function loadGithubState(sources: GithubStateSources): Promise<Gith
   // Only an active connection can list repositories or back a new application.
   const installations = all.filter((installation) => installation.status === 'active');
   if (installations.length === 0) {
-    return { status: 'empty', connectUrl, inactive: all.length > 0 };
+    return { status: 'empty', connectUrl, canConnect: canConnect !== false, inactive: all.length > 0 };
   }
 
   const repositories: Record<string, GithubRepository[]> = {};

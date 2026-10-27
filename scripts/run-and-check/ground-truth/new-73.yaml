@@ -1,0 +1,144 @@
+id: new-73
+repository: odoo/odoo
+commit: 7c04d3290c90b1ff2d1d9017e914967a6d013b52
+summary: >
+  Odoo 20.0 ERP (Python 3.12-3.14, PostgreSQL 16+). One server process serves HTTP, cron and background work
+  (workers=0 threaded mode by default). The repo has no production Dockerfile: the official image is in the separate
+  odoo/docker repo, and the only Dockerfiles here (setup/docker/package.df*) are nightly packaging test images. Attachments
+  (filestore) and HTTP sessions go to local disk under data_dir; core has no S3 option.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    Topology fits Deployz (one web process, PostgreSQL, no Redis, embedded cron). But there is no Dockerfile that builds the app
+    from this repo, so a Dockerfile must be added (DEPLOYABLE_WITH_CHANGES); a strict reading of "built from ONE Dockerfile in
+    the repo" gives NOT_DEPLOYABLE. Local filestore and file sessions are ephemeral; attachments can be moved to the database with
+    the system parameter ir_attachment.location=db (not an env variable), but sessions stay on disk and break with several tasks.
+dockerfile:
+  accept: []
+  reject:
+    - {path: setup/docker/package.dfsrc, reason: "nightly-build test image that installs a built package; its own header says not to use it to deploy Odoo"}
+    - {path: setup/docker/package.dfdebian, reason: "nightly-build packaging test image, not a production app image"}
+    - {path: setup/docker/package.dffedora, reason: "nightly-build packaging test image, not a production app image"}
+    - {path: setup/docker/package.dfwine, reason: "nightly-build packaging test image, not a production app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: setup/docker/package.dfsrc, line: 1, quote: "# Please note that this Dockerfile is used for testing nightly builds and should"}
+    - {path: setup/docker/package.dfsrc, line: 2, quote: "# not be used to deploy Odoo"}
+    - {path: setup/docker/package.dfdebian, line: 1, quote: "# Please note that this Dockerfile is used for testing nightly builds and should"}
+runtime: {accept: [python]}
+port:
+  accept: [8069]
+  evidence:
+    - {path: odoo/tools/config.py, line: 291, quote: "\"-p\", \"--http-port\", dest=\"http_port\", my_default=8069"}
+    - {path: odoo/tools/config.py, line: 293, quote: "\"--gevent-port\", dest=\"gevent_port\", my_default=8072"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: odoo/tools/config.py, line: 289, quote: "my_default='127.0.0.1'"}
+    - {path: odoo/tools/config.py, line: 770, quote: "self._runtime_options['http_interface'] = '127.0.0.1'"}
+    - {path: odoo/tools/config.py, line: 136, quote: "self.env_name = 'ODOO_' + self.dest.upper()"}
+startCommand:
+  source: explicit
+  accept: ["odoo-bin", "--http-interface=0.0.0.0", "--proxy-mode"]
+  # The bind address and proxy mode can also be set with the generated env names ODOO_HTTP_INTERFACE and ODOO_PROXY_MODE.
+healthPath:
+  accept: ["/web/health"]
+  # auth='none', no session, returns {"status": "pass"} with 200 and no redirect. Without ?db_server_status it does not touch the DB.
+  evidence:
+    - {path: addons/web/controllers/home.py, line: 200, quote: "@route('/web/health', type='http', auth='none', save_session=False)"}
+    - {path: addons/web/controllers/home.py, line: 201, quote: "def health(self, db_server_status=False):"}
+    - {path: addons/web/controllers/home.py, line: 203, quote: "status = 200"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, PGSSLMODE]
+  evidence:
+    - {path: odoo/tools/config.py, line: 412, quote: "\"--db_host\", dest=\"db_host\", my_default='', env_name='PGHOST'"}
+    - {path: odoo/tools/config.py, line: 406, quote: "\"-r\", \"--db_user\", dest=\"db_user\", my_default='', env_name='PGUSER'"}
+    - {path: odoo/tools/config.py, line: 408, quote: "\"-w\", \"--db_password\", dest=\"db_password\", my_default='', env_name='PGPASSWORD'"}
+    - {path: odoo/tools/config.py, line: 404, quote: "env_name='PGDATABASE'"}
+    - {path: odoo/tools/config.py, line: 420, quote: "my_default='prefer', env_name='PGSSLMODE'"}
+    - {path: odoo/release.py, line: 41, quote: "MIN_PG_VERSION = 16"}
+migrations:
+  mode: command
+  accept: ["-i base", "-u all", "--stop-after-init"]
+  # An empty database is not initialised at boot unless -i base is given; the server then raises ImportError. Module updates need -u.
+  evidence:
+    - {path: odoo/modules/loading.py, line: 348, quote: "if not modules_db.is_initialized(cr):"}
+    - {path: odoo/modules/loading.py, line: 350, quote: "you can force it with `-i base`"}
+    - {path: odoo/service/server.py, line: 1520, quote: "update_module = config['init'] or config['update'] or config['reinit']"}
+redis:
+  status: none
+  evidence:
+    - {path: odoo/http/session.py, line: 656, quote: "return SessionStore(path=config.session_dir)"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: odoo/tools/config.py, line: 495, quote: "\"--workers\", dest=\"workers\", my_default=0"}
+    - {path: odoo/service/server.py, line: 342, quote: "def cron_thread(self, number):"}
+    - {path: odoo/service/server.py, line: 1566, quote: "elif config['workers']:"}
+scheduledJobs:
+  status: embedded
+  items: ["ir.cron jobs run in cron threads of the server process"]
+  evidence:
+    - {path: odoo/service/server.py, line: 342, quote: "def cron_thread(self, number):"}
+storage:
+  local: required
+  paths: [data_dir/filestore, data_dir/sessions]
+  s3: none
+  s3SelectBy: {}
+  # Default data_dir is a user/site data dir (/var/lib/odoo in the fallback). Attachments go to the filestore unless the DB parameter
+  # ir_attachment.location is set to db. Sessions are always files in data_dir/sessions (no Redis or DB session store in core).
+  evidence:
+    - {path: odoo/tools/config.py, line: 1133, quote: "return os.path.join(self['data_dir'], 'filestore', dbname)"}
+    - {path: odoo/tools/config.py, line: 1122, quote: "d = os.path.join(self['data_dir'], 'sessions')"}
+    - {path: odoo/addons/base/models/ir_attachment.py, line: 97, quote: "get_str('ir_attachment.location') or 'file'"}
+    - {path: odoo/http/session.py, line: 656, quote: "return SessionStore(path=config.session_dir)"}
+env:
+  required:
+    - {name: PGHOST, secret: false, buildTime: false, note: "RDS host; default is a local socket"}
+    - {name: PGUSER, secret: false, buildTime: false, note: "database user"}
+    - {name: PGPASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: PGDATABASE, secret: false, buildTime: false, note: "database name (db_name); needed so the DB can be initialised with -i base"}
+  optional: [PGPORT, PGSSLMODE, ODOO_RC, ODOO_HTTP_INTERFACE, ODOO_PROXY_MODE]
+  buildTime: []
+  evidence:
+    - {path: odoo/tools/config.py, line: 230, quote: "dest='admin_passwd', my_default='admin'"}
+    - {path: odoo/tools/config.py, line: 449, quote: "'--no-database-list', action=\"store_false\", dest='list_db'"}
+blockers:
+  expected:
+    - "No production Dockerfile in the repo: setup/docker/package.df* are packaging test images (the official image is in odoo/docker)"
+    - "Attachments (filestore) and HTTP sessions are stored on local disk with no S3 or Redis option in core; ephemeral on Fargate and not shared between tasks"
+  mustNot:
+    - "Redis must not be required or reported as a dependency: core has none"
+    - "A separate worker or cron service must not be needed: workers=0 runs cron threads in the web process"
+    - "gevent/longpolling port 8072 must not be a second service: it is used only in prefork mode (--workers > 0)"
+    - "PostgreSQL must not be reported as unsupported: 16+ is required and RDS PostgreSQL 16 fits"
+vendorQuestions:
+  legitimate:
+    - "Is a custom Dockerfile (for example from odoo/docker) acceptable, since the repo has none?"
+    - "Should attachments be stored in the database (ir_attachment.location=db) because local disk is ephemeral?"
+  unnecessary:
+    - "Which port? (8069 default)"
+    - "Which database engine? (PostgreSQL only)"
+    - "Is Redis or a worker process needed? (no)"
+    - "Health path? (/web/health)"
+traps:
+  - "setup/docker/package.dfsrc, package.dfdebian, package.dffedora, package.dfwine look like Dockerfiles but are nightly packaging test images (package.dfsrc:1-2)"
+  - "http_interface defaults to 127.0.0.1, so the app is not reachable from the ALB unless --http-interface=0.0.0.0 is given (odoo/tools/config.py:289)"
+  - "gevent_port 8072 is the longpolling/websocket port only in prefork mode; with workers=0 websocket runs on the main port (odoo/tools/config.py:293, odoo/service/server.py:1566)"
+  - "debian/odoo.conf and the odoo.service unit are for the .deb package, not for a container (debian/odoo.conf:1)"
+  - "/ and /web redirect to login or the database manager; use /web/health (addons/web/controllers/home.py:200)"
+  - "admin_passwd is only a config-file option (FileOnlyOption), not an env variable or CLI flag (odoo/tools/config.py:230)"
+openQuestions:
+  - "Whether the Postgres user can create extensions: not verified; with a pre-created RDS database and -i base the database manager is not needed"
+crossReview:
+  - {field: startCommand / bindAllInterfaces, change: "kept value false (default 127.0.0.1) and source explicit; added a note and evidence that every file-loadable option has an auto env name ODOO_<DEST>, so ODOO_HTTP_INTERFACE=0.0.0.0 and ODOO_PROXY_MODE work without CLI flags; added both to env.optional", evidence: "odoo/tools/config.py:134-136, 666-670"}
+  - {field: dockerfile.accept, change: "none: only four setup/docker/package.df* files exist in git (git ls-files), none is a production image; odoo-bin, requirements.txt and setup.py exist, so a Dockerfile can be added", evidence: "git ls-files"}
+  - {field: migrations, change: "none: -i/-u are file_loadable=False so they have no env name and need a command; confirmed", evidence: "odoo/tools/config.py:250-253"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

@@ -618,7 +618,7 @@ const EXACT_DOCKERFILE_NAME_REGEX = /(?:^|\/)dockerfile$/i;
 // is never the image Deployz should build — it ranks below every other
 // candidate regardless of depth (Stage A COMP-007, COMP-027).
 const DEV_DOCKERFILE_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|meilisearch|mysql|mariadb|minio|gotenberg)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|devenv|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|meilisearch|mysql|mariadb|minio|gotenberg)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$/i;
 
 // A variant of the same image for other hardware or a bundled-process layout
 // ranks below the plain one (`dev/build-arm`, `docker/multi-process`).
@@ -693,10 +693,11 @@ function productionStageIndex(stages: DockerfileStage[]): number {
 }
 
 // A base image whose default command is a shell, and an interpreter or launcher that
-// exits (or waits on a terminal) when it receives no script or sub-command.
+// exits (or waits on a terminal) when it receives no script or sub-command. An init
+// process (`["/usr/bin/tini", "--"]`, mastodon) only runs the CMD it is given.
 const BARE_OS_IMAGE_REGEX = /^(?:docker\.io\/)?(?:library\/)?(?:debian|ubuntu|alpine|busybox|fedora|centos|rockylinux|almalinux|amazonlinux)(?:[:@]|$)/i;
 const LAUNCHER_ONLY_ENTRYPOINT_REGEX =
-  /^\s*ENTRYPOINT\s+\[\s*"(?:bundle"\s*,\s*"exec|uv"\s*,\s*"run|poetry"\s*,\s*"run|pipenv"\s*,\s*"run|npx|node|python3?|ruby)"\s*\]\s*$/im;
+  /^\s*ENTRYPOINT\s+\[\s*"(?:bundle"\s*,\s*"exec|uv"\s*,\s*"run|poetry"\s*,\s*"run|pipenv"\s*,\s*"run|npx|node|python3?|ruby|(?:[\w./-]*\/)?(?:tini|dumb-init)(?:"\s*,\s*"(?:-g|-s|--))*)"\s*\]\s*$/im;
 
 /**
  * Why the image `docker build` produces has no default command that starts a server, or
@@ -759,7 +760,11 @@ function isUnusableDockerfile(path: string, content: string): boolean {
   if (DEV_DOCKERFILE_DIR_REGEX.test(path) && !startsSomething) return true;
   const copiesApp = lines.some((line) => /^\s*(?:COPY|ADD)\b/i.test(line));
   const installsSystemPackages = lines.some((line) => /^\s*RUN\b.*\b(?:apt-get|apt|apk|yum|dnf|microdnf)\b/i.test(line));
-  return installsSystemPackages && !startsSomething && !copiesApp;
+  // A dev container installs tools, copies nothing in and starts a script by a relative path:
+  // it runs a bind-mounted checkout (actual `CMD ["sh", "./bin/docker-start"]`).
+  const startsMountedScript = lines.some((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line) && /(?:^|[\s"'[,])\.\/[\w.-]/.test(line));
+  const fetchesSource = lines.some((line) => /^\s*RUN\b.*\b(?:git\s+clone|curl|wget)\b/i.test(line));
+  return installsSystemPackages && !copiesApp && (!startsSomething || (startsMountedScript && !fetchesSource));
 }
 
 function dockerfileStartsSomething(content: string): boolean {
@@ -1721,7 +1726,8 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
     });
   }
   for (const [path, content] of Object.entries(tree)) {
-    if (!LANGUAGE_SOURCE_REGEX.test(path) || !content || !isRuntimeSourcePath(path)) continue;
+    // Rust (actix `#[get("/healthz")]`, axum `.route("/health", get(…))`) names its routes the same way.
+    if (!(LANGUAGE_SOURCE_REGEX.test(path) || path.endsWith('.rs')) || !content || !isRuntimeSourcePath(path)) continue;
 
     // Phoenix routes are read below, inside their `scope`.
     if (/\.exs?$/.test(path)) continue;
@@ -1823,7 +1829,8 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
 
   // 3. Route patterns in source code, or a file-based route path
   for (const [path, content] of Object.entries(tree)) {
-    if (!/\.(ts|js|mjs|cjs|jsx|tsx)$/.test(path)) continue;
+    // A test calls a route (`page.request.get('/health')`); it does not register one.
+    if (!/\.(ts|js|mjs|cjs|jsx|tsx)$/.test(path) || !isRuntimeSourcePath(path)) continue;
     // Only a file inside a file-based router (`routes`, `pages`, `app`, or
     // an `api` segment) declares a URL by its name; a model or controller
     // called `heartbeat.js` does not (Stage A COMP-004).
@@ -1888,10 +1895,15 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   // priority the longer path wins — when a repo both registers `/health`
   // directly and mounts a health router under `/api`, the longer mounted
   // path is the one the app actually serves at that URL.
+  // One file that registers both `/health` and `/api/health` keeps the bare route: the
+  // prefixed one sits in the API group, often behind its auth (listmonk).
+  const prefixedInSameFile = (longer: HealthCandidate, shorter: HealthCandidate): boolean =>
+    longer.file !== undefined && longer.label === shorter.label && longer.path.endsWith(shorter.path);
   const best = confident.reduce((winner, candidate) => {
     if (candidate.priority < winner.priority) return candidate;
-    if (candidate.priority === winner.priority && candidate.path.length > winner.path.length) return candidate;
-    return winner;
+    if (candidate.priority !== winner.priority) return winner;
+    if (candidate.path.length > winner.path.length) return prefixedInSameFile(candidate, winner) ? winner : candidate;
+    return prefixedInSameFile(winner, candidate) ? candidate : winner;
   });
   const sources = confident.map((candidate) => candidate.label);
 
@@ -4492,9 +4504,13 @@ const ENV_NAME_LIST_REGEX = /\brequired\w*env\w*(?:\s*:[^=;\n]+)?\s*(?:=\s*\[|\.
 export function optionalQueueMode(tree: FileTree): { name: string; value: string; path: string } | null {
   for (const [path, content] of Object.entries(tree)) {
     if (!content || !isRuntimeSourcePath(path) || !SELECTOR_SOURCE_REGEX.test(path)) continue;
-    for (const [name, value] of scanDefaultedEnvReads(content)) {
+    const defaults = scanDefaultedEnvReads(content);
+    for (const [name, value] of defaults) {
       if (/_MODE$/.test(name) && !/^queue$/i.test(value) && /['"`]queue['"`]/.test(content)) return { name, value, path };
     }
+    // A mode with no default that only an equality test turns to queue (Flowise `process.env.MODE === MODE.QUEUE`).
+    const tested = /\benv\.((?:[A-Z][A-Z0-9_]*_)?MODE)\s*[!=]==?\s*(?:["'`]queue["'`]|[A-Z]\w*\.QUEUE\b)/.exec(content)?.[1];
+    if (tested !== undefined && !defaults.some(([name]) => name === tested)) return { name: tested, value: 'unset', path };
   }
   return null;
 }
@@ -6056,6 +6072,14 @@ export function detectGitCopyInDockerfile(tree: FileTree): DetectorFinding {
   }
   // A RUN command that reads git history with no `||` fallback fails the build (chatwoot's
   // `RUN git rev-parse HEAD > /app/.git_sha`).
+  // A RUN that bind-mounts `.git` from the context (gitea's `--mount=type=bind,source=".git/"`) fails without it.
+  for (const match of collapsed.matchAll(DOCKERFILE_RUN_REGEX)) {
+    const mountsGit = [...(match[1] ?? '').matchAll(/--mount=(\S+)/g)].some(([, options = '']) => {
+      const source = /(?:^|,)source=["']?([^,"']+)/.exec(options)?.[1] ?? '';
+      return /(?:^|,)type=bind\b/.test(options) && !/(?:^|,)from=/.test(options) && GIT_SOURCE_TOKEN_REGEX.test(source);
+    });
+    if (mountsGit) matches.push(match[0].trim());
+  }
   if (!GIT_REPOSITORY_SETUP_REGEX.test(collapsed)) {
     for (const match of collapsed.matchAll(DOCKERFILE_RUN_REGEX)) {
       const commands = (match[1] ?? '').split(/&&|;/);

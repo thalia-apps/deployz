@@ -26,8 +26,8 @@ export interface GithubRepository {
 export interface GithubInstallationsResult {
   installations: GithubInstallation[];
   connectUrl: string | null;
-  /** Owners and admins change connections; other members only see them. */
-  canManage: boolean;
+  /** False for a plain member: only owners and admins connect GitHub. */
+  canConnect?: boolean;
 }
 
 export interface GithubRepositoriesResult {
@@ -49,7 +49,7 @@ export interface ApplicationGithubStatus {
   installationId: string | null;
   manageUrl: string | null;
   connectUrl: string | null;
-  canManage: boolean;
+  canConnect: boolean;
 }
 
 export const GITHUB_CONNECTION_LABELS: Record<GithubConnectionStatus, { label: string; badge: BadgeVariant }> = {
@@ -136,4 +136,5 @@ export const GITHUB_RETURN_MESSAGES: Record<string, { ok: boolean; message: stri
       'Deployz could not link the GitHub installation to this organization. An installation that another Deployz organization already uses cannot be linked here.',
   },
   missing_installation: { ok: false, message: 'GitHub did not return an installation. Try again.' },
+  forbidden: { ok: false, message: 'Only an owner or admin can connect GitHub. Ask one of them to connect it.' },
 };

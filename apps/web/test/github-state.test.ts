@@ -32,13 +32,24 @@ const CONNECT_URL = 'https://github.com/apps/deployz/installations/new';
 describe('loadGithubState', () => {
   it('reports an empty state, keeping the connect link, when nothing is installed', async () => {
     const state = await loadGithubState({
-      fetchInstallations: async () => ({ installations: [], connectUrl: CONNECT_URL, canManage: true }),
+      fetchInstallations: async () => ({ installations: [], connectUrl: CONNECT_URL, canConnect: true }),
       fetchRepositories: async () => {
         throw new Error('should not be called');
       },
     });
 
-    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, inactive: false });
+    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, canConnect: true, inactive: false });
+  });
+
+  it('tells a member they cannot connect GitHub', async () => {
+    const state = await loadGithubState({
+      fetchInstallations: async () => ({ installations: [], connectUrl: null, canConnect: false }),
+      fetchRepositories: async () => {
+        throw new Error('should not be called');
+      },
+    });
+
+    expect(state).toEqual({ status: 'empty', connectUrl: null, canConnect: false, inactive: false });
   });
 
   // A disconnected connection lists no repositories and backs no new
@@ -48,14 +59,14 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation({ status: 'disconnected' }), installation({ id: 'install-2', status: 'access_issue' })],
         connectUrl: CONNECT_URL,
-        canManage: true,
+        canConnect: true,
       }),
       fetchRepositories: async () => {
         throw new Error('should not be called');
       },
     });
 
-    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, inactive: true });
+    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, canConnect: true, inactive: true });
   });
 
   it('lists each installation with its repositories', async () => {
@@ -63,7 +74,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation()],
         connectUrl: CONNECT_URL,
-        canManage: true,
+        canConnect: true,
       }),
       fetchRepositories: async () => ({ repositories: [repository()] }),
     });
@@ -85,7 +96,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation(), installation({ id: 'install-2', accountLogin: 'beta' })],
         connectUrl: CONNECT_URL,
-        canManage: true,
+        canConnect: true,
       }),
       fetchRepositories: async (id) => {
         if (id === 'install-2') throw new Error('GitHub request failed (502)');
@@ -109,7 +120,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation()],
         connectUrl: CONNECT_URL,
-        canManage: true,
+        canConnect: true,
       }),
       fetchRepositories: async () => {
         throw new Error('GitHub request failed (502)');

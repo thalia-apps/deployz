@@ -195,7 +195,7 @@ function RepositoryAccessAlert({
   const returnTo = `/dashboard/applications/${application.id}/config`;
   const reason = REPOSITORY_ACCESS_REASONS[github.status as Exclude<ApplicationGithubStatus['status'], 'connected'>];
   const canReconnect =
-    github.canManage && github.installationId !== null && (github.status === 'disconnected' || github.status === 'access_issue');
+    github.canConnect && github.installationId !== null && (github.status === 'disconnected' || github.status === 'access_issue');
 
   async function reconnect(): Promise<void> {
     if (!github.installationId) return;
@@ -240,7 +240,7 @@ function RepositoryAccessAlert({
             </a>
           </Button>
         ) : null}
-        {!github.canManage && github.status !== 'repository_inaccessible' ? (
+        {!github.canConnect && github.status !== 'repository_inaccessible' ? (
           <p className="text-xs">Ask an owner or admin of your organization to reconnect GitHub.</p>
         ) : null}
       </AlertDescription>

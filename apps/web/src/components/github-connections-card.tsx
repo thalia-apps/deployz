@@ -97,7 +97,7 @@ function ConnectionList({ data, onChanged }: { data: GithubInstallationsResult; 
     return (
       <div className="flex flex-col items-start gap-3">
         <p className="text-sm text-muted-foreground">No GitHub account is connected.</p>
-        {data.canManage && data.connectUrl ? (
+        {data.canConnect && data.connectUrl ? (
           <Button asChild data-testid="github-connect">
             <a href={githubConnectHref(data.connectUrl, SETTINGS_PATH)}>Connect GitHub</a>
           </Button>
@@ -112,12 +112,12 @@ function ConnectionList({ data, onChanged }: { data: GithubInstallationsResult; 
         <ConnectionRow
           key={installation.id}
           installation={installation}
-          canManage={data.canManage}
+          canManage={data.canConnect}
           connectUrl={data.connectUrl}
           onChanged={onChanged}
         />
       ))}
-      {!data.canManage ? (
+      {!data.canConnect ? (
         <li className="px-4 py-3 text-xs text-muted-foreground">Only an owner or admin can change the GitHub connection.</li>
       ) : null}
     </ul>
@@ -138,7 +138,7 @@ function ConnectionRow({
   onChanged,
 }: {
   installation: GithubInstallation;
-  canManage: boolean;
+  canConnect: boolean;
   connectUrl: string | null;
   onChanged: () => Promise<void>;
 }) {

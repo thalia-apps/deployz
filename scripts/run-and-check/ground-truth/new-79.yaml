@@ -1,0 +1,155 @@
+id: new-79
+repository: FlowiseAI/Flowise
+commit: 9291856d1ea4a4ceea9f8fef8ce14f4f6c81e8eb
+summary: >
+  Flowise, a low-code LLM flow builder (Node.js 24, Express, pnpm/turbo monorepo with a React UI served by the same
+  server). The root Dockerfile builds everything from source and runs one process (`pnpm start`, port 3000).
+  Defaults are SQLite and local blob storage under ~/.flowise, so a Deployz deploy must select PostgreSQL or MySQL,
+  S3 storage and stable secrets by env. Queue mode (Redis plus a `worker` command from the same image) is optional.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One image, one HTTP port, migrations at boot. Needs DATABASE_TYPE=postgres (or mysql) with DATABASE_* parts,
+    STORAGE_TYPE=s3 with S3_STORAGE_BUCKET_NAME and S3_STORAGE_REGION (the S3 keys are optional, so the task role
+    works) and fixed secrets (FLOWISE_SECRETKEY_OVERWRITE, JWT, session and token secrets) because the fallback is
+    key files on ephemeral disk. Redis and the worker are only for the optional queue mode.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker/Dockerfile, reason: "installs the published flowise package from npm (npm install -g flowise), not the repo source"}
+    - {path: docker/worker/Dockerfile, reason: "worker image variant with a healthcheck sidecar script; the main Dockerfile image runs the worker command too"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "FROM node:24-alpine"}
+    - {path: Dockerfile, line: 31, quote: "COPY . ."}
+    - {path: Dockerfile, line: 35, quote: "pnpm build:docker"}
+    - {path: Dockerfile, line: 45, quote: "CMD [ \"pnpm\", \"start\" ]"}
+    - {path: docker/Dockerfile, line: 19, quote: "RUN npm install -g flowise"}
+    - {path: docker/Dockerfile, line: 40, quote: "ENTRYPOINT [\"flowise\", \"start\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 43, quote: "EXPOSE 3000"}
+    - {path: packages/server/src/index.ts, line: 400, quote: "const port = parseInt(process.env.PORT || '', 10) || 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/server/src/index.ts, line: 406, quote: "server.listen(port, host, () => {"}
+    - {path: packages/server/src/index.ts, line: 399, quote: "const host = process.env.HOST"}
+startCommand:
+  source: image
+  accept: ["pnpm start"]
+healthPath:
+  accept: ["/api/v1/ping"]
+  # /api/v1/ping returns 200 'pong' with no dependency check and is in the auth whitelist. The UI at / is a static SPA.
+  evidence:
+    - {path: packages/server/src/routes/index.ts, line: 77, quote: "router.use('/ping', pingRouter)"}
+    - {path: packages/server/src/routes/ping/index.ts, line: 6, quote: "router.get('/', pingController.getPing)"}
+    - {path: packages/server/src/controllers/ping/index.ts, line: 5, quote: "return res.status(200).send('pong')"}
+    - {path: packages/server/src/utils/constants.ts, line: 24, quote: "'/api/v1/ping',"}
+database:
+  status: required
+  engines: [sqlite, mysql, mariadb, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_TYPE: postgres}
+  connectionVars: ["DATABASE_HOST/DATABASE_PORT/DATABASE_NAME/DATABASE_USER/DATABASE_PASSWORD", DATABASE_SSL]
+  evidence:
+    - {path: packages/server/src/DataSource.ts, line: 21, quote: "switch (process.env.DATABASE_TYPE) {"}
+    - {path: packages/server/src/DataSource.ts, line: 65, quote: "case 'postgres':"}
+    - {path: packages/server/src/DataSource.ts, line: 33, quote: "case 'mysql':"}
+    - {path: packages/server/src/DataSource.ts, line: 90, quote: "default:"}
+    - {path: packages/server/src/DataSource.ts, line: 91, quote: "homePath = process.env.DATABASE_PATH ?? flowisePath"}
+    - {path: packages/server/src/DataSource.ts, line: 68, quote: "host: process.env.DATABASE_HOST,"}
+    - {path: packages/server/src/DataSource.ts, line: 117, quote: "process.env.DATABASE_SSL === 'true'"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/server/src/index.ts, line: 91, quote: "await this.AppDataSource.runMigrations({ transaction: 'each' })"}
+    - {path: packages/server/src/commands/worker.ts, line: 72, quote: "await appDataSource.runMigrations({ transaction: 'each' })"}
+redis:
+  status: optional
+  selectBy: {MODE: queue, REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: packages/server/.env.example, line: 175, quote: "# MODE=queue #(queue | main)"}
+    - {path: packages/server/src/index.ts, line: 138, quote: "if (process.env.MODE === MODE.QUEUE) {"}
+    - {path: packages/server/src/queue/QueueManager.ts, line: 30, quote: "if (process.env.REDIS_URL) {"}
+workers:
+  status: optional-independent
+  commands: ["pnpm start-worker"]
+  evidence:
+    - {path: package.json, line: 23, quote: "\"start-worker:default\": \"cd packages/server/bin && ./run worker\""}
+    - {path: packages/server/src/commands/worker.ts, line: 62, quote: "Schedule Worker"}
+    - {path: docker/worker/Dockerfile, line: 55, quote: "pnpm run start-worker"}
+scheduledJobs:
+  status: embedded
+  items: ["user-defined flow schedules (ScheduleBeat with node-cron, or BullMQ in queue mode)"]
+  evidence:
+    - {path: packages/server/src/index.ts, line: 164, quote: "await ScheduleBeat.getInstance().init()"}
+    - {path: packages/server/src/schedule/ScheduleBeat.ts, line: 8, quote: "Non-queue mode: uses node-cron to register per-schedule cron jobs in-process."}
+storage:
+  local: conditional
+  paths: [/home/node/.flowise, /home/node/.flowise/storage, /home/node/.flowise/logs]
+  s3: native
+  s3SelectBy: {STORAGE_TYPE: s3, S3_STORAGE_BUCKET_NAME: bucket, S3_STORAGE_REGION: region}
+  evidence:
+    - {path: packages/components/src/storageUtils.ts, line: 64, quote: "process.env.STORAGE_TYPE ? process.env.STORAGE_TYPE : 'local'"}
+    - {path: packages/components/src/storageUtils.ts, line: 53, quote: ": path.join(getUserHome(), '.flowise', 'storage')"}
+    - {path: packages/components/src/storage/S3StorageProvider.ts, line: 42, quote: "S3 storage configuration is missing"}
+    - {path: packages/components/src/storage/S3StorageProvider.ts, line: 50, quote: "? { credentials: { accessKeyId, secretAccessKey } }"}
+    - {path: packages/server/src/utils/index.ts, line: 1587, quote: "await fs.promises.writeFile(defaultLocation, encryptKey)"}
+    - {path: packages/server/src/utils/index.ts, line: 1735, quote: "await fs.promises.writeFile(filePath, value)"}
+env:
+  required:
+    - {name: DATABASE_TYPE, secret: false, buildTime: false, note: "postgres (or mysql); default sqlite is ephemeral on Fargate"}
+    - {name: "DATABASE_HOST / DATABASE_PORT / DATABASE_NAME / DATABASE_USER / DATABASE_PASSWORD", secret: false, buildTime: false, note: "the password is secret"}
+    - {name: DATABASE_SSL, secret: false, buildTime: false, note: "true for RDS with forced TLS; see openQuestions on the RDS CA"}
+    - {name: STORAGE_TYPE, secret: false, buildTime: false, note: "s3, with S3_STORAGE_BUCKET_NAME and S3_STORAGE_REGION; S3_STORAGE_ACCESS_KEY_ID/SECRET_ACCESS_KEY are optional (both or neither), so the ECS task role works"}
+    - {name: FLOWISE_SECRETKEY_OVERWRITE, secret: true, buildTime: false, note: "encryption key for stored credentials; otherwise a random key is written to local disk and lost on restart"}
+    - {name: JWT_AUTH_TOKEN_SECRET, secret: true, buildTime: false, note: "else generated into a local key file (ephemeral; breaks with several tasks)"}
+    - {name: JWT_REFRESH_TOKEN_SECRET, secret: true, buildTime: false, note: "same as JWT_AUTH_TOKEN_SECRET"}
+    - {name: EXPRESS_SESSION_SECRET, secret: true, buildTime: false, note: "same as JWT_AUTH_TOKEN_SECRET"}
+    - {name: TOKEN_HASH_SECRET, secret: true, buildTime: false, note: "same as JWT_AUTH_TOKEN_SECRET"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for CORS, emails and secure cookie decision"}
+  optional: [SECRETKEY_STORAGE_TYPE, PORT, HOST, DATABASE_PATH, DATABASE_REJECT_UNAUTHORIZED, DATABASE_SSL_KEY_BASE64, S3_STORAGE_ACCESS_KEY_ID, S3_STORAGE_SECRET_ACCESS_KEY, S3_ENDPOINT_URL, S3_FORCE_PATH_STYLE, BLOB_STORAGE_PATH, SECRETKEY_PATH, LOG_PATH, LOG_LEVEL, MODE, REDIS_URL, REDIS_HOST, REDIS_PORT, QUEUE_NAME, WORKER_CONCURRENCY, TRUST_PROXY, SECURE_COOKIES, CORS_ORIGINS, SMTP_HOST, DISABLE_FLOWISE_TELEMETRY, FLOWISE_FILE_SIZE_LIMIT]
+  buildTime: []
+  evidence:
+    - {path: packages/server/src/utils/index.ts, line: 1554, quote: "FLOWISE_SECRETKEY_OVERWRITE !== undefined"}
+    - {path: packages/server/src/utils/index.ts, line: 1698, quote: "const useEnv = envVal"}
+    - {path: packages/server/src/enterprise/utils/authSecrets.ts, line: 8, quote: "JWT_AUTH_TOKEN_SECRET: 'AABBCCDDAABBCCDDAABBCCDDAABBCCDDAABBCCDD',"}
+    - {path: packages/server/src/enterprise/middleware/passport/index.ts, line: 42, quote: "process.env.NODE_ENV === 'production'"}
+    - {path: packages/server/src/index.ts, line: 187, quote: "// Default to trust all proxies"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are supported via DATABASE_TYPE"
+    - "Local ~/.flowise storage must not block: S3 storage is native and the S3 keys are optional (task role)"
+    - "Redis and the worker must not be required: MODE defaults to main, with an in-process cache and node-cron"
+    - "docker/Dockerfile must not be chosen: it installs flowise from npm, not from the repo source"
+    - "Chromium in the image (Puppeteer document loaders) must not count as a second service"
+    - "Other supported vector stores and external LLM APIs are user-configured flow nodes, not Deployz dependencies"
+vendorQuestions:
+  legitimate:
+    - "Queue mode: whether the user wants MODE=queue with Redis and a separate worker service (optional scale-out)"
+  unnecessary:
+    - "Which port? (3000 in image and code)"
+    - "Who runs migrations? (the app runs them at boot)"
+    - "Which Dockerfile? (root Dockerfile builds from source)"
+    - "Health path? (/api/v1/ping)"
+traps:
+  - "docker/Dockerfile -> installs the flowise npm package, not the repo source; use the root Dockerfile (docker/Dockerfile:19)"
+  - "docker-compose files mount ../.flowise as a volume and set DATABASE_PATH/SECRETKEY_PATH/BLOB_STORAGE_PATH to it -> the local-disk topology is a default, S3 and Postgres replace it (docker/docker-compose-queue-source.yml:21-34)"
+  - "docker-compose-queue-prebuilt.yml and docker/worker use prebuilt flowiseai/* images -> not usable by Deployz; the root image runs the worker command (docker/docker-compose-queue-prebuilt.yml:184)"
+  - "Root Dockerfile build sets NODE_OPTIONS max-old-space-size=8192 and runs a full turbo build -> the build needs much memory (Dockerfile:26)"
+  - "Missing auth secrets are generated into key files on local disk -> on Fargate they are lost on restart; set them by env (packages/server/src/utils/index.ts:1735)"
+  - "Dockerfile comment says node:20-alpine but the base is node:24-alpine (Dockerfile:40, Dockerfile:7)"
+openQuestions:
+  - "RDS TLS: DATABASE_SSL=true passes ssl:true to the driver, which verifies the server certificate; the RDS CA is not in the Node trust store, so the CA may need DATABASE_SSL_KEY_BASE64 with DATABASE_REJECT_UNAUTHORIZED, or a platform CA bundle"
+  - "First visit to a fresh instance lets the visitor create the owner account (no admin env var found): a vendor and operator choice"
+crossReview:
+ - {field: env.optional, change: "added SECRETKEY_STORAGE_TYPE (aws moves the secrets to AWS Secrets Manager; this needs IAM rights and creates secrets, so env secrets stay the simple path)", evidence: "packages/server/src/utils/index.ts:76,1559-1575"}
+ - {field: dockerfile / database / storage.s3 / workers / healthPath, change: "none: root Dockerfile builds from source (COPY . . then pnpm build:docker, CMD pnpm start); DATABASE_TYPE selects sqlite|mysql|mariadb|postgres with sqlite as default; S3 credentials are added only when both keys are set, so the task role works; the worker is optional queue mode; /api/v1/ping is in the auth whitelist and returns 200 pong", evidence: "Dockerfile:31-45; packages/server/src/DataSource.ts:21-103; packages/components/src/storage/S3StorageProvider.ts:46-53; packages/server/src/utils/constants.ts:24"}
+ - {field: all, change: verified, evidence: "42 citations checked"}

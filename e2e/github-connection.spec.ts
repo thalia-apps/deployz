@@ -93,7 +93,7 @@ test('a member sees the GitHub connection but cannot change it', async ({ page }
   await signUpWithApplication(page);
   await page.route('**/api/github/installations', async (route) => {
     const response = await route.fetch();
-    await route.fulfill({ response, json: { ...(await response.json()), canManage: false } });
+    await route.fulfill({ response, json: { ...(await response.json()), canConnect: false } });
   });
 
   await page.goto('/dashboard/settings');

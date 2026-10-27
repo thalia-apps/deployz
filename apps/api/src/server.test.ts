@@ -4352,7 +4352,7 @@ describe('server — GitHub disconnect and reconnect', () => {
   const listFor = async (cookie: string) =>
     (await get('/api/github/installations', cookie)).json() as {
       installations: { id: string; status: string; applicationCount: number }[];
-      canManage: boolean;
+      canConnect: boolean;
     };
   const repoStatus = async () =>
     ((await get(`/api/applications/${applicationId}/github`, owner.cookie)).json() as { status: string }).status;
@@ -4441,9 +4441,9 @@ describe('server — GitHub disconnect and reconnect', () => {
 
   it('shows the connection with its application count, and management to owners and admins only', async () => {
     const mine = await listFor(owner.cookie);
-    expect(mine.canManage).toBe(true);
+    expect(mine.canConnect).toBe(true);
     expect(mine.installations).toEqual([expect.objectContaining({ id: '4242', status: 'active', applicationCount: 1 })]);
-    expect((await listFor(member.cookie)).canManage).toBe(false);
+    expect((await listFor(member.cookie)).canConnect).toBe(false);
     expect(await repoStatus()).toBe('connected');
   });
 
@@ -4514,9 +4514,9 @@ describe('server — GitHub disconnect and reconnect', () => {
     // GitHub sends the vendor to the Setup URL after a change on GitHub's side.
     const revisit = await setup('4242', owner.cookie);
     expect(revisit.headers['location']).toContain('/dashboard/applications?github=disconnected');
-    // A member's install flow cannot end an owner's disconnect either.
-    const byMember = await setup('4242', member.cookie, await startInstall(member.cookie));
-    expect(byMember.headers['location']).toContain('github=disconnected');
+    // A member never reaches the binding, so cannot end the disconnect.
+    const byMember = await setup('4242', member.cookie);
+    expect(byMember.headers['location']).toContain('github=forbidden');
     expect((await listFor(owner.cookie)).installations[0]?.status).toBe('disconnected');
   });
 
