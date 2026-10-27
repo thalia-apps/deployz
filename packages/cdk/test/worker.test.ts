@@ -93,6 +93,13 @@ describe('worker handler', () => {
       .values({ id: 'org-worker', name: 'Worker Org', slug: 'worker-org-1234' })
       .returning();
     organizationId = org!.id;
+    // The build mints a token only for an active binding of the organization.
+    await db.insert(schema.githubInstallations).values({
+      id: '4242',
+      organizationId,
+      accountLogin: 'acme',
+      accountType: 'Organization',
+    });
 
     const [application] = await db
       .insert(schema.applications)
@@ -387,6 +394,54 @@ describe('worker handler', () => {
       .where(and(eq(schema.eventLogs.eventType, 'release.build_failed'), eq(schema.eventLogs.releaseId, release!.id)));
     expect(failed).toHaveLength(1);
     expect(failed[0]!.payload).toMatchObject({ schemaVersion: 1, applicationId: application!.id, failureCode: 'build_failed' });
+  });
+
+  // A build queued before the organization disconnected GitHub starts after
+  // it: the worker checks the connection when the build starts, mints no
+  // token, and settles the release as failed with the reason.
+  it('fails a queued build without a token once GitHub is disconnected', async () => {
+    await db.insert(schema.githubInstallations).values({
+      id: '5353',
+      organizationId,
+      accountLogin: 'acme-disconnected',
+      accountType: 'Organization',
+      status: 'disconnected',
+    });
+    const [application] = await db
+      .insert(schema.applications)
+      .values({
+        organizationId,
+        name: 'Disconnected',
+        githubInstallationId: '5353',
+        repoFullName: 'acme/disconnected',
+        repoUrl: 'https://github.com/acme/disconnected',
+        defaultBranch: 'main',
+      })
+      .returning();
+    const [release] = await db
+      .insert(schema.releases)
+      .values({ applicationId: application!.id, version: 'v0.2.0', gitSha: 'def4561' })
+      .returning();
+    const fetched: string[] = [];
+    const startedBefore = started.length;
+
+    await handleMessage(
+      {
+        ...deps(),
+        fetchFn: (async (url: string) => {
+          fetched.push(url);
+          throw new Error('should never be called');
+        }) as unknown as WorkerDeps['fetchFn'],
+      },
+      { type: 'BUILD_RELEASE', releaseId: release!.id },
+      'msg-disconnected',
+    );
+
+    expect(fetched).toEqual([]);
+    expect(started).toHaveLength(startedBefore);
+    const [row] = await db.select().from(schema.releases).where(eq(schema.releases.id, release!.id));
+    expect(row?.releaseStatus).toBe('FAILED');
+    expect(row?.failureReason).toBe('GitHub is disconnected for this organization. Reconnect GitHub to continue.');
   });
 
   it('§31 env setup: passes vendor build-stage variables as their own CodeBuild env vars, named by DEPLOYZ_BUILD_ARG_NAMES', async () => {

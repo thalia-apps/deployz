@@ -161,22 +161,31 @@ import { FIX_INSTRUCTIONS_AI_PROBLEMS, createAnalysisAiGateways } from './ai-con
 import { env } from './env.js';
 import { ApiError, NotFoundError, UnauthorizedError, toErrorEnvelope } from './errors.js';
 import {
+  canReadRepository,
   createAppJwt,
   createInstallState,
   createGithubStore,
   fetchInstallationAccount,
+  fetchInstallationLiveState,
+  FixtureGithubConnections,
   getCommit,
   getFixtureCommit,
+  githubManageUrl,
   handleInstallationWebhook,
+  isDashboardReturnPath,
   listBranchCommits,
   listFixtureBranchCommits,
-  listInstallations,
   listRepositories,
   mintInstallationToken,
   parseRepoFullName,
+  reconciledStatus,
+  requireActiveInstallation,
   verifyInstallState,
   verifyWebhookSignature,
   type FetchFn,
+  type GithubConnectionStatus,
+  type GithubInstallationRecord,
+  type GithubLiveState,
   type GithubWebhookEvent,
 } from './github.js';
 import {
@@ -278,6 +287,7 @@ import {
   listInvitationsForEmail,
   listMembers,
   listOrganizations,
+  recordAuditEvent,
   rejectInvitation,
   removeMember,
   requireVerifiedEmail,
@@ -517,6 +527,8 @@ const paginationQuerySchema = z.object({
 // well under GitHub's own per-installation rate limits while comfortably
 // covering normal use (opening the release picker, paging, typing a sha).
 const GITHUB_COMMITS_RATE_LIMIT = { max: 60, timeWindow: '1 minute' } as const;
+// Disconnect and reconnect change what the whole organization can build.
+const GITHUB_CONNECTION_RATE_LIMIT = { max: 10, timeWindow: '1 minute' } as const;
 
 // Failed-build evidence reads the build log (a few log-service calls per
 // request); the AI explanation spends model tokens. Both are on-demand
@@ -2590,6 +2602,17 @@ export async function buildServer({
   const githubFetch: FetchFn = injectedGithubFetch ?? globalThis.fetch.bind(globalThis);
   const githubAppId = injectedGithubAppId ?? env.githubAppId;
   const githubAppPrivateKey = injectedGithubAppPrivateKey ?? env.githubAppPrivateKey;
+  const isGithubFixtureMode = (): boolean => githubFixtureMode ?? env.githubFixtureMode;
+  const readGithubLiveState = async (installationId: string): Promise<GithubLiveState> => {
+    if (!githubAppId || !githubAppPrivateKey) {
+      throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
+    }
+    return fetchInstallationLiveState(
+      installationId,
+      createAppJwt(githubAppId, githubAppPrivateKey, Date.now()),
+      githubFetch,
+    );
+  };
   // §18/§19: real GitHub-backed analysis by default; tests inject a fake
   // via ServerDeps.analysisRunner instead of hitting GitHub.
   const runAnalysis: AnalysisRunner =
@@ -2628,7 +2651,7 @@ export async function buildServer({
       installation: body.installation,
       sender: body.sender,
     };
-    const handled = await handleInstallationWebhook(githubStore, event);
+    const handled = await handleInstallationWebhook(githubStore, event, readGithubLiveState);
     return reply.code(200).send({ received: true, handled });
   });
 
@@ -3954,6 +3977,7 @@ export async function buildServer({
     if (requireRole(request) === 'member') {
       return reply.redirect(`${env.webUrl}/dashboard/applications?github=forbidden`);
     }
+    const { returnTo } = request.query as { returnTo?: string | undefined };
     const target = new URL(installUrl);
     // GitHub hands `state` back to the Setup URL only from the App's
     // installations/new page. The App's public page (`/apps/<slug>`) drops it
@@ -3961,7 +3985,15 @@ export async function buildServer({
     if (!target.pathname.endsWith('/installations/new')) {
       target.pathname = `${target.pathname.replace(/\/+$/, '')}/installations/new`;
     }
-    target.searchParams.set('state', createInstallState(githubStateSecret, organizationId, Date.now()));
+    target.searchParams.set(
+      'state',
+      createInstallState(
+        githubStateSecret,
+        organizationId,
+        Date.now(),
+        returnTo !== undefined && isDashboardReturnPath(returnTo) ? returnTo : null,
+      ),
+    );
     return reply.redirect(target.toString());
   });
   app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
@@ -3975,12 +4007,16 @@ export async function buildServer({
       throw new ApiError(403, 'SUPPORT_MODE_READ_ONLY', 'Support mode is read-only. Exit support mode to make changes.');
     }
     const organizationId = requireSessionOrganizationId(request);
-    const dashboardUrl = `${env.webUrl}/dashboard/applications`;
+    // A member goes back to the dashboard before any binding (#636).
     if (requireRole(request) === 'member') {
-      return reply.redirect(`${dashboardUrl}?github=forbidden`);
+      return reply.redirect(`${env.webUrl}/dashboard/applications?github=forbidden`);
     }
+    const verifiedState = verifyInstallState(githubStateSecret, state, organizationId, Date.now());
+    // Back to the page that started the install, when a valid state names one.
+    const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'missing_installation'): string =>
+      `${env.webUrl}${(verifiedState && verifiedState.returnPath) || '/dashboard/applications'}?github=${result}`;
     if (!installationId) {
-      return reply.redirect(`${dashboardUrl}?github=missing_installation`);
+      return reply.redirect(returnUrl('missing_installation'));
     }
 
     if (!githubAppId || !githubAppPrivateKey) {
@@ -3992,6 +4028,7 @@ export async function buildServer({
     // (GitHub unreachable, an installation this App does not own, a private
     // key it cannot sign with), put them back on the dashboard, which reports
     // the state it can actually see.
+    let status: GithubConnectionStatus;
     try {
       const jwt = createAppJwt(githubAppId, githubAppPrivateKey, Date.now());
       const account = await fetchInstallationAccount(installationId, jwt, githubFetch);
@@ -4002,29 +4039,154 @@ export async function buildServer({
       const existing = await githubStore.get(installationId);
       if (existing !== null && existing.organizationId !== organizationId) {
         request.log.warn({ installationId }, 'github setup refused: installation bound to another organization');
-        return reply.redirect(`${dashboardUrl}?github=failed`);
+        return reply.redirect(returnUrl('failed'));
       }
       // Anyone can open this URL with an installation id they do not own. Only
       // an install this organization started (valid state) can create a
       // binding; re-visits of an existing own binding only refresh it.
-      if (existing === null && !verifyInstallState(githubStateSecret, state, organizationId, Date.now())) {
+      if (existing === null && !verifiedState) {
         request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
-        return reply.redirect(`${dashboardUrl}?github=failed`);
+        return reply.redirect(returnUrl('failed'));
       }
+      // A disconnect ends only through a reconnect this organization started
+      // (members never get here). GitHub also sends the vendor here when
+      // they change the installation on GitHub, and that keeps it disconnected.
+      status =
+        existing?.status === 'disconnected' && !verifiedState
+          ? 'disconnected'
+          : account.state === 'active'
+            ? 'active'
+            : 'access_issue';
+      // GitHub has one installation of the App per account, so this
+      // organization's other rows for the same account are earlier
+      // installations (the App was removed and installed again). Their
+      // applications move to this one, which keeps every association.
+      const replacedInstallationIds =
+        status === 'active'
+          ? (await githubStore.listByOrganization(organizationId))
+              .filter(
+                (record) =>
+                  record.id !== installationId &&
+                  (record.accountId !== null && account.accountId !== null
+                    ? record.accountId === account.accountId
+                    : record.accountLogin === account.accountLogin && record.accountType === account.accountType),
+              )
+              .map((record) => record.id)
+          : [];
 
-      await githubStore.set({
-        id: installationId,
-        organizationId,
-        accountLogin: account.accountLogin,
-        accountType: account.accountType,
-      });
+      await githubStore.set(
+        {
+          id: installationId,
+          organizationId,
+          accountLogin: account.accountLogin,
+          accountType: account.accountType,
+          accountId: account.accountId,
+          status,
+        },
+        replacedInstallationIds,
+      );
+      if (status === 'active' && existing?.status !== 'active') {
+        await recordAuditEvent(db, {
+          organizationId,
+          actorId: request.user!.id,
+          eventType: existing === null ? 'github.connected' : 'github.reconnected',
+          previousState: existing?.status ?? null,
+          requestedState: 'active',
+          payload: {
+            schemaVersion: 1,
+            installationId,
+            accountLogin: account.accountLogin,
+            ...(replacedInstallationIds.length > 0 ? { replacedInstallationIds } : {}),
+          },
+        });
+      }
     } catch (error) {
       request.log.error({ err: error, installationId }, 'github setup binding failed');
-      return reply.redirect(`${dashboardUrl}?github=failed`);
+      return reply.redirect(returnUrl('failed'));
     }
 
-    return reply.redirect(`${dashboardUrl}?github=connected`);
+    return reply.redirect(returnUrl(status === 'active' ? 'connected' : status === 'disconnected' ? 'disconnected' : 'failed'));
   });
+
+  // ── GitHub connection state ─────────────────────────────────────────────
+  //
+  // One status per organization-to-installation binding (docs/architecture.md
+  // "GitHub connection"). Fixture mode keeps it per organization in memory.
+  const fixtureGithubConnections = new FixtureGithubConnections();
+
+  /** The organization's own binding of an installation, or null. */
+  async function loadGithubConnection(
+    installationId: string | null,
+    organizationId: string,
+  ): Promise<GithubInstallationRecord | null> {
+    if (!installationId) return null;
+    if (isGithubFixtureMode()) return fixtureGithubConnections.get(installationId, organizationId);
+    const record = await githubStore.get(installationId);
+    return record?.organizationId === organizationId ? record : null;
+  }
+
+  async function saveGithubConnectionStatus(
+    record: GithubInstallationRecord,
+    status: GithubConnectionStatus,
+    disconnectedBy?: string,
+  ): Promise<boolean> {
+    if (isGithubFixtureMode()) {
+      return fixtureGithubConnections.setStatus(record.id, record.organizationId, status);
+    }
+    return githubStore.setStatus(record.id, status, disconnectedBy);
+  }
+
+  // A saved installation id is not proof of access: the stored status is
+  // checked against GitHub's current state before it is shown. A GitHub that
+  // does not answer leaves the stored status as it is.
+  async function verifiedGithubConnection(record: GithubInstallationRecord): Promise<GithubInstallationRecord> {
+    if (isGithubFixtureMode() || record.status === 'disconnected') return record;
+    let live: GithubLiveState;
+    try {
+      live = await readGithubLiveState(record.id);
+    } catch (error) {
+      app.log.warn({ err: error, installationId: record.id }, 'github installation check failed');
+      return record;
+    }
+    const status = reconciledStatus(record.status, live.state);
+    if (status !== record.status) await githubStore.setStatus(record.id, status);
+    return { ...record, status };
+  }
+
+  async function githubApplicationCounts(organizationId: string): Promise<Map<string, number>> {
+    const rows = await db
+      .select({
+        installationId: schema.applications.githubInstallationId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(schema.applications)
+      .where(eq(schema.applications.organizationId, organizationId))
+      .groupBy(schema.applications.githubInstallationId);
+    return new Map(rows.flatMap((row) => (row.installationId ? [[row.installationId, Number(row.count)]] : [])));
+  }
+
+  function githubConnectionView(record: GithubInstallationRecord, applicationCount: number) {
+    return {
+      id: record.id,
+      accountLogin: record.accountLogin,
+      accountType: record.accountType,
+      status: record.status,
+      applicationCount,
+      manageUrl: githubManageUrl(record),
+    };
+  }
+
+  // Work that will need GitHub is refused when it is requested, so the
+  // vendor sees the reason at once; analysis and the release build check
+  // again when they start. An application with no installation id keeps its
+  // old path (the run fails with GITHUB_INSTALLATION_MISSING), and fixture
+  // mode only gates the fixture installation it knows.
+  async function requireApplicationGithubAccess(application: ApplicationRow): Promise<void> {
+    if (!application.githubInstallationId) return;
+    const connection = await loadGithubConnection(application.githubInstallationId, application.organizationId);
+    if (connection === null && isGithubFixtureMode()) return;
+    requireActiveInstallation(connection, application.organizationId);
+  }
 
   // GitHub repo-selection surface (auth-gated). Fixture mode serves the
   // fixture org/repos so the dashboard renders test data without a real App;
@@ -4035,11 +4197,16 @@ export async function buildServer({
     if (!organizationId) {
       throw new ApiError(401, 'UNAUTHORIZED', 'An organization is required');
     }
-    const fixtureMode = githubFixtureMode ?? env.githubFixtureMode;
-    const installations = await listInstallations(githubStore, organizationId, { fixtureMode });
+    const records = isGithubFixtureMode()
+      ? fixtureGithubConnections.list(organizationId)
+      : await githubStore.listByOrganization(organizationId);
+    const [verified, counts] = await Promise.all([
+      Promise.all(records.map(verifiedGithubConnection)),
+      githubApplicationCounts(organizationId),
+    ]);
     const canConnect = requireRole(request) !== 'member';
     return {
-      installations,
+      installations: verified.map((record) => githubConnectionView(record, counts.get(record.id) ?? 0)),
       canConnect,
       connectUrl:
         canConnect && (githubAppInstallUrl ?? env.githubAppInstallUrl)
@@ -4048,23 +4215,93 @@ export async function buildServer({
     };
   });
 
+  // A local disconnect: Deployz stops using the installation for this
+  // organization. It never uninstalls or suspends the App on GitHub, so
+  // access on GitHub's side stays until the account owner removes it there
+  // (the manage URL). Applications, releases and running deployments stay.
+  app.post(
+    '/api/github/installations/:installationId/disconnect',
+    { preHandler: requireAuth, config: { rateLimit: GITHUB_CONNECTION_RATE_LIMIT } },
+    async (request) => {
+      const { installationId } = request.params as { installationId: string };
+      const organizationId = requireSessionOrganizationId(request);
+      requireOwnerOrAdmin(request);
+      const record = await loadGithubConnection(installationId, organizationId);
+      if (!record) {
+        throw new NotFoundError('GitHub installation not found');
+      }
+      const applicationCount = (await githubApplicationCounts(organizationId)).get(record.id) ?? 0;
+      if (await saveGithubConnectionStatus(record, 'disconnected', request.user!.id)) {
+        await recordAuditEvent(db, {
+          organizationId,
+          actorId: request.user!.id,
+          eventType: 'github.disconnected',
+          previousState: record.status,
+          requestedState: 'disconnected',
+          payload: { schemaVersion: 1, installationId, accountLogin: record.accountLogin, applicationCount },
+        });
+      }
+      return githubConnectionView({ ...record, status: 'disconnected' }, applicationCount);
+    },
+  );
+
+  // Reconnects an installation GitHub still has. The status comes from
+  // GitHub's current state: an installation GitHub removed or suspended
+  // becomes 'access_issue', and the vendor installs the App again through
+  // /api/github/connect.
+  app.post(
+    '/api/github/installations/:installationId/reconnect',
+    { preHandler: requireAuth, config: { rateLimit: GITHUB_CONNECTION_RATE_LIMIT } },
+    async (request) => {
+      const { installationId } = request.params as { installationId: string };
+      const organizationId = requireSessionOrganizationId(request);
+      requireOwnerOrAdmin(request);
+      const record = await loadGithubConnection(installationId, organizationId);
+      if (!record) {
+        throw new NotFoundError('GitHub installation not found');
+      }
+      const applicationCount = (await githubApplicationCounts(organizationId)).get(record.id) ?? 0;
+      if (record.status === 'active') {
+        return githubConnectionView(record, applicationCount);
+      }
+      const status: GithubConnectionStatus = isGithubFixtureMode()
+        ? 'active'
+        : (await readGithubLiveState(record.id)).state === 'active'
+          ? 'active'
+          : 'access_issue';
+      if ((await saveGithubConnectionStatus(record, status)) && status === 'active') {
+        await recordAuditEvent(db, {
+          organizationId,
+          actorId: request.user!.id,
+          eventType: 'github.reconnected',
+          previousState: record.status,
+          requestedState: 'active',
+          payload: { schemaVersion: 1, installationId, accountLogin: record.accountLogin },
+        });
+      }
+      return githubConnectionView({ ...record, status }, applicationCount);
+    },
+  );
+
   app.get('/api/github/repos', { preHandler: requireAuth }, async (request) => {
     const { installationId } = request.query as { installationId?: string | undefined };
     if (!installationId) {
       throw new ApiError(400, 'INSTALLATION_ID_REQUIRED', 'installationId query parameter is required');
     }
     const organizationId = requireSessionOrganizationId(request);
-    const fixtureMode = githubFixtureMode ?? env.githubFixtureMode;
-    if (fixtureMode) {
+    // An installation id is a guessable integer, and the token minted below
+    // can read every repository in it — so the caller must own it, and the
+    // connection must be active.
+    const record = await loadGithubConnection(installationId, organizationId);
+    if (isGithubFixtureMode()) {
+      if (record) requireActiveInstallation(record, organizationId);
       const repositories = await listRepositories(installationId, { fixtureMode: true });
       return { repositories };
     }
-    // An installation id is a guessable integer, and the token minted below
-    // can read every repository in it — so the caller must own it.
-    const record = await githubStore.get(installationId);
-    if (!record || record.organizationId !== organizationId) {
+    if (!record) {
       throw new NotFoundError('GitHub installation not found');
     }
+    requireActiveInstallation(record, organizationId);
     if (!githubAppId || !githubAppPrivateKey) {
       throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
     }
@@ -4241,12 +4478,11 @@ export async function buildServer({
     // The installation id is what analysis later mints a repo-read token
     // from, so an application may only point at an installation this
     // organization connected.
-    if (!(githubFixtureMode ?? env.githubFixtureMode)) {
-      const record = await githubStore.get(body.githubInstallationId);
-      if (!record || record.organizationId !== organizationId) {
-        throw new NotFoundError('GitHub installation not found');
-      }
+    const connection = await loadGithubConnection(body.githubInstallationId, organizationId);
+    if (!connection && !isGithubFixtureMode()) {
+      throw new NotFoundError('GitHub installation not found');
     }
+    if (connection) requireActiveInstallation(connection, organizationId);
 
     // One application per repository per organization. Choosing the same repo
     // twice used to create a second application with its own releases and
@@ -4507,7 +4743,7 @@ export async function buildServer({
   app.post('/api/applications/:id/analyse', { preHandler: requireAuth }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
-    await loadOwnedApplication(db, id, organizationId);
+    await requireApplicationGithubAccess(await loadOwnedApplication(db, id, organizationId));
     // Task 6 commit-SHA analysis cache: `force` bypasses it (the vendor's
     // explicit "Re-analyse" action) — an auto-trigger sends no body and
     // lets the cache decide.
@@ -4558,7 +4794,7 @@ export async function buildServer({
     if (!isDisputableFinding(findingId)) {
       throw new ApiError(422, 'FINDING_NOT_DISPUTABLE', 'Deployz cannot remove this item. Change the application instead.');
     }
-    await loadOwnedApplication(db, id, organizationId);
+    await requireApplicationGithubAccess(await loadOwnedApplication(db, id, organizationId));
     await db.transaction(async (tx) => {
       const [row] = await tx.select().from(schema.applications).where(eq(schema.applications.id, id)).limit(1).for('update');
       if (!row) throw new NotFoundError('Application not found');
@@ -4605,7 +4841,7 @@ export async function buildServer({
   app.delete('/api/applications/:id/blocker-disputes/:findingId', { preHandler: requireAuth }, async (request, reply) => {
     const { id, findingId } = request.params as { id: string; findingId: string };
     const organizationId = requireSessionOrganizationId(request);
-    await loadOwnedApplication(db, id, organizationId);
+    await requireApplicationGithubAccess(await loadOwnedApplication(db, id, organizationId));
     await db.transaction(async (tx) => {
       const [row] = await tx.select().from(schema.applications).where(eq(schema.applications.id, id)).limit(1).for('update');
       if (!row) throw new NotFoundError('Application not found');
@@ -5808,6 +6044,7 @@ export async function buildServer({
     const { id } = request.params as { id: string };
     const organizationId = requireSessionOrganizationId(request);
     const application = await loadOwnedApplication(db, id, organizationId);
+    await requireApplicationGithubAccess(application);
     await ensureBuildConfigurationReady(db, application);
     const body = createReleaseBodySchema.parse(request.body);
 
@@ -5985,19 +6222,16 @@ export async function buildServer({
   // was revoked since the application was connected, which is indistinguishable
   // from "never connected" from here.
   async function resolveCommitInstallationToken(application: ApplicationRow, organizationId: string): Promise<string> {
-    if (!application.githubInstallationId) {
-      throw new ApiError(409, 'GITHUB_NOT_CONNECTED', 'This application is not connected to a GitHub installation');
-    }
-    const record = await githubStore.get(application.githubInstallationId);
-    if (!record || record.organizationId !== organizationId) {
-      throw new ApiError(409, 'GITHUB_NOT_CONNECTED', 'This application is not connected to a GitHub installation');
-    }
+    const record = requireActiveInstallation(
+      await loadGithubConnection(application.githubInstallationId, organizationId),
+      organizationId,
+    );
     if (!githubAppId || !githubAppPrivateKey) {
       throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
     }
     try {
       const { token } = await mintInstallationToken(
-        application.githubInstallationId,
+        record.id,
         githubAppId,
         githubAppPrivateKey,
         Date.now(),
@@ -6017,6 +6251,47 @@ export async function buildServer({
     }
   }
 
+  // GET /api/applications/:id/github — whether Deployz can read this
+  // application's repository now. Read from GitHub on each request, so a
+  // repository removed from the installation shows as inaccessible without
+  // any stored per-repository state.
+  app.get(
+    '/api/applications/:id/github',
+    { preHandler: requireAuth, config: { rateLimit: GITHUB_COMMITS_RATE_LIMIT } },
+    async (request) => {
+      const { id } = request.params as { id: string };
+      const organizationId = requireSessionOrganizationId(request);
+      const application = await loadOwnedApplication(db, id, organizationId);
+      const record = await loadGithubConnection(application.githubInstallationId, organizationId);
+      const canConnect = requireRole(request) !== 'member';
+      const view = (status: GithubConnectionStatus | 'not_connected' | 'connected' | 'repository_inaccessible') => ({
+        status: status === 'active' ? 'connected' : status,
+        repoFullName: application.repoFullName,
+        branch: application.defaultBranch,
+        accountLogin: record?.accountLogin ?? null,
+        installationId: record?.id ?? null,
+        manageUrl: record ? githubManageUrl(record) : null,
+        connectUrl:
+          canConnect && (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
+        canConnect,
+      });
+      if (!record) return view('not_connected');
+      const verified = await verifiedGithubConnection(record);
+      if (verified.status !== 'active' || isGithubFixtureMode()) return view(verified.status);
+      if (!githubAppId || !githubAppPrivateKey) {
+        throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
+      }
+      let token: string;
+      try {
+        ({ token } = await mintInstallationToken(record.id, githubAppId, githubAppPrivateKey, Date.now(), githubFetch));
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'GITHUB_TOKEN_FETCH_FAILED') return view('access_issue');
+        throw error;
+      }
+      return view((await canReadRepository(application.repoFullName, token, githubFetch)) ? 'connected' : 'repository_inaccessible');
+    },
+  );
+
   const commitsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).max(10).optional().default(1),
   });
@@ -6030,6 +6305,7 @@ export async function buildServer({
       const { id } = request.params as { id: string };
       const organizationId = requireSessionOrganizationId(request);
       const application = await loadOwnedApplication(db, id, organizationId);
+      await requireApplicationGithubAccess(application);
       const parsedQuery = commitsQuerySchema.safeParse(request.query);
       if (!parsedQuery.success) {
         throw new ApiError(400, 'INVALID_PAGE', 'page must be an integer between 1 and 10');
@@ -6067,6 +6343,7 @@ export async function buildServer({
       const { id, sha } = request.params as { id: string; sha: string };
       const organizationId = requireSessionOrganizationId(request);
       const application = await loadOwnedApplication(db, id, organizationId);
+      await requireApplicationGithubAccess(application);
       if (!COMMIT_SHA_REGEX.test(sha)) {
         throw new ApiError(400, 'INVALID_COMMIT_SHA', 'sha must be 7-40 hexadecimal characters');
       }

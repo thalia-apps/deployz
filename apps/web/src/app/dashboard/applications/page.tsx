@@ -1,13 +1,13 @@
 'use client';
 
-import { ArrowRight, CircleAlert, Plus } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { DocsLink } from '@/components/docs-link';
+import { GithubReturnNotice } from '@/components/github-return-notice';
 import { RepositoryPicker } from '@/components/repository-picker';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,15 +19,6 @@ import { fetchDeployments } from '@/lib/deployments';
 import { DOCS } from '@/lib/docs-links';
 import { fetchReadiness } from '@/lib/readiness';
 import { mapWithConcurrency } from '@/lib/map-with-concurrency';
-
-// Where the GitHub App setup callback sends the vendor back to
-// (`?github=failed|missing_installation`) when no installation was linked.
-const GITHUB_CONNECT_FAILURES: Record<string, string> = {
-  failed:
-    'Deployz could not link the GitHub installation to this organization. Connect GitHub again from Add application. An installation that another Deployz organization already uses cannot be linked here.',
-  missing_installation: 'GitHub did not return an installation. Connect GitHub again from Add application.',
-  forbidden: 'Only an owner or admin can connect GitHub. Ask one of them to connect it.',
-};
 
 // The API's Lambda account quota is small (10 concurrent executions), so the
 // per-application readiness reads go a few at a time.
@@ -46,12 +37,6 @@ type AppsState =
 export default function ApplicationsPage() {
   const [appsState, setAppsState] = useState<AppsState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
-  const [githubFailure, setGithubFailure] = useState<string | null>(null);
-
-  useEffect(() => {
-    const result = new URLSearchParams(window.location.search).get('github');
-    setGithubFailure(result !== null ? (GITHUB_CONNECT_FAILURES[result] ?? null) : null);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,13 +77,7 @@ export default function ApplicationsPage() {
         ) : null}
       </div>
 
-      {githubFailure ? (
-        <Alert variant="destructive">
-          <CircleAlert aria-hidden />
-          <AlertTitle>GitHub was not connected</AlertTitle>
-          <AlertDescription>{githubFailure}</AlertDescription>
-        </Alert>
-      ) : null}
+      <GithubReturnNotice />
 
       {appsState.status === 'loading' ? (
         <div className="flex flex-col gap-3" aria-busy="true">

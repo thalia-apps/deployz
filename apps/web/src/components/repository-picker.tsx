@@ -86,7 +86,11 @@ export function RepositoryPicker({ applications }: { applications: Application[]
 
   if (githubState.status === 'empty') {
     return (
-      <ConnectGitHubEmptyState connectUrl={githubState.connectUrl} canConnect={githubState.canConnect} />
+      <ConnectGitHubEmptyState
+        connectUrl={githubState.connectUrl}
+        canConnect={githubState.canConnect}
+        inactive={githubState.inactive}
+      />
     );
   }
 
@@ -104,10 +108,32 @@ export function RepositoryPicker({ applications }: { applications: Application[]
 function ConnectGitHubEmptyState({
   connectUrl,
   canConnect,
+  inactive,
 }: {
   connectUrl: string | null;
   canConnect: boolean;
+  inactive: boolean;
 }) {
+  if (inactive) {
+    return (
+      <section
+        aria-labelledby="connect-github"
+        data-testid="github-inactive"
+        className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center"
+      >
+        <h2 id="connect-github" className="text-lg font-semibold">
+          GitHub is not connected
+        </h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          This organization&apos;s GitHub connection is disconnected or has an access issue. Reconnect it to choose a
+          repository.
+        </p>
+        <Button asChild>
+          <Link href="/dashboard/settings#github">Open GitHub settings</Link>
+        </Button>
+      </section>
+    );
+  }
   return (
     <section
       aria-labelledby="connect-github"
