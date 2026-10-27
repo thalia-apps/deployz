@@ -26,6 +26,7 @@ const GITHUB_CONNECT_FAILURES: Record<string, string> = {
   failed:
     'Deployz could not link the GitHub installation to this organization. Connect GitHub again from Add application. An installation that another Deployz organization already uses cannot be linked here.',
   missing_installation: 'GitHub did not return an installation. Connect GitHub again from Add application.',
+  forbidden: 'Only an owner or admin can connect GitHub. Ask one of them to connect it.',
 };
 
 // The API's Lambda account quota is small (10 concurrent executions), so the

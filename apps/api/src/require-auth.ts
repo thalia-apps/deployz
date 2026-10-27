@@ -49,10 +49,14 @@ export function requireRole(request: FastifyRequest): OrganizationRole {
   return role as OrganizationRole;
 }
 
-/** Destructive tenant actions (destroy, purge, delete) need owner or admin. */
-export function requireOwnerOrAdmin(request: FastifyRequest): void {
+/** Destructive tenant actions (destroy, purge, delete), billing and the
+ *  GitHub connection need owner or admin. */
+export function requireOwnerOrAdmin(
+  request: FastifyRequest,
+  message = 'Your role does not allow this action',
+): void {
   if (requireRole(request) === 'member') {
-    throw new ApiError(403, 'INSUFFICIENT_ROLE', 'Your role does not allow this action');
+    throw new ApiError(403, 'INSUFFICIENT_ROLE', message);
   }
 }
 

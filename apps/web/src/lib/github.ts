@@ -18,6 +18,8 @@ export interface GithubRepository {
 export interface GithubInstallationsResult {
   installations: GithubInstallation[];
   connectUrl: string | null;
+  /** False for a plain member: only owners and admins connect GitHub. */
+  canConnect?: boolean;
 }
 
 export interface GithubRepositoriesResult {

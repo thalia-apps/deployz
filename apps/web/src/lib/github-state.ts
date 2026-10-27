@@ -22,7 +22,7 @@ import type {
 export type GithubState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'empty'; connectUrl: string | null }
+  | { status: 'empty'; connectUrl: string | null; canConnect: boolean }
   | {
       status: 'loaded';
       connectUrl: string | null;
@@ -42,14 +42,15 @@ interface GithubStateSources {
 export async function loadGithubState(sources: GithubStateSources): Promise<GithubState> {
   let installations: GithubInstallation[];
   let connectUrl: string | null;
+  let canConnect: boolean | undefined;
   try {
-    ({ installations, connectUrl } = await sources.fetchInstallations());
+    ({ installations, connectUrl, canConnect } = await sources.fetchInstallations());
   } catch {
     return { status: 'error', message: "We couldn't reach GitHub. Try again in a moment." };
   }
 
   if (installations.length === 0) {
-    return { status: 'empty', connectUrl };
+    return { status: 'empty', connectUrl, canConnect: canConnect !== false };
   }
 
   const repositories: Record<string, GithubRepository[]> = {};

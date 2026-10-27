@@ -30,7 +30,18 @@ describe('loadGithubState', () => {
       },
     });
 
-    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL });
+    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, canConnect: true });
+  });
+
+  it('tells a member they cannot connect GitHub', async () => {
+    const state = await loadGithubState({
+      fetchInstallations: async () => ({ installations: [], connectUrl: null, canConnect: false }),
+      fetchRepositories: async () => {
+        throw new Error('should not be called');
+      },
+    });
+
+    expect(state).toEqual({ status: 'empty', connectUrl: null, canConnect: false });
   });
 
   it('lists each installation with its repositories', async () => {
