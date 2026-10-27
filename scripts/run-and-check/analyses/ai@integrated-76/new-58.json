@@ -1,0 +1,435 @@
+{
+  "id": "new-58",
+  "commit": "564d724ed79adc62e0e571881e898663b00d1f43",
+  "analyser": "ai@integrated-76",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "apps/studio",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "apps/studio/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"apps/studio/server.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/platform/profile",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CURRENT_CLI_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLED_FEATURES_OVERRIDE_DISABLE_ALL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/common/enabled-features/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GLOBAL_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/.env.example declares GLOBAL_S3_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAINTENANCE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/routes/__root.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ADMIN_STUDIO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/router.tsx",
+            "read in apps/studio/compat/next/router.ts",
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_CONFIGCAT_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/server/configcat.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_CONFIGCAT_SDK_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/studio/lib/server/configcat.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DOCS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/dev-tools/index.ts",
+            "read in apps/studio/routes/__root.tsx",
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_HCAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/studio/pages/new/index.tsx"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_IS_PLATFORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/common/constants/environment.ts",
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/routes/__root.tsx",
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SITE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/common/constants/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/routes/__root.tsx",
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLATFORM_PG_META_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker/.env.example declares POSTGRES_PASSWORD",
+            "apps/studio/docker-entrypoint.sh declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "STUDIO_PG_META_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/studio/lib/constants/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "clerk",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker/docker-compose.yml defines 8 application services (studio, api-gw, auth, realtime, storage, imgproxy, functions, supavisor). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/docker-compose.yml defines 8 application services (studio, api-gw, auth, realtime, storage, imgproxy, functions, supavisor). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: PLATFORM_PG_META_URL. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0935154,
+        "promptTokens": 19955,
+        "completionTokens": 732
+      },
+      "latencyMs": 10668
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10670,
+    "questions": 3,
+    "generatedAt": "2026-10-27T16:42:04.063Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
