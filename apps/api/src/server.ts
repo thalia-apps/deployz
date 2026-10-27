@@ -3929,11 +3929,13 @@ export async function buildServer({
       // resolving the tenant, say) must surface as itself rather than be
       // disguised as "please sign in".
       if (!(error instanceof UnauthorizedError)) throw error;
-      const { installation_id: installationId } = request.query as {
+      const { installation_id: installationId, state } = request.query as {
         installation_id?: string | undefined;
+        state?: string | undefined;
       };
       const target = installationId
-        ? `/github/setup?installation_id=${encodeURIComponent(installationId)}`
+        ? `/github/setup?installation_id=${encodeURIComponent(installationId)}` +
+          (state ? `&state=${encodeURIComponent(state)}` : '')
         : '/github/setup';
       return reply.redirect(`${env.webUrl}/sign-in?callbackUrl=${encodeURIComponent(target)}`);
     }
@@ -3948,6 +3950,12 @@ export async function buildServer({
     }
     const organizationId = requireSessionOrganizationId(request);
     const target = new URL(installUrl);
+    // GitHub hands `state` back to the Setup URL only from the App's
+    // installations/new page. The App's public page (`/apps/<slug>`) drops it
+    // on Install, and the setup callback then refuses every new binding.
+    if (!target.pathname.endsWith('/installations/new')) {
+      target.pathname = `${target.pathname.replace(/\/+$/, '')}/installations/new`;
+    }
     target.searchParams.set('state', createInstallState(githubStateSecret, organizationId, Date.now()));
     return reply.redirect(target.toString());
   });

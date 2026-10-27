@@ -4058,6 +4058,30 @@ describe('server — GitHub installation binding', () => {
     return location.searchParams.get('state')!;
   };
 
+  // Production configured the App's public page. GitHub drops `state` when
+  // the vendor clicks Install there, so every new binding was refused.
+  it('sends the install to installations/new when the configured URL is the App page', async () => {
+    const pageApp = await buildServer({
+      auth,
+      db,
+      githubFixtureMode: false,
+      githubAppInstallUrl: 'https://github.com/apps/deployz-test/',
+    });
+    try {
+      const connect = await pageApp.inject({
+        method: 'GET',
+        url: '/api/github/connect',
+        headers: { cookie: org.cookie },
+      });
+      expect(connect.statusCode).toBe(302);
+      const location = new URL(String(connect.headers['location']));
+      expect(location.origin + location.pathname).toBe('https://github.com/apps/deployz-test/installations/new');
+      expect(location.searchParams.get('state')).toBeTruthy();
+    } finally {
+      await pageApp.close();
+    }
+  });
+
   it('refuses to bind an installation without a state this organization issued', async () => {
     const withoutState = await app.inject({
       method: 'GET',
@@ -4130,12 +4154,12 @@ describe('server — GitHub installation binding', () => {
   it('redirects a signed-out setup hit to sign-in rather than erroring', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: '/api/github/setup?installation_id=4242',
+      url: '/api/github/setup?installation_id=4242&state=s1',
     });
 
     expect(response.statusCode).toBe(302);
     expect(response.headers['location']).toContain(
-      '/sign-in?callbackUrl=%2Fgithub%2Fsetup%3Finstallation_id%3D4242',
+      '/sign-in?callbackUrl=%2Fgithub%2Fsetup%3Finstallation_id%3D4242%26state%3Ds1',
     );
   });
 
