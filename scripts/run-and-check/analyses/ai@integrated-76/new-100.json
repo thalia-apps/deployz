@@ -1,0 +1,659 @@
+{
+  "id": "new-100",
+  "commit": "aeb10d96bb2ea797696613af931e91ddf51f3320",
+  "analyser": "ai@integrated-76",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "docker/build_and_push_backend.Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"python\", \"-m\", \"langflow\", \"run\", \"--backend-only\"]",
+      "port": 7860
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LANGFLOW_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": "/bin/sh -c python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet"
+    },
+    "workers": [
+      {
+        "id": "celeryworker",
+        "command": "/bin/sh -c python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet",
+        "source": "deploy/docker-compose.yml celeryworker"
+      },
+      {
+        "id": "flower",
+        "command": "/bin/sh -c python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL:?Set a broker URL with your RabbitMQ credentials} flower --port=5555",
+        "source": "deploy/docker-compose.yml flower"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKEND_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "deploy/.env.example declares DB_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "deploy/.env.example declares DB_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "deploy/.env.example declares DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "deploy/.env.example declares DB_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "deploy/.env.example declares DB_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LANGFLOW_ALEMBIC_LOG_TO_STDOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_ALEMBIC_LOG_TO_STDOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LANGFLOW_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_API_KEY_SOURCE",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LANGFLOW_API_KEY_SOURCE"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_CACHE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_CACHE_TYPE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_CONFIG_DIR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_DATABASE_CONNECTION_RETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_DATABASE_CONNECTION_RETRY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LANGFLOW_DEBUG_FORK_GHOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/backend/base/langflow/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_DEV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/backend/base/langflow/settings.py",
+            "read in src/lfx/src/lfx/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_ENABLE_SUPERUSER_CLI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_ENABLE_SUPERUSER_CLI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_FRONTEND_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_FRONTEND_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_LANGCHAIN_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_LANGCHAIN_CACHE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_LOG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_LOG_FILE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_LOG_LEVEL",
+            "read in src/backend/base/langflow/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_LOG_ROTATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_LOG_ROTATION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_MCP_COMPOSER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_MCP_COMPOSER_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_MIGRATION_LOCK_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/backend/base/langflow/alembic/env.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_MODELS_DEV_REFRESH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/backend/base/langflow/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_OPEN_BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_OPEN_BROWSER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_PROMETHEUS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/backend/base/langflow/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_RATE_LIMIT_PER_MINUTE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_RATE_LIMIT_STORAGE_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_RATE_LIMIT_STORAGE_URI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_RATE_LIMIT_TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_RATE_LIMIT_TRUST_PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_REMOVE_API_KEYS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LANGFLOW_REMOVE_API_KEYS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_SAVE_DB_IN_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_SAVE_DB_IN_CONFIG_DIR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_SSRF_ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_SSRF_ALLOWED_HOSTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_SSRF_PROTECTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_SSRF_PROTECTION_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_STORE_ENVIRONMENT_VARIABLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_STORE_ENVIRONMENT_VARIABLES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_SUPERUSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_SUPERUSER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_SUPERUSER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares LANGFLOW_SUPERUSER_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LANGFLOW_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LANGFLOW_WORKERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "deploy/.env.example declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "deploy/.env.example declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported infrastructure: a RabbitMQ service is defined in deploy/docker-compose.yml.",
+      "Unsupported architecture: deploy/docker-compose.yml defines 2 application services (proxy, frontend). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: a RabbitMQ service is defined in deploy/docker-compose.yml."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: deploy/docker-compose.yml defines 2 application services (proxy, frontend). Deployz runs ONE web process per deployment plus declared background workers."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.08946828,
+        "promptTokens": 17268,
+        "completionTokens": 1065
+      },
+      "latencyMs": 15092
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "exactly one listed service must build the app from this repository"
+        ],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "/health",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      },
+      {
+        "id": "q3",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 15098,
+    "questions": 3,
+    "generatedAt": "2026-10-27T17:42:22.876Z",
+    "failedChecks": 1,
+    "promptVersion": 16
+  }
+}

@@ -1,0 +1,657 @@
+{
+  "id": "new-67",
+  "commit": "a9e70360c5bc5b1beb5f70fe4c2fa765743147ec",
+  "analyser": "rules@integrated",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "apps/admin",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "apps/admin/Dockerfile.admin"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"caddy\", \"run\", \"--config\", \"/etc/caddy/Caddyfile\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/god-mode",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "./bin/docker-entrypoint-worker.sh"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "./bin/docker-entrypoint-worker.sh",
+        "source": "docker-compose.yml worker"
+      },
+      {
+        "id": "beat-worker",
+        "command": "./bin/docker-entrypoint-beat.sh",
+        "source": "docker-compose.yml beat-worker"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_KEY_RATE_LIMIT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares API_KEY_RATE_LIMIT"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/controllers/health.controller.ts",
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_ACCESS_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_REGION",
+            "apps/api/.env.example declares AWS_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_BUCKET_NAME",
+            "apps/api/.env.example declares AWS_S3_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_S3_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_S3_ENDPOINT_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CERT_ACME_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CERT_ACME_CA"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CERT_ACME_DNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CERT_ACME_DNS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CERT_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CERT_EMAIL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COMPRESSION_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts",
+            "read in apps/live/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMPRESSION_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts",
+            "read in apps/live/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts",
+            "read in apps/live/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/api/.env.example declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DOCKERIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DOCKERIZED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FILE_SIZE_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GPT_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GPT_ENGINE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LISTEN_HTTPS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LISTEN_HTTPS_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LISTEN_HTTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LISTEN_HTTP_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LIVE_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts",
+            "read in apps/live/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIVE_SERVER_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/logger/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_ENDPOINT_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MINIO_ENDPOINT_SSL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENAI_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OPENAI_API_BASE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_API_KEY",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGDATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PGDATA"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/live/src/env.ts",
+            "read in apps/live/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTGRES_PASSWORD",
+            "apps/api/.env.example declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_USER",
+            "apps/api/.env.example declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RABBITMQ_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RABBITMQ_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RABBITMQ_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares RABBITMQ_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RABBITMQ_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RABBITMQ_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RABBITMQ_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RABBITMQ_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RABBITMQ_VHOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RABBITMQ_VHOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_HOST",
+            "apps/live/.env.example declares REDIS_HOST",
+            "apps/api/.env.example declares REDIS_HOST",
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_PORT",
+            "apps/live/.env.example declares REDIS_PORT",
+            "apps/api/.env.example declares REDIS_PORT",
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/live/.env.example declares REDIS_URL",
+            "apps/api/.env.example declares REDIS_URL",
+            "read in apps/live/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SITE_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SITE_ADDRESS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUSTED_PROXIES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "USE_MINIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USE_MINIO"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported infrastructure: a RabbitMQ service is defined in docker-compose.yml.",
+      "Unsupported architecture: docker-compose.yml defines 7 application services (web, admin, space, api, live, plane-minio, proxy). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: a RabbitMQ service is defined in docker-compose.yml."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 7 application services (web, admin, space, api, live, plane-minio, proxy). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE"
+}

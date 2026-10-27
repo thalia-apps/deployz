@@ -1,0 +1,965 @@
+{
+  "id": "new-79",
+  "commit": "9291856d1ea4a4ceea9f8fef8ce14f4f6c81e8eb",
+  "analyser": "rules@integrated",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"pnpm\", \"start\" ]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/v1/ping",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADDITIONAL_SEAT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts",
+            "read in packages/server/src/StripeManager.ts",
+            "read in packages/server/src/UsageCacheManager.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ADMIN_RATE_LIMIT_MESSAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/StripeManager.ts",
+            "read in packages/server/src/schedule/ScheduleExecutor.ts",
+            "read in packages/server/src/utils/XSS.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BLOB_STORAGE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD_FREE_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts",
+            "read in packages/server/src/StripeManager.ts",
+            "read in packages/server/src/controllers/pricing/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLOUD_PRO_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts",
+            "read in packages/server/src/StripeManager.ts",
+            "read in packages/server/src/controllers/pricing/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLOUD_STARTER_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts",
+            "read in packages/server/src/StripeManager.ts",
+            "read in packages/server/src/controllers/pricing/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CORS_ALLOW_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/XSS.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/XSS.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DATABASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_KEY_BASE64",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/DataSource.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/components/src/handler.ts",
+            "read in packages/server/src/utils/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DENYLIST_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLED_NODES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/NodesPool.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_BULLMQ_DASHBOARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLOWISE_EE_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLOWISE_FILE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLOWISE_SECRETKEY_OVERWRITE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IFRAME_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/XSS.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_JSON_SPACES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/components/src/handler.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/components/src/handler.ts",
+            "read in packages/server/src/utils/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SANITIZE_BODY_FIELDS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOG_SANITIZE_HEADER_FIELDS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_ITERATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/buildAgentflow.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_LOOP_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/buildAgentflow.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_INCLUDE_NODE_METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/metrics/Prometheus.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_OPEN_TELEMETRY_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/metrics/OpenTelemetry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_OPEN_TELEMETRY_METRIC_ENDPOINT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/metrics/OpenTelemetry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "METRICS_OPEN_TELEMETRY_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/metrics/OpenTelemetry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS_PROVIDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "METRICS_SERVICE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/metrics/OpenTelemetry.ts",
+            "read in packages/server/src/metrics/Prometheus.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/index.ts",
+            "read in packages/server/src/schedule/ScheduleBeat.ts",
+            "read in packages/server/src/utils/buildChatflow.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/upsertVector.ts",
+            "read in packages/server/src/controllers/internal-predictions/index.ts",
+            "read in packages/server/src/controllers/predictions/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH2_ALLOWED_TOKEN_DOMAINS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/oauth2Security.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH2_SECURITY_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/utils/oauth2Security.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OFFLINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_PUBLIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/telemetry.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/queue/QueueManager.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_REDIS_EVENT_STREAM_MAX_LEN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/queue/BaseQueue.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/CachePool.ts",
+            "read in packages/server/src/UsageCacheManager.ts",
+            "read in packages/server/src/queue/QueueManager.ts",
+            "read in packages/server/src/utils/rateLimit.ts",
+            "read in packages/server/src/utils/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REMOVE_ON_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/queue/BaseQueue.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REMOVE_ON_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/queue/BaseQueue.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_AWS_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_AWS_AUTH_PREFIX",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_AWS_NAME",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_AWS_REGION",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_AWS_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_PATH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETKEY_STORAGE_TYPE",
+          "required": true,
+          "secret": true,
+          "source": [
+            "storage selector: default \"unset\" stores files on the container disk — set \"aws\" to use the managed S3 bucket",
+            "read in packages/server/src/utils/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "SHOW_COMMUNITY_NODES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/AppConfig.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/server/src/IdentityManager.ts",
+            "read in packages/server/src/StripeManager.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/server/src/queue/BaseQueue.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker/worker/healthcheck/healthcheck.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ADDITIONAL_SEAT_ID, CLOUD_FREE_ID, CLOUD_PRO_ID, CLOUD_STARTER_ID, DATABASE_PASSWORD, and 7 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 11,
+  "outcome": "DEPLOYABLE"
+}
