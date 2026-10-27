@@ -1,10 +1,12 @@
 'use client';
 
-import { RefreshCw, Trash2 } from 'lucide-react';
+import { CircleAlert, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { GithubReturnNotice } from '@/components/github-return-notice';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +26,12 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/api-client';
 import { deleteApplication, updateApplication, type Application } from '@/lib/applications';
+import {
+  fetchApplicationGithubStatus,
+  reconnectGithub,
+  REPOSITORY_CONNECTION_LABELS,
+  type ApplicationGithubStatus,
+} from '@/lib/github';
 
 import { useApplicationPage } from '../application-page-context';
 
@@ -44,6 +53,7 @@ export function GeneralSettings() {
         <Card>
           <CardContent className="flex flex-col gap-4 py-4">
             <ApplicationNameField application={data.application} onRenamed={refresh} />
+            <GithubReturnNotice />
             <RepositoryDetails application={data.application} />
             <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
               <div>
@@ -121,14 +131,120 @@ function ApplicationNameField({
   );
 }
 
+// GitHub access is managed for the whole organization in Settings; this
+// shows whether Deployz can read THIS repository now, and the one action
+// that restores it. There is no disconnect here.
 function RepositoryDetails({ application }: { application: Application }) {
+  const [github, setGithub] = useState<ApplicationGithubStatus | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setGithub(await fetchApplicationGithubStatus(application.id));
+    } catch {
+      setGithub(null);
+    }
+  }, [application.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const status = github ? REPOSITORY_CONNECTION_LABELS[github.status] : null;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-      <dt className="text-muted-foreground">Repository</dt>
-      <dd>{application.repoFullName}</dd>
-      <dt className="text-muted-foreground">Default branch</dt>
-      <dd>{application.defaultBranch}</dd>
-    </dl>
+    <div className="flex flex-col gap-3">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+        <dt className="text-muted-foreground">Repository</dt>
+        <dd>{application.repoFullName}</dd>
+        <dt className="text-muted-foreground">Default branch</dt>
+        <dd>{application.defaultBranch}</dd>
+        {status ? (
+          <>
+            <dt className="text-muted-foreground">GitHub</dt>
+            <dd>
+              <Badge variant={status.badge} data-testid="repository-connection-status">
+                {status.label}
+              </Badge>
+            </dd>
+          </>
+        ) : null}
+      </dl>
+      {github && github.status !== 'connected' ? (
+        <RepositoryAccessAlert application={application} github={github} onReconnected={load} />
+      ) : null}
+    </div>
+  );
+}
+
+const REPOSITORY_ACCESS_REASONS: Record<Exclude<ApplicationGithubStatus['status'], 'connected'>, string> = {
+  disconnected: 'GitHub is disconnected for this organization.',
+  access_issue: 'GitHub removed or suspended the installation that gives Deployz access to this repository.',
+  repository_inaccessible: 'GitHub is connected, but the installation does not give Deployz access to this repository.',
+  not_connected: 'This application is not connected to a GitHub installation.',
+};
+
+function RepositoryAccessAlert({
+  application,
+  github,
+  onReconnected,
+}: {
+  application: Application;
+  github: ApplicationGithubStatus;
+  onReconnected: () => Promise<void>;
+}) {
+  const [pending, setPending] = useState(false);
+  const returnTo = `/dashboard/applications/${application.id}/config`;
+  const reason = REPOSITORY_ACCESS_REASONS[github.status as Exclude<ApplicationGithubStatus['status'], 'connected'>];
+  const canReconnect =
+    github.canManage && github.installationId !== null && (github.status === 'disconnected' || github.status === 'access_issue');
+
+  async function reconnect(): Promise<void> {
+    if (!github.installationId) return;
+    setPending(true);
+    try {
+      if ((await reconnectGithub(github.installationId, github.connectUrl, returnTo)) === 'reconnected') {
+        toast.success('GitHub reconnected.');
+        await onReconnected();
+      }
+    } catch (caught) {
+      toast.error(errorMessage(caught, "Couldn't reconnect GitHub. Try again."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Alert data-testid="repository-access-alert">
+      <CircleAlert aria-hidden />
+      <AlertTitle>Deployz cannot read this repository</AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <p>
+          {reason} Analysis and new release builds are paused. Existing releases and running customer deployments are
+          not affected.
+        </p>
+        {canReconnect ? (
+          <Button
+            size="sm"
+            loading={pending}
+            loadingText="Reconnecting GitHub…"
+            onClick={() => void reconnect()}
+            data-testid="repository-reconnect"
+          >
+            Reconnect GitHub
+          </Button>
+        ) : null}
+        {github.status === 'repository_inaccessible' && github.manageUrl ? (
+          <Button size="sm" variant="outline" asChild>
+            <a href={github.manageUrl} target="_blank" rel="noreferrer">
+              Manage access on GitHub
+              <ExternalLink aria-hidden />
+            </a>
+          </Button>
+        ) : null}
+        {!github.canManage && github.status !== 'repository_inaccessible' ? (
+          <p className="text-xs">Ask an owner or admin of your organization to reconnect GitHub.</p>
+        ) : null}
+      </AlertDescription>
+    </Alert>
   );
 }
 

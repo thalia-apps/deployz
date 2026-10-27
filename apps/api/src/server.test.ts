@@ -2653,6 +2653,32 @@ describe('server — idempotent job creation (§5)', () => {
     return release.id;
   }
 
+  it('runs the lifecycle of an existing deployment while GitHub is disconnected', async () => {
+    await db.insert(schema.githubInstallations).values({
+      id: 'idem-disconnected',
+      organizationId: org.organizationId,
+      accountLogin: 'acme',
+      accountType: 'Organization',
+      status: 'disconnected',
+    });
+    await db
+      .update(schema.applications)
+      .set({ githubInstallationId: 'idem-disconnected' })
+      .where(eq(schema.applications.id, applicationId));
+    try {
+      const deploy = await postJson(app, `/api/deployments/${(await freshDeployment()).id}/deploy`, { releaseId: await deployableRelease() }, { cookie: org.cookie });
+      expect(deploy.statusCode, deploy.body).toBe(202);
+      const restart = await postJson(app, `/api/deployments/${(await freshDeployment()).id}/restart`, {}, { cookie: org.cookie });
+      expect(restart.statusCode, restart.body).toBe(202);
+      const rollback = await postJson(app, `/api/deployments/${(await freshDeployment()).id}/rollback`, { releaseId: await deployableRelease() }, { cookie: org.cookie });
+      expect(rollback.statusCode, rollback.body).toBe(202);
+      const destroy = await postJson(app, `/api/deployments/${(await freshDeployment()).id}/destroy`, {}, { cookie: org.cookie });
+      expect(destroy.statusCode, destroy.body).toBe(202);
+    } finally {
+      await db.update(schema.applications).set({ githubInstallationId: null }).where(eq(schema.applications.id, applicationId));
+    }
+  });
+
   it('POST .../deploy twice with the same releaseId returns the SAME job (202 then 200), never a duplicate row', async () => {
     const deployment = await freshDeployment();
     const releaseId = await deployableRelease();
@@ -4191,7 +4217,14 @@ describe('server — GitHub installation binding', () => {
       headers: { cookie: org.cookie },
     });
     expect((mine.json() as { installations: unknown[] }).installations).toEqual([
-      { id: '4242', accountLogin: 'acme-inc', accountType: 'Organization' },
+      {
+        id: '4242',
+        accountLogin: 'acme-inc',
+        accountType: 'Organization',
+        status: 'active',
+        applicationCount: 0,
+        manageUrl: 'https://github.com/organizations/acme-inc/settings/installations/4242',
+      },
     ]);
 
     const theirs = await app.inject({
@@ -4231,35 +4264,353 @@ describe('server — GitHub installation binding', () => {
     expect(response.statusCode).toBe(404);
   });
 
-  it('drops the installation on the installation.deleted webhook', async () => {
+  // The row stays as an access issue, so the applications keep their
+  // repository association and the vendor sees what happened.
+  it('marks the installation as an access issue on the installation.deleted webhook', async () => {
     const secret = 'webhook-secret';
     const webhookApp = await buildServer({
       auth,
       db,
       githubWebhookSecret: secret,
       githubFixtureMode: false,
-      githubFetch,
+      // GitHub no longer has the installation.
+      githubFetch: (async () => ({ status: 404, headers: { get: () => null }, json: async () => ({}) })) as unknown as Parameters<
+        typeof buildServer
+      >[0]['githubFetch'],
+      githubAppId: 'test-app-id',
+      githubAppPrivateKey: generateKeyPairSync('rsa', {
+        modulusLength: 2048,
+        privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+      }).privateKey,
     });
     try {
       const body = JSON.stringify({ action: 'deleted', installation: { id: 4242 } });
       const signature = `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+      const deliver = () =>
+        webhookApp.inject({
+          method: 'POST',
+          url: '/api/github/webhook',
+          headers: {
+            'content-type': 'application/json',
+            'x-github-event': 'installation',
+            'x-hub-signature-256': signature,
+          },
+          payload: body,
+        });
 
-      const response = await webhookApp.inject({
-        method: 'POST',
-        url: '/api/github/webhook',
-        headers: {
-          'content-type': 'application/json',
-          'x-github-event': 'installation',
-          'x-hub-signature-256': signature,
-        },
-        payload: body,
-      });
-
-      expect(response.json()).toStrictEqual({ received: true, handled: 'removed' });
-      expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+      expect((await deliver()).json()).toStrictEqual({ received: true, handled: 'updated' });
+      // A redelivery changes nothing.
+      expect((await deliver()).json()).toStrictEqual({ received: true, handled: 'unchanged' });
+      const rows = await db.select().from(schema.githubInstallations);
+      expect(rows).toEqual([expect.objectContaining({ id: '4242', status: 'access_issue' })]);
     } finally {
       await webhookApp.close();
     }
+  });
+});
+
+// ── GitHub disconnect and reconnect ────────────────────────────────────────
+describe('server — GitHub disconnect and reconnect', () => {
+  let client: PGlite | undefined;
+  let db: Db;
+  let auth: Auth;
+  let app: FastifyInstance;
+  let owner: { userId: string; organizationId: string; cookie: string };
+  let member: { userId: string; organizationId: string; cookie: string };
+  let other: { userId: string; organizationId: string; cookie: string };
+  let applicationId: string;
+  const WEBHOOK_SECRET = 'disconnect-webhook-secret';
+
+  // GitHub as the tests set it: the installations it has, their accounts,
+  // and which repositories each token can read. Every call is recorded.
+  const installations = new Map<string, { login: string; id: number; suspended?: boolean }>();
+  const readableRepos = new Set<string>();
+  const calls: string[] = [];
+  const json = (status: number, body: unknown) => ({ status, headers: { get: () => null }, json: async () => body });
+  const githubFetch = (async (url: string) => {
+    calls.push(url);
+    const install = /\/app\/installations\/([^/]+)(\/access_tokens)?$/.exec(url);
+    if (install) {
+      const found = installations.get(install[1]!);
+      if (!found) return json(404, {});
+      if (install[2]) return found.suspended ? json(403, {}) : json(201, { token: `ghs_${install[1]}`, expires_at: '2099-01-01T00:00:00Z' });
+      return json(200, {
+        account: { login: found.login, type: 'Organization', id: found.id },
+        suspended_at: found.suspended ? '2026-10-01T00:00:00Z' : null,
+      });
+    }
+    const repo = /\/repos\/([^/]+\/[^/]+)$/.exec(url);
+    if (repo) return readableRepos.has(repo[1]!) ? json(200, {}) : json(404, {});
+    if (url.includes('/commits')) return json(200, []);
+    return json(404, {});
+  }) as unknown as Parameters<typeof buildServer>[0]['githubFetch'];
+
+  const get = (url: string, cookie: string) => app.inject({ method: 'GET', url, headers: { cookie } });
+  const post = (url: string, cookie: string, payload?: unknown) =>
+    app.inject({ method: 'POST', url, headers: { cookie }, ...(payload === undefined ? {} : { payload }) });
+  const listFor = async (cookie: string) =>
+    (await get('/api/github/installations', cookie)).json() as {
+      installations: { id: string; status: string; applicationCount: number }[];
+      canManage: boolean;
+    };
+  const repoStatus = async () =>
+    ((await get(`/api/applications/${applicationId}/github`, owner.cookie)).json() as { status: string }).status;
+  const auditEvents = async (eventType: string) =>
+    db
+      .select()
+      .from(schema.eventLogs)
+      .where(and(eq(schema.eventLogs.organizationId, owner.organizationId), eq(schema.eventLogs.eventType, eventType)));
+  const startInstall = async (cookie: string, returnTo?: string): Promise<string> => {
+    const connect = await get(`/api/github/connect${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`, cookie);
+    return new URL(String(connect.headers['location'])).searchParams.get('state')!;
+  };
+  const setup = (installationId: string, cookie: string, state?: string) =>
+    get(`/api/github/setup?installation_id=${installationId}${state ? `&state=${encodeURIComponent(state)}` : ''}`, cookie);
+  const webhook = (action: string, installationId: number) => {
+    const body = JSON.stringify({ action, installation: { id: installationId } });
+    return app.inject({
+      method: 'POST',
+      url: '/api/github/webhook',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'installation',
+        'x-hub-signature-256': `sha256=${createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex')}`,
+      },
+      payload: body,
+    });
+  };
+
+  beforeAll(async () => {
+    client = new PGlite();
+    await applyMigrations(client);
+    db = createDb(client);
+    auth = createAuth(db);
+    app = await buildServer({
+      auth,
+      db,
+      githubFixtureMode: false,
+      githubFetch,
+      githubWebhookSecret: WEBHOOK_SECRET,
+      githubAppInstallUrl: 'https://github.com/apps/deployz-test/installations/new',
+      githubAppId: 'test-app-id',
+      githubAppPrivateKey: generateKeyPairSync('rsa', {
+        modulusLength: 2048,
+        privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+      }).privateKey,
+    });
+    owner = await signUpAndGetOrg(auth, db, 'gh-disconnect-owner@example.com');
+    other = await signUpAndGetOrg(auth, db, 'gh-disconnect-other@example.com');
+    // A plain member of the owner's organization.
+    member = await signUpAndGetOrg(auth, db, 'gh-disconnect-member@example.com');
+    await db.update(schema.member).set({ organizationId: owner.organizationId, role: 'member' }).where(eq(schema.member.userId, member.userId));
+    await db.update(schema.session).set({ activeOrganizationId: owner.organizationId }).where(eq(schema.session.userId, member.userId));
+
+    installations.set('4242', { login: 'acme-inc', id: 9001 });
+    installations.set('5151', { login: 'other-inc', id: 9002 });
+    readableRepos.add('acme-inc/api');
+
+    expect((await setup('4242', owner.cookie, await startInstall(owner.cookie))).headers['location']).toContain(
+      'github=connected',
+    );
+    expect((await setup('5151', other.cookie, await startInstall(other.cookie))).headers['location']).toContain(
+      'github=connected',
+    );
+    const created = await post('/api/applications', owner.cookie, {
+      name: 'API',
+      githubInstallationId: '4242',
+      repoFullName: 'acme-inc/api',
+      repoUrl: 'https://github.com/acme-inc/api',
+      defaultBranch: 'main',
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    applicationId = (created.json() as { id: string }).id;
+  }, 60_000);
+
+  afterAll(async () => {
+    await app?.close();
+    await client?.close();
+  });
+
+  it('records the GitHub account id and the connection on the first binding', async () => {
+    const [row] = await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.id, '4242'));
+    expect(row).toMatchObject({ organizationId: owner.organizationId, accountId: '9001', status: 'active' });
+    expect(await auditEvents('github.connected')).toHaveLength(1);
+  });
+
+  it('shows the connection with its application count, and management to owners and admins only', async () => {
+    const mine = await listFor(owner.cookie);
+    expect(mine.canManage).toBe(true);
+    expect(mine.installations).toEqual([expect.objectContaining({ id: '4242', status: 'active', applicationCount: 1 })]);
+    expect((await listFor(member.cookie)).canManage).toBe(false);
+    expect(await repoStatus()).toBe('connected');
+  });
+
+  it('refuses a disconnect from a member, and from another organization', async () => {
+    const byMember = await post('/api/github/installations/4242/disconnect', member.cookie);
+    expect(byMember.statusCode).toBe(403);
+    expect(byMember.json()).toMatchObject({ error: { code: 'INSUFFICIENT_ROLE' } });
+    const crossTenant = await post('/api/github/installations/4242/disconnect', other.cookie);
+    expect(crossTenant.statusCode).toBe(404);
+    expect((await listFor(owner.cookie)).installations[0]?.status).toBe('active');
+  });
+
+  it('disconnects once: a repeat has no further effect, and the status persists', async () => {
+    const first = await post('/api/github/installations/4242/disconnect', owner.cookie);
+    expect(first.statusCode, first.body).toBe(200);
+    expect(first.json()).toMatchObject({ id: '4242', status: 'disconnected', applicationCount: 1 });
+    const again = await post('/api/github/installations/4242/disconnect', owner.cookie);
+    expect(again.json()).toMatchObject({ status: 'disconnected' });
+
+    expect(await auditEvents('github.disconnected')).toEqual([
+      expect.objectContaining({ actorId: owner.userId, previousState: 'active', requestedState: 'disconnected' }),
+    ]);
+    const [row] = await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.id, '4242'));
+    expect(row).toMatchObject({ status: 'disconnected', disconnectedBy: owner.userId });
+    expect(row?.disconnectedAt).toBeInstanceOf(Date);
+    // A page refresh reads the same status.
+    expect((await listFor(owner.cookie)).installations[0]?.status).toBe('disconnected');
+    // The application and its repository reference stay.
+    const [application] = await db.select().from(schema.applications).where(eq(schema.applications.id, applicationId));
+    expect(application).toMatchObject({ githubInstallationId: '4242', repoFullName: 'acme-inc/api' });
+  });
+
+  it('refuses every new GitHub-dependent operation without minting a token', async () => {
+    calls.length = 0;
+    const refusals = await Promise.all([
+      post(`/api/applications/${applicationId}/analyse`, owner.cookie),
+      post(`/api/applications/${applicationId}/releases`, owner.cookie, { version: '1.0.0', gitSha: 'a'.repeat(40) }),
+      get(`/api/applications/${applicationId}/commits`, owner.cookie),
+      get('/api/github/repos?installationId=4242', owner.cookie),
+      post('/api/applications', owner.cookie, {
+        name: 'Second',
+        githubInstallationId: '4242',
+        repoFullName: 'acme-inc/second',
+        repoUrl: 'https://github.com/acme-inc/second',
+        defaultBranch: 'main',
+      }),
+    ]);
+    for (const response of refusals) {
+      expect(response.statusCode, response.body).toBe(409);
+      expect(response.json()).toMatchObject({
+        error: { code: 'GITHUB_NOT_CONNECTED', details: { connectionStatus: 'disconnected' } },
+      });
+    }
+    expect(calls.filter((url) => url.endsWith('/access_tokens'))).toEqual([]);
+    expect(await repoStatus()).toBe('disconnected');
+  });
+
+  it('leaves other organizations untouched, and never lets them take the disconnected installation', async () => {
+    expect((await listFor(other.cookie)).installations).toEqual([expect.objectContaining({ id: '5151', status: 'active' })]);
+    const takeover = await setup('4242', other.cookie, await startInstall(other.cookie));
+    expect(takeover.headers['location']).toContain('github=failed');
+    const [row] = await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.id, '4242'));
+    expect(row?.organizationId).toBe(owner.organizationId);
+  });
+
+  it('keeps a disconnect through GitHub events and a setup visit without a reconnect', async () => {
+    expect((await webhook('unsuspend', 4242)).json()).toMatchObject({ handled: 'unchanged' });
+    // GitHub sends the vendor to the Setup URL after a change on GitHub's side.
+    const revisit = await setup('4242', owner.cookie);
+    expect(revisit.headers['location']).toContain('/dashboard/applications?github=disconnected');
+    // A member's install flow cannot end an owner's disconnect either.
+    const byMember = await setup('4242', member.cookie, await startInstall(member.cookie));
+    expect(byMember.headers['location']).toContain('github=disconnected');
+    expect((await listFor(owner.cookie)).installations[0]?.status).toBe('disconnected');
+  });
+
+  it('reconnects the same installation idempotently and restores the association', async () => {
+    const byMember = await post('/api/github/installations/4242/reconnect', member.cookie);
+    expect(byMember.statusCode).toBe(403);
+
+    const first = await post('/api/github/installations/4242/reconnect', owner.cookie);
+    expect(first.json()).toMatchObject({ id: '4242', status: 'active', applicationCount: 1 });
+    const again = await post('/api/github/installations/4242/reconnect', owner.cookie);
+    expect(again.json()).toMatchObject({ status: 'active' });
+    expect(await auditEvents('github.reconnected')).toHaveLength(1);
+    expect(await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.organizationId, owner.organizationId))).toHaveLength(1);
+    const [row] = await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.id, '4242'));
+    expect(row).toMatchObject({ status: 'active', disconnectedAt: null, disconnectedBy: null });
+
+    expect(await repoStatus()).toBe('connected');
+    const analyse = await post(`/api/applications/${applicationId}/analyse`, owner.cookie);
+    expect(analyse.statusCode).toBe(202);
+  });
+
+  it('shows a repository the installation can no longer read as inaccessible', async () => {
+    readableRepos.delete('acme-inc/api');
+    expect(await repoStatus()).toBe('repository_inaccessible');
+    readableRepos.add('acme-inc/api');
+    expect(await repoStatus()).toBe('connected');
+  });
+
+  it('follows GitHub suspension, ignores a replayed suspend, and restores on a confirmed unsuspend', async () => {
+    installations.get('4242')!.suspended = true;
+    expect((await webhook('suspend', 4242)).json()).toMatchObject({ handled: 'updated' });
+    expect(await repoStatus()).toBe('access_issue');
+
+    installations.get('4242')!.suspended = false;
+    expect((await webhook('unsuspend', 4242)).json()).toMatchObject({ handled: 'updated' });
+    // The old suspend delivered again: GitHub says active, so nothing changes.
+    expect((await webhook('suspend', 4242)).json()).toMatchObject({ handled: 'unchanged' });
+    expect(await repoStatus()).toBe('connected');
+  });
+
+  it('marks an uninstalled App as an access issue that a direct reconnect cannot clear', async () => {
+    installations.delete('4242');
+    expect((await webhook('deleted', 4242)).json()).toMatchObject({ handled: 'updated' });
+    expect((await listFor(owner.cookie)).installations[0]?.status).toBe('access_issue');
+    expect(await repoStatus()).toBe('access_issue');
+    const reconnect = await post('/api/github/installations/4242/reconnect', owner.cookie);
+    expect(reconnect.json()).toMatchObject({ status: 'access_issue' });
+    const analyse = await post(`/api/applications/${applicationId}/analyse`, owner.cookie);
+    expect(analyse.json()).toMatchObject({ error: { details: { connectionStatus: 'access_issue' } } });
+  });
+
+  it('keeps an installation of a different GitHub account away from the existing applications', async () => {
+    installations.set('6161', { login: 'someone-else', id: 9003 });
+    await setup('6161', owner.cookie, await startInstall(owner.cookie));
+    const [application] = await db.select().from(schema.applications).where(eq(schema.applications.id, applicationId));
+    expect(application?.githubInstallationId).toBe('4242');
+    expect(await repoStatus()).toBe('access_issue');
+  });
+
+  it('moves the applications to a new installation of the same account, and back to the page that started it', async () => {
+    installations.set('4343', { login: 'acme-inc', id: 9001 });
+    const returnTo = `/dashboard/applications/${applicationId}/config`;
+    const state = await startInstall(owner.cookie, returnTo);
+    const response = await setup('4343', owner.cookie, state);
+    expect(response.headers['location']).toBe(`${env.webUrl}${returnTo}?github=connected`);
+
+    const rows = await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.organizationId, owner.organizationId));
+    expect(rows.map((row) => row.id).sort()).toEqual(['4343', '6161']);
+    const [application] = await db.select().from(schema.applications).where(eq(schema.applications.id, applicationId));
+    expect(application?.githubInstallationId).toBe('4343');
+    expect(await repoStatus()).toBe('connected');
+
+    // The callback replayed: no new rows, no second audit event.
+    const connectedBefore = (await auditEvents('github.connected')).length;
+    await setup('4343', owner.cookie, state);
+    expect(await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.organizationId, owner.organizationId))).toHaveLength(2);
+    expect(await auditEvents('github.connected')).toHaveLength(connectedBefore);
+  });
+
+  it('returns a failed callback to the page that started it, and writes nothing', async () => {
+    const returnTo = '/dashboard/settings';
+    const response = await setup('9999', owner.cookie, await startInstall(owner.cookie, returnTo));
+    expect(response.headers['location']).toBe(`${env.webUrl}${returnTo}?github=failed`);
+    expect(await db.select().from(schema.githubInstallations).where(eq(schema.githubInstallations.id, '9999'))).toEqual([]);
+  });
+
+  it('never redirects outside the dashboard', async () => {
+    const state = await startInstall(owner.cookie, 'https://evil.example/steal');
+    const response = await setup('9999', owner.cookie, state);
+    expect(response.headers['location']).toBe(`${env.webUrl}/dashboard/applications?github=failed`);
+  });
+
+  it('rejects cross-organization reads of the application repository status', async () => {
+    expect((await get(`/api/applications/${applicationId}/github`, other.cookie)).statusCode).toBe(404);
   });
 });
 

@@ -4,7 +4,15 @@ import type { GithubInstallation, GithubRepository } from '../src/lib/github';
 import { loadGithubState } from '../src/lib/github-state';
 
 function installation(overrides: Partial<GithubInstallation> = {}): GithubInstallation {
-  return { id: 'install-1', accountLogin: 'acme', accountType: 'Organization', ...overrides };
+  return {
+    id: 'install-1',
+    accountLogin: 'acme',
+    accountType: 'Organization',
+    status: 'active',
+    applicationCount: 0,
+    manageUrl: 'https://github.com/organizations/acme/settings/installations/install-1',
+    ...overrides,
+  };
 }
 
 function repository(overrides: Partial<GithubRepository> = {}): GithubRepository {
@@ -24,13 +32,30 @@ const CONNECT_URL = 'https://github.com/apps/deployz/installations/new';
 describe('loadGithubState', () => {
   it('reports an empty state, keeping the connect link, when nothing is installed', async () => {
     const state = await loadGithubState({
-      fetchInstallations: async () => ({ installations: [], connectUrl: CONNECT_URL }),
+      fetchInstallations: async () => ({ installations: [], connectUrl: CONNECT_URL, canManage: true }),
       fetchRepositories: async () => {
         throw new Error('should not be called');
       },
     });
 
-    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL });
+    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, inactive: false });
+  });
+
+  // A disconnected connection lists no repositories and backs no new
+  // application, but the page says the connection exists.
+  it('offers no repositories from a connection that is not active', async () => {
+    const state = await loadGithubState({
+      fetchInstallations: async () => ({
+        installations: [installation({ status: 'disconnected' }), installation({ id: 'install-2', status: 'access_issue' })],
+        connectUrl: CONNECT_URL,
+        canManage: true,
+      }),
+      fetchRepositories: async () => {
+        throw new Error('should not be called');
+      },
+    });
+
+    expect(state).toEqual({ status: 'empty', connectUrl: CONNECT_URL, inactive: true });
   });
 
   it('lists each installation with its repositories', async () => {
@@ -38,6 +63,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation()],
         connectUrl: CONNECT_URL,
+        canManage: true,
       }),
       fetchRepositories: async () => ({ repositories: [repository()] }),
     });
@@ -59,6 +85,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation(), installation({ id: 'install-2', accountLogin: 'beta' })],
         connectUrl: CONNECT_URL,
+        canManage: true,
       }),
       fetchRepositories: async (id) => {
         if (id === 'install-2') throw new Error('GitHub request failed (502)');
@@ -82,6 +109,7 @@ describe('loadGithubState', () => {
       fetchInstallations: async () => ({
         installations: [installation()],
         connectUrl: CONNECT_URL,
+        canManage: true,
       }),
       fetchRepositories: async () => {
         throw new Error('GitHub request failed (502)');

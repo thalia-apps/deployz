@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { GithubConnectionsCard } from '@/components/github-connections-card';
 import { OrganizationDangerZone } from '@/components/organization-danger-zone';
 import { OrganizationForm } from '@/components/organization-form';
 import { fetchOrganization } from '@/lib/organization';
@@ -13,7 +14,8 @@ import { ROLE_LABELS, subscriptionStatusLabel } from '@/lib/organization-vocabul
 // §41 screen 18 organization settings. Rename (PATCH /api/organization) is
 // owner/admin only; a plain member sees the name as read-only (§65 — no dead
 // controls). Deletion (DELETE /api/organization) is owner only and lives in
-// its own danger-zone card with a type-to-confirm step.
+// its own danger-zone card with a type-to-confirm step. The GitHub card
+// shows the organization's GitHub connections (owner/admin change them).
 export default async function SettingsPage() {
   const org = await fetchOrganization();
   const canRename = org.role === 'owner' || org.role === 'admin';
@@ -66,6 +68,8 @@ export default async function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <GithubConnectionsCard />
 
       {org.role === 'owner' ? <OrganizationDangerZone organizationName={org.name} /> : null}
     </div>

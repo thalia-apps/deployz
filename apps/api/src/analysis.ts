@@ -47,11 +47,13 @@ import { ApiError } from './errors.js';
 import { recordEvent } from './events.js';
 import { effectiveReadinessReport } from './fix-instructions.js';
 import {
+  createGithubStore,
   fetchFilesForAnalysis,
   fetchHeadSha,
   getFileTreeForAnalysis,
   mintInstallationToken,
   parseRepoFullName,
+  requireActiveInstallation,
   type FetchFn,
 } from './github.js';
 import type { JevShadowRunner } from './jev-shadow.js';
@@ -766,6 +768,7 @@ function analysisFailureCode(error: unknown): string {
       case 'GITHUB_DISABLED':
         return 'github_disabled';
       case 'GITHUB_INSTALLATION_MISSING':
+      case 'GITHUB_NOT_CONNECTED':
         return 'github_installation_missing';
       case 'GITHUB_RATE_LIMITED':
         return 'github_rate_limited';
@@ -841,6 +844,12 @@ async function mintRealModeToken(deps: AnalysisRunnerDeps, application: Applicat
       'No GitHub installation is linked to this application',
     );
   }
+  // Checked when the run starts, not when it was requested: a run queued
+  // before a disconnect must not get a token after it.
+  requireActiveInstallation(
+    await createGithubStore(deps.db).get(application.githubInstallationId),
+    application.organizationId,
+  );
   if (!deps.githubAppId || !deps.githubAppPrivateKey) {
     throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
   }

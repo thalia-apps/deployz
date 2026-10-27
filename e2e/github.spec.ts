@@ -74,9 +74,17 @@ test('keeps the repo picker usable when GitHub will not list repositories', asyn
     route.fulfill({
       json: {
         installations: [
-          { id: 'fixture-install-1', accountLogin: 'deployz-demo', accountType: 'Organization' },
+          {
+            id: 'fixture-install-1',
+            accountLogin: 'deployz-demo',
+            accountType: 'Organization',
+            status: 'active',
+            applicationCount: 0,
+            manageUrl: 'https://github.com/organizations/deployz-demo/settings/installations/fixture-install-1',
+          },
         ],
         connectUrl: 'https://github.com/apps/deployz-demo/installations/new',
+        canManage: true,
       },
     }),
   );

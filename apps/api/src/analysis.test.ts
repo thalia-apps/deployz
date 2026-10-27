@@ -90,6 +90,17 @@ async function insertApplication(
 ): Promise<typeof schema.applications.$inferSelect> {
   const ownOrgId = `${organizationId}-${crypto.randomUUID().slice(0, 8)}`;
   await insertOrganization(db, ownOrgId);
+  // A real-mode run mints a token only for an active binding of this
+  // organization, so a named installation is bound to the fresh org.
+  if (typeof overrides.githubInstallationId === 'string') {
+    overrides = { ...overrides, githubInstallationId: `${overrides.githubInstallationId}-${ownOrgId}` };
+    await db.insert(schema.githubInstallations).values({
+      id: overrides.githubInstallationId!,
+      organizationId: ownOrgId,
+      accountLogin: 'acme',
+      accountType: 'Organization',
+    });
+  }
   const [row] = await db
     .insert(schema.applications)
     .values({
@@ -1093,6 +1104,64 @@ describe('analysis — runApplicationAnalysis (real mode failure paths)', () => 
     const row = await loadApplication(db, application.id);
     expect(row.analysisStatus).toBe('FAILED');
     expect(row.compatibilityReason).toBe('No GitHub installation is linked to this application');
+  });
+
+  // A run queued before a disconnect starts after it: the check is made when
+  // the run starts, so no token is minted for a disconnected organization.
+  it.each([
+    ['disconnected', 'GitHub is disconnected for this organization. Reconnect GitHub to continue.'],
+    ['access_issue', 'Deployz cannot access this GitHub installation. Reconnect GitHub to continue.'],
+  ])('mints no token when the connection is %s at run time', async (status, reason) => {
+    const application = await insertApplication(db, orgId, { githubInstallationId: 'install-1' });
+    await db
+      .update(schema.githubInstallations)
+      .set({ status })
+      .where(eq(schema.githubInstallations.id, application.githubInstallationId!));
+    const urls: string[] = [];
+    const deps: AnalysisRunnerDeps = {
+      db,
+      fetchFn: (async (url: string) => {
+        urls.push(url);
+        throw new Error('should never be called');
+      }) as unknown as FetchFn,
+      githubAppId: 'app-id',
+      githubAppPrivateKey: 'private-key',
+      githubFixtureMode: false,
+      aiGateway: createAiGateway(undefined),
+    };
+
+    await runApplicationAnalysis(deps, application.id);
+
+    expect(urls).toEqual([]);
+    const row = await loadApplication(db, application.id);
+    expect(row.analysisStatus).toBe('FAILED');
+    expect(row.compatibilityReason).toBe(reason);
+  });
+
+  it('mints no token for an installation bound to another organization', async () => {
+    const owner = await insertApplication(db, orgId, { githubInstallationId: 'install-1' });
+    const intruder = await insertApplication(db, orgId, { githubInstallationId: null });
+    await db
+      .update(schema.applications)
+      .set({ githubInstallationId: owner.githubInstallationId })
+      .where(eq(schema.applications.id, intruder.id));
+    const urls: string[] = [];
+    const deps: AnalysisRunnerDeps = {
+      db,
+      fetchFn: (async (url: string) => {
+        urls.push(url);
+        throw new Error('should never be called');
+      }) as unknown as FetchFn,
+      githubAppId: 'app-id',
+      githubAppPrivateKey: 'private-key',
+      githubFixtureMode: false,
+      aiGateway: createAiGateway(undefined),
+    };
+
+    await runApplicationAnalysis(deps, intruder.id);
+
+    expect(urls).toEqual([]);
+    expect((await loadApplication(db, intruder.id)).analysisStatus).toBe('FAILED');
   });
 
   it('fails cleanly with GitHub-disabled reason when the App is not configured', async () => {

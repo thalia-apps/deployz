@@ -53,7 +53,8 @@ HTTPS probes to the application's public address.
 
 1. **Repository** — the vendor installs the Deployz GitHub App and creates an
    application from a repository (`apps/api/src/github.ts`). The webhook acts
-   only on an `installation` `deleted` event; a push never builds anything.
+   only on `installation` events that change access (see
+   [GitHub connection](#github-connection)); a push never builds anything.
 2. **Analysis** — `@deployz/analysis` runs deterministic detectors (runtime,
    Dockerfile, port, bind address, health path, environment-variable model,
    external services, PostgreSQL / MySQL / storage / Redis requirements,
@@ -448,6 +449,56 @@ Notes:
   command and image digest has `SUCCEEDED`. Retry update creates a new job,
   so a retried failed update can run the migration again. The command must
   be safe to run more than once.
+
+## GitHub connection
+
+GitHub access belongs to the organization. Each binding of a GitHub App
+installation (`github_installations`, keyed by GitHub's installation id) has
+one `status`:
+
+| Status | Meaning | Set by |
+| --- | --- | --- |
+| `active` | Deployz can mint tokens for the installation. | The setup callback, a reconnect, a webhook that GitHub confirms |
+| `disconnected` | The organization stopped Deployz from using the installation. | An owner or admin (`POST /api/github/installations/:id/disconnect`) |
+| `access_issue` | GitHub removed or suspended the installation. | The webhook, or a live check when the connection is shown |
+
+- **One gate.** `requireActiveInstallation` runs before every token mint and
+  before Deployz accepts work that needs GitHub: the repository list,
+  application creation, analysis, blocker disputes, commit selection and
+  release creation. Analysis and the release build check again when they
+  start, so a job queued before a disconnect mints no token after it. The
+  refusal is 409 `GITHUB_NOT_CONNECTED` with `details.connectionStatus`.
+- **No stored tokens.** Installation tokens are minted per request and are
+  not cached, so the status change is the cutoff. A build that already
+  fetched its source finishes; CodeBuild reads the source from S3, not GitHub.
+- **What stays.** A disconnect keeps applications, their repository
+  references, releases and deployments. Deploy, restart, rollback and
+  destroy of an existing deployment do not use GitHub and keep working.
+- **Local only.** A disconnect never uninstalls or suspends the App on
+  GitHub. The Settings card links to the installation's GitHub settings,
+  where the account owner removes access on GitHub's side.
+- **Reconnect.** `POST …/reconnect` sets `active` only when GitHub reports
+  the installation active. Otherwise the status is `access_issue`, and the
+  vendor installs the App again through `GET /api/github/connect?returnTo=`.
+  The signed install state carries the dashboard page to return to. The
+  setup callback ends a disconnect only for an owner or admin with a valid
+  state. When it binds a new installation of the same GitHub account (by
+  immutable account id), the organization's earlier rows for that account go
+  and their applications move to the new installation, in one transaction.
+- **Webhooks.** `deleted`, `suspend`, `unsuspend` and
+  `new_permissions_accepted` read the installation's current state from
+  GitHub with the App JWT and apply it. A replayed or out-of-order delivery
+  therefore sets no wrong status. A webhook never ends a disconnect.
+- **Repository access.** `GET /api/applications/:id/github` reads from
+  GitHub on each request whether the installation token can read the
+  application's repository (`connected`, `repository_inaccessible`, or the
+  connection status). No per-repository state is stored, so
+  `installation_repositories` events need no handling.
+- **One organization per installation.** An installation bound to one
+  organization is never bound to another, also when it is disconnected. A
+  disconnect therefore never affects another organization.
+- **Fixture mode.** Every organization shares the fixture installation, so
+  its status is kept per organization in the API process.
 
 ## Trust and ownership boundaries
 
