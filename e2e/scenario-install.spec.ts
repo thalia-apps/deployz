@@ -242,7 +242,9 @@ test.describe('healthcheck-failure', () => {
     // stays INSTALLING until the relay's runtime health heartbeat reports
     // HEALTHY. In this scenario every ALB target fails its health check, so
     // healthStatus becomes UNHEALTHY while the customer-facing ladder holds
-    // at VERIFYING ("Running health checks.") — never FAILED and never READY.
+    // at VERIFYING — never FAILED and never READY. The app has a migration, so
+    // the install starts no task and the first deploy is the first start: the
+    // step stays on starting the application while its targets are unhealthy.
     await expect
       .poll(async () => ((await api.getDeployment(deploymentId)) as unknown as DeploymentResponse).deploymentStatus.stage, {
         timeout: 15_000,
@@ -260,7 +262,7 @@ test.describe('healthcheck-failure', () => {
     const deployment = (await api.getDeployment(deploymentId)) as unknown as DeploymentResponse;
     expect(deployment.state).toBe('INSTALLING');
     expect(deployment.deploymentStatus.stage).toBe('VERIFYING');
-    expect(deployment.deploymentStatus.step).toBe('HEALTH_CHECK');
+    expect(deployment.deploymentStatus.step).toBe('APPLICATION');
     expect(deployment.deploymentStatus.failure).toBeNull();
 
     const events = (await api.getStackEvents(deploymentId)) as StackEventRow[];

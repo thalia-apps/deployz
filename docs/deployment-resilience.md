@@ -222,7 +222,9 @@ install / database ready
   `MIGRATION_FAILED` (family, exit code, stopped reason). No service is
   updated, the previous release keeps serving, and the deployment
   returns to `UPDATE_AVAILABLE` — a failed migration is a failed update,
-  not a failed deployment.
+  not a failed deployment. On the first start of a zero-task install
+  nothing serves yet, so the deployment is `FAILED` (a failed environment,
+  `hasStartedInstall`); deploying again recovers it.
 - **Verdict.** Only the application container's own exit code 0 succeeds.
   ECS reports runtime containers without their `essential` flag, so the
   relay finds the application container in the exact revision the task ran

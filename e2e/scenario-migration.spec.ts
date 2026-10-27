@@ -197,9 +197,9 @@ test.describe('migration failure (phase 4c)', () => {
       .toBe('MIGRATION_FAILED');
 
     const deployment = await getDeployment(request, deploymentId);
-    // The ready release keeps the deployment in a live UPDATE_AVAILABLE state
-    // (the standard failed-release state) — never a false HEALTHY.
-    expect(deployment.state).toBe('UPDATE_AVAILABLE');
+    // Nothing ever started, so the failed first start is a failed environment
+    // (FAILED, recovered by deploying again) — never a false HEALTHY.
+    expect(deployment.state).toBe('FAILED');
     // Actionable: the copy says what happened and for whom...
     const detail = `${deployment.deploymentStatus.failure?.message ?? ''}`;
     expect(detail.toLowerCase()).toContain('migration');
@@ -231,7 +231,7 @@ test.describe('migration recovery on an existing deployment', () => {
         message: 'waiting for the frozen migration to fail',
       })
       .toBe('MIGRATION_FAILED');
-    expect((await getDeployment(request, deploymentId)).state).toBe('UPDATE_AVAILABLE');
+    expect((await getDeployment(request, deploymentId)).state).toBe('FAILED');
     const applicationId = await getApplicationId(request, deploymentId);
     const releases = (await (await request.get(`${API_URL}/api/applications/${applicationId}/releases`)).json()) as {
       releases: { id: string }[];
