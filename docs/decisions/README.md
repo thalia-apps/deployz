@@ -54,6 +54,7 @@ Three decisions with substantial detail have their own files:
 | 2026-10-23 | Until public launch, the `production` Environment has no required reviewers: production deploys without an approval | Active |
 | 2026-10-23 | Until public launch, there is no pull-request CI: the full CI run on `main` is the only gate before production | Active |
 | 2026-10-27 | The MVP boundary expands to a customer page for each deployment, behind an emailed sign-in code; connector updates stay customer-run in AWS | Active |
+| 2026-10-27 | An app with a migration starts no task at install; a migration that fails on that first start is a failed environment (`FAILED`) | Active |
 
 ## AI explanations are on-demand and never change state (2026-08-25)
 
@@ -1483,3 +1484,29 @@ sign-out of all sessions, a step-up check, more than one owner.
 
 What would change it: customer teams or customer-side operations, which need
 a stronger identity (MFA or SSO), or a request to transfer ownership.
+
+## A migration runs before the first task (2026-10-27)
+
+Context: an install deferred the first start (zero tasks, then the
+auto-deploy) only when configuration had to reach the task first. An app with
+a migration but nothing to configure started its web task at install, before
+any migration ran. On real AWS, miniflux exited on its empty schema
+(`current=v0 expected=v134`), the ECS circuit breaker fired, and the install
+failed (analysis round 3, PR #627).
+
+Decision:
+
+- A deployment whose frozen spec has a migration workload installs with zero
+  tasks. The auto-deploy runs the migration once, then starts the service
+  (`buildInstallPayload`, `apps/api/src/install-config.ts`).
+- A migration that fails on that first start leaves the deployment `FAILED`:
+  nothing ever served, so it is a failed environment, not a failed update.
+  Deploying again recovers it. A failed migration of a later release stays a
+  failed update (`UPDATE_AVAILABLE`), and the running release keeps serving.
+
+The user chose this semantics ("go with A"). It keeps the documented order
+(migration before any service starts) for every first install
+([`../deployment-resilience.md`](../deployment-resilience.md)).
+
+What would change it: a first start that must serve before its migration
+(for example, a maintenance page), which would need a separate start policy.
