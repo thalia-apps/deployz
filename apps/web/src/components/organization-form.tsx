@@ -6,9 +6,8 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { apiRequest, errorMessage } from '@/lib/api-client';
 import type { OrganizationInfo } from '@/lib/organization-vocabulary';
-
-import { apiUrl } from '@/lib/api-url';
 
 // §41 screen 18 — organization settings form. Submits PATCH /api/organization
 // for real (previously had no handler at all). §65: plain confirmation text,
@@ -17,23 +16,21 @@ export function OrganizationForm({ organization }: { organization: OrganizationI
   const router = useRouter();
   const [name, setName] = useState(organization.name);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [error, setError] = useState('');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setStatus('saving');
     try {
-      const response = await fetch(`${apiUrl}/api/organization`, {
+      const updated = await apiRequest<OrganizationInfo>('/api/organization', {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: { name },
       });
-      if (!response.ok) throw new Error(`Update failed (${response.status})`);
-      const updated = (await response.json()) as OrganizationInfo;
       setName(updated.name);
       setStatus('saved');
       router.refresh();
-    } catch {
+    } catch (err) {
+      setError(errorMessage(err, "Couldn't save. Try again."));
       setStatus('error');
     }
   }
@@ -47,6 +44,7 @@ export function OrganizationForm({ organization }: { organization: OrganizationI
           name="orgName"
           value={name}
           onChange={(event) => setName(event.target.value)}
+          maxLength={80}
           required
         />
       </div>
@@ -66,7 +64,7 @@ export function OrganizationForm({ organization }: { organization: OrganizationI
         ) : null}
         {status === 'error' ? (
           <p role="alert" className="text-sm text-destructive">
-            Couldn&apos;t save. Try again.
+            {error}
           </p>
         ) : null}
       </div>

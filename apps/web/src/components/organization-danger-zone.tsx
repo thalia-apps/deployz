@@ -17,7 +17,7 @@ export function OrganizationDangerZone({ organizationName }: { organizationName:
   const [confirmName, setConfirmName] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canDelete = confirmName === organizationName;
+  const canDelete = confirmName.trim() === organizationName;
 
   async function handleDelete(): Promise<void> {
     if (!canDelete) return;

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import type { BillingSubscriptionStatus } from '@deployz/contracts';
@@ -764,7 +764,12 @@ export async function removeMember(
   await db
     .update(schema.user)
     .set({ lastActiveOrganizationId: null })
-    .where(eq(schema.user.id, target.userId));
+    .where(
+      and(
+        eq(schema.user.id, target.userId),
+        eq(schema.user.lastActiveOrganizationId, organizationId),
+      ),
+    );
 
   await recordAuditEvent(db, {
     organizationId,
@@ -845,17 +850,34 @@ export async function transferOwnership(
   }
 
   // The outgoing owner stays on as an admin — an organization must never be
-  // left without someone who can administer it.
-  await db
-    .update(schema.member)
-    .set({ role: 'owner' })
-    .where(and(eq(schema.member.id, target.id), eq(schema.member.organizationId, organizationId)));
-  await db
-    .update(schema.member)
-    .set({ role: 'admin' })
-    .where(
-      and(eq(schema.member.organizationId, organizationId), eq(schema.member.userId, actor.id)),
-    );
+  // left without someone who can administer it. Both updates commit together
+  // and each one only matches the row the checks above saw, so a concurrent
+  // transfer (or a removal of the target) changes nothing and the
+  // organization keeps exactly one owner.
+  await db.transaction(async (tx) => {
+    const demoted = await tx
+      .update(schema.member)
+      .set({ role: 'admin' })
+      .where(
+        and(
+          eq(schema.member.organizationId, organizationId),
+          eq(schema.member.userId, actor.id),
+          eq(schema.member.role, 'owner'),
+        ),
+      )
+      .returning();
+    if (demoted.length === 0) {
+      throw new ApiError(403, 'INSUFFICIENT_ROLE', 'Your role does not allow this action');
+    }
+    const promoted = await tx
+      .update(schema.member)
+      .set({ role: 'owner' })
+      .where(and(eq(schema.member.id, target.id), eq(schema.member.organizationId, organizationId)))
+      .returning();
+    if (promoted.length === 0) {
+      throw new NotFoundError('Member not found');
+    }
+  });
 
   const [organization] = await db
     .select({ name: schema.organization.name })
@@ -1015,6 +1037,8 @@ export async function createInvitation(
       .returning();
     row = updated!;
   } else {
+    // A concurrent invite for the same address loses on the pending-invitation
+    // unique index and gets the same answer as a sequential duplicate.
     const [inserted] = await db
       .insert(schema.invitation)
       .values({
@@ -1026,8 +1050,16 @@ export async function createInvitation(
         expiresAt: expiryFromNow(),
         inviterId: actor.id,
       })
+      .onConflictDoNothing()
       .returning();
-    row = inserted!;
+    if (!inserted) {
+      throw new ApiError(
+        409,
+        'ALREADY_INVITED',
+        'That person already has a pending invitation — resend it instead',
+      );
+    }
+    row = inserted;
   }
 
   await recordAuditEvent(db, {
@@ -1121,10 +1153,7 @@ export async function revokeInvitation(
       'This invitation has already been answered',
     );
   }
-  await db
-    .update(schema.invitation)
-    .set({ status: 'canceled' })
-    .where(eq(schema.invitation.id, invitationId));
+  await claimPendingInvitation(db, invitationId, 'canceled');
   await recordAuditEvent(db, {
     organizationId,
     actorId: actor.id,
@@ -1211,6 +1240,30 @@ async function loadAnswerableInvitation(
   return row;
 }
 
+/** Moves an invitation out of 'pending' only if it is still pending (and,
+ *  for the invitee's answer, unexpired), so a concurrent accept, reject or
+ *  revoke settles it once. */
+async function claimPendingInvitation(
+  db: RuntimeDb,
+  invitationId: string,
+  status: 'accepted' | 'rejected' | 'canceled',
+): Promise<void> {
+  const claimed = await db
+    .update(schema.invitation)
+    .set({ status })
+    .where(
+      and(
+        eq(schema.invitation.id, invitationId),
+        eq(schema.invitation.status, 'pending'),
+        status === 'canceled' ? undefined : gt(schema.invitation.expiresAt, new Date()),
+      ),
+    )
+    .returning();
+  if (claimed.length === 0) {
+    throw new ApiError(409, 'INVITATION_NOT_PENDING', 'This invitation has already been answered');
+  }
+}
+
 export async function acceptInvitation(
   deps: OrganizationDeps,
   actor: Actor,
@@ -1220,28 +1273,18 @@ export async function acceptInvitation(
   const { db } = deps;
   const row = await loadAnswerableInvitation(db, actor, invitationId);
 
-  const existing = await db
-    .select({ id: schema.member.id })
-    .from(schema.member)
-    .where(
-      and(
-        eq(schema.member.organizationId, row.organizationId),
-        eq(schema.member.userId, actor.id),
-      ),
-    )
-    .limit(1);
-  if (existing.length === 0) {
-    await db.insert(schema.member).values({
-      id: crypto.randomUUID(),
-      organizationId: row.organizationId,
-      userId: actor.id,
-      role: row.role,
-    });
-  }
-  await db
-    .update(schema.invitation)
-    .set({ status: 'accepted' })
-    .where(eq(schema.invitation.id, invitationId));
+  await db.transaction(async (tx) => {
+    await claimPendingInvitation(tx, invitationId, 'accepted');
+    await tx
+      .insert(schema.member)
+      .values({
+        id: crypto.randomUUID(),
+        organizationId: row.organizationId,
+        userId: actor.id,
+        role: row.role,
+      })
+      .onConflictDoNothing();
+  });
 
   await recordAuditEvent(db, {
     organizationId: row.organizationId,
@@ -1279,10 +1322,7 @@ export async function rejectInvitation(
   invitationId: string,
 ): Promise<void> {
   const row = await loadAnswerableInvitation(db, actor, invitationId);
-  await db
-    .update(schema.invitation)
-    .set({ status: 'rejected' })
-    .where(eq(schema.invitation.id, invitationId));
+  await claimPendingInvitation(db, invitationId, 'rejected');
   await recordAuditEvent(db, {
     organizationId: row.organizationId,
     actorId: actor.id,

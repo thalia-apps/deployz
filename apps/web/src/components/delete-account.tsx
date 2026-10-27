@@ -20,7 +20,7 @@ export function DeleteAccount({ email }: { email: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canDelete = confirmEmail === email;
+  const canDelete = confirmEmail.trim().toLowerCase() === email.toLowerCase();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
