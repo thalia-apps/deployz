@@ -3949,6 +3949,11 @@ export async function buildServer({
       throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
     }
     const organizationId = requireSessionOrganizationId(request);
+    // A browser navigation, so a member goes back to the dashboard with the
+    // reason instead of a JSON error page.
+    if (requireRole(request) === 'member') {
+      return reply.redirect(`${env.webUrl}/dashboard/applications?github=forbidden`);
+    }
     const target = new URL(installUrl);
     // GitHub hands `state` back to the Setup URL only from the App's
     // installations/new page. The App's public page (`/apps/<slug>`) drops it
@@ -3971,6 +3976,9 @@ export async function buildServer({
     }
     const organizationId = requireSessionOrganizationId(request);
     const dashboardUrl = `${env.webUrl}/dashboard/applications`;
+    if (requireRole(request) === 'member') {
+      return reply.redirect(`${dashboardUrl}?github=forbidden`);
+    }
     if (!installationId) {
       return reply.redirect(`${dashboardUrl}?github=missing_installation`);
     }
@@ -4029,9 +4037,14 @@ export async function buildServer({
     }
     const fixtureMode = githubFixtureMode ?? env.githubFixtureMode;
     const installations = await listInstallations(githubStore, organizationId, { fixtureMode });
+    const canConnect = requireRole(request) !== 'member';
     return {
       installations,
-      connectUrl: (githubAppInstallUrl ?? env.githubAppInstallUrl) ? `${env.apiUrl}/api/github/connect` : null,
+      canConnect,
+      connectUrl:
+        canConnect && (githubAppInstallUrl ?? env.githubAppInstallUrl)
+          ? `${env.apiUrl}/api/github/connect`
+          : null,
     };
   });
 
@@ -8019,6 +8032,9 @@ export async function buildServer({
     };
   });
 
+  const BILLING_ROLE_MESSAGE =
+    'Only an owner or admin can manage billing. Ask one of them to do this.';
+
   // POST /api/billing/checkout — the vendor's first production deployment
   // (Phase 8), or a subscribe-only start (invitation-first flow). Nothing is
   // provisioned here: the request is parked as a checkout intent and answered
@@ -8026,6 +8042,7 @@ export async function buildServer({
   // deployment row appears only when the subscription activates (see
   // onSubscriptionChanged below); a subscribe-only intent creates nothing.
   app.post('/api/billing/checkout', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const body = createCheckoutBodySchema.parse(request.body);
     const organizationId = requireSessionOrganizationId(request);
     // Same fail-closed region gate as POST /api/deployments — a checkout must
@@ -8055,6 +8072,7 @@ export async function buildServer({
   // live there, never on a Deployz screen. The links are for the signed-in
   // organization's own Paddle customer; nothing about the session is cached.
   app.post('/api/billing/portal', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
     const organizationId = requireSessionOrganizationId(request);
     return createBillingPortalLinks({ db, paddle }, organizationId);
   });

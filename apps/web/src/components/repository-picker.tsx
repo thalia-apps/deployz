@@ -85,7 +85,9 @@ export function RepositoryPicker({ applications }: { applications: Application[]
   }
 
   if (githubState.status === 'empty') {
-    return <ConnectGitHubEmptyState connectUrl={githubState.connectUrl} />;
+    return (
+      <ConnectGitHubEmptyState connectUrl={githubState.connectUrl} canConnect={githubState.canConnect} />
+    );
   }
 
   return (
@@ -99,7 +101,13 @@ export function RepositoryPicker({ applications }: { applications: Application[]
   );
 }
 
-function ConnectGitHubEmptyState({ connectUrl }: { connectUrl: string | null }) {
+function ConnectGitHubEmptyState({
+  connectUrl,
+  canConnect,
+}: {
+  connectUrl: string | null;
+  canConnect: boolean;
+}) {
   return (
     <section
       aria-labelledby="connect-github"
@@ -120,7 +128,9 @@ function ConnectGitHubEmptyState({ connectUrl }: { connectUrl: string | null }) 
       )}
       {!connectUrl ? (
         <p className="text-xs text-muted-foreground">
-          GitHub isn&apos;t configured for this workspace.
+          {canConnect
+            ? "GitHub isn't configured for this workspace."
+            : 'Ask an owner or admin of your organization to connect GitHub.'}
         </p>
       ) : null}
       <DocsLink href={DOCS.github}>How to connect GitHub</DocsLink>
