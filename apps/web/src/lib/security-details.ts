@@ -32,7 +32,8 @@ export const CONNECTOR_STACK_RESOURCES = [
 /**
  * §16/§45 "data sent to Deployz" — what the relay reports on its polls:
  * operational metadata plus the AWS diagnostic messages it forwards
- * (packages/relay/src/stack-events.ts, deploy.ts, http-probe.ts, poll.ts),
+ * (packages/relay/src/stack-events.ts, deploy.ts, http-probe.ts, poll.ts,
+ * identity.ts),
  * and the configuration values Deployz stores (apps/api/src/config.ts,
  * install-config.ts).
  */
@@ -40,6 +41,7 @@ export const DATA_SENT_TO_DEPLOYZ = [
   'Installation ID, AWS account ID and AWS Region',
   'Connector version and the release and container image version that runs',
   'Deployment state, infrastructure status, health state and timestamps',
+  'Status of the connector stack in your AWS account, such as updating or rolled back',
   'Resource identifiers',
   'AWS error messages: stack events, stopped-task reasons and exit codes',
   'Health-check status code and response time (not the response body)',

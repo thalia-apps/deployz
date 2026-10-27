@@ -281,7 +281,7 @@ export async function createDeploymentRecord(
         },
       },
       enrollmentCode: mintEnrollmentCode(),
-      // Invitation lifecycle: every newly issued link is time-limited (30
+      // Invitation lifecycle: every newly issued link is time-limited (7
       // days). Links created before this column existed keep NULL = no limit,
       // so in-flight installations are untouched.
       installLinkExpiresAt: installLinkExpiryFrom(new Date()),
