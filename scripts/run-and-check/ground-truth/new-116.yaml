@@ -1,0 +1,158 @@
+id: new-116
+repository: monicahq/monica
+commit: 6e6ec217457e946e330ba7cd3b28107f4332c7b1
+summary: >
+  Monica (personal CRM) v5: Laravel 12 / PHP 8.3 app with an Inertia + Vue frontend built by Vite. The repo has a
+  dev-purpose Dockerfile (scripts/docker/Dockerfile, php:8.3-apache, two stages: yarn build, then PHP image with
+  composer install) that builds the whole app from source. The entrypoint waits for the DB and runs
+  `monica:setup` (migrations) at every start. The image defaults to SQLite, database cache and sessions, and a sync queue.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One web container (Apache, port 80) from scripts/docker/Dockerfile; no volume is needed once a DB is chosen.
+    A Deployz deploy must set DB_CONNECTION=pgsql (or mysql) with DB parts, APP_KEY, APP_URL and
+    APP_TRUSTED_PROXIES=* (the image .env has DB_CONNECTION=sqlite, which is ephemeral). Cache, session and queue use
+    the database by default, so Redis is optional. Reminders and the email jobs need a scheduler that runs
+    `php artisan schedule:run` each minute (same image, scheduled job). Photo and document upload needs the external
+    Uploadcare service (not S3, not local disk); without keys uploads are off but the app works. Judgement call
+    between DEPLOYABLE and DEPLOYABLE_WITH_CHANGES: the Dockerfile builds as is, but the env changes are needed.
+dockerfile:
+  accept: [scripts/docker/Dockerfile]
+  reject:
+    - {path: scripts/docker/Dockerfile-fpm, reason: "php-fpm variant: needs a separate web server container"}
+    - {path: docker-compose.yml, reason: "Laravel Sail dev compose, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 10, quote: "FROM node:22 AS yarn"}
+    - {path: scripts/docker/Dockerfile, line: 21, quote: "FROM php:8.3-apache"}
+    - {path: scripts/docker/Dockerfile, line: 166, quote: "COPY --chown=www-data:www-data . ./"}
+    - {path: scripts/docker/Dockerfile, line: 183, quote: "composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader --no-dev"}
+    - {path: scripts/docker/Dockerfile, line: 188, quote: "COPY --from=yarn --chown=www-data:www-data /var/www/html/public/build ./public/build"}
+    - {path: scripts/docker/Dockerfile, line: 4, quote: "### This file is used for dev purpose."}
+    - {path: scripts/docker/Dockerfile-fpm, line: 21, quote: "FROM php:8.3-fpm"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 21, quote: "FROM php:8.3-apache"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 157, quote: "APACHE_DOCUMENT_ROOT=/var/www/html/public;"}
+startCommand:
+  source: image
+  accept: ["entrypoint.sh apache2-foreground", "apache2-foreground"]
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 197, quote: "ENTRYPOINT [\"entrypoint.sh\"]"}
+    - {path: scripts/docker/Dockerfile, line: 198, quote: "CMD [\"apache2-foreground\"]"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: bootstrap/app.php, line: 17, quote: "health: '/up',"}
+database:
+  status: required
+  engines: [sqlite, mysql, pgsql, sqlsrv]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION: pgsql}
+  connectionVars: [DATABASE_URL, "DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD"]
+  evidence:
+    - {path: config/database.php, line: 18, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: config/database.php, line: 73, quote: "'driver' => 'pgsql',"}
+    - {path: config/database.php, line: 84, quote: "'sslmode' => 'prefer',"}
+    - {path: config/database.php, line: 55, quote: "'host' => env('DB_HOST', '127.0.0.1'),"}
+    - {path: scripts/docker/.env.production, line: 8, quote: "DB_CONNECTION=sqlite"}
+    - {path: scripts/docker/entrypoint.sh, line: 44, quote: "if [ \"${DB_CONNECTION:-sqlite}\" == \"sqlite\" ]; then"}
+migrations:
+  mode: startup
+  accept: ["php artisan monica:setup --force", "php artisan migrate --force"]
+  evidence:
+    - {path: scripts/docker/entrypoint.sh, line: 62, quote: "${ARTISAN} waitfordb"}
+    - {path: scripts/docker/entrypoint.sh, line: 63, quote: "${ARTISAN} monica:setup --force -vv"}
+    - {path: app/Console/Commands/SetupApplication.php, line: 115, quote: "'migrate', ['--force' => true]"}
+redis:
+  status: optional
+  selectBy: {CACHE_STORE: redis, SESSION_DRIVER: redis, QUEUE_CONNECTION: redis, REDIS_HOST: host}
+  evidence:
+    - {path: scripts/docker/.env.production, line: 12, quote: "CACHE_DRIVER=database"}
+    - {path: scripts/docker/.env.production, line: 14, quote: "SESSION_DRIVER=database"}
+    - {path: scripts/docker/.env.production, line: 13, quote: "QUEUE_CONNECTION=sync"}
+    - {path: config/queue.php, line: 66, quote: "'driver' => 'redis',"}
+workers:
+  status: optional-independent
+  commands: ["php /var/www/html/artisan queue:work --sleep=10 --timeout=0 --tries=3 --queue=high,default,low"]
+  evidence:
+    - {path: scripts/docker/queue.sh, line: 4, quote: "artisan queue:work --sleep=10 --timeout=0 --tries=3 --queue=high,default,low"}
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+    - {path: .env.example, line: 68, quote: "If Queue is not set to 'sync', you'll have to set a queue worker"}
+scheduledJobs:
+  status: independent
+  items: [ProcessScheduledContactReminders every minute, UpdateAddressBooks hourly, CleanSyncToken, CleanLogs, model:prune, queue:prune-failed]
+  evidence:
+    - {path: routes/console.php, line: 27, quote: "Schedule::job(ProcessScheduledContactReminders::class, 'minutes', 1);"}
+    - {path: routes/console.php, line: 26, quote: "Schedule::job(UpdateAddressBooks::class, 'hourly');"}
+    - {path: scripts/docker/Dockerfile, line: 103, quote: "* * * * * php /var/www/html/artisan schedule:run -v"}
+    - {path: scripts/docker/cron.sh, line: 4, quote: "exec busybox crond -f -l 0 -L /proc/1/fd/1"}
+storage:
+  local: ephemeral
+  paths: [/var/www/html/storage, /var/www/html/database/database.sqlite]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DISK', 'local'),"}
+    - {path: config/services.php, line: 34, quote: "'public_key' => env('UPLOADCARE_PUBLIC_KEY', null),"}
+    - {path: app/Domains/Contact/ManageDocuments/Services/UploadFile.php, line: 65, quote: "if (is_null(config('services.uploadcare.private_key'))) {"}
+    - {path: scripts/docker/entrypoint.sh, line: 47, quote: "make sure it will be saved in a persistent volume"}
+env:
+  required:
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "set to pgsql (or mysql); the image .env default sqlite is ephemeral"}
+    - {name: "DB_HOST / DB_PORT / DB_DATABASE / DB_USERNAME / DB_PASSWORD", secret: false, buildTime: false, note: "or DATABASE_URL; the password is secret"}
+    - {name: APP_KEY, secret: true, buildTime: false, note: "32 bytes, base64: prefix; if missing the entrypoint generates one into the ephemeral .env, so sessions and encrypted data break on restart or with several tasks"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; image .env has https://monica.test"}
+    - {name: APP_TRUSTED_PROXIES, secret: false, buildTime: false, note: "set to * so Laravel builds https URLs behind the ALB"}
+  optional: [APP_DISABLE_SIGNUP, MAIL_MAILER, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_ENCRYPTION, MAIL_FROM_ADDRESS, UPLOADCARE_PUBLIC_KEY, UPLOADCARE_PRIVATE_KEY, LOCATION_IQ_API_KEY, MAPBOX_API_KEY, QUEUE_CONNECTION, CACHE_STORE, SESSION_DRIVER, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, SCOUT_DRIVER, MEILISEARCH_URL, MEILISEARCH_KEY, DEFAULT_STORAGE_LIMIT, PHP_MEMORY_LIMIT, PHP_UPLOAD_LIMIT]
+  buildTime: []
+  evidence:
+    - {path: scripts/docker/entrypoint.sh, line: 53, quote: "if [ -z \"${APP_KEY:-}\" ]; then"}
+    - {path: scripts/docker/entrypoint.sh, line: 54, quote: "${ARTISAN} key:generate --no-interaction"}
+    - {path: scripts/docker/.env.production, line: 5, quote: "APP_URL=https://monica.test"}
+    - {path: config/trustedproxy.php, line: 19, quote: "'proxies' => env('APP_TRUSTED_PROXIES', null),"}
+    - {path: config/mail.php, line: 16, quote: "'default' => env('MAIL_MAILER', 'log'),"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are supported through DB_CONNECTION"
+    - "Redis must not be required: cache, session and queue default to database or sync"
+    - "Meilisearch or Typesense must not be required: SCOUT_DRIVER=database is the image default"
+    - "Missing S3 support must not block: file upload uses Uploadcare (optional external SaaS), not local disk"
+    - "The dev label on the Dockerfile must not block: it builds the full production app from source"
+    - "Cron or queue scripts must not count as a second image: they run from the same image"
+vendorQuestions:
+  legitimate:
+    - "Is the Uploadcare service (photos, documents) needed? The repo does not say whether the user needs uploads"
+    - "Is outgoing email (SMTP) needed? Reminders by email need MAIL_MAILER=smtp and a server"
+  unnecessary:
+    - "Which port? (Apache on 80)"
+    - "Who runs migrations? (the entrypoint runs monica:setup on each start)"
+    - "Which database? (pgsql or mysql through DB_CONNECTION)"
+    - "Health path? (/up)"
+traps:
+  - "No root Dockerfile -> the only app images are scripts/docker/Dockerfile (apache) and scripts/docker/Dockerfile-fpm (needs a separate web server); the file header says dev purpose, but it builds the app"
+  - "scripts/docker/Dockerfile-fpm -> php-fpm needs an nginx or Apache front container, so it is not a one-container image"
+  - "docker-compose.yml is Laravel Sail for local dev (MariaDB, Redis, Memcached, Meilisearch, Mailpit) -> not the production topology"
+  - "image .env.production sets DB_CONNECTION=sqlite, QUEUE_CONNECTION=sync, CACHE_DRIVER=database -> defaults to override, not the real choice"
+  - "config/database.php default is mysql but .env sets sqlite -> an env value DB_CONNECTION wins over the baked .env"
+  - "queue is sync by default -> no worker needed unless QUEUE_CONNECTION is changed"
+  - "scripts/docker/cron.sh runs busybox crond for the in-image crontab -> a separate command from the same image; on Deployz use a scheduled job `php artisan schedule:run`"
+  - "fortrabbit.yml -> PaaS config for another host, not used by Deployz"
+openQuestions:
+  - "Whether Deployz scheduled jobs run each minute; Monica reminders use a 1-minute schedule"
+  - "Whether the sync queue default is acceptable for the first deploy (jobs run in the web request)"
+crossReview:
+  - {field: traps (No root Dockerfile), change: "path scripts/Dockerfile -> scripts/docker/Dockerfile and scripts/Dockerfile-fpm -> scripts/docker/Dockerfile-fpm", evidence: "scripts/docker/Dockerfile:4; scripts/docker/Dockerfile-fpm:21"}
+  - {field: dockerfile, change: "none: scripts/docker/Dockerfile builds from the archive; all COPY sources exist in git (scripts/docker/install-composer.sh, .env.production, entrypoint.sh, entrypoint-unittests.sh, cron.sh, queue.sh; yarn.lock and package.json for the yarn stage; vite.config.js imports no vendor/ files)", evidence: "scripts/docker/Dockerfile:176,190-195"}
+  - {field: redis.selectBy, change: "none: CACHE_STORE falls back to CACHE_DRIVER, so CACHE_STORE=redis works and the image CACHE_DRIVER=database is overridable; phpredis is installed in the image", evidence: "config/cache.php:19; scripts/docker/Dockerfile:68"}
+  - {field: database / outcome, change: "none: pdo_pgsql and pdo_mysql installed; DATABASE_URL honoured by the pgsql and mysql connections; sslmode prefer works with the forced-TLS RDS; health /up is unauthenticated", evidence: "scripts/docker/Dockerfile:61; config/database.php:76-84; bootstrap/app.php:17"}
+  - {field: storage, change: "none: the only Storage:: uses in app/ are the lang disk (dev command); uploads use Uploadcare, so s3 none and local ephemeral hold", evidence: "app/Console/Commands/Local/MonicaLocalize.php:64; app/Domains/Contact/ManageDocuments/Services/UploadFile.php:65"}
+  - {field: all, change: verified, evidence: "41 citations checked"}

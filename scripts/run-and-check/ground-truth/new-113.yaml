@@ -1,0 +1,134 @@
+id: new-113
+repository: frappe/erpnext
+commit: 821ca1d87e81751216f1f6fd5ed89935b1677f98
+summary: >
+  ERPNext is a Python app (a Frappe Framework app), not a standalone web service. It has no HTTP server, no
+  production Dockerfile and no start command of its own: it must be installed with `bench` into a bench that holds
+  the separate Frappe framework (a different repository, develop branch, >=17). A running site needs MariaDB (or
+  experimental PostgreSQL), several Redis instances, a web process, background worker processes, a scheduler and a
+  socket.io process. The only Dockerfile is .oss-scanner/Dockerfile, a security-scanner fixture that bakes MariaDB,
+  Redis and a test site into one image and has no CMD. Production images are built in the separate frappe_docker repo.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    NOT_DEPLOYABLE as the repo stands: no production Dockerfile builds from the repo alone, the framework and the
+    process topology (web, workers, scheduler, socket.io, bench config) come from other repositories, and the only
+    Dockerfile is a scanner fixture that embeds MariaDB and Redis. DEPLOYABLE_WITH_CHANGES is a judgement call: a user
+    could write a new Dockerfile (bench init + get-app) and run web, worker and scheduler commands from one image with
+    managed DB and Redis, but that is a new image design, not a small change.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .oss-scanner/Dockerfile, reason: "scanner fixture: installs MariaDB and Redis inside the image, creates test_site with fixed passwords at build time, builds frappe develop with bench init, and has no CMD or ENTRYPOINT; not a production image"}
+  target: null
+  context: .
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 1, quote: "# ERPNext for OSS Scanner."}
+    - {path: .oss-scanner/Dockerfile, line: 5, quote: "# MariaDB and Redis run inside this one container"}
+    - {path: .oss-scanner/Dockerfile, line: 24, quote: "mariadb-server mariadb-client libmariadb-dev redis-server"}
+    - {path: .oss-scanner/Dockerfile, line: 82, quote: "bench init --skip-assets --frappe-branch"}
+    - {path: .oss-scanner/Dockerfile, line: 110, quote: "bench new-site test_site --db-root-password root --admin-password admin"}
+    - {path: README.md, line: 81, quote: "See [Frappe Docker Documentation](https://github.com/frappe/frappe_docker)"}
+    - {path: .github/workflows/docker-release.yml, line: 18, quote: "repos/frappe/frappe_docker/actions/workflows/core-build-stable.yml/dispatches"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: README.md, line: 146, quote: "http://erpnext.localhost:8000/app"}
+    - {path: .oss-scanner/Dockerfile, line: 127, quote: "bench serve --port 8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: .oss-scanner/threat_model.md, line: 6, quote: "ERPNext has no HTTP stack of its own."}
+startCommand:
+  source: explicit
+  accept: ["bench serve", "gunicorn", "bench start"]
+healthPath:
+  accept: ["/api/method/ping"]
+  # Provided by the Frappe framework (not in this repo); the Dockerfile smoke check uses it with a Host header for the site name.
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 129, quote: "http://127.0.0.1:8000/api/method/ping"}
+database:
+  status: required
+  engines: [mariadb, postgres]
+  default: mariadb
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: ["site_config.json db_type/db_host/db_port/db_name/db_password (written by bench new-site)"]
+  evidence:
+    - {path: .github/workflows/server-tests-mariadb.yml, line: 96, quote: "DB: mariadb"}
+    - {path: .github/workflows/server-tests-postgres.yml, line: 103, quote: "DB: postgres"}
+    - {path: .github/helper/site_config_postgres.json, line: 6, quote: "\"db_type\": \"postgres\","}
+    - {path: .oss-scanner/Dockerfile, line: 35, quote: "# Frappe needs utf8mb4 with this exact collation"}
+migrations:
+  mode: command
+  accept: ["bench --site <site> migrate", "bench new-site <site> --install-app erpnext"]
+  evidence:
+    - {path: erpnext/hooks.py, line: 109, quote: "after_install = \"erpnext.setup.install.after_install\""}
+    - {path: .oss-scanner/Dockerfile, line: 110, quote: "--install-app erpnext"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 5, quote: "# MariaDB and Redis run inside this one container"}
+    - {path: .github/helper/install.sh, line: 386, quote: "for key in (\"redis_cache\", \"redis_queue\"):"}
+    - {path: erpnext/accounts/doctype/accounting_dimension/accounting_dimension.py, line: 120, quote: "frappe.enqueue("}
+workers:
+  status: independent
+  commands: ["bench worker --queue short,default,long", "bench schedule", "node socketio server"]
+  evidence:
+    - {path: erpnext/accounts/doctype/accounting_dimension/accounting_dimension.py, line: 128, quote: "frappe.enqueue(delete_accounting_dimension, doc=self, queue=\"long\""}
+    - {path: erpnext/hooks.py, line: 514, quote: "scheduler_events = {"}
+scheduledJobs:
+  status: independent
+  items: [cron every 15 minutes, hourly, hourly_maintenance, daily_maintenance]
+  evidence:
+    - {path: erpnext/hooks.py, line: 516, quote: "\"0/15 * * * *\": ["}
+    - {path: erpnext/hooks.py, line: 532, quote: "\"hourly_maintenance\": ["}
+storage:
+  local: required
+  paths: [sites/<site>/public/files, sites/<site>/private/files, sites/<site>/private/backups]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: erpnext/edi/doctype/code_list/code_list_import.py, line: 16, quote: "LOCAL_FILE_PREFIXES = (\"/files/\", \"/private/files/\")"}
+env:
+  required:
+    - {name: "db_host / db_name / db_password", secret: true, buildTime: false, note: "kept in the bench site_config.json, written by bench new-site; not env vars of this repo"}
+    - {name: "Administrator password", secret: true, buildTime: false, note: "set with bench new-site --admin-password"}
+    - {name: host_name, secret: false, buildTime: false, note: "public site URL / site name; Frappe selects the site from the Host header"}
+  optional: []
+  buildTime: []
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 110, quote: "--admin-password admin"}
+blockers:
+  expected:
+    - "No production Dockerfile in the repo builds the app: the only one is the .oss-scanner scanner fixture"
+    - "ERPNext needs the Frappe framework from another repository (frappe >=17.0.0-dev) installed with bench; this repo alone does not run"
+    - "A site needs a web process, a scheduler, background workers (queues short/default/long) and a socket.io process; none has a start command here"
+    - "Site files (public, private, backups) are on local disk under sites/; the repo gives no S3 option"
+  mustNot:
+    - "MariaDB must not be reported as a missing service: Frappe also supports PostgreSQL, which Deployz offers (PostgreSQL 16; compatibility is a risk to note, not the blocker). MySQL 8 is not a Frappe database, so it is not the right managed engine"
+    - "node/yarn in package.json must not be reported as a second runtime image: the banking UI and assets are built at bench build time"
+    - "docker-release.yml must not be treated as a build recipe for this repo: it only dispatches a build in frappe_docker"
+vendorQuestions:
+  legitimate:
+    - "Which Frappe framework version and image will run this app (frappe >=17 develop)? The repo does not pin one"
+    - "Is MariaDB or PostgreSQL the target database? PostgreSQL support is tested only on request (server-tests-postgres is label-triggered)"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Which language runtime? (Python 3.14)"
+traps:
+  - ".oss-scanner/Dockerfile looks like the app image -> scanner fixture with MariaDB, Redis and a test site inside, no CMD (.oss-scanner/Dockerfile:1-8)"
+  - "README Docker section -> points to the frappe_docker repo with compose files, not a Dockerfile in this repo (README.md:81)"
+  - "pyproject.toml builds an ERPNext wheel (flit) -> a library for bench, not a runnable server (pyproject.toml:34-36)"
+  - "package.json has dev and build scripts -> they build the banking UI only, not the app (package.json:14-18)"
+  - "docker-release.yml -> only dispatches a build in frappe/frappe_docker (docker-release.yml:18)"
+openQuestions:
+  - "Whether a user-written Dockerfile based on frappe_docker could run on Deployz with one image and different commands for web, worker, scheduler and socket.io; the nginx front and bench config make this uncertain"
+crossReview:
+  - {field: database.deployzEngine, change: "mysql -> postgres; Frappe supports MariaDB and PostgreSQL only, MySQL 8 is not a Frappe database; CI runs a Postgres site config (db_type postgres). Added the evidence item and updated blockers.mustNot", evidence: ".github/helper/site_config_postgres.json:6; .github/workflows/server-tests-postgres.yml:103"}
+  - {field: storage.local, change: "ephemeral -> required; uploaded files under sites/<site>/public and private are durable user data with no S3 option in the repo, which the writer already listed as a blocker (ephemeral was inconsistent). Replaced the unrelated hooks.py:1 evidence", evidence: "erpnext/edi/doctype/code_list/code_list_import.py:16"}
+  - {field: redis.evidence, change: "replaced a weak citation (install.sh:294 only comments a Procfile line out) with the redis_cache/redis_queue site config keys", evidence: ".github/helper/install.sh:386"}
+  - {field: dockerfile.accept, change: "none: .oss-scanner/Dockerfile does build from the repo as context, but it is a scanner fixture (MariaDB and Redis inside the image, test_site with fixed passwords, no CMD or ENTRYPOINT), so [] stays. Unresolved: an analyser may pick it as the only Dockerfile", evidence: ".oss-scanner/Dockerfile:5,75,110 (no CMD/ENTRYPOINT in the file)"}
+  - {field: all, change: verified, evidence: "26 citations checked"}

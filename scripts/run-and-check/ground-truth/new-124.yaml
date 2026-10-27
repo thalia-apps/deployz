@@ -1,0 +1,126 @@
+id: new-124
+repository: ClickHouse/ClickHouse
+commit: d491ad88ce45448fba69cbf462cd629a09dcc0bd
+summary: >
+  ClickHouse is a C++ column-oriented database server (HTTP 8123, native TCP 9000), not a web app. The repo has no
+  Dockerfile that builds the server from source: docker/server/Dockerfile is a symlink to Dockerfile.ubuntu, which installs
+  pre-built clickhouse-server packages from packages.clickhouse.com. The server is a database that stores its data in
+  /var/lib/clickhouse on local disk, and ClickHouse is not a Deployz-supported service.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    ClickHouse is itself the database, and Deployz does not support ClickHouse. No Dockerfile builds it from the repo
+    archive (the images download release packages). The data path /var/lib/clickhouse is a VOLUME on ephemeral local disk
+    (no EFS), so data is lost on every task restart. The source build needs 159 contrib submodules that the archive
+    does not contain.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/server/Dockerfile, reason: "symlink to Dockerfile.ubuntu"}
+    - {path: docker/server/Dockerfile.ubuntu, reason: "installs pre-built clickhouse-server deb packages from packages.clickhouse.com; no build from repo source; COPY entrypoint.sh and docker_related_config.xml are relative to docker/server, so they are missing with the repo root as build context"}
+    - {path: docker/bare/Dockerfile, reason: "FROM scratch, ADD root /: the root directory is made by docker/bare/prepare from a local build/programs/clickhouse binary, which is not in git"}
+    - {path: docker/server/Dockerfile.alpine, reason: "downloads pre-built tgz packages; also needs a glibc donor stage"}
+    - {path: docker/server/Dockerfile.distroless, reason: "same package-download pattern, not a source build"}
+    - {path: docker/keeper/Dockerfile, reason: "ClickHouse Keeper image, a different service, also from packages"}
+    - {path: ci/docker/binary-builder/Dockerfile, reason: "CI build toolchain image, does not produce the server image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/server/Dockerfile, line: 1, quote: "Dockerfile.ubuntu"}
+    - {path: docker/server/Dockerfile.ubuntu, line: 36, quote: "https://packages.clickhouse.com/deb"}
+    - {path: docker/server/Dockerfile.ubuntu, line: 37, quote: "ARG VERSION=\"26.10.2.103\""}
+    - {path: docker/server/Dockerfile.ubuntu, line: 140, quote: "apt-get install --yes --no-install-recommends ${packages}"}
+    - {path: docker/server/Dockerfile.ubuntu, line: 163, quote: "COPY entrypoint.sh /entrypoint.sh"}
+    - {path: docker/bare/Dockerfile, line: 2, quote: "ADD root /"}
+    - {path: docker/server/Dockerfile.alpine, line: 93, quote: "wget_with_retry \"${REPOSITORY}/${package}-${VERSION}-${arch}.tgz\""}
+runtime: {accept: []}
+port:
+  accept: [8123]
+  evidence:
+    - {path: docker/server/Dockerfile.ubuntu, line: 165, quote: "EXPOSE 9000 8123 9009"}
+    - {path: programs/server/config.xml, line: 177, quote: "<http_port>8123</http_port>"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/server/docker_related_config.xml, line: 4, quote: "<listen_host>0.0.0.0</listen_host>"}
+startCommand:
+  source: image
+  accept: ["/entrypoint.sh", "clickhouse-server"]
+healthPath:
+  accept: ["/ping"]
+  # /ping is a strict-path handler that returns "Ok." (HTTP 200) with no auth. The image entrypoint itself polls it.
+  evidence:
+    - {path: src/Server/HTTPHandlerFactory.cpp, line: 496, quote: "ping_handler->attachStrictPath(\"/ping\");"}
+    - {path: src/Server/HTTPHandlerFactory.cpp, line: 172, quote: "constexpr auto ping_response_expression = \"Ok.\\n\";"}
+    - {path: docker/server/entrypoint.sh, line: 193, quote: "URL=\"http://127.0.0.1:$HTTP_PORT/ping\""}
+database:
+  status: none
+  engines: [clickhouse]
+  default: clickhouse
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: programs/server/config.xml, line: 596, quote: "<path>/var/lib/clickhouse/</path>"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: docker/server/entrypoint.sh, line: 274, quote: "exec clickhouse su \"${USER}:${GROUP}\" clickhouse-server --config-file=\"$CLICKHOUSE_CONFIG\" \"$@\""}
+redis:
+  status: none
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/clickhouse, /var/log/clickhouse-server]
+  s3: none
+  s3SelectBy: {}
+  # ClickHouse can place MergeTree data on an S3 disk via storage_configuration, but this needs extra XML config and
+  # keeps metadata on local disk; it is not a Deployz bucket feature. The default is local disk.
+  evidence:
+    - {path: docker/server/Dockerfile.ubuntu, line: 166, quote: "VOLUME /var/lib/clickhouse"}
+    - {path: programs/server/config.xml, line: 596, quote: "<path>/var/lib/clickhouse/</path>"}
+env:
+  required: []
+  optional: [CLICKHOUSE_USER, CLICKHOUSE_PASSWORD, CLICKHOUSE_PASSWORD_FILE, CLICKHOUSE_DB, CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT]
+  buildTime: []
+  evidence:
+    - {path: docker/server/entrypoint.sh, line: 52, quote: "CLICKHOUSE_USER=\"${CLICKHOUSE_USER:-default}\""}
+blockers:
+  expected:
+    - "ClickHouse is an unsupported database service: Deployz offers only RDS PostgreSQL/MySQL, Redis and S3"
+    - "No Dockerfile builds the server from the repo archive: the images download pre-built packages from packages.clickhouse.com"
+    - "Data lives in /var/lib/clickhouse on local disk (VOLUME); Fargate disk is ephemeral and there is no EFS, so all data is lost on restart"
+    - "A source build needs the contrib/ submodules (159 entries in .gitmodules); the Deployz archive has no submodule content"
+  mustNot:
+    - "Missing PostgreSQL or Redis must not be a blocker: ClickHouse needs neither"
+    - "Missing health path must not be a blocker: /ping exists and returns 200"
+    - "Binding to localhost must not be a blocker: the image config listens on 0.0.0.0"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8123 HTTP, 9000 native; Deployz needs the HTTP port)"
+    - "Which database? (the server is the database)"
+    - "Health path? (/ping)"
+traps:
+  - "docker/server/Dockerfile looks like a Dockerfile -> it is a symlink to Dockerfile.ubuntu (docker/server/Dockerfile:1)"
+  - "Dockerfile.ubuntu looks like a server build -> it only installs release deb packages from the network (docker/server/Dockerfile.ubuntu:36, :140)"
+  - "ARG deb_location_url / single_binary_location_url -> optional overrides for CI binaries, not a repo-source build (docker/server/Dockerfile.ubuntu:46, :51)"
+  - "ci/docker/* has many Dockerfiles -> CI and test images, not the production server (ci/docker)"
+  - "9000, 8123 and 9009 are all exposed -> three ports, but Deployz routes one HTTP port (8123); native TCP clients on 9000 cannot go through the HTTPS ALB (docker/server/Dockerfile.ubuntu:165)"
+  - "default user has no password and network access is off unless CLICKHOUSE_USER or CLICKHOUSE_PASSWORD is set -> auth is part of any deploy (docker/server/entrypoint.sh:154)"
+openQuestions:
+  - "Whether ClickHouse should be served at all as a Deployz app: judged out of scope, since the platform has no ClickHouse service and no persistent volume"
+crossReview:
+  - {field: dockerfile.reject, change: "added docker/bare/Dockerfile (FROM scratch, ADD root /; root comes from a local build via docker/bare/prepare) and the build-context reason for Dockerfile.ubuntu; accept stays [] because with the repo root as context the COPY sources are missing", evidence: "docker/server/Dockerfile.ubuntu:163 COPY entrypoint.sh /entrypoint.sh; docker/bare/Dockerfile:2 ADD root /; docker/bare/prepare:15"}
+  - {field: outcome / dockerfile.accept, change: "none: judgement kept. Open point: if Deployz used docker/server as build context, Dockerfile.ubuntu would build (it downloads release packages at the pinned VERSION), but NOT_DEPLOYABLE still holds (ClickHouse unsupported, data on ephemeral disk)", evidence: "docker/server/Dockerfile.ubuntu:140; docker/server/Dockerfile.ubuntu:166"}
+  - {field: healthPath, port, bindAllInterfaces, traps line refs, .gitmodules count, change: "none: checked against code (ping handler, 8123, listen 0.0.0.0, trap lines :46 :51 :154 correct, 159 submodules)", evidence: "src/Server/HTTPHandlerFactory.cpp:496; .gitmodules (159 [submodule] entries)"}
+  - {field: all, change: verified, evidence: "18 citations checked"}

@@ -1,0 +1,130 @@
+id: new-102
+repository: danny-avila/LibreChat
+commit: 8d3da9bbb220a0a96be9330a2e1cbd385fb786d5
+summary: >
+  LibreChat AI chat app (Node.js, Express, React client built by Vite). The root Dockerfile builds one app image
+  that runs `npm run backend` on port 3080. The app needs MongoDB (MONGO_URI is mandatory; no SQL option).
+  The upstream compose adds MongoDB, Meilisearch, pgvector and a RAG API as separate images.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The app throws at start if MONGO_URI is missing, and the only database is MongoDB, which Deployz does not support
+    (RDS PostgreSQL or MySQL only). There is no PostgreSQL or MySQL mode. The image itself is buildable and the rest
+    (Redis, S3, no worker) would fit, but the MongoDB requirement is a hard blocker.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.multi, reason: "multi-stage variant that builds packages and an API-only image; the root Dockerfile is the standard one"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+    - {path: otel/langfuse-fanout/Dockerfile, reason: "separate optional Langfuse fan-out sidecar, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 4, quote: "FROM node:24.22.1-alpine AS node"}
+    - {path: Dockerfile, line: 64, quote: "npm run frontend"}
+    - {path: Dockerfile, line: 83, quote: "CMD [\"npm\", \"run\", \"backend\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3080]
+  evidence:
+    - {path: Dockerfile, line: 81, quote: "EXPOSE 3080"}
+    - {path: api/server/index.js, line: 114, quote: "const port = isNaN(Number(PORT)) ? 3080 : Number(PORT);"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 82, quote: "ENV HOST=0.0.0.0"}
+    - {path: api/server/index.js, line: 115, quote: "const host = HOST || 'localhost';"}
+startCommand:
+  source: image
+  accept: ["npm run backend", "node api/server/index.js"]
+healthPath:
+  accept: ["/health", "/livez"]
+  evidence:
+    - {path: api/server/index.js, line: 358, quote: "app.get('/health', (_req, res) => res.status(200).send('OK'));"}
+    - {path: api/server/index.js, line: 359, quote: "app.get('/livez', (_req, res) => res.status(200).send('OK'));"}
+database:
+  status: required
+  engines: [mongodb]
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [MONGO_URI]
+  evidence:
+    - {path: api/db/connect.js, line: 10, quote: "if (!MONGO_URI) {"}
+    - {path: api/db/connect.js, line: 11, quote: "throw new Error('Please define the MONGO_URI environment variable');"}
+    - {path: api/db/connect.js, line: 68, quote: "cached.promise = mongoose.connect(MONGO_URI, opts).then((mongoose) => {"}
+    - {path: .env.example, line: 30, quote: "MONGO_URI=mongodb://127.0.0.1:27017/LibreChat"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: package.json, line: 45, quote: "\"backend\": \"cross-env NODE_ENV=production node api/server/index.js\","}
+redis:
+  status: optional
+  selectBy: {USE_REDIS: "true", REDIS_URI: "redis://host:6379"}
+  evidence:
+    - {path: .env.example, line: 1331, quote: "# USE_REDIS=true"}
+    - {path: .env.example, line: 1361, quote: "# REDIS_URI=redis://127.0.0.1:6379"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 83, quote: "CMD [\"npm\", \"run\", \"backend\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: Dockerfile, line: 83, quote: "CMD [\"npm\", \"run\", \"backend\"]"}
+storage:
+  local: conditional
+  paths: [/app/uploads, /app/client/public/images, /app/logs, /app/data, /app/skill]
+  s3: native
+  s3SelectBy: {fileStrategy: s3}
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "mkdir -p /app/client/public/images /app/logs /app/uploads /app/skill /app/data"}
+    - {path: librechat.example.yaml, line: 104, quote: "# fileStrategy: \"s3\""}
+    - {path: .env.example, line: 1255, quote: "AWS_BUCKET_NAME="}
+    - {path: docker-compose.yml, line: 36, quote: "- ./uploads:/app/uploads"}
+env:
+  required:
+    - {name: MONGO_URI, secret: true, buildTime: false, note: "MongoDB connection string; the app exits without it; MongoDB is not available in Deployz"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "signs access tokens; set a random value"}
+    - {name: JWT_REFRESH_SECRET, secret: true, buildTime: false, note: "signs refresh tokens; set a random value"}
+    - {name: CREDS_KEY, secret: true, buildTime: false, note: "encryption key for stored credentials; set a random 32-byte hex value"}
+    - {name: CREDS_IV, secret: true, buildTime: false, note: "encryption IV for stored credentials; set a random 16-byte hex value"}
+    - {name: DOMAIN_CLIENT, secret: false, buildTime: false, note: "public HTTPS URL of the app; default is http://localhost:3080"}
+    - {name: DOMAIN_SERVER, secret: false, buildTime: false, note: "public HTTPS URL of the app; default is http://localhost:3080"}
+  optional: [HOST, PORT, ALLOW_REGISTRATION, SEARCH, MEILI_HOST, MEILI_MASTER_KEY, RAG_API_URL, USE_REDIS, REDIS_URI, AWS_REGION, AWS_BUCKET_NAME, CONFIG_PATH]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 993, quote: "JWT_SECRET="}
+    - {path: .env.example, line: 708, quote: "CREDS_KEY="}
+    - {path: .env.example, line: 48, quote: "DOMAIN_CLIENT=http://localhost:3080"}
+    - {path: .env.example, line: 773, quote: "SEARCH=false"}
+blockers:
+  expected:
+    - "MongoDB is required (MONGO_URI mandatory, mongoose only); Deployz supports PostgreSQL and MySQL only"
+  mustNot:
+    - "Meilisearch must not be a blocker: search is optional (SEARCH=false in .env.example)"
+    - "The RAG API and pgvector must not be blockers: they are optional separate images for file chat"
+    - "Redis must not be required: it is optional (USE_REDIS is commented out)"
+    - "Local uploads, images and logs directories must not block: native S3 file strategy exists"
+    - "Missing worker or migration command must not be raised: none is needed"
+vendorQuestions:
+  legitimate:
+    - "Can the app run without MongoDB? (No: the code throws without MONGO_URI; ask only if a Mongo-compatible service is acceptable)"
+  unnecessary:
+    - "Which port? (3080 in image and defaults)"
+    - "Health path? (/health returns 200 OK)"
+    - "Who runs migrations? (none needed)"
+    - "Is a worker process needed? (no)"
+traps:
+  - "docker-compose.yml uses a pre-built registry image and adds mongodb, meilisearch, vectordb, rag_api and admin-panel -> compose is the upstream self-host topology; the Dockerfile alone builds the app (docker-compose.yml:12)"
+  - "ENV HOST=0.0.0.0 in the image, but .env.example sets HOST=localhost -> the image value is used when no .env is copied (Dockerfile:82, .env.example:14)"
+  - "Meilisearch and RAG API look required in compose -> both are optional features (docker-compose.yml:20, .env.example:773)"
+  - "/ serves the SPA index.html -> use /health, which returns 200 OK without auth (api/server/index.js:358)"
+openQuestions:
+  - "Whether a MongoDB-compatible managed service outside Deployz would be acceptable to the vendor"
+crossReview:
+  - {field: "outcome, dockerfile, port, healthPath, database, redis, storage, env", change: "none: all challenged against the code and confirmed (MONGO_URI is mandatory and mongoose is the only store, so NOT_DEPLOYABLE; every COPY source exists in git; HOST=0.0.0.0 set in the image; /health is a plain route before the SPA fallback)", evidence: "api/db/connect.js:10-11; Dockerfile:82-83; api/server/index.js:358"}
+  - {field: all, change: verified, evidence: "26 citations checked"}

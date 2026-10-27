@@ -1,0 +1,152 @@
+id: new-109
+repository: windmill-labs/windmill
+commit: 8dd46a4d14ecbce4e2ee4a71561d7a5e917dfed3
+summary: >
+  Windmill workflow engine and internal-tool platform (Rust backend, Svelte frontend). One root Dockerfile builds
+  one image (frontend + Rust binary `windmill`). Without MODE it runs in standalone mode: API server, UI and one
+  worker in one process on port 8000. PostgreSQL is the only required store; migrations run at start. The Dockerfile
+  has `COPY .git/ .git/`, which fails when the build context has no .git. The release build is a very long Rust compile.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    Topology fits Deployz: one image, one HTTP port, PostgreSQL via DATABASE_URL, no Redis, standalone mode embeds
+    the worker. Blocker: Dockerfile line 121 copies .git, which is absent from a repo archive, so the build fails
+    until that line is removed (GIT_VERSION has a fallback, so the binary does not need .git). With that one-line
+    change it is DEPLOYABLE_WITH_CHANGES. NOT_DEPLOYABLE is also acceptable because the image is very heavy
+    (full Rust release build plus Go, Python, Node, Bun, PowerShell, Claude CLI downloads).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker/DockerfileSlim, reason: "slim variant; not the main production image"}
+    - {path: docker/DockerfileSlimEe, reason: "EE variant"}
+    - {path: docker/DockerfileFull, reason: "extra variant; not the main production image"}
+    - {path: docker/DockerfileFullEe, reason: "EE variant"}
+    - {path: docker/DockerfileExtra, reason: "windmill-extra sidecar (LSP, multiplayer, debugger); a second image, optional"}
+    - {path: docker/DockerfileCuda, reason: "GPU variant"}
+    - {path: docker/DockerfileCli, reason: "CLI image, not the server"}
+    - {path: docker/DockerfileCaddyL4, reason: "Caddy proxy image for compose, not the app"}
+    - {path: docker-compose.yml, reason: "compose file, not a Dockerfile; uses a pre-built ${WM_IMAGE} from a registry"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 139, quote: "FROM ${DEBIAN_IMAGE}"}
+    - {path: Dockerfile, line: 125, quote: "cargo build --release --features \"$features\""}
+    - {path: Dockerfile, line: 360, quote: "CMD [\"windmill\"]"}
+    - {path: Dockerfile, line: 121, quote: "COPY .git/ .git/"}
+runtime: {accept: [rust]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 358, quote: "EXPOSE 8000"}
+    - {path: backend/src/main.rs, line: 167, quote: "const DEFAULT_PORT: u16 = 8000;"}
+    - {path: backend/src/main.rs, line: 1045, quote: "let port_var = std::env::var(\"PORT\")"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/src/main.rs, line: 168, quote: "const DEFAULT_SERVER_BIND_ADDR: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);"}
+startCommand:
+  source: image
+  accept: ["windmill"]
+healthPath:
+  accept: ["/api/version", "/api/health/status"]
+  # The /api router is built in windmill-api/src/lib.rs. /version and /health/status are in the global part,
+  # outside the workspace routes that need ApiAuthed. /version returns 200 with a plain string. /health/status is
+  # unauthenticated, cached, and returns 503 when the status is unhealthy. "/" serves the SPA.
+  evidence:
+    - {path: backend/windmill-api/src/lib.rs, line: 666, quote: "\"/api\","}
+    - {path: backend/windmill-api/src/lib.rs, line: 1138, quote: ".route(\"/version\", get(git_v))"}
+    - {path: backend/windmill-api/src/lib.rs, line: 1139, quote: ".nest(\"/health/status\", health::status_service())"}
+    - {path: backend/windmill-api/src/health.rs, line: 132, quote: "Router::new().route(\"/\", get(health_status))"}
+    - {path: backend/windmill-api/src/health.rs, line: 519, quote: "StatusCode::SERVICE_UNAVAILABLE"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_URL_FILE]
+  evidence:
+    - {path: backend/src/main.rs, line: 448, quote: "DATABASE_URL = <required>"}
+    - {path: backend/src/main.rs, line: 449, quote: "DATABASE_URL_FILE = None"}
+    - {path: backend/windmill-common/src/lib.rs, line: 1160, quote: "Some(\"allow\") => \"prefer\".to_string(),"}
+    - {path: backend/migrations/20220123221901_migrate_root.up.sql, line: 5, quote: "CREATE ROLE windmill_user;"}
+    - {path: backend/migrations/20220123221901_migrate_root.up.sql, line: 41, quote: "CREATE ROLE windmill_admin WITH BYPASSRLS;"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/src/main.rs, line: 830, quote: "let skip_migration = std::env::var(\"SKIP_MIGRATION\")"}
+    - {path: backend/src/main.rs, line: 839, quote: "windmill_api::migrate_db(&db, killpill_rx.resubscribe()).await?;"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: backend/Cargo.toml, line: 121, quote: "default = []"}
+workers:
+  status: embedded
+  commands: []
+  # Default (no MODE) is standalone: server and workers in one process. Separate MODE=worker services (same image)
+  # are an optional way to scale job execution, not needed.
+  evidence:
+    - {path: backend/windmill-common/src/utils.rs, line: 165, quote: "Mode not specified, defaulting to standalone"}
+    - {path: backend/src/main.rs, line: 166, quote: "const DEFAULT_NUM_WORKERS: usize = 1;"}
+    - {path: docker-compose.yml, line: 56, quote: "- MODE=server"}
+scheduledJobs:
+  status: embedded
+  items: [schedules run by the server process, job queue polling]
+  evidence:
+    - {path: backend/windmill-api/src/lib.rs, line: 860, quote: ".nest(\"/schedules\", windmill_api_schedule::global_service())"}
+storage:
+  local: ephemeral
+  paths: [/tmp/windmill/logs, /tmp/windmill/cache, /tmp/windmill/search]
+  s3: none
+  s3SelectBy: {}
+  # The default Dockerfile builds with features="" (CE). Instance object storage (S3 for logs and large results) needs
+  # the parquet or enterprise feature, so it is not in the default image. Job logs and data stay in PostgreSQL.
+  evidence:
+    - {path: Dockerfile, line: 352, quote: "mkdir -p -m 777 /tmp/windmill/logs /tmp/windmill/search /tmp/.cache"}
+    - {path: Dockerfile, line: 102, quote: "ARG features=\"\""}
+    - {path: backend/Cargo.toml, line: 130, quote: "parquet = [\"windmill-api/parquet\""}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgres://user:password@host:5432/windmill; add sslmode=require for RDS (default is prefer); the password is secret"}
+  optional: [MODE, PORT, NUM_WORKERS, WORKER_GROUP, SKIP_MIGRATION, SUPERADMIN_SECRET, DISABLE_NSJAIL, SERVER_BIND_ADDR, DATABASE_URL_FILE]
+  buildTime: []
+  evidence:
+    - {path: backend/windmill-api/src/lib.rs, line: 429, quote: "std::env::var(\"SUPERADMIN_SECRET\").ok(),"}
+    - {path: backend/windmill-worker/src/worker.rs, line: 390, quote: "pub static ref DISABLE_NSJAIL: bool = std::env::var(\"DISABLE_NSJAIL\")"}
+    - {path: README.md, line: 260, quote: "default credentials: `admin@windmill.dev` / `changeme`"}
+blockers:
+  expected:
+    - "Dockerfile line 121 `COPY .git/ .git/` fails: the build context is a repo archive with no .git; the line must be removed (GIT_VERSION falls back to unknown-version)"
+  mustNot:
+    - "Redis must not be required: the app has no Redis dependency"
+    - "Separate worker service must not be required: the default standalone mode runs server and worker in one process"
+    - "nsjail or privileged mode must not block: DISABLE_NSJAIL defaults to true; privileged is only for optional PID isolation in compose"
+    - "docker-compose windmill_extra (LSP, debugger) must not be a blocker: it is optional and the app works without it"
+    - "The Docker client in the image must not count as Docker-in-Docker: it is only used if a docker socket is mounted, which is optional"
+    - "Local disk under /tmp/windmill must not block: only caches and logs; durable data is in PostgreSQL"
+vendorQuestions:
+  legitimate:
+    - "Is the default admin@windmill.dev / changeme login acceptable on a public URL, or must it be changed at first login?"
+  unnecessary:
+    - "Which port? (8000 in image and code)"
+    - "Who runs migrations? (the server runs them at start)"
+    - "Is a separate worker needed? (standalone mode embeds one)"
+    - "Is Redis needed? (no)"
+traps:
+  - "docker-compose.yml lists separate server, worker, native worker, indexer and windmill_extra services -> these use the same image with MODE=..., except windmill_extra (separate optional image); default standalone mode needs none of them (docker-compose.yml:56)"
+  - "docker-compose.yml worker has privileged: true -> optional PID isolation, not needed (docker-compose.yml:78)"
+  - "Dockerfile copies the docker client binary -> only for the optional docker socket feature (Dockerfile:316)"
+  - "/ serves the SPA; use /api/version as health path (backend/windmill-api/src/lib.rs:1138)"
+  - "Dockerfile builds nsjail, DuckDB runner, Rust binary and frontend in several stages -> last stage is the app; no --target needed (Dockerfile:139)"
+  - "Dockerfile needs the wasm parser pkg and docs dirs -> they are committed in the repo, not CI artefacts (Dockerfile:79-81)"
+openQuestions:
+  - "Whether a builder can finish the Rust release build (cargo chef, --release, frontend NODE_OPTIONS max-old-space-size=8192) within time and memory limits"
+  - "Whether RDS rds_superuser can run the role migrations (CREATE ROLE windmill_user, windmill_admin WITH BYPASSRLS); migration 20220123221901 catches errors and only raises a notice"
+crossReview:
+  - {field: dockerfile / blockers, change: "none: COPY .git/ .git/ confirmed as a build failure for an archive without .git; git_version! has fallback unknown-version so removing the line is safe. All other COPY sources (wasm parser pkg, typescript-client/docs, python-client/docs, system_prompts/auto-generated, chat-sdk/src, docker/nsjail-patches, frontend lockfile, .sqlx offline data) are tracked in git", evidence: "Dockerfile:121; backend/windmill-common/src/utils.rs:39-40; git ls-files"}
+  - {field: healthPath, change: "none: /api/version returns the plain string CE <git version> with 200 and no auth; /api/health/status is unauthenticated and 503 when unhealthy", evidence: "backend/windmill-api/src/lib.rs:1138,1378; backend/windmill-api/src/health.rs:130-133"}
+  - {field: storage.s3 / redis, change: "none: default features is empty so no object-store feature in the default image; no Redis code in the backend (only a py import mapping and dbt text)", evidence: "Dockerfile:102; backend/Cargo.toml:121; grep redis backend"}
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES or NOT_DEPLOYABLE both stay accepted; the one-line Dockerfile fix and the heavy build are a judgement call", evidence: "Dockerfile:121"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

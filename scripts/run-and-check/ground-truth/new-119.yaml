@@ -1,0 +1,132 @@
+id: new-119
+repository: hasura/graphql-engine
+commit: 0ee2929472fdc7f8206a865f456a949d2b2eccee
+summary: >
+  Hasura monorepo with two engines. Hasura v2 (Haskell, server/) has no Dockerfile that builds it from the repo:
+  packaging/graphql-engine/Dockerfile only copies a CI-built binary (rootfs/bin) on top of a BASE_IMAGE build arg.
+  Hasura v3 (Rust, v3/) has v3/Dockerfile that compiles the engine with cargo and ships one binary, but it is a
+  local-development file. The v3 engine is a stateless GraphQL gateway: it needs a metadata file and an auth config
+  file made by the DDN CLI (not in the repo), and it talks to separate NDC connector services (a second image) for data.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only Dockerfile that builds an app from source (v3/Dockerfile) builds the v3 engine, which does nothing
+    without METADATA_PATH and AUTHN_CONFIG_PATH files (no default, not in the image) and without one or more NDC
+    connector services that run as separate images (for example ndc-postgres). The v2 server has no from-source
+    Dockerfile (CI-built binary only). So there is no single-image deployable app in the repo.
+dockerfile:
+  # Kept: it builds from the repo alone (all COPY sources are in git; RELEASE_VERSION=dev is set, so build.rs needs no .git).
+  # The outcome is NOT_DEPLOYABLE because of the missing app definition, not because the image cannot be built.
+  accept: [v3/Dockerfile]
+  reject:
+    - {path: packaging/graphql-engine/Dockerfile, reason: "needs ARG BASE_IMAGE and COPY rootfs/bin from a CI-built binary; no build from source"}
+    - {path: packaging/graphql-engine-base/ubuntu.dockerfile, reason: "base image only (OS packages, pg_dump); no application"}
+    - {path: packaging/cli-migrations/v3/Dockerfile, reason: "packages the CLI on top of a prebuilt graphql-engine image"}
+    - {path: v3/custom-connector.Dockerfile, reason: "builds a test connector, a second image"}
+    - {path: v3/dev-auth-webhook.Dockerfile, reason: "dev auth webhook for local compose, a second image"}
+    - {path: docs/Dockerfile, reason: "documentation site"}
+    - {path: dc-agents/sqlite/Dockerfile, reason: "v2 data connector agent, a separate service"}
+  target: null
+  context: v3
+  evidence:
+    - {path: packaging/graphql-engine/Dockerfile, line: 2, quote: "FROM ${BASE_IMAGE}"}
+    - {path: packaging/graphql-engine/Dockerfile, line: 7, quote: "COPY rootfs/bin/ /bin/"}
+    - {path: v3/Dockerfile, line: 58, quote: "RUN cargo build --release --bin engine"}
+    - {path: v3/Dockerfile, line: 71, quote: "ENTRYPOINT [\"engine\"]"}
+    - {path: v3/Dockerfile, line: 21, quote: "This Dockerfile is only for local development"}
+runtime: {accept: [rust]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 19, quote: "const DEFAULT_PORT: u16 = 3000;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 38, quote: "default_value_t = net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED)"}
+startCommand:
+  source: image
+  accept: ["engine"]
+healthPath:
+  accept: ["/health"]
+  # /health returns 200 with no auth and no dependency check. "/" serves GraphiQL.
+  evidence:
+    - {path: v3/crates/engine/src/routes.rs, line: 81, quote: "Router::new().route(\"/health\", get(handle_health));"}
+    - {path: v3/crates/engine/src/routes.rs, line: 137, quote: "reqwest::StatusCode::OK"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 26, quote: "env = \"METADATA_PATH\""}
+    - {path: v3/README.md, line: 48, quote: "[NDC Postgres](https://github.com/hasura/ndc-postgres) is the official connector"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 26, quote: "env = \"METADATA_PATH\""}
+redis:
+  status: none
+  evidence:
+    - {path: v3/Dockerfile, line: 71, quote: "ENTRYPOINT [\"engine\"]"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: v3/Dockerfile, line: 71, quote: "ENTRYPOINT [\"engine\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: v3/Dockerfile, line: 71, quote: "ENTRYPOINT [\"engine\"]"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: v3/Dockerfile, line: 70, quote: "COPY --from=builder /app/target/release/engine /usr/local/bin"}
+env:
+  required:
+    - {name: METADATA_PATH, secret: false, buildTime: false, note: "path to the OpenDD metadata file (open_dd.json) made by the DDN CLI; no default, not in the image"}
+    - {name: AUTHN_CONFIG_PATH, secret: false, buildTime: false, note: "path to the auth config file; no default, not in the image; webhook or JWT secrets inside the file are secrets"}
+  optional: [PORT, HOST, OTLP_ENDPOINT, INTROSPECTION_METADATA_FILE, ENABLE_CORS, CORS_ALLOW_ORIGIN, UNSTABLE_FEATURES, EXPOSE_INTERNAL_ERRORS, EXPORT_TRACES_STDOUT, OTEL_SERVICE_NAME, AUTH_MODE_HEADER, NDC_RESPONSE_SIZE_LIMIT, REQUEST_BODY_LIMIT]
+  buildTime: []
+  evidence:
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 26, quote: "env = \"METADATA_PATH\""}
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 35, quote: "env = \"AUTHN_CONFIG_PATH\""}
+    - {path: v3/crates/engine/bin/engine/main.rs, line: 36, quote: "authn_config_path: PathBuf,"}
+blockers:
+  expected:
+    - "Data connectors are separate services: the v3 engine reads data only through NDC connectors (for example ndc-postgres), each its own image; Deployz allows one application image (v3/README.md:48-52, v3/docker-compose.yaml:1-2)"
+    - "No app definition in the repo: METADATA_PATH and AUTHN_CONFIG_PATH files are made by the DDN CLI for a user project and are not in the image (v3/README.md:54-62, v3/crates/engine/bin/engine/main.rs:26-36)"
+    - "Hasura v2 server has no Dockerfile that builds from the repo: only a CI-built binary is packaged (packaging/graphql-engine/Dockerfile:7)"
+  mustNot:
+    - "Rust build time or the cargo-chef stage must not block: v3/Dockerfile builds from source with a plain cargo build"
+    - "The port or the health path must not be unknown: 3000 and /health are in the source"
+    - "No database is needed by the engine itself: do not report a missing DATABASE_URL"
+    - "Redis, workers, scheduled jobs and local volumes must not be reported: the engine has none"
+    - "v3/docker-compose.yaml (Postgres, Jaeger, auth hook, plugins) is a dev stack, not a proof that the engine needs these services itself"
+vendorQuestions:
+  legitimate:
+    - "Which Hasura version is the target (v2 Haskell server or v3 DDN engine), and where is the project metadata (open_dd.json, auth_config.json) and which NDC connector images does it use?"
+  unnecessary:
+    - "Which port? (3000 default in main.rs)"
+    - "Health path? (/health)"
+    - "Does it need a database or Redis? (the engine has none; data is in connectors)"
+    - "Is there a start command? (ENTRYPOINT engine in v3/Dockerfile)"
+traps:
+  - "v3/Dockerfile is the only from-source build and looks deployable, but it is for local development and the engine needs metadata plus connector services (v3/Dockerfile:21)"
+  - "packaging/graphql-engine/Dockerfile looks like the v2 production image, but it only copies a CI-built binary from rootfs/ (packaging/graphql-engine/Dockerfile:7)"
+  - "v2 server defaults to port 8080 and /healthz, v3 engine to 3000 and /health: different engines in one repo (server/src-lib/Hasura/Server/Init/Arg/Command/Serve.hs:219, server/src-lib/Hasura/Server/App.hs:977)"
+  - "v3/static/metadata.json points to http://local.hasura.dev:8080: a test fixture, not a production app (v3/static/metadata.json:12)"
+  - "Many docker-compose files under install-manifests/ and community/ show Postgres, MongoDB, ClickHouse and others: examples, not the repo topology"
+openQuestions:
+  - "Whether a user would copy their own DDN build output into v3/ and deploy the engine with a hosted connector: a post-MVP shape, the repo alone does not show it"
+crossReview:
+  - {field: dockerfile.accept, change: "none: v3/Dockerfile kept. It builds the engine from the repo alone (COPY sources rust-toolchain.toml, .cargo, Cargo.toml, Cargo.lock, crates are in git; ENV RELEASE_VERSION=dev stops build.rs from needing .git; git is installed for cargo git dependencies). An empty accept list would score an analysis that names this Dockerfile as wrong, although it is the only from-source app build. NOT_DEPLOYABLE comes from the missing metadata and connectors, not from the build. Added a comment", evidence: "v3/Dockerfile:21-23,26,35-37,58; v3/crates/engine/build.rs:13-14"}
+  - {field: outcome, change: "none: NOT_DEPLOYABLE kept. v3/static/metadata.json and auth configs are test fixtures that point to a local connector and are not copied into the image", evidence: "v3/crates/engine/bin/engine/main.rs:26,35; v3/docker-compose.yaml:11-12"}
+  - {field: healthPath, change: "none: /health confirmed (200, no auth middleware on health_route, not behind the /*path pre-route handler); / serves GraphiQL", evidence: "v3/crates/engine/src/routes.rs:81,94,137"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

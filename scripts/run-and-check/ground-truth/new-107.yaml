@@ -1,0 +1,90 @@
+id: new-107
+repository: letta-ai/letta
+commit: 8816d3a8516893bfdc0fa14bfb1235226012e295
+summary: >
+  The main branch is a landing page only: 12 files (README, AGENTS.md, policy and legal text, issue templates, one issue
+  workflow). There is no application source, no Dockerfile, no manifest and no lockfile. The old Python V1 server
+  is retired and exists only on the archive branch. The current Letta source is in letta-ai/letta-code.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The pinned commit has no deployable application. The README and AGENTS.md say that main is a landing page and
+    that the old server is retired and must not be used. A deploy from this archive cannot build or start anything.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: AGENTS.md, line: 5, quote: "`main` is intentionally a small landing page."}
+    - {path: AGENTS.md, line: 7, quote: "The old `letta/letta` Docker image and the Python server packages associated with that code are retired as well."}
+    - {path: README.md, line: 5, quote: "The current source code lives in"}
+    - {path: README.md, line: 38, quote: "contains the retired Letta V1 API server"}
+runtime: {accept: []}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No application source and no Dockerfile on main: it is only a landing page"
+    - "The retired V1 server exists only on the archive branch, which is unsupported"
+  mustNot:
+    - "Must not invent a Python/FastAPI, Postgres or Redis topology from the Letta name or the old docs"
+    - "Must not treat the letta/letta Docker image as a build source: it is retired"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port, database or health path? (there is no server in this commit)"
+traps:
+  - "The Letta name and the star count suggest a Python agent server with Postgres -> main has none of it (AGENTS.md:5)"
+  - "README points to letta-ai/letta-code for current source -> another repository, not part of this commit (README.md:5)"
+  - "The archive branch holds the old server -> not the pinned commit and unsupported (README.md:38)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.evidence, change: "added README.md lines 5 and 38 as evidence for the landing-page and archive-branch claims", evidence: "README.md:5; README.md:38"}
+  - {field: outcome, change: "none: the pinned commit tree has 12 files (no source, no Dockerfile, no manifest); it equals origin/main", evidence: "git ls-tree of 8816d3a8516893bfdc0fa14bfb1235226012e295"}
+  - {field: all, change: verified, evidence: "4 citations checked"}

@@ -1,0 +1,152 @@
+id: new-121
+repository: grafana/grafana
+commit: 27371d3787a546d0a53ea484aa5e34ccbcc074de
+summary: >
+  Grafana observability and dashboard platform (Go backend, React frontend, yarn monorepo). The root Dockerfile builds
+  the full OSS server from source (a Node frontend stage and a Go backend stage) into one alpine image. One process
+  serves HTTP on port 3000. Alerting, scheduling, unified storage and search run inside that process. The image
+  defaults to SQLite on local disk, so a Deployz deploy must select PostgreSQL or MySQL.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One image, one web process, one port. Needs GF_DATABASE_* env to use RDS (default is SQLite on ephemeral disk), with
+    TLS set by GF_DATABASE_SSL_MODE, plus a public URL, a secret key and an admin password (defaults are public
+    admin/admin). Migrations run at boot. Redis is not needed for one task. The image build is heavy (full yarn and Go
+    build, 8 GB Node heap) and uses the BuildKit labs syntax, which is a build-risk and not a blocker.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: packaging/docker/run.sh, reason: "entrypoint script copied into the image, not a Dockerfile"}
+    - {path: packaging/docker/custom/Dockerfile, reason: "extends the published grafana/grafana image (FROM grafana/grafana), not a build from source"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 25, quote: "FROM --platform=${JS_PLATFORM} ${JS_IMAGE} AS js-builder"}
+    - {path: Dockerfile, line: 63, quote: "FROM ${GO_IMAGE} AS go-builder"}
+    - {path: Dockerfile, line: 410, quote: "FROM final-alpine"}
+    - {path: Dockerfile, line: 291, quote: "ENTRYPOINT [ \"/run.sh\" ]"}
+    - {path: Dockerfile, line: 126, quote: "COPY ${GRAFANA_TGZ} /tmp/grafana.tar.gz"}
+runtime: {accept: [go]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 284, quote: "EXPOSE 3000"}
+    - {path: conf/defaults.ini, line: 53, quote: "http_port = 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: conf/defaults.ini, line: 49, quote: "# The ip address to bind to, empty will bind to all interfaces"}
+    - {path: conf/defaults.ini, line: 50, quote: "http_addr ="}
+startCommand:
+  source: image
+  accept: ["/run.sh", "grafana server"]
+healthPath:
+  accept: ["/api/health", "/healthz"]
+  # Both handlers are HTTP middleware (m.Use) that run before routing and auth. /api/health also checks the database and
+  # returns 503 when it fails or when the apiserver is not ready. /healthz always returns 200 "Ok". / redirects to /login for anonymous users.
+  evidence:
+    - {path: pkg/api/http_server.go, line: 726, quote: "m.Use(hs.healthzHandler)"}
+    - {path: pkg/api/http_server.go, line: 727, quote: "m.Use(hs.apiHealthHandler)"}
+    - {path: pkg/api/http_server.go, line: 773, quote: "// healthzHandler always return 200 - Ok if Grafana's web server is running"}
+    - {path: pkg/api/http_server.go, line: 797, quote: "// apiHealthHandler will return ok if Grafana's web server is running and it"}
+database:
+  status: required
+  engines: [sqlite3, postgres, mysql]
+  default: sqlite3
+  deployzEngine: postgres
+  selectBy: {GF_DATABASE_TYPE: postgres}
+  connectionVars: [GF_DATABASE_URL, "GF_DATABASE_HOST/GF_DATABASE_NAME/GF_DATABASE_USER/GF_DATABASE_PASSWORD", GF_DATABASE_SSL_MODE]
+  evidence:
+    - {path: conf/defaults.ini, line: 236, quote: "# You can configure the database connection by specifying type, host, name, user and password"}
+    - {path: conf/defaults.ini, line: 240, quote: "type = sqlite3"}
+    - {path: conf/defaults.ini, line: 247, quote: "# Example: mysql://user:secret@host:port/database"}
+    - {path: conf/defaults.ini, line: 269, quote: "# For \"postgres\", use either \"disable\", \"require\" or \"verify-full\""}
+    - {path: conf/defaults.ini, line: 271, quote: "ssl_mode = disable"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: pkg/services/sqlstore/sqlstore.go, line: 80, quote: "if err := s.Migrate(s.dbCfg.MigrationLock); err != nil {"}
+    - {path: conf/defaults.ini, line: 297, quote: "migration_locking = true"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: conf/defaults.ini, line: 328, quote: "type = database"}
+    - {path: conf/defaults.ini, line: 1550, quote: "ha_redis_address ="}
+    - {path: conf/defaults.ini, line: 2331, quote: "ha_engine ="}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: packaging/docker/run.sh, line: 94, quote: "exec grafana server"}
+scheduledJobs:
+  status: embedded
+  items: [alert rule evaluation, cleanup jobs, unified storage maintenance]
+  evidence:
+    - {path: conf/defaults.ini, line: 20, quote: "temp_data_lifetime = 24h"}
+storage:
+  local: ephemeral
+  paths: [/var/lib/grafana, /var/lib/grafana/plugins, /var/log/grafana, /etc/grafana/provisioning]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 227, quote: "GF_PATHS_DATA=\"/var/lib/grafana\""}
+    - {path: Dockerfile, line: 230, quote: "GF_PATHS_PLUGINS=\"/var/lib/grafana/plugins\""}
+    - {path: conf/defaults.ini, line: 17, quote: "data = data"}
+    - {path: conf/defaults.ini, line: 2190, quote: "provider ="}
+    - {path: conf/defaults.ini, line: 2761, quote: "index_path ="}
+env:
+  required:
+    - {name: GF_DATABASE_TYPE, secret: false, buildTime: false, note: "postgres or mysql; the default sqlite3 file is on ephemeral disk"}
+    - {name: "GF_DATABASE_HOST / GF_DATABASE_NAME / GF_DATABASE_USER / GF_DATABASE_PASSWORD", secret: false, buildTime: false, note: "or GF_DATABASE_URL; host is host:port (the Postgres port defaults to 5432 when absent); the password is secret"}
+    - {name: GF_DATABASE_SSL_MODE, secret: false, buildTime: false, note: "require (Postgres) or true (MySQL); default is disable and RDS forces TLS"}
+    - {name: GF_SECURITY_ADMIN_PASSWORD, secret: true, buildTime: false, note: "default is the public value admin; set a strong value before the first start"}
+    - {name: GF_SECURITY_SECRET_KEY, secret: true, buildTime: false, note: "default is a public repo value used to encrypt data source secrets in the database; set a random value"}
+    - {name: GF_SERVER_ROOT_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for links, OAuth redirects and alert links (default is http://localhost:3000/)"}
+  optional: [GF_SECURITY_ADMIN_USER, GF_SERVER_DOMAIN, GF_SECURITY_COOKIE_SECURE, GF_USERS_ALLOW_SIGN_UP, GF_PLUGINS_PREINSTALL, GF_AUTH_ANONYMOUS_ENABLED, GF_SMTP_ENABLED, GF_REMOTE_CACHE_TYPE, GF_DATABASE_MAX_OPEN_CONN, GF_SERVER_SERVE_FROM_SUB_PATH]
+  buildTime: []
+  evidence:
+    - {path: conf/defaults.ini, line: 488, quote: "admin_password = admin"}
+    - {path: conf/defaults.ini, line: 494, quote: "secret_key = SW2YcwTIb9zpOOhoPsMm"}
+    - {path: conf/defaults.ini, line: 63, quote: "root_url = %(protocol)s://%(domain)s:%(http_port)s/"}
+    - {path: conf/defaults.ini, line: 524, quote: "cookie_secure = false"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are supported through GF_DATABASE_* env"
+    - "Local data, plugin and log directories must not block: durable state is in the database; plugins are re-fetched or bundled"
+    - "Redis must not be required: remote cache defaults to the database and HA engines are optional (multi-instance only)"
+    - "Image renderer, Loki, Prometheus, Tempo and other Grafana stack products must not be required: they are optional separate products"
+    - "Alerting, unified storage and search must not count as several services: they run in the one grafana process"
+    - "The enterprise-src build context and the tgz-builder stage must not block: they are empty or unused in the default build"
+    - "No S3 bucket is needed: S3 is only an optional external image store"
+vendorQuestions:
+  legitimate:
+    - "Plugins: extra plugins install into local disk (GF_PLUGINS_PREINSTALL) at each start; the repo does not say which the user needs"
+    - "Data sources: Grafana only shows data from user-supplied data sources (Prometheus, Loki and others); these are external and not part of the deploy"
+  unnecessary:
+    - "Which port? (3000 in the image and defaults)"
+    - "Who runs migrations? (the server migrates the database at boot)"
+    - "Is a worker or scheduler process needed? (all embedded)"
+    - "Is Redis needed? (not for one task)"
+    - "Health path? (/api/health or /healthz)"
+traps:
+  - "Dockerfile has many stages (tgz-builder, final-ubuntu, final-distroless) -> the last stage final-alpine is the default; no --target needed (Dockerfile:410)"
+  - "tgz-builder stage copies a prebuilt tarball (GRAFANA_TGZ) -> only used when GO_SRC and JS_SRC are overridden; the default builds from source (Dockerfile:11-12, Dockerfile:126)"
+  - "final-distroless stage has a different entrypoint without run.sh -> not the default image (Dockerfile:367, Dockerfile:405)"
+  - "conf/defaults.ini shows type = sqlite3 and admin/admin -> defaults to override, not the real choice (conf/defaults.ini:240, conf/defaults.ini:488)"
+  - "/ redirects to /login for anonymous users -> use /api/health or /healthz (pkg/api/http_server.go:726-727)"
+  - "Dockerfile starts with syntax=docker/dockerfile:1.7-labs and COPY --parents -> needs BuildKit to pull the labs frontend (Dockerfile:1, Dockerfile:89)"
+  - "Build is heavy: yarn monorepo build with NODE_OPTIONS max_old_space_size=8000 plus a full Go build -> needs a large builder (Dockerfile:30)"
+  - "devenv, docker-compose and the many docs examples (Prometheus, Loki, MySQL, Redis) -> dev setups, not the production topology"
+openQuestions:
+  - "Whether the Deployz builder can run the BuildKit labs frontend and has enough memory and time for the 8 GB Node build plus Go build"
+  - "Whether the user wants more than one task: that needs a shared database plus Redis for alert HA (ha_redis_address) and Live HA, and a per-task unified-search index"
+crossReview:
+  - {field: dockerfile.reject, change: "added packaging/docker/custom/Dockerfile (FROM grafana/grafana image, not from source)", evidence: "packaging/docker/custom/Dockerfile:3"}
+  - {field: healthPath comment, change: "added that /api/health also returns 503 while the apiserver is not ready", evidence: "pkg/api/http_server.go:831-833"}
+  - {field: env.required GF_DATABASE_* host note, change: "host without a port is valid: Postgres port defaults to 5432 (a GF_DATABASE_PORT key also exists)", evidence: "pkg/services/sqlstore/database_config.go:98-100,172"}
+  - {field: traps (distroless), change: "line ref 367 -> 367 and 405 (the distroless stage and the stage with the other ENTRYPOINT)", evidence: "Dockerfile:367,405"}
+  - {field: dockerfile / outcome, change: "none: root Dockerfile, no target, DEPLOYABLE(_WITH_CHANGES) confirmed. All COPY sources are in git; go.work modules are all under copied dirs; Makefile falls back when .git is missing; run.sh is the ENTRYPOINT of the last stage final-alpine", evidence: "Dockerfile:66-126,410; Makefile:22-24"}
+  - {field: all, change: verified, evidence: "34 citations checked"}

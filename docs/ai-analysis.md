@@ -94,28 +94,35 @@ Repository (GitHub tree, bounded)
   manager describe the app only when there is no Dockerfile, or when the
   selected Dockerfile builds or runs Node. A Python image does not get a
   sibling front end's `react-scripts build`. The Compose port comes from an
-  application service, never from a database, cache or proxy service.
+  application service, never from a database, cache or proxy service
+  (Cassandra, CouchDB, Neo4j and etcd too), and never from a Compose file
+  under `develop/` (a development stack).
 - **Runtime precision:** the image is the production stage of the selected
   Dockerfile. This stage is the last stage that is not a dev, test, build or
-  nightly stage (also with a number: `pr-test2`), together with the stages it
+  nightly stage (also with a number: `pr-test2`) and whose own CMD does not
+  run a CI script (superset `showtime`: `docker-ci.sh`), together with the stages it
   is built from. The start command is the last CMD and the last ENTRYPOINT of
   this stage and its lineage. A HEALTHCHECK `CMD` and the CMD of another stage
-  are never the start command. A Dockerfile in a test,
-  example or dev-container directory, a base image (system packages only, no
+  are never the start command. A CMD that only prints the usage or the
+  version (`CMD ["--help"]`) is no start command: the vendor is asked. A Dockerfile in a test,
+  example (also `docker_example/`) or dev-container directory, a base image (system packages only, no
   CMD, ENTRYPOINT, EXPOSE or COPY) and a Dockerfile that starts a dev server
   are never selected (a dev server is `npm run dev`, `next dev`, `nodemon`,
   `--reload` or `sleep infinity`). A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
   one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. A
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
-  mdBook, Antora, Docsify) ranks with the dev images, below the app image. A
+  mdBook, Antora, Docsify) ranks with the dev images, below the app image. So
+  does an image in a datastore or proxy directory (`hosting/couchdb/`,
+  `docker/nginx/`): it builds a service next to the app. A
   Dockerfile named production or prod ranks first. An
   arm or multi-process variant ranks last. When the other signals tie, a
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
   EXPOSE) ranks first, then one that declares a port. Dockerfiles that still
   tie are recorded as `dockerfileSelectionTied` and give the recommended
   finding `dockerfile-target-unresolved`. When the last stage is a tooling
-  stage (an artifact, upload, export, publish, lint, build or test stage) and
+  stage (an artifact, upload, export, publish, lint, build or test stage, or a
+  stage that runs a CI script) and
   an earlier named stage is the production stage, the analysis records
   `dockerfileBuildTarget`. The build then runs `docker build --target <stage>`
   (not for a vendor-overridden Dockerfile). A Dockerfile in a subdirectory
@@ -129,17 +136,23 @@ Repository (GitHub tree, bounded)
   `go.mod` with no Go source and a `package.json` with no dependencies are
   tooling manifests: they decide the runtime only when nothing else remains.
   A Node framework is reported only for a Node image. The port is the ENV
-  PORT or EXPOSE of the production stage, then a HEALTHCHECK of the
+  PORT or EXPOSE of the production stage (`EXPOSE ${SUPERSET_PORT}` reads the
+  variable from any key of an `ENV` line), then a HEALTHCHECK of the
   production stage that probes localhost on a port variable with a default
   (`${LIVEBOOK_PORT-8080}`), then the one application service of the
   production Compose file that publishes a port, then a port literal in
-  runtime source. An
+  runtime source, then the mapping of an application service (one that
+  waits on a database or cache service with `depends_on` first: khoj
+  `server` before its VNC `computer` sidecar). An
   image with a front web server (nginx, caddy) publishes port 80. The health
   path, in order: the URL that the HEALTHCHECK of the production stage or a
   production Compose app service probes (also in the script it runs, with the
   host, port, scheme and a base path from variables:
-  `http${s}://${addr}:${PORT}${base_path}/alive`); a dedicated route that the app
-  registers, with the framework prefix and URI version; the Spring actuator
+  `http${s}://${addr}:${PORT}${base_path}/alive`; a Compose healthcheck counts
+  only from an app service that waits on the database, when one does); a dedicated route that the app
+  registers, with the framework prefix and URI version (a FastAPI `APIRouter`
+  route also gets the router prefix and the one `include_router(api,
+  prefix="/api")` mounts it at); the Spring actuator
   route. A dedicated route ends in a health word, and only an API root, a
   version or one namespace (for example system) comes before it.
   `status` is accepted only under an API root, or in a JS server. `readyz` and
@@ -147,7 +160,12 @@ Repository (GitHub tree, bounded)
   another language than the one the image starts, when two apps in the
   repository register a route and the start command does not name one of
   them, or when a front web server hides the app behind a prefix. In these
-  cases the detector reports no path. Without a path the health check
+  cases the detector reports no path. Apache or nginx in a PHP image is the
+  PHP app's own server, not a front server: a PHP route keeps its path. A
+  Laravel 11 app declares its framework route in `bootstrap/app.php`
+  (`->withRouting(health: '/up')`). A `routes/api.php` route gets the `/api`
+  prefix, or the prefix that `app/Providers/RouteServiceProvider.php` maps
+  for that file (invoiceninja `Route::prefix('')`). Without a path the health check
   probes `/` and also accepts a redirect (`health.redirectsAccepted`, ALB
   matcher 200-399), and the vendor is not asked. A HEALTHCHECK of the
   production stage that probes `/` gives the same root check, and the
@@ -251,7 +269,9 @@ Repository (GitHub tree, bounded)
   `pdo_mysql`, or a Laravel default connection of `mysql`. A PostgreSQL
   driver that only a Python dev group or a dev requirements file declares
   does not count. A Laravel app that lists a `pgsql` connection keeps
-  PostgreSQL. A MariaDB-only client (`mariadb-java-client`, a Laravel
+  PostgreSQL, unless the selected image installs only a MySQL PHP driver
+  (`php8.3-mysql`, `pdo_mysql`) and no PostgreSQL one: then the image cannot
+  reach PostgreSQL. A MariaDB-only client (`mariadb-java-client`, a Laravel
   default of `mariadb`) stays unsupported. A MySQL driver next to a
   MariaDB image or client is MySQL. When a SQLAlchemy app declares PyMySQL
   and not `mysqlclient`, the manifest sets `database.urlScheme` to
@@ -268,7 +288,9 @@ Repository (GitHub tree, bounded)
   connection variable that an env sample comments out or calls optional,
   a connection variable that the code tests before it uses it, a backend
   selector whose default is not Redis (`CACHE_DRIVER=file`,
-  `JOBS_PROVIDER=local`), a `*_MODE` setting whose default is not `queue`
+  `JOBS_PROVIDER=local`; also in code: a setting that the code compares
+  with `'redis'` and that defaults to another backend or to nothing, open-webui
+  `os.getenv('WEBSOCKET_MANAGER', '')`), a `*_MODE` setting whose default is not `queue`
   while the code offers `queue` (n8n `EXECUTIONS_MODE`; a package.json
   worker script is then not provisioned either), an image that installs its own Redis server, or
   code that sets the connection itself. An env sample comment that says
@@ -326,7 +348,9 @@ is final.
   most 200 files of some source languages (TypeScript, JavaScript, Python,
   Ruby, Go, C#, Java, Kotlin, PHP, Rust, Elixir; the rules read the
   variables of each, see docs/environment-variables.md#code-reads). Scala
-  and the files the cap left out are not in it. For a repository with an
+  and the files the cap left out are not in it. Inside the cap, a shallower
+  manifest comes first: 600 plugin manifests (`packages/pieces/community/*/`)
+  do not push out `packages/server/api/package.json`. For a repository with an
   open item, the API also fetches
   up to 40 production files that the tree does not hold: the boot files
   (`Program.cs`, `*Startup.cs`, `*Application.java`, `main.rs`,
@@ -520,7 +544,9 @@ that is out of date).
 
 Ids: `unsupported-database-*` (MySQL is a supported engine, so only the
 still-unsupported engines land here — MariaDB-only setups, MongoDB,
-SQLite, Elasticsearch/OpenSearch, Cassandra, Neo4j, ClickHouse, embedded
+SQLite, Elasticsearch/OpenSearch (also the Python clients `elasticsearch`,
+`elasticsearch-dsl` and `opensearch-py`), Cassandra, Neo4j, CouchDB (`nano`),
+ClickHouse, embedded
 JVM databases), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue`,
 `unsupported-multi-service` (Compose application services beyond the web
@@ -531,7 +557,9 @@ CMD/ENTRYPOINT chain that puts two or more long-running servers in the
 background with `&`, such as Homarr's `redis-server &` and
 `node server.js &`; an nginx, apache, httpd or caddy front end and a
 migration step do not count), `unsupported-persistent-volume`,
-`unsupported-gpu`, `local-file-storage`,
+`unsupported-gpu` (a CUDA image or an NVIDIA GPU runtime library such as
+`nvidia-cudnn-cu12`; a hosted-API client such as `nvidia-riva-client` is not one),
+`local-file-storage`,
 `unsupported-no-dockerfile`, `build-context-git-metadata`
 (blocking only as a `CAPABILITY_GAP`, see above); `container-setup`, `port-unresolved`, `start-command-missing`,
 `health-check`, `localhost-binding`, `migration-command-needs-input`

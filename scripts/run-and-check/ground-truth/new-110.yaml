@@ -1,0 +1,164 @@
+id: new-110
+repository: kestra-io/kestra
+commit: de7f54778824f3c0169098fa25e30c569c9d876a
+summary: >
+  Kestra open-source workflow orchestrator (Java/Gradle multi-module, Micronaut, Vue UI built by Gradle with npm).
+  The root Dockerfile does not build the app. It layers a pre-built executable (docker/app/kestra, a CI or `make`
+  artefact that is not in the repo) on the registry image ghcr.io/kestra-io/kestra-base:latest-slim. No Dockerfile
+  in the repo builds Kestra from source. The runtime topology is simple: `server standalone` runs webserver,
+  executor, scheduler and worker in one process, with PostgreSQL or MySQL as repository and queue (JDBC) and
+  internal storage on local disk by default (S3 only through a separately installed storage plugin). No Redis.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one process, PostgreSQL, port 8080, /ping health), but the repo has no Dockerfile
+    that builds from the repo archive: the root Dockerfile needs the build/executable artefact and a prebuilt
+    base image. A deploy needs a new multi-stage Dockerfile (Gradle executableJar plus the UI) and a command
+    `server standalone` with KESTRA_CONFIGURATION that selects postgres for repository and queue. A strict read
+    of "no CI-built artefacts" gives NOT_DEPLOYABLE; a read that allows a vendor-written Dockerfile gives
+    DEPLOYABLE_WITH_CHANGES. Internal storage stays on ephemeral local disk unless an S3 storage plugin is set up.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "layers docker/app/kestra (a pre-built executable jar, only .gitkeep files in the repo) on ghcr.io/kestra-io/kestra-base; the app is never compiled in the Dockerfile"}
+    - {path: Dockerfile.base, reason: "builds only the JRE base image (Temurin, uv, optional Python); contains no Kestra code"}
+    - {path: Dockerfile.pr, reason: "FROM kestra/kestra:<version>, a published image, for pull-request builds"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "ARG BASE_IMAGE=\"ghcr.io/kestra-io/kestra-base:latest-slim\""}
+    - {path: Dockerfile, line: 6, quote: "COPY --chown=kestra:kestra docker /"}
+    - {path: Dockerfile, line: 15, quote: "ENTRYPOINT [\"docker-entrypoint.sh\"]"}
+    - {path: docker/usr/local/bin/docker-entrypoint.sh, line: 5, quote: "exec /app/kestra \"$@\""}
+    - {path: Makefile, line: 101, quote: "cp build/executable/* docker/app/kestra && chmod +x docker/app/kestra"}
+    - {path: Makefile, line: 53, quote: "./gradlew -q executableJar --no-daemon --priority=normal"}
+    - {path: .github/workflows/main-build.yml, line: 126, quote: "- name: Download executable"}
+    - {path: Dockerfile.base, line: 7, quote: "FROM eclipse-temurin:${JRE_VERSION}-jre-noble"}
+    - {path: Dockerfile.pr, line: 2, quote: "FROM  kestra/kestra:$KESTRA_DOCKER_BASE_VERSION"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: docker-compose.yml, line: 62, quote: "\"8080:8080\""}
+    - {path: charts/kestra/values.yaml, line: 306, quote: "containerPort: 8080"}
+    - {path: cli/src/main/resources/application.yml, line: 140, quote: "port: 8081"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker-compose.yml, line: 62, quote: "\"8080:8080\""}
+startCommand:
+  source: explicit
+  # The image CMD is `--help`. The compose file and docs run `server standalone`.
+  accept: ["server standalone"]
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "CMD [\"--help\"]"}
+    - {path: docker-compose.yml, line: 31, quote: "command: server standalone"}
+    - {path: cli/src/main/java/io/kestra/cli/commands/servers/StandAloneCommand.java, line: 30, quote: "Start the standalone all-in-one server"}
+healthPath:
+  accept: ["/ping"]
+  # /ping is on the main port 8080 and is listed in basic-auth open-urls. /health, /health/liveness and /health/readiness
+  # are on the management port 8081, a second port that the ALB cannot use. / is the UI and may redirect.
+  evidence:
+    - {path: webserver/src/main/java/io/kestra/webserver/controllers/RootController.java, line: 14, quote: "@Get(\"/ping\")"}
+    - {path: webserver/src/main/java/io/kestra/webserver/controllers/RootController.java, line: 17, quote: "return HttpResponse.ok(\"pong\");"}
+    - {path: cli/src/main/resources/application.yml, line: 181, quote: "- \"/ping\""}
+    - {path: charts/kestra/values.yaml, line: 87, quote: "path: /health/liveness"}
+database:
+  status: required
+  engines: [postgres, mysql, h2, memory]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [datasources.postgres.url, datasources.postgres.username, datasources.postgres.password, datasources.postgres.driverClassName]
+  # Set through the KESTRA_CONFIGURATION YAML env var: kestra.repository.type=postgres and kestra.queue.type=postgres.
+  evidence:
+    - {path: core/src/main/java/io/kestra/core/validations/ServerCommandValidator.java, line: 22, quote: "\"kestra.queue.type\""}
+    - {path: core/src/main/java/io/kestra/core/validations/ServerCommandValidator.java, line: 23, quote: "\"kestra.repository.type\""}
+    - {path: core/src/main/java/io/kestra/core/validations/ServerCommandValidator.java, line: 59, quote: "Incomplete server configuration - missing required properties"}
+    - {path: core/src/main/java/io/kestra/core/queues/factory/QueuePluginInterfaceFactory.java, line: 29, quote: "List.of(\"memory\", \"h2\", \"mysql\", \"postgres\")"}
+    - {path: docker-compose.yml, line: 40, quote: "url: jdbc:postgresql://postgres:5432/kestra"}
+    - {path: docker-compose.yml, line: 50, quote: "type: postgres"}
+    - {path: cli/src/main/java/io/kestra/cli/commands/servers/LocalCommand.java, line: 33, quote: ".put(\"kestra.repository.type\", \"h2\")"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: core/src/main/java/io/kestra/core/migration/MigrationStartupRunner.java, line: 50, quote: "migrationRunner.autoRun();"}
+    - {path: core/src/main/java/io/kestra/core/migration/MigrationRunner.java, line: 79, quote: "runAlways();"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: core/src/main/java/io/kestra/core/queues/factory/QueuePluginInterfaceFactory.java, line: 29, quote: "List.of(\"memory\", \"h2\", \"mysql\", \"postgres\")"}
+    - {path: docker-compose.yml, line: 55, quote: "queue:"}
+workers:
+  status: embedded
+  commands: []
+  # `server standalone` runs worker, executor, scheduler and webserver in one process. Separate commands
+  # (server webserver, executor, scheduler, worker) exist for scaling but are not needed.
+  evidence:
+    - {path: cli/src/main/java/io/kestra/cli/commands/servers/StandAloneCommand.java, line: 30, quote: "Start the standalone all-in-one server"}
+    - {path: cli/src/main/java/io/kestra/cli/commands/servers/StandAloneCommand.java, line: 59, quote: "Set it to 0 to avoid starting a worker."}
+scheduledJobs:
+  status: embedded
+  items: [flow schedule triggers, service purge]
+  evidence:
+    - {path: cli/src/main/resources/application.yml, line: 248, quote: "recoverMissedSchedules: ALL"}
+storage:
+  local: conditional
+  paths: [/app/storage]
+  s3: none
+  s3SelectBy: {}
+  # Internal storage backend is chosen by kestra.storage.type and is required for server commands. The S3 backend
+  # (io.kestra.storage:storage-s3) is not in this repo; it is auto-installed as a plugin when the type is set and plugin
+  # auto-install is on. Whether it can use the ECS task role cannot be proved from this repo.
+  evidence:
+    - {path: core/src/main/java/io/kestra/core/validations/ServerCommandValidator.java, line: 24, quote: "\"kestra.storage.type\""}
+    - {path: docker-compose.yml, line: 54, quote: "base-path: \"/app/storage\""}
+    - {path: storage-local/src/main/java/io/kestra/storage/local/LocalStorage.java, line: 53, quote: "Files.createDirectories(this.basePath);"}
+    - {path: core/src/main/java/io/kestra/core/plugins/PluginAutoInstallService.java, line: 300, quote: "is missing, so a slim distribution configured for e.g. S3 does not fail startup."}
+env:
+  required:
+    - {name: KESTRA_CONFIGURATION, secret: true, buildTime: false, note: "YAML config: datasources.postgres (url, driverClassName org.postgresql.Driver, username, password), kestra.repository.type=postgres, kestra.queue.type=postgres, kestra.storage.type=local with kestra.storage.local.base-path, kestra.url (public HTTPS URL); contains the DB password. The server fails to start if queue, repository or storage type is missing. RDS needs TLS in the JDBC URL (sslmode=require)"}
+    - {name: kestra.server.basic-auth.username / password, secret: true, buildTime: false, note: "the UI and API are open until a first admin is created; set both (a valid email and a strong password) so the first visitor cannot claim the instance"}
+  optional: [KESTRA_PLUGINS_PATH, KESTRA_CONFIGURATION_PATH, KESTRA_JAVA_OPTS, kestra.url, kestra.storage.type, kestra.tutorial-flows.enabled, kestra.encryption.secret-key]
+  buildTime: []
+  evidence:
+    - {path: core/src/main/java/io/kestra/core/runners/configuration/VariableConfiguration.java, line: 21, quote: "\"KESTRA_PLUGINS_PATH\", \"KESTRA_CONFIGURATION_PATH\", \"KESTRA_CONFIGURATION\", \"KESTRA_JAVA_OPTS\""}
+    - {path: docker-compose.yml, line: 60, quote: "url: http://localhost:8080/"}
+    - {path: cli/src/main/resources/application.yml, line: 178, quote: "basic-auth:"}
+blockers:
+  expected:
+    - "No Dockerfile builds Kestra from the repo archive: the root Dockerfile needs a pre-built docker/app/kestra executable (CI artefact, not in the repo) and a prebuilt registry base image"
+  mustNot:
+    - "PostgreSQL must not block: Deployz RDS PostgreSQL is a supported backend (kestra.repository.type and kestra.queue.type = postgres)"
+    - "Redis, Kafka and Elasticsearch must not be reported as required: the OSS edition uses JDBC for repository and queue (no Kafka or ES module in this repo)"
+    - "The /var/run/docker.sock mount in docker-compose.yml must not block: it is only for the optional Docker task runner; the process task runner needs no socket"
+    - "The management port 8081 must not count as a second app port: it is only for metrics and health, not needed to serve the app"
+    - "gRPC controller port 50051 must not block: it is internal between worker and controller in the same process in standalone mode"
+    - "Local storage at /app/storage must not block by itself: it is a conditional ephemeral data path"
+vendorQuestions:
+  legitimate:
+    - "Internal storage: execution files and outputs go to local disk (ephemeral on Fargate); is an S3 storage plugin needed, and does it work with the task role?"
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source (vendor must supply a build stage for the Gradle executableJar and UI)"
+  unnecessary:
+    - "Which port? (8080; 8081 is management only)"
+    - "Who runs migrations? (the app runs them at start)"
+    - "Is a worker or scheduler process needed? (server standalone embeds all)"
+    - "Health path? (/ping)"
+traps:
+  - "Root Dockerfile looks like the production image but only copies a pre-built executable onto a registry base image (Dockerfile:1-17, Makefile:101)"
+  - "Dockerfile.base only builds the JRE base image, Dockerfile.pr starts from kestra/kestra (Dockerfile.base:7, Dockerfile.pr:2)"
+  - "The image CMD is --help, so the container exits with usage unless a command is given (Dockerfile:17)"
+  - "/health is on management port 8081, not on the app port 8080; use /ping (cli/src/main/resources/application.yml:140, RootController.java:14)"
+  - "server local uses H2 file DB and data dir in the working directory, ephemeral on Fargate; use server standalone with postgres (LocalCommand.java:33-41)"
+  - "docker-compose.yml runs user root with a docker.sock mount for development (docker-compose.yml:28-35)"
+openQuestions:
+  - "Whether the S3 internal storage plugin accepts the ECS task role credentials: the plugin source is in a separate repository (kestra-io/plugin-aws), not in this repo"
+  - "Whether plugin auto-install at start needs internet egress to Maven Central, and if so whether this is allowed in the Deployz network"
+crossReview:
+  - {field: dockerfile, change: "none: confirmed that no Dockerfile builds Kestra from source (only Dockerfile, Dockerfile.base, Dockerfile.pr and the devcontainer exist); docker/ holds only .gitkeep files and the entrypoint script, so docker/app/kestra is missing in the archive", evidence: "git ls-files docker; Dockerfile:1-17"}
+  - {field: port / healthPath, change: "none: the app port is the Micronaut default 8080; endpoints.all.port 8081 is the management port; /ping is in basic-auth open-urls on the main port", evidence: "cli/src/main/resources/application.yml:138-140,178-181; docker-compose.yml:62"}
+  - {field: database / storage / env, change: "none: queue, repository and storage types are all required for server commands, so KESTRA_CONFIGURATION must set all three", evidence: "core/src/main/java/io/kestra/core/validations/ServerCommandValidator.java:22-25,59"}
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES or NOT_DEPLOYABLE both stay accepted", evidence: "Dockerfile:1-6; Makefile:101"}
+  - {field: all, change: verified, evidence: "41 citations checked"}

@@ -13,6 +13,8 @@ import {
   detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
   detectEnvVarModel,
+  detectHealthEndpoint,
+  detectPort,
   detectStartupCommand,
   detectWorker,
   selectedDockerfile,
@@ -21,6 +23,7 @@ import {
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { assessRedis } from '../src/redis.js';
+import { checkElasticsearch, checkGpu, checkOtherUnsupportedDatabases } from '../src/rejection.js';
 
 const envVar = (tree: FileTree, key: string) => detectEnvVarModel(tree).find((variable) => variable.key === key);
 
@@ -522,5 +525,162 @@ describe('a Dockerfile beside no project file that copies its whole context (min
 
   it('keeps the Dockerfile directory when it holds the project', () => {
     expect(detectDockerfileBuildContext(tree(['packaging/docker/alpine/go.mod'])).detected).toBe(false);
+  });
+});
+
+// Round 5
+describe('round 5 corpus (langflow, litellm, activepieces, budibase, onyx, monica, snipe-it, invoiceninja, open-webui, kestra, temporal)', () => {
+  const laravel = (files: FileTree): FileTree => ({
+    Dockerfile: 'FROM php:8.3-apache\nRUN docker-php-ext-install pdo_mysql\nCOPY . /var/www/html\nEXPOSE 80\n',
+    'composer.json': '{"require":{"laravel/framework":"^11.0"}}',
+    ...files,
+  });
+
+  it('reads the Laravel framework health route from bootstrap/app.php (monica)', () => {
+    const app = "return Application::configure(basePath: dirname(__DIR__))\n    ->withRouting(\n        web: __DIR__.'/../routes/web.php',\n        health: '/up',\n    )\n    ->create();\n";
+    expect(detectHealthEndpoint(laravel({ 'bootstrap/app.php': app })).path).toBe('/up');
+    expect(detectHealthEndpoint(laravel({ 'bootstrap/app.php': app.replace("        health: '/up',\n", '') })).detected).toBe(false);
+  });
+
+  it('keeps a PHP route behind the image Apache server (snipe-it)', () => {
+    const routes = "Route::withoutMiddleware(['web'])->get(\n    '/health',\n    [HealthController::class, 'get']\n);\n";
+    expect(detectHealthEndpoint(laravel({ 'routes/web.php': routes })).path).toBe('/health');
+  });
+
+  it('prefixes routes/api.php with the prefix that the RouteServiceProvider maps (invoiceninja)', () => {
+    const routes = "Route::get('/health', function () { return ['ok' => true]; });\n";
+    const provider = (prefix: string) => `Route::prefix('${prefix}')\n             ->middleware('api')\n             ->group(base_path('routes/api.php'));\n`;
+    expect(detectHealthEndpoint(laravel({ 'routes/api.php': routes, 'app/Providers/RouteServiceProvider.php': provider('') })).path).toBe('/health');
+    expect(detectHealthEndpoint(laravel({ 'routes/api.php': routes, 'app/Providers/RouteServiceProvider.php': provider('v1') })).path).toBe('/v1/health');
+    expect(detectHealthEndpoint(laravel({ 'routes/api.php': routes })).path).toBe('/api/health');
+  });
+
+  it('provisions MySQL for a Laravel image that has only the MySQL PHP driver (snipe-it)', () => {
+    const tree = (drivers: string): FileTree => ({
+      Dockerfile: `FROM ubuntu:24.04\nRUN apt-get install -y \\\n  libapache2-mod-php8.3 \\\n  ${drivers} \\\n  php8.3-gd\nCOPY . /var/www/html\nCMD ["/startup.sh"]\n`,
+      'composer.json': '{"require":{"laravel/framework":"^11.0"}}',
+      'config/database.php': "'default' => env('DB_CONNECTION', 'mysql'),\n'mysql' => ['driver' => 'mysql'],\n'pgsql' => ['driver' => 'pgsql'],\n",
+      '.env.example': 'DB_CONNECTION=mysql\nDB_HOST=127.0.0.1\n',
+    });
+    expect(normalizeDeploymentManifest(analyseRepo(tree('php8.3-mysql')), {}).database.engine).toBe('mysql');
+    expect(normalizeDeploymentManifest(analyseRepo(tree('php8.3-mysql php8.3-pgsql')), {}).database.engine).not.toBe('mysql');
+  });
+
+  it('does not take a hosted-API client for a GPU requirement (langflow, litellm)', () => {
+    const pyproject = (dep: string): FileTree => ({ 'pyproject.toml': `[project]\ndependencies = ["fastapi"]\n[project.optional-dependencies]\nextra = ["${dep}"]\n` });
+    expect(checkGpu(pyproject('nvidia-riva-client>=2.15.0')).detected).toBe(false);
+    expect(checkGpu(pyproject('langchain-nvidia-ai-endpoints~=1.0.0')).detected).toBe(false);
+    expect(checkGpu(pyproject('nvidia-cudnn-cu12==9.1.0')).detected).toBe(true);
+  });
+
+  it('never builds a Dockerfile from a docker_example directory (langflow)', () => {
+    const tree: FileTree = {
+      'docker_example/Dockerfile': 'FROM langflowai/langflow:latest\nCMD ["python", "-m", "langflow", "run"]\n',
+      'docker/build_and_push.Dockerfile': 'FROM python:3.12\nCOPY ./src /app/src\nCMD ["langflow", "run"]\n',
+    };
+    expect(selectedDockerfile(tree)?.path).toBe('docker/build_and_push.Dockerfile');
+  });
+
+  it('ranks a datastore support image below the application image (budibase)', () => {
+    const tree: FileTree = {
+      'hosting/couchdb/Dockerfile': 'FROM node:22-slim\nCOPY runner.sh ./\nEXPOSE 5984\nCMD ["./bbcouch-runner.sh"]\n',
+      'hosting/single/Dockerfile': 'FROM node:22-slim\nCOPY . /app\nEXPOSE 80\nCMD ["./runner.sh"]\n',
+    };
+    expect(selectedDockerfile(tree)?.path).toBe('hosting/single/Dockerfile');
+  });
+
+  it('takes no port from a Cassandra service or a develop/ Compose file (temporal)', () => {
+    const compose = 'services:\n  store:\n    image: cassandra:3.11\n    ports:\n      - "9042:9042"\n';
+    expect(detectPort({ 'docker-compose.yml': compose }).value).not.toBe('9042');
+    expect(detectPort({ 'develop/docker-compose/docker-compose.yml': compose.replace('cassandra:3.11', 'acme/app:1') }).value).not.toBe('9042');
+    expect(detectPort({ 'docker-compose.yml': compose.replace('cassandra:3.11', 'acme/app:1') }).value).toBe('9042');
+  });
+
+  it('rejects a Python OpenSearch client only with a corroborating service (onyx)', () => {
+    const tree = (compose: string): FileTree => ({
+      'pyproject.toml': '[project]\ndependencies = [\n    "opensearch-py==3.2.0",\n]\n',
+      'docker-compose.yml': compose,
+    });
+    expect(checkElasticsearch(tree('services:\n  api:\n    image: acme/api\n  index:\n    image: opensearchproject/opensearch:3\n')).detected).toBe(true);
+    expect(checkElasticsearch(tree('services:\n  api:\n    image: acme/api\n')).detected).toBe(false);
+  });
+
+  it('rejects the CouchDB client nano when a Compose service is named after CouchDB (budibase)', () => {
+    const tree = (name: string): FileTree => ({
+      'package.json': '{"dependencies":{"@budibase/nano":"10.1.5"}}',
+      'docker-compose.yml': `services:\n  app:\n    image: acme/app\n  ${name}:\n    image: acme/database:2.1.0\n`,
+    });
+    expect(checkOtherUnsupportedDatabases(tree('couchdb-service')).detected).toBe(true);
+    expect(checkOtherUnsupportedDatabases(tree('files')).detected).toBe(false);
+  });
+
+  it('keeps Redis optional when the setting that selects it defaults to another backend (open-webui)', () => {
+    const tree = (fallback: string): FileTree => ({
+      'requirements.txt': 'redis==5.0.0\nfastapi\n',
+      'backend/app/env.py': `REDIS_URL = os.getenv('REDIS_URL', '')\nWEBSOCKET_MANAGER = os.getenv('WEBSOCKET_MANAGER', '${fallback}')\n`,
+      'backend/app/socket.py': "from app.env import WEBSOCKET_MANAGER, REDIS_URL\nif WEBSOCKET_MANAGER == 'redis':\n    mgr = AsyncRedisManager(REDIS_URL)\n",
+    });
+    expect(assessRedis(tree('')).required).toBe(false);
+    expect(assessRedis(tree('redis')).required).toBe(true);
+  });
+
+  it('builds the application stage, not a trailing stage that runs a CI script (superset)', () => {
+    const tree = (last: string): FileTree => ({
+      Dockerfile: [
+        'FROM python:3.11 AS lean',
+        'ENV SUPERSET_HOME="/app/superset_home" \\',
+        '    SUPERSET_PORT="8088"',
+        'COPY superset /app/superset',
+        'CMD ["/app/docker/entrypoints/run-server.sh"]',
+        'EXPOSE ${SUPERSET_PORT}',
+        'FROM lean AS superset',
+        'RUN pip install psycopg2',
+        'FROM lean AS showtime',
+        `CMD ["/app/docker/entrypoints/${last}"]`,
+        '',
+      ].join('\n'),
+    });
+    expect(detectDockerfileBuildTarget(tree('docker-ci.sh')).value).toBe('superset');
+    expect(detectStartupCommand(tree('docker-ci.sh')).value).toEqual(['CMD: ["/app/docker/entrypoints/run-server.sh"]']);
+    expect(detectPort(tree('docker-ci.sh')).value).toBe('8088');
+    expect(detectDockerfileBuildTarget(tree('run-showtime.sh')).detected).toBe(false);
+  });
+
+  it('reads the app service that waits on the database and the FastAPI router mount (khoj)', () => {
+    const compose = [
+      'services:',
+      '  database:',
+      '    image: pgvector/pgvector:pg15',
+      '  sandbox:',
+      '    image: ghcr.io/acme/terrarium:latest',
+      '    healthcheck:',
+      '      test: ["CMD-SHELL", "curl -f http://localhost:8080/health"]',
+      '  computer:',
+      '    image: ghcr.io/acme/computer:latest',
+      '    ports:',
+      '      - "5900:5900"',
+      '  server:',
+      '    depends_on:',
+      '      database:',
+      '        condition: service_healthy',
+      '    image: ghcr.io/acme/app:latest',
+      '    ports:',
+      '      - "42110:42110"',
+      '',
+    ].join('\n');
+    const router = (mount: string): FileTree => ({
+      'src/app/routers/api.py': 'from fastapi import APIRouter\napi = APIRouter()\n\n@api.get("/health", response_class=Response)\ndef health():\n    return Response(status_code=200)\n',
+      'src/app/configure.py': `def configure_routes(app):\n    app.include_router(api, prefix="${mount}")\n`,
+    });
+    expect(detectPort({ 'docker-compose.yml': compose, 'pyproject.toml': '[project]\nname = "app"\n' }).value).toBe('42110');
+    expect(detectPort({ 'docker-compose.yml': compose.replace('    depends_on:\n      database:\n        condition: service_healthy\n', '') }).value).toBe('5900');
+    expect(detectHealthEndpoint(router('/api')).path).toBe('/api/health');
+    expect(detectHealthEndpoint({ ...router('/api'), 'src/app/other.py': 'app.include_router(api, prefix="/v2")\n' }).path).toBe('/health');
+  });
+
+  it('asks for the start command when the image CMD only prints the usage (kestra)', () => {
+    const tree = (cmd: string): FileTree => ({ Dockerfile: `FROM eclipse-temurin:21-jre\nCOPY app /app/kestra\nENTRYPOINT ["docker-entrypoint.sh"]\nCMD ${cmd}\n` });
+    expect(detectStartupCommand(tree('["--help"]')).detected).toBe(false);
+    expect(detectStartupCommand(tree('["server", "standalone"]')).detected).toBe(true);
   });
 });

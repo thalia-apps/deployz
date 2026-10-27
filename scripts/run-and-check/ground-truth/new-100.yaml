@@ -1,0 +1,174 @@
+id: new-100
+repository: langflow-ai/langflow
+commit: aeb10d96bb2ea797696613af931e91ddf51f3320
+summary: >
+  Langflow visual AI flow builder (Python 3.14 FastAPI backend, React frontend built with npm, uv workspace).
+  One production Dockerfile, docker/build_and_push.Dockerfile, builds frontend and backend from source. Its last
+  stage (`full`) runs `langflow run`, which serves API and UI from one process on port 7860. SQLite is the default
+  database, so a Deployz deploy must set LANGFLOW_DATABASE_URL to PostgreSQL. Auth is on (AUTO_LOGIN=false in the
+  image), so LANGFLOW_SUPERUSER_PASSWORD is mandatory. Uploaded files use local disk by default; native S3 storage
+  is available. Redis, Celery and separate workers are not needed for one instance.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    The image starts the app with no command. It needs LANGFLOW_DATABASE_URL (PostgreSQL), LANGFLOW_SUPERUSER_PASSWORD
+    and LANGFLOW_SECRET_KEY. For durable uploads set LANGFLOW_STORAGE_TYPE=s3 with a bucket. Without them the app
+    refuses to start (no superuser password) or keeps data on ephemeral disk (SQLite, local files).
+    Redis is only needed for several workers. No second image is needed.
+dockerfile:
+  accept: [docker/build_and_push.Dockerfile]
+  reject:
+    - {path: docker/build_and_push_backend.Dockerfile, reason: "backend-only image, no frontend assets (CMD uses --backend-only)"}
+    - {path: docker/build_and_push_ep.Dockerfile, reason: "legacy image with nv-ingest extra; CMD runs --backend-only, so the UI is not served"}
+    - {path: docker/render.Dockerfile, reason: "FROM langflowai/langflow:latest, a pre-built registry image, not built from the repo"}
+    - {path: docker_example/Dockerfile, reason: "FROM langflowai/langflow:latest, a pre-built registry image"}
+    - {path: docker_example/pre.Dockerfile, reason: "wraps a pre-built registry image"}
+    - {path: docker/dev.Dockerfile, reason: "development image; CMD runs docker/dev.start.sh"}
+    - {path: docker/cdk.Dockerfile, reason: "CDK sample image, not the main application"}
+    - {path: src/frontend/dev.Dockerfile, reason: "frontend dev server image"}
+    - {path: src/lfx/docker/Dockerfile, reason: "lfx executor package image, not the Langflow app"}
+    - {path: .devcontainer/Dockerfile, reason: "devcontainer, not production"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/build_and_push.Dockerfile, line: 264, quote: "FROM runtime AS full"}
+    - {path: docker/build_and_push.Dockerfile, line: 261, quote: "DEFAULT IMAGE (default/final target)"}
+    - {path: docker/build_and_push.Dockerfile, line: 240, quote: "CMD [\"langflow\", \"run\"]"}
+    - {path: docker/build_and_push.Dockerfile, line: 94, quote: "npm run build"}
+    - {path: docker/build_and_push.Dockerfile, line: 125, quote: "COPY ./.release-artifacts /tmp/release-artifacts"}
+    - {path: docker/build_and_push_backend.Dockerfile, line: 130, quote: "CMD [\"python\", \"-m\", \"langflow\", \"run\", \"--backend-only\"]"}
+    - {path: docker/render.Dockerfile, line: 1, quote: "FROM langflowai/langflow:latest"}
+    - {path: scripts/ci/install_release_wheels.py, line: 129, quote: "if not any(artifacts_dir.rglob(\"*.whl\")):"}
+runtime: {accept: [python]}
+port:
+  accept: [7860]
+  evidence:
+    - {path: docker/build_and_push.Dockerfile, line: 232, quote: "LANGFLOW_PORT=7860"}
+    - {path: src/lfx/src/lfx/services/settings/groups/server.py, line: 23, quote: "port: int = 7860"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/build_and_push.Dockerfile, line: 231, quote: "LANGFLOW_HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["langflow run"]
+  evidence:
+    - {path: docker/build_and_push.Dockerfile, line: 240, quote: "CMD [\"langflow\", \"run\"]"}
+    - {path: src/backend/base/langflow/main.py, line: 1449, quote: "setup_static_files(app, static_files_dir)"}
+healthPath:
+  accept: ["/health_check", "/health"]
+  # /health returns {"status": "ok"} with no dependency check (uvicorn also answers /health before the app is up).
+  # /health_check probes the database and the chat cache and returns 500 if one fails. Neither needs auth.
+  evidence:
+    - {path: src/backend/base/langflow/api/health_check_router.py, line: 67, quote: "@health_check_router.get(\"/health\")"}
+    - {path: src/backend/base/langflow/api/health_check_router.py, line: 74, quote: "@health_check_router.get(\"/health_check\")"}
+    - {path: src/backend/base/langflow/api/health_check_router.py, line: 48, quote: "response.db = \"ok\""}
+    - {path: src/backend/base/langflow/main.py, line: 1206, quote: "app.include_router(health_check_router)"}
+    - {path: render.yaml, line: 10, quote: "healthCheckPath: /health_check"}
+database:
+  status: required
+  engines: [sqlite, postgresql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {LANGFLOW_DATABASE_URL: "postgresql://user:password@host:5432/langflow"}
+  connectionVars: [LANGFLOW_DATABASE_URL]
+  evidence:
+    - {path: src/lfx/src/lfx/services/settings/groups/database.py, line: 22, quote: "database_url: str | None = None"}
+    - {path: src/lfx/src/lfx/services/settings/groups/database.py, line: 96, quote: "if langflow_database_url := os.getenv(\"LANGFLOW_DATABASE_URL\"):"}
+    - {path: src/lfx/src/lfx/services/settings/groups/database.py, line: 155, quote: "value = f\"sqlite:///{final_path}\""}
+    - {path: src/backend/base/langflow/services/database/service.py, line: 365, quote: "driver = \"postgresql+psycopg\""}
+    - {path: docker/build_and_push.Dockerfile, line: 79, quote: "uv sync --frozen --extra postgresql --no-default-groups --no-install-workspace"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/backend/base/langflow/services/database/service.py, line: 610, quote: "command.upgrade(alembic_cfg, \"head\")"}
+    - {path: src/backend/base/langflow/services/database/service.py, line: 689, quote: "async def run_migrations(self, *, fix=False) -> None:"}
+    - {path: src/backend/base/langflow/main.py, line: 302, quote: "await initialize_services(fix_migration=fix_migration)"}
+redis:
+  status: optional
+  selectBy: {LANGFLOW_CACHE_TYPE: redis, LANGFLOW_JOB_QUEUE_TYPE: redis}
+  evidence:
+    - {path: src/lfx/src/lfx/services/settings/groups/cache.py, line: 10, quote: "cache_type: Literal[\"async\", \"redis\", \"memory\"] = \"async\""}
+    - {path: src/lfx/src/lfx/services/settings/groups/runtime.py, line: 50, quote: "job_queue_type: Literal[\"asyncio\", \"redis\"] = \"asyncio\""}
+    - {path: src/lfx/src/lfx/services/settings/groups/server.py, line: 29, quote: "workers: int = 1"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: src/lfx/src/lfx/services/settings/groups/server.py, line: 29, quote: "workers: int = 1"}
+    - {path: src/lfx/src/lfx/services/settings/groups/runtime.py, line: 375, quote: "celery_enabled: bool = False"}
+    - {path: src/lfx/src/lfx/services/settings/groups/runtime.py, line: 50, quote: "job_queue_type: Literal[\"asyncio\", \"redis\"] = \"asyncio\""}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: src/lfx/src/lfx/services/settings/groups/runtime.py, line: 375, quote: "celery_enabled: bool = False"}
+storage:
+  local: conditional
+  paths: [/app/data, /app/langflow, "~/.langflow/knowledge_bases"]
+  s3: native
+  s3SelectBy: {LANGFLOW_STORAGE_TYPE: s3, LANGFLOW_OBJECT_STORAGE_BUCKET_NAME: "<bucket>", AWS_DEFAULT_REGION: "<region>"}
+  evidence:
+    - {path: src/lfx/src/lfx/services/settings/groups/storage.py, line: 7, quote: "storage_type: str = \"local\""}
+    - {path: src/lfx/src/lfx/services/settings/groups/storage.py, line: 9, quote: "object_storage_bucket_name: str | None = \"langflow-bucket\""}
+    - {path: src/backend/base/langflow/services/storage/factory.py, line: 23, quote: "if storage_type.lower() == \"s3\":"}
+    - {path: src/backend/base/langflow/services/storage/s3.py, line: 82, quote: "self.session = get_session()"}
+    - {path: src/backend/base/langflow/services/storage/s3.py, line: 81, quote: "AWS credentials are picked up from environment variables"}
+    - {path: src/backend/base/pyproject.toml, line: 146, quote: "\"aiobotocore>=3.7.0,<4.0.0\","}
+    - {path: docker/build_and_push.Dockerfile, line: 210, quote: "mkdir -p /app/data /app/langflow"}
+    - {path: src/lfx/src/lfx/services/settings/groups/paths.py, line: 13, quote: "knowledge_bases_dir: str | None = \"~/.langflow/knowledge_bases\""}
+env:
+  required:
+    - {name: LANGFLOW_DATABASE_URL, secret: true, buildTime: false, note: "postgresql://user:password@host:5432/dbname; without it the app uses SQLite on ephemeral disk; contains the DB password"}
+    - {name: LANGFLOW_SUPERUSER_PASSWORD, secret: true, buildTime: false, note: "startup raises an error when empty because the image sets AUTO_LOGIN=false; LANGFLOW_SUPERUSER (default langflow) is the user name"}
+    - {name: LANGFLOW_SECRET_KEY, secret: true, buildTime: false, note: "JWT and stored-variable encryption key; if missing a key is generated into the config dir (ephemeral), so tokens and encrypted variables break on restart or with several tasks; use 32+ chars"}
+    - {name: LANGFLOW_STORAGE_TYPE, secret: false, buildTime: false, note: "s3 for durable uploaded files; default local is ephemeral"}
+    - {name: LANGFLOW_OBJECT_STORAGE_BUCKET_NAME, secret: false, buildTime: false, note: "S3 bucket; default langflow-bucket is a placeholder; credentials come from the AWS default chain (task role)"}
+    - {name: AWS_DEFAULT_REGION, secret: false, buildTime: false, note: "region for the S3 client"}
+  optional: [LANGFLOW_SUPERUSER, LANGFLOW_OBJECT_STORAGE_PREFIX, LANGFLOW_WORKERS, LANGFLOW_LOG_LEVEL, LANGFLOW_ENABLE_SIGNUP, LANGFLOW_ACCESS_SECURE, LANGFLOW_REFRESH_SECURE, LANGFLOW_CACHE_TYPE, LANGFLOW_REDIS_HOST, LANGFLOW_REDIS_PORT, LANGFLOW_JOB_QUEUE_TYPE, LANGFLOW_CONFIG_DIR, LANGFLOW_SAVE_DB_IN_CONFIG_DIR, LANGFLOW_DATABASE_CONNECTION_RETRY]
+  buildTime: []
+  evidence:
+    - {path: docker/build_and_push.Dockerfile, line: 235, quote: "ENV LANGFLOW_AUTO_LOGIN=false"}
+    - {path: src/backend/base/langflow/services/utils.py, line: 232, quote: "if not username or not password:"}
+    - {path: src/lfx/src/lfx/services/settings/auth.py, line: 364, quote: "secret_key_path = Path(config_dir) / \"secret_key\""}
+    - {path: src/lfx/src/lfx/services/settings/auth.py, line: 138, quote: "SUPERUSER: str = DEFAULT_SUPERUSER"}
+    - {path: src/lfx/src/lfx/services/settings/auth.py, line: 150, quote: "ACCESS_SECURE: bool = False"}
+    - {path: .env.example, line: 102, quote: "# LANGFLOW_SUPERUSER_PASSWORD must be set when AUTO_LOGIN is false."}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL is supported through LANGFLOW_DATABASE_URL and the psycopg driver is in the image"
+    - "Local file and knowledge-base directories must not block: S3 file storage is native; knowledge bases are an optional feature"
+    - "Redis must not be required: in-memory cache and job queue are the defaults for one worker"
+    - "Celery or a worker process must not be required: celery_enabled is False and the image has no worker command"
+    - "Node.js in the runtime image must not mean a second service: it is only for npx-based MCP stdio servers"
+    - "deploy/docker-compose.yml (traefik, pgadmin, broker, db) must not set the topology: it is a legacy sample"
+vendorQuestions:
+  legitimate:
+    - "Which superuser name and password should the first admin use?"
+    - "Are knowledge bases or other local-disk features (MCP config, profile pictures) needed? Their data is on ephemeral disk"
+  unnecessary:
+    - "Which port? (7860 in image and defaults)"
+    - "Who runs migrations? (the app runs alembic at startup)"
+    - "Is a worker or Redis needed? (not for one instance)"
+    - "Health path? (/health_check or /health)"
+traps:
+  - "Many Dockerfiles in docker/ -> only build_and_push.Dockerfile builds the full app from source; backend and ep variants use --backend-only; render.Dockerfile and docker_example pull langflowai/langflow:latest (docker/build_and_push_backend.Dockerfile:130, docker/render.Dockerfile:1)"
+  - "Multi-stage file with base, full-bundles and full targets -> the last stage `full` is the default image; no --target needed (docker/build_and_push.Dockerfile:264)"
+  - "COPY ./.release-artifacts looks like a CI artefact -> the directory is tracked in the repo (README.md) and the install step is a no-op when it has no wheels (docker/build_and_push.Dockerfile:125)"
+  - "render.yaml mounts a disk at /app/data and uses SQLite -> a Render persistent-disk pattern; Deployz has no volumes, use PostgreSQL and S3 (render.yaml:14)"
+  - "deploy/docker-compose.yml uses langflow-backend, broker and result_backend (Celery) -> legacy; the settings default celery_enabled to False (src/lfx/src/lfx/services/settings/groups/runtime.py:375)"
+  - "/health is answered by uvicorn before the app is ready -> use /health_check which probes the database (api/health_check_router.py:63-74)"
+  - "Frontend build runs npm with a 4 GB Node heap and the Python deps compile native code -> the build needs much memory and time (docker/build_and_push.Dockerfile:94)"
+  - "Image sets LANGFLOW_AUTO_LOGIN=false -> without LANGFLOW_SUPERUSER_PASSWORD the app exits at startup (services/utils.py:232)"
+openQuestions:
+  - "Whether RDS forced TLS works with the default psycopg sslmode (prefer): expected to negotiate TLS, add ?sslmode=require to the URL to be sure"
+  - "Knowledge bases and some features keep data on local disk (LANGFLOW_KNOWLEDGE_BASES_DIR); the repo does not show a full S3 route for all of them"
+crossReview:
+  - {field: dockerfile.evidence, change: "added evidence that the COPY ./.release-artifacts step is a no-op without wheels (the directory holds only README.md in git)", evidence: "scripts/ci/install_release_wheels.py:129; .release-artifacts/README.md"}
+  - {field: dockerfile.accept, change: "none: every COPY source of the build stages exists in git (uv.lock, pyproject files, src/bundles, src/frontend, scripts/ci/*, docker/install_hardened_npm.sh, .release-artifacts); last stage full is the default", evidence: "docker/build_and_push.Dockerfile:55-70,87,125,200,264"}
+  - {field: healthPath, change: "none: /health_check and /health are both unauthenticated; /health_check returns 500 when the DB or chat probe fails", evidence: "src/backend/base/langflow/api/health_check_router.py:67-85"}
+  - {field: env.required LANGFLOW_SUPERUSER_PASSWORD, change: "none: image sets AUTO_LOGIN=false and startup raises ValueError without the password", evidence: "docker/build_and_push.Dockerfile:235; src/backend/base/langflow/services/utils.py:232"}
+  - {field: storage / env (S3), change: "none: S3 service builds an aiobotocore session from the default credential chain, so the task role works; bucket default is a placeholder", evidence: "src/backend/base/langflow/services/storage/s3.py:81-82"}
+  - {field: all, change: verified, evidence: "47 citations checked"}

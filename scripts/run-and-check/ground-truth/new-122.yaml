@@ -1,0 +1,146 @@
+id: new-122
+repository: getsentry/sentry
+commit: 6a36e81c220645cc362c7ffcd1868b4d1f58bb76
+summary: >
+  Sentry error and performance monitoring platform (Python/Django web app with a React frontend). The repo has one
+  self-hosted Dockerfile for the Sentry image (web by default, same image for workers and consumers). Running Sentry
+  needs separate services that are not in this image: Kafka, ClickHouse, Snuba, Relay, Symbolicator, taskbroker and more
+  (devservices and SENTRY_SNUBA / KAFKA_CLUSTERS settings). Postgres and Redis alone do not run a working Sentry.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The Dockerfile cannot build from the repo alone: it checks for generated files that are not in git. Also event ingest and queries need Kafka and ClickHouse (through Snuba), plus Relay
+    and other separate images. Deployz supports none of Kafka, ClickHouse or a second application image. Local filestore is also
+    the default and the config needs a mounted /data volume.
+dockerfile:
+  accept: []
+  reject:
+    - {path: self-hosted/Dockerfile, reason: "the build stops at the test -f checks: loader/_registry.json, integration-docs/python.json and static/sentry/dist/entrypoints/app.js are git-ignored files that CI creates (sentry.build.main and webpack) before the image build; the distroless stage also uses a private registry base"}
+    - {path: devservices/config.yml, reason: "dev dependency list (snuba, symbolicator, vroom, taskbroker, kafka consumers), not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: self-hosted/Dockerfile, line: 71, quote: "COPY . ."}
+    - {path: self-hosted/Dockerfile, line: 81, quote: "test -f /usr/src/sentry/src/sentry/loader/_registry.json"}
+    - {path: self-hosted/Dockerfile, line: 82, quote: "test -f /usr/src/sentry/src/sentry/integration-docs/python.json"}
+    - {path: self-hosted/Dockerfile, line: 83, quote: "test -f /usr/src/sentry/src/sentry/static/sentry/dist/entrypoints/app.js"}
+    - {path: .gitignore, line: 36, quote: "/src/sentry/loader/_registry.json"}
+    - {path: .gitignore, line: 35, quote: "/src/sentry/integration-docs"}
+    - {path: .gitignore, line: 31, quote: "/src/sentry/static/sentry/dist/"}
+    - {path: .github/workflows/self-hosted.yml, line: 86, quote: "python3 -m sentry.build.main"}
+    - {path: self-hosted/Dockerfile, line: 16, quote: "AS application"}
+    - {path: self-hosted/Dockerfile, line: 109, quote: "AS distroless"}
+    - {path: self-hosted/Dockerfile, line: 151, quote: "FROM application"}
+    - {path: self-hosted/Dockerfile, line: 96, quote: "CMD [\"run\", \"web\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: self-hosted/Dockerfile, line: 92, quote: "EXPOSE 9000"}
+    - {path: self-hosted/sentry.conf.py, line: 180, quote: "SENTRY_WEB_PORT = 9000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: self-hosted/sentry.conf.py, line: 179, quote: "SENTRY_WEB_HOST = \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["run web", "sentry run web"]
+  evidence:
+    - {path: self-hosted/Dockerfile, line: 95, quote: "ENTRYPOINT [\"python3\", \"/docker_entrypoint.py\"]"}
+    - {path: self-hosted/Dockerfile, line: 96, quote: "CMD [\"run\", \"web\"]"}
+healthPath:
+  accept: ["/_health/"]
+  # Handled by middleware before URL routing; returns 200 "ok" without auth or redirect.
+  evidence:
+    - {path: src/sentry/middleware/health.py, line: 17, quote: "if request.path != \"/_health/\":"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [SENTRY_POSTGRES_HOST, SENTRY_POSTGRES_PORT]
+  evidence:
+    - {path: self-hosted/sentry.conf.py, line: 43, quote: "postgres = env(\"SENTRY_POSTGRES_HOST\")"}
+    - {path: self-hosted/sentry.conf.py, line: 47, quote: "\"ENGINE\": \"sentry.db.postgres\","}
+migrations:
+  mode: command
+  accept: ["sentry upgrade --noinput"]
+  # `run web` does not migrate; the migration step is the separate `upgrade` command (it can also create Kafka topics).
+  evidence:
+    - {path: src/sentry/runner/commands/upgrade.py, line: 147, quote: "Perform any pending database migrations and upgrades."}
+    - {path: src/sentry/runner/commands/upgrade.py, line: 119, quote: "\"--noinput\""}
+redis:
+  status: required
+  selectBy: {SENTRY_REDIS_HOST: host}
+  evidence:
+    - {path: self-hosted/sentry.conf.py, line: 74, quote: "redis = env(\"SENTRY_REDIS_HOST\")"}
+    - {path: self-hosted/sentry.conf.py, line: 167, quote: "SENTRY_DIGESTS = \"sentry.digests.backends.redis.RedisBackend\""}
+workers:
+  status: independent
+  commands: ["run taskworker", "run taskworker-scheduler", "run consumer <name>"]
+  evidence:
+    - {path: src/sentry/runner/commands/run.py, line: 243, quote: "def taskworker("}
+    - {path: src/sentry/runner/commands/run.py, line: 112, quote: "def taskworker_scheduler("}
+    - {path: devservices/config.yml, line: 139, quote: "Kafka consumer for processing ingested events"}
+scheduledJobs:
+  status: independent
+  items: [taskworker-scheduler]
+  evidence:
+    - {path: src/sentry/runner/commands/run.py, line: 112, quote: "def taskworker_scheduler("}
+storage:
+  local: conditional
+  paths: [/data/files, /data/dsym-cache, /data/releasefile-cache]
+  s3: native
+  s3SelectBy: {filestore.backend: s3}
+  evidence:
+    - {path: self-hosted/config.yml, line: 37, quote: "filestore.backend: 'filesystem'"}
+    - {path: self-hosted/config.yml, line: 42, quote: "# filestore.backend: 's3'"}
+    - {path: self-hosted/Dockerfile, line: 93, quote: "VOLUME /data"}
+env:
+  required:
+    - {name: SENTRY_SECRET_KEY, secret: true, buildTime: false, note: "sentry.conf.py raises an error without it; under 32 characters only prints a warning"}
+    - {name: SENTRY_POSTGRES_HOST, secret: false, buildTime: false, note: "selects the Postgres host; with SENTRY_POSTGRES_PORT, user and password options"}
+    - {name: SENTRY_REDIS_HOST, secret: false, buildTime: false, note: "config raises an error without it"}
+  optional: [SENTRY_POSTGRES_PORT, SENTRY_REDIS_PORT, SENTRY_MEMCACHED_HOST, SENTRY_EMAIL_HOST, SNUBA]
+  buildTime: []
+  evidence:
+    - {path: self-hosted/sentry.conf.py, line: 221, quote: "secret_key = env(\"SENTRY_SECRET_KEY\")"}
+    - {path: self-hosted/sentry.conf.py, line: 74, quote: "redis = env(\"SENTRY_REDIS_HOST\")"}
+    - {path: src/sentry/conf/server.py, line: 1769, quote: "SENTRY_SNUBA = os.environ.get(\"SNUBA\", \"http://127.0.0.1:1218\")"}
+blockers:
+  expected:
+    - "Kafka is required for event ingest: KAFKA_CLUSTERS points to a broker and many consumers read Kafka topics (src/sentry/conf/server.py:3042)"
+    - "ClickHouse through Snuba is required for events, issues and search: SENTRY_SNUBA and SnubaEventStream (src/sentry/conf/server.py:1769, :1802); TSDB is RedisSnubaTSDB (self-hosted/sentry.conf.py:159)"
+    - "The Dockerfile build needs generated files (frontend dist, loader registry, integration docs) that are git-ignored and made by CI (self-hosted/Dockerfile:81-83, .gitignore:31,35,36)"
+    - "Relay is a separate service (SENTRY_USE_RELAY = True) built from another repo and image; Symbolicator, Vroom, taskbroker are also separate images (devservices/config.yml)"
+  mustNot:
+    - "Python/uv dependency install must not block: uv.lock and pyproject.toml are in git (the blocker is the generated files, not uv)"
+    - "Postgres, Redis and S3 filestore support must not hide the Kafka/ClickHouse blockers"
+    - "VOLUME /data alone must not block: filestore can use S3"
+    - "Memcached must not be reported as required: only used when SENTRY_MEMCACHED_HOST is set"
+vendorQuestions:
+  legitimate:
+    - "Is a managed Kafka or ClickHouse available outside Deployz? (Deployz cannot provide them)"
+  unnecessary:
+    - "Which port? (9000)"
+    - "Health path? (/_health/)"
+    - "Which Dockerfile? (self-hosted/Dockerfile is the only one)"
+traps:
+  - "Postgres + Redis + one Dockerfile look like a simple web app -> events need Kafka, Snuba and ClickHouse (self-hosted/sentry.conf.py:159)"
+  - "devservices/config.yml is a dev tool list, not the production topology, but it names the real required services (devservices/config.yml:9)"
+  - "self-hosted/Dockerfile looks buildable (COPY . . and uv sync) -> it checks for git-ignored generated files and fails without CI steps (self-hosted/Dockerfile:81-83)"
+  - "self-hosted/Dockerfile has a distroless stage using a private registry base; the last line FROM application makes the application stage the default (self-hosted/Dockerfile:109, :151)"
+  - "VOLUME /data and filesystem filestore -> S3 backend exists, so local disk is not the blocker (self-hosted/config.yml:42)"
+openQuestions:
+  - "Whether a reduced Sentry without Snuba/Kafka can run: the repo does not describe one"
+crossReview:
+  - {field: dockerfile.accept, change: "[self-hosted/Dockerfile] -> [] and target application -> null; the Dockerfile runs test -f on three files that are git-ignored and made by CI (sentry.build.main, webpack) before the image build, so it cannot build from the repo archive; self-hosted/Dockerfile moved to reject; added evidence", evidence: "self-hosted/Dockerfile:71,81-83; .gitignore:31,35,36; .github/workflows/self-hosted.yml:86"}
+  - {field: outcome.reason / blockers.expected / blockers.mustNot / traps, change: "added the generated-files blocker; replaced the false mustNot 'Dockerfile builds from the repo'; added a trap; outcome stays NOT_DEPLOYABLE", evidence: "self-hosted/Dockerfile:81-83"}
+  - {field: migrations.evidence, change: "evidence was the Dockerfile CMD line (does not show migrations) -> upgrade.py command; mode command and accept kept: web does not migrate, `sentry upgrade` is the migration command", evidence: "src/sentry/runner/commands/upgrade.py:147,119"}
+  - {field: scheduledJobs.status, change: "embedded -> independent; taskworker-scheduler is its own process (run taskworker-scheduler), not in the web process", evidence: "src/sentry/runner/commands/run.py:112"}
+  - {field: env.required SENTRY_SECRET_KEY note, change: "'stops without it; 32+ characters' -> raises an error without it; shorter than 32 only prints a warning", evidence: "self-hosted/sentry.conf.py:221-232"}
+  - {field: storage, change: "none: S3 filestore confirmed native; access keys are optional (AWS_* env or default chain when both are absent)", evidence: "src/sentry/services/filestore/s3.py:320-342"}
+  - {field: database.selectBy, change: "none: self-hosted conf needs SENTRY_POSTGRES_HOST, but base server.py DATABASES also defaults to postgres, so no engine selection exists", evidence: "src/sentry/conf/server.py:249-251"}
+  - {field: startCommand / port / healthPath, change: "none: entrypoint maps run web to sentry run web; /_health/ is answered in middleware without auth", evidence: "self-hosted/docker_entrypoint.py:15-20; src/sentry/middleware/health.py:17-21"}
+  - {field: all, change: verified, evidence: "29 citations checked"}

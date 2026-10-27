@@ -1,0 +1,138 @@
+id: new-120
+repository: temporalio/temporal
+commit: f7ca7c3c49318cefa10299960b2c8dd7d9d4f9cb
+summary: >
+  Temporal server (Go). A distributed workflow engine with four internal services (frontend, history, matching,
+  worker) that run in one `temporal-server start` process by default. The frontend speaks gRPC on 7233 and an
+  optional HTTP API on 7243. There is no Dockerfile that builds from the repo: the only image Dockerfiles copy
+  pre-built binaries from ./build/${TARGETARCH}/ (made by CI with make bins), and the image has no config file.
+  A persistent store (Cassandra, MySQL, PostgreSQL or SQLite) needs a schema applied by a separate tool.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No Dockerfile builds the server from the repo archive: server.Dockerfile copies ./build/${TARGETARCH}/temporal-server,
+    which is a CI-built artefact absent from the archive. The main protocol is gRPC (HTTP/2), which an HTTPS ALB
+    serving one HTTP port for web traffic does not expose as an HTTP/1 service; the HTTP API (port 7243) is off
+    unless httpPort is set in a config file the image does not contain. The DB schema must also be applied
+    with temporal-sql-tool, which is not in the server image.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/targets/server.Dockerfile, reason: "copies pre-built ./build/${TARGETARCH}/temporal-server; no Go build stage; build context is docker/, not the repo root"}
+    - {path: docker/targets/admin-tools.Dockerfile, reason: "copies pre-built CLI and schema tools from ./build; this is a tools image, not the server"}
+  target: null
+  context: docker
+  evidence:
+    - {path: docker/targets/server.Dockerfile, line: 14, quote: "COPY --chmod=755 ./build/${TARGETARCH}/temporal-server /usr/local/bin/"}
+    - {path: docker/targets/server.Dockerfile, line: 3, quote: "FROM alpine:${ALPINE_TAG}"}
+    - {path: docker/docker-bake.hcl, line: 71, quote: "context = \"docker\""}
+    - {path: docker/docker-bake.hcl, line: 72, quote: "dockerfile = \"targets/server.Dockerfile\""}
+    - {path: Makefile, line: 5, quote: "# Rebuild binaries (used by Dockerfile)."}
+    - {path: docker/targets/admin-tools.Dockerfile, line: 21, quote: "./build/${TARGETARCH}/temporal \\"}
+runtime: {accept: [go]}
+port:
+  accept: [7233, 7243]
+  evidence:
+    - {path: docker/config_template.yaml, line: 272, quote: "default .Env.FRONTEND_GRPC_PORT \"7233\""}
+    - {path: docker/config_template.yaml, line: 273, quote: "default .Env.FRONTEND_HTTP_PORT \"7243\""}
+    - {path: config/development-postgres12.yaml, line: 50, quote: "grpcPort: 7233"}
+    - {path: config/development-postgres12.yaml, line: 53, quote: "httpPort: 7243"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: docker/config_template.yaml, line: 280, quote: "bindOnIP: \"{{ default .Env.BIND_ON_IP \"127.0.0.1\" }}\""}
+    - {path: docker/scripts/sh/entrypoint.sh, line: 7, quote: ": \"${BIND_ON_IP:=$(getent hosts"}
+startCommand:
+  source: image
+  accept: ["/etc/temporal/entrypoint.sh", "temporal-server start"]
+healthPath:
+  # Frontend health is the gRPC health service (grpc.health.v1); no HTTP/1 /health route was found. The HTTP API
+  # (grpc-gateway, port 7243; the image template sets httpPort, a rendered config is still needed) serves /system-info (the HTTP tests call it without a prefix), but the ALB must target 7243 and it is not the gRPC port.
+  accept: ["/system-info", "/api/v1/system-info"]
+  evidence:
+    - {path: service/frontend/fx.go, line: 575, quote: "healthpb.Health_Check_FullMethodName:"}
+    - {path: service/frontend/fx.go, line: 1131, quote: "return cfg.Services[string(serviceName)].RPC.HTTPPort != 0"}
+    - {path: common/config/config.go, line: 87, quote: "// HTTPPort is the port on which HTTP will listen. If unset/0, HTTP will be"}
+    - {path: tests/http_api_test.go, line: 368, quote: "s.httpGet(env, http.StatusOK, \"/system-info\", \"application/json\")"}
+database:
+  status: required
+  engines: [cassandra, mysql8, postgres12, postgres12_pgx, sqlite]
+  default: cassandra
+  deployzEngine: postgres
+  selectBy: {DB: postgres12}
+  connectionVars: [POSTGRES_SEEDS, DB_PORT, DBNAME, POSTGRES_USER, POSTGRES_PWD, SQL_TLS_ENABLED]
+  evidence:
+    - {path: docker/config_template.yaml, line: 16, quote: "{{- $db := default .Env.DB \"cassandra\" | lower -}}"}
+    - {path: docker/config_template.yaml, line: 102, quote: "{{- else if eq $db \"postgres12\" \"postgres12_pgx\" }}"}
+    - {path: docker/config_template.yaml, line: 107, quote: "connectAddr: \"{{ default .Env.POSTGRES_SEEDS \"\" }}:{{ default .Env.DB_PORT \"5432\" }}\""}
+    - {path: docker/config_template.yaml, line: 115, quote: "enabled: {{ default .Env.SQL_TLS_ENABLED \"false\" }}"}
+migrations:
+  mode: command
+  accept: ["temporal-sql-tool"]
+  evidence:
+    - {path: docker/targets/admin-tools.Dockerfile, line: 23, quote: "./build/${TARGETARCH}/temporal-sql-tool \\"}
+    - {path: docker/targets/admin-tools.Dockerfile, line: 28, quote: "COPY ./build/temporal/schema /etc/temporal/schema"}
+    - {path: docker/targets/server.Dockerfile, line: 14, quote: "temporal-server /usr/local/bin/"}
+redis:
+  status: none
+  evidence:
+    - {path: docker/config_template.yaml, line: 9, quote: "{{- $es := default .Env.ENABLE_ES \"false\" | lower -}}"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: temporal/server.go, line: 35, quote: "DefaultServices = []string{"}
+    - {path: temporal/server.go, line: 39, quote: "string(primitives.WorkerService),"}
+    - {path: docker/scripts/sh/entrypoint.sh, line: 16, quote: "exec temporal-server start"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/config_template.yaml, line: 7, quote: "numHistoryShards: {{ default .Env.NUM_HISTORY_SHARDS \"4\" }}"}
+env:
+  required:
+    - {name: DB, secret: false, buildTime: false, note: "postgres12 (or mysql8); the template default is cassandra, which Deployz cannot provide"}
+    - {name: POSTGRES_SEEDS, secret: false, buildTime: false, note: "DB host; with DB_PORT, DBNAME, POSTGRES_USER"}
+    - {name: POSTGRES_PWD, secret: true, buildTime: false, note: "DB password"}
+    - {name: BIND_ON_IP, secret: false, buildTime: false, note: "entrypoint resolves the container hostname when unset; 0.0.0.0 also sets TEMPORAL_BROADCAST_ADDRESS"}
+  optional: [SQL_TLS_ENABLED, NUM_HISTORY_SHARDS, LOG_LEVEL, FRONTEND_GRPC_PORT, FRONTEND_HTTP_PORT, ENABLE_ES, USE_INTERNAL_FRONTEND, VISIBILITY_DBNAME]
+  buildTime: []
+  evidence:
+    - {path: docker/config_template.yaml, line: 109, quote: "user: \"{{ default .Env.POSTGRES_USER \"\" }}\""}
+    - {path: docker/config_template.yaml, line: 110, quote: "password: \"{{ default .Env.POSTGRES_PWD \"\" }}\""}
+    - {path: docker/scripts/sh/entrypoint.sh, line: 12, quote: ": \"${TEMPORAL_BROADCAST_ADDRESS:=$(getent hosts"}
+blockers:
+  expected:
+    - "No Dockerfile builds the server from the repo archive: docker/targets/server.Dockerfile needs a pre-built ./build/<arch>/temporal-server (CI artefact), and its build context is docker/"
+    - "Main protocol is gRPC (HTTP/2) on 7233; an HTTPS ALB web service with one HTTP/1 health check does not fit (health is the gRPC health service)"
+    - "The server image has no config file and the schema needs temporal-sql-tool (separate admin-tools image), so a one-image deploy cannot create the DB schema"
+  mustNot:
+    - "Cassandra and Elasticsearch support must not block by themselves: PostgreSQL and MySQL are supported stores"
+    - "The four internal services (frontend, history, matching, worker) must not count as four deployable services: they run in one process by default"
+    - "Redis must not be required: Temporal does not use it"
+    - "Temporal UI (temporalio/ui in develop docker-compose) must not be treated as part of the server image"
+vendorQuestions:
+  legitimate:
+    - "How is the server binary built in the deploy: Deployz needs a Dockerfile that compiles it (go build ./cmd/server); the repo only has CI-built-binary Dockerfiles"
+    - "Is the gRPC frontend reachable by workers outside the VPC: Temporal clients use gRPC on 7233 and an ALB path is not a fit"
+  unnecessary:
+    - "Is a worker process needed? (all services run in one process by default)"
+    - "Is Redis needed? (not used)"
+    - "Which DB? (PostgreSQL 12+ or MySQL 8 are supported by the server)"
+traps:
+  - "docker/targets/server.Dockerfile looks like the server Dockerfile but copies pre-built binaries from ./build (docker/targets/server.Dockerfile:14)"
+  - "docker/config_template.yaml defaults DB to cassandra and binds 127.0.0.1 -> set DB and BIND_ON_IP (docker/config_template.yaml:16, docker/config_template.yaml:280)"
+  - "develop/docker-compose/docker-compose.yml lists Cassandra, Elasticsearch, Prometheus, Grafana and the UI -> developer dependencies only, not the production topology (develop/docker-compose/docker-compose.yml:30)"
+  - "HTTP API port 7243 is off unless httpPort is set in the config (common/config/config.go:87)"
+openQuestions:
+  - "Whether a custom Dockerfile with a Go build stage plus a rendered config and a schema step would count as DEPLOYABLE_WITH_CHANGES: the repo does not provide one, and gRPC still has no ALB path"
+crossReview:
+  - {field: healthPath.accept, change: "[/api/v1/system-info] -> [/system-info, /api/v1/system-info]; the HTTP API tests call /system-info with no /api/v1 prefix, and the /api/v1 form is not in the repo sources (generated routes are in a go.temporal.io/api module)", evidence: "tests/http_api_test.go:368 s.httpGet(env, http.StatusOK, \"/system-info\"; tests/http_api_test.go:394-396 request goes to the HTTP API address with the given path"}
+  - {field: outcome, dockerfile, database.selectBy, port, bindAllInterfaces, startCommand, change: "none: checked against server.Dockerfile, entrypoint.sh, config_template.yaml (DB default cassandra, postgres12 branch, httpPort 7243 in template, bindOnIP 127.0.0.1); no other Dockerfile builds the server", evidence: "docker/targets/server.Dockerfile:14; docker/config_template.yaml:16,273,280"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

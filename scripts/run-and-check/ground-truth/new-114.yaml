@@ -1,0 +1,150 @@
+id: new-114
+repository: getlago/lago
+commit: a1f5650effe7703ade6f82758ec43c2c75c9eca9
+summary: >
+  Lago is an open-source usage-based billing platform. This repository is an orchestration repository: the Rails API
+  (api) and the React front end (front) are git submodules, so the repository archive has no application source. The only
+  Dockerfiles that build from the archive are docker/Dockerfile (needs ./api and ./front, which are empty in an archive),
+  connectors/Dockerfile and events-processor/Dockerfile (sidecars). The real deployment is several images from a registry
+  (getlago/api, getlago/front, getlago/lago-gotenberg) plus Postgres and Redis.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The application source (api, front) is in submodules that a repository archive does not contain, so no Dockerfile builds
+    the app from the repository alone. The documented topology also needs two application images (API and front), a PDF
+    image (Gotenberg), a migrate job, a Sidekiq worker and a clock process. The all-in-one docker/Dockerfile would embed
+    Postgres, Redis and nginx in one container, keeps data in a /data volume and starts the PDF container through the Docker
+    socket (optional, skipped when the socket is absent).
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile, reason: "COPY ./front and COPY ./api need the submodule content, which is absent from the repository archive; the image also installs Postgres, Redis, nginx and docker-ce and keeps data in VOLUME /data"}
+    - {path: connectors/Dockerfile, reason: "builds a Redpanda Connect binary for Kafka/SQS/Kinesis ingestion (a sidecar), not the web app; base images come from ghcr.io/getlago"}
+    - {path: events-processor/Dockerfile.dev, reason: "development image of the events processor (air, dlv, git clone at build); a Kafka sidecar, not the web app"}
+    - {path: events-processor/Dockerfile, reason: "Go events processor that needs Kafka; a separate service, not the web app; base images come from ghcr.io/getlago"}
+  target: null
+  context: .
+  evidence:
+    - {path: .gitmodules, line: 1, quote: "[submodule \"api\"]"}
+    - {path: .gitmodules, line: 4, quote: "[submodule \"front\"]"}
+    - {path: docker/Dockerfile, line: 13, quote: "COPY ./front/ ."}
+    - {path: docker/Dockerfile, line: 31, quote: "COPY ./api/Gemfile /app/Gemfile"}
+    - {path: docker/Dockerfile, line: 62, quote: "COPY ./api ./api"}
+    - {path: .github/workflows/release-docker-image.yml, line: 36, quote: "submodules: true"}
+    - {path: docker/runner.sh, line: 59, quote: "WARN: Docker socket is not mounted. Skipping PDF service."}
+    - {path: events-processor/config/kafka/kafka.go, line: 1, quote: "package kafka"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000, 80]
+  evidence:
+    - {path: docker/Procfile, line: 1, quote: "web: bundle exec rails s -b :: -p 3000"}
+    - {path: docker/Dockerfile, line: 66, quote: "EXPOSE 80"}
+    - {path: docker/nginx.conf, line: 2, quote: "listen 80;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/Procfile, line: 1, quote: "rails s -b :: -p 3000"}
+startCommand:
+  source: image
+  accept: ["./runner.sh"]
+  # The all-in-one image ENTRYPOINT starts Redis, Postgres and nginx, runs migrations, then foreman (web, worker, clock).
+  evidence:
+    - {path: docker/Dockerfile, line: 70, quote: "ENTRYPOINT [\"./runner.sh\"]"}
+    - {path: docker/runner.sh, line: 93, quote: "foreman start"}
+healthPath:
+  accept: ["/health"]
+  # Only the compose healthcheck shows the path; the Rails code is in the api submodule and is not readable here.
+  evidence:
+    - {path: docker-compose.yml, line: 157, quote: "test: curl -f http://localhost:3000/health || exit 1"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: docker-compose.yml, line: 21, quote: "\"DATABASE_URL\": postgresql://"}
+    - {path: docker/runner.sh, line: 72, quote: "export DATABASE_URL=postgresql://lago:$POSTGRES_PASSWORD@localhost:5432/lago"}
+    - {path: docker/Dockerfile, line: 53, quote: "postgresql-17-partman"}
+migrations:
+  mode: command
+  accept: ["./scripts/migrate.sh", "bundle exec rake db:migrate"]
+  evidence:
+    - {path: docker-compose.yml, line: 138, quote: "command: [\"./scripts/migrate.sh\"]"}
+    - {path: docker/runner.sh, line: 89, quote: "bundle exec rake db:migrate"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 22, quote: "\"REDIS_URL\": redis://"}
+    - {path: docker/Procfile, line: 2, quote: "worker: bundle exec sidekiq -C config/sidekiq/sidekiq.yml"}
+workers:
+  status: independent
+  commands: ["./scripts/start.worker.sh", "bundle exec sidekiq -C config/sidekiq/sidekiq.yml"]
+  evidence:
+    - {path: docker-compose.yml, line: 217, quote: "command: [\"./scripts/start.worker.sh\"]"}
+    - {path: docker/Procfile, line: 2, quote: "worker: bundle exec sidekiq"}
+scheduledJobs:
+  status: independent
+  items: [clock process]
+  evidence:
+    - {path: docker-compose.yml, line: 357, quote: "command: [\"./scripts/start.clock.sh\"]"}
+    - {path: docker/Procfile, line: 3, quote: "clock: bundle exec clockwork ./clock.rb"}
+storage:
+  local: conditional
+  paths: [/app/storage, /data]
+  s3: native
+  s3SelectBy: {LAGO_USE_AWS_S3: "true"}
+  evidence:
+    - {path: docker-compose.yml, line: 36, quote: "\"LAGO_USE_AWS_S3\": ${LAGO_USE_AWS_S3:-false}"}
+    - {path: docker-compose.yml, line: 37, quote: "\"LAGO_AWS_S3_ACCESS_KEY_ID\": ${LAGO_AWS_S3_ACCESS_KEY_ID:-azerty123456}"}
+    - {path: docker-compose.yml, line: 165, quote: "lago_storage_data:/app/storage"}
+env:
+  required:
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "Rails secret"}
+    - {name: LAGO_RSA_PRIVATE_KEY, secret: true, buildTime: false, note: "base64 RSA key; no default in compose"}
+    - {name: LAGO_ENCRYPTION_PRIMARY_KEY, secret: true, buildTime: false, note: "compose has a placeholder default"}
+    - {name: LAGO_ENCRYPTION_DETERMINISTIC_KEY, secret: true, buildTime: false, note: "compose has a placeholder default"}
+    - {name: LAGO_ENCRYPTION_KEY_DERIVATION_SALT, secret: true, buildTime: false, note: "compose has a placeholder default"}
+    - {name: LAGO_API_URL, secret: false, buildTime: false, note: "public API URL"}
+    - {name: LAGO_FRONT_URL, secret: false, buildTime: false, note: "public front URL"}
+  optional: [LAGO_USE_AWS_S3, LAGO_AWS_S3_BUCKET, LAGO_AWS_S3_REGION, LAGO_SMTP_ADDRESS, LAGO_PDF_URL, LAGO_DISABLE_SIGNUP, LAGO_CREATE_ORG]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yml, line: 28, quote: "\"SECRET_KEY_BASE\": ${SECRET_KEY_BASE:-your-secret-key-base-hex-64}"}
+    - {path: docker-compose.yml, line: 31, quote: "\"LAGO_RSA_PRIVATE_KEY\": ${LAGO_RSA_PRIVATE_KEY}"}
+    - {path: docker-compose.yml, line: 33, quote: "\"LAGO_ENCRYPTION_PRIMARY_KEY\""}
+blockers:
+  expected:
+    - "Application source (api, front) is in git submodules and is absent from the repository archive; no Dockerfile builds the app from the repo alone (.gitmodules:1-6)"
+    - "Documented topology needs two application images (getlago/api and getlago/front) pulled from a registry, plus a Gotenberg PDF image (docker-compose.yml:11-13, 362)"
+    - "The all-in-one docker/Dockerfile embeds Postgres, Redis and nginx, keeps data in VOLUME /data and starts the PDF container through the Docker socket (optional; skipped when the socket is absent)"
+  mustNot:
+    - "Postgres and Redis must not block: both are supported managed services"
+    - "Sidekiq worker and clock must not block by themselves: separate processes from the same image are allowed"
+    - "The events-processor Kafka and ClickHouse pipeline must not be reported as required: it is an optional high-volume path (separate sidecar images)"
+    - "S3 must not be reported as a blocker: only the placeholder static keys in compose are an issue, and local storage is replaceable by S3"
+vendorQuestions:
+  legitimate:
+    - "Where is the buildable Lago source? The repository holds only submodule pointers for api and front"
+    - "Is a PDF service (Gotenberg) needed for invoices? It is a separate image"
+  unnecessary:
+    - "Which port? (3000 for the API, 80 for nginx or front)"
+    - "Is Redis or Postgres needed? (both, compose and runner.sh)"
+    - "Who runs migrations? (./scripts/migrate.sh job in compose, rake db:migrate in runner.sh)"
+traps:
+  - "docker/Dockerfile looks like a production build -> it copies ./api and ./front, which are submodules and empty in the archive (docker/Dockerfile:13, 62)"
+  - "docker-compose.yml looks deployable -> it uses prebuilt getlago/api and getlago/front images, not a build from this repo (docker-compose.yml:11-13)"
+  - "events-processor/Dockerfile and connectors/Dockerfile build from the archive -> they are Kafka-based sidecars, not the web app (events-processor/Dockerfile:79, connectors/Dockerfile:85)"
+  - "all-in-one image runs Postgres and Redis inside the container -> ephemeral and unsupported topology (docker/runner.sh:47-48)"
+  - "LAGO_AWS_S3_ACCESS_KEY_ID defaults to azerty123456 in compose -> a placeholder, not a requirement for static keys (docker-compose.yml:37)"
+openQuestions:
+  - "Whether the Rails API reads S3 credentials from the default AWS chain when the key variables are empty: the code is in the api submodule and is not readable here"
+  - "The /health path is read from the compose healthcheck only; the route code is in the api submodule"
+crossReview:
+  - {field: outcome.reason / blockers.expected, change: "the Docker socket is optional in the all-in-one image (the PDF container is skipped when it is absent), so the text now says optional instead of needs", evidence: "docker/runner.sh:52-60"}
+  - {field: dockerfile.reject, change: "added events-processor/Dockerfile.dev (dev image, git clone at build, Kafka sidecar)", evidence: "events-processor/Dockerfile.dev:1; events-processor/config/kafka/kafka.go:1"}
+  - {field: outcome, change: "none: NOT_DEPLOYABLE confirmed; api and front are gitlinks (mode 160000) with empty directories, and every compose file uses getlago/api and getlago/front registry images", evidence: ".gitmodules:1-6; docker/Dockerfile:13; docker/Dockerfile:62; docker-compose.yml:11-13"}
+  - {field: "health / port / migrations / redis / env", change: "none: compose and runner.sh checked again; the all-in-one image still starts local Postgres and Redis even when DATABASE_URL and REDIS_URL are set", evidence: "docker/runner.sh:47-49"}
+  - {field: all, change: verified, evidence: "32 citations checked"}
