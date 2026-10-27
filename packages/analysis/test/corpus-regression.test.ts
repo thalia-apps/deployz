@@ -666,3 +666,18 @@ describe('a Redis queue that a mode equality test turns on, with no default (Flo
     expect(assessRedis(tree('process.env.MODE !== MODE.MAIN')).required).toBe(true);
   });
 });
+
+describe('a development environment image beside the app images (penpot)', () => {
+  const tree = (devDir: string): FileTree => ({
+    [`docker/${devDir}/Dockerfile`]: 'FROM ubuntu:24.04\nRUN apt-get update && apt-get install -y openjdk-21-jdk nodejs\nCOPY files/init.sh /home/init.sh\nCMD ["/home/init.sh"]\n',
+    'docker/images/Dockerfile.backend': 'FROM eclipse-temurin:21-jre\nCOPY bundle-backend/ /opt/penpot/backend/\nEXPOSE 6060\nCMD ["/bin/bash", "run.sh"]\n',
+  });
+
+  it('ranks the devenv image below the app image', () => {
+    expect(selectedDockerfile(tree('devenv'))?.path).toBe('docker/images/Dockerfile.backend');
+  });
+
+  it('keeps a shallower image in an ordinary directory', () => {
+    expect(selectedDockerfile(tree('runtime'))?.path).toBe('docker/runtime/Dockerfile');
+  });
+});

@@ -1,0 +1,4303 @@
+{
+  "id": "new-9",
+  "commit": "99e6255d386128bb16c2d57ddab33673bcb6a27c",
+  "analyser": "rules@r4-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "backend",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "backend/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"geopulse\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/api/v1/system/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DEMO_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_URL",
+          "kind": "jdbc_url"
+        },
+        {
+          "name": "GEOPULSE_POSTGRES_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CLIENT_MAX_BODY_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_MAX_BODY_SIZE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DEMO_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in demo-integrations/internal/demodata/store.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_ADMIN_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_ADMIN_EMAIL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AI_CHAT_MEMORY_MAX_MESSAGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AI_ENCRYPTION_KEY_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AI_LOGGING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AI_TOOL_RESULT_MAX_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_ACCESS_TOKEN_LIFESPAN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_ADMIN_LOGIN_BYPASS_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_ADMIN_LOGIN_BYPASS_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_GUEST_ROOT_REDIRECT_TO_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_GUEST_ROOT_REDIRECT_TO_LOGIN_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_LOGIN_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_MOBILE_CODE_EXPIRY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_MOBILE_DEEPLINK_CLEANUP_CRON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_MOBILE_DEEPLINK_CLEANUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_MOBILE_DEEPLINK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_OIDC_AUTO_LAUNCH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_OIDC_AUTO_LAUNCH_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_OIDC_LOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_OIDC_LOGIN_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_OIDC_REGISTRATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_PASSWORD_LOGIN_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_PASSWORD_LOGIN_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_PASSWORD_REGISTRATION_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_REGISTRATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_SECURE_COOKIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_AUTH_SECURE_COOKIES",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_SESSION_ABSOLUTE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_SESSION_CLEANUP_RETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_SESSION_IDLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AUTH_SIGN_UP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_AVATAR_MAX_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_BACKEND_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_BACKUP_BINARY_DIRECTORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BACKUP_MAINTENANCE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_BACKUP_MAINTENANCE_DATABASE",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BACKUP_RESTORE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BACKUP_RESTORE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BACKUP_WORK_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_BACKUP_WORK_PATH",
+            "sample value is a path",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BADGES_CALCULATION_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BADGES_CALCULATION_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BOAT_WATER_EVIDENCE_MAINTENANCE_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_BOAT_WATER_EVIDENCE_MAINTENANCE_MAX_USERS_PER_RUN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_COOKIE_DOMAIN",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_CORS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_CORS_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_CORS_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_CORS_ORIGINS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_COVERAGE_PROCESSING_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_DATABASE_TRANSACTION_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_DATABASE_TRANSACTION_TIMEOUT_MINUTES",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_DEMO_ADMIN_READ_ONLY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_DEMO_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_CONCURRENT_JOBS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_JOB_EXPIRY_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_MAX_JOBS_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_SCHEDULER_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_TEMP_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_TEMP_FILE_RETENTION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_EXPORT_TRIP_POINT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_FIRST_USER_ADMIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CACHE_MAX_BBOX_AREA_KM2",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_GEOCODING_CACHE_MAX_BBOX_AREA_KM2",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CB_DELAY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CB_FAILURE_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CB_REQUEST_VOLUME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CB_SUCCESS_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CHIBIGEO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CHIBIGEO_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CHIBIGEO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CHIBIGEO_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_CHIBIGEO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_GEOCODING_DELAY_MS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_FALLBACK_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GEOAPIFY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GEOAPIFY_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GEOAPIFY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GEOAPIFY_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GOOGLE_MAPS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GOOGLE_MAPS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_GOOGLE_MAPS_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_MAPBOX_ACCESS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_MAPBOX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_NOMINATIM_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_NOMINATIM_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_NOMINATIM_PUBLIC_HOST_FORWARD_SEARCH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_NOMINATIM_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_PHOTON_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_PHOTON_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_PHOTON_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_PRIMARY_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RECONCILE_CIRCUIT_OPEN_WAIT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RECONCILE_INTER_ITEM_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RECONCILE_ITEM_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RETRY_DELAY_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RETRY_JITTER_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEOCODING_RETRY_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_FORCE_REFRESH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_MIN_ROW_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_COUNTRY_IMPORT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_FORCE_REFRESH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_MIN_ROW_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GEONAMES_IMPORT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_DUPLICATE_DETECTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_DUPLICATE_DETECTION_LOCATION_TIME_THRESHOLD_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_GPS_DUPLICATE_DETECTION_LOCATION_TIME_THRESHOLD_MINUTES",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_DUPLICATE_DETECTION_THRESHOLD_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_FILTER_INACCURATE_DATA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_FILTER_NEGATIVE_ACCURACY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_MAX_ALLOWED_ACCURACY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_GPS_MAX_ALLOWED_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_HTTP_ACCESS_LOG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_HTTP_ACCESS_LOG_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMMICH_GEONAMES_NORMALIZATION_MAX_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMMICH_PHOTO_SEARCH_CACHE_MAX_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMMICH_PHOTO_SEARCH_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMMICH_PHOTO_SEARCH_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_BULK_INSERT_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_CHUNKS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_CHUNK_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_DROP_FOLDER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_DROP_FOLDER_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_DROP_FOLDER_GEOPULSE_MAX_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_DROP_FOLDER_GEOPULSE_MAX_SIZE_MB",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_DROP_FOLDER_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_DROP_FOLDER_PATH",
+            "sample value is a path",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_DROP_FOLDER_POLL_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_DROP_FOLDER_POLL_INTERVAL_SECONDS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_DROP_FOLDER_STABLE_AGE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_DROP_FOLDER_STABLE_AGE_SECONDS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_GEOJSON_STREAMING_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_GOOGLETIMELINE_STREAMING_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_LARGE_FILE_THRESHOLD_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_MAX_FILE_SIZE_GB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_MERGE_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_TEMP_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_TEMP_FILE_RETENTION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_TRANSACTION_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_IMPORT_TRANSACTION_TIMEOUT_MINUTES",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_UPLOAD_CLEANUP_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_IMPORT_UPLOAD_TIMEOUT_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_INVITATION_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_LOG_JSON_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_LOG_JSON_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_MEMOS_NOTES_SEARCH_CACHE_MAX_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MEMOS_NOTES_SEARCH_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_BROKER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_BROKER_HOST",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_BROKER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_BROKER_PORT",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_PASSWORD",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_INSECURE_SKIP_HOSTNAME_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_INSECURE_SKIP_HOSTNAME_VERIFICATION",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_KEYSTORE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_KEYSTORE_PASSWORD",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_KEYSTORE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_KEYSTORE_PATH",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_KEYSTORE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_KEYSTORE_TYPE",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_PROTOCOL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_TRUSTSTORE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_TRUSTSTORE_PASSWORD",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_TRUSTSTORE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_TRUSTSTORE_PATH",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_TLS_TRUSTSTORE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_TLS_TRUSTSTORE_TYPE",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_USERNAME",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_MQTT_VERBOSE_LOGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_MQTT_VERBOSE_LOGGING"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_NOTIFICATIONS_APPRISE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_NOTIFICATIONS_APPRISE_API_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_NOTIFICATIONS_APPRISE_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_NOTIFICATIONS_APPRISE_AUTH_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_NOTIFICATIONS_APPRISE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_NOTIFICATIONS_APPRISE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_NOTIFICATIONS_APPRISE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_NOTIFICATIONS_APPRISE_TIMEOUT_MS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_NOTIFICATIONS_APPRISE_VERIFY_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_NOTIFICATIONS_APPRISE_VERIFY_TLS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_AUTO_LINK_ACCOUNTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OIDC_CALLBACK_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_CALLBACK_BASE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OIDC_CLEANUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OIDC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OIDC_JWKS_CACHE_TTL_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GENERIC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GENERIC_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GENERIC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GENERIC_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GENERIC_DISCOVERY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GENERIC_DISCOVERY_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GENERIC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GENERIC_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GENERIC_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GENERIC_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GOOGLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GOOGLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GOOGLE_DISCOVERY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GOOGLE_DISCOVERY_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_PROVIDER_GOOGLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_OIDC_PROVIDER_GOOGLE_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_OIDC_RP_LOGOUT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_OWNTRACKS_PING_TIMESTAMP_OVERRIDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_ATTRIBUTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_ATTRIBUTION_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_CACHE_TTL_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_CACHE_TTL_DAYS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_COMMONS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_COMMONS_ENDPOINT",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_IMAGE_CACHE_TTL_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_IMAGE_CACHE_TTL_DAYS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_LANGUAGE",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_MAX_RESULTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_MAX_RESULTS",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_THUMB_WIDTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_THUMB_WIDTH",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_USER_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_USER_AGENT",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POI_WIKIDATA_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POI_WIKIDATA_ENDPOINT",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POSTGRES_DB"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POSTGRES_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_POSTGRES_PASSWORD",
+            "read in backend/src/main/resources/application.properties",
+            "read in demo-integrations/internal/demodata/store.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POSTGRES_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_POSTGRES_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_POSTGRES_USERNAME",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_FAVORITES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_GEOCODING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_GPS_POINTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_MEMORY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_REFRESH_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_TIMELINE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_USER_METRICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROMETHEUS_WORKLOAD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PROXY_ADDRESS_FORWARDING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_PUBLIC_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_PUBLIC_BASE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_SHARE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_SHARE_BASE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BICYCLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BICYCLE_MAX_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BICYCLE_MAX_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BICYCLE_MIN_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BOAT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BOAT_MAX_PLAUSIBLE_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BOAT_MIN_CONTINUOUS_WATER_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BOAT_MIN_WATER_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_BOAT_MIN_WATER_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_CAR_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_CAR_MIN_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_CAR_MIN_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_MIN_DURATION_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_ADJACENT_TOLERANCE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_LOCATION_MATCH_MAX_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_MATCHING_MAX_BOUNDARY_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_MATCHING_MAX_DURATION_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_MATCHING_MAX_TIMESTAMP_DELTA_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_STAY_OVERRIDE_MATCHING_MIN_DURATION_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_DATA_GAP_THRESHOLD_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_FLIGHT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_FLIGHT_MIN_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_FLIGHT_MIN_DISTANCE_KM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_FLIGHT_MIN_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_IN_TRIP_LOCAL_EXCURSION_MAX_DURATION_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_IN_TRIP_LOCAL_EXCURSION_RADIUS_MULTIPLIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_MAX_GAP_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_SPARSE_IN_TRIP_MAX_BOUNDARY_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_SPARSE_IN_TRIP_MAX_IMPLIED_SPEED_KMH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_SPARSE_IN_TRIP_MIN_BOUNDARY_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_SPARSE_IN_TRIP_MIN_GAP_DURATION_FLOOR_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_STATIONARY_BOUNDARY_IN_TRIP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_STATIONARY_BOUNDARY_IN_TRIP_MAX_BOUNDARY_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_STATIONARY_BOUNDARY_IN_TRIP_MAX_IMPLIED_SPEED_KMH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_STAY_INFERENCE_STATIONARY_BOUNDARY_IN_TRIP_MIN_GAP_DURATION_FLOOR_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_TRIP_INFERENCE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_TRIP_INFERENCE_MAX_GAP_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_TRIP_INFERENCE_MIN_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_GAP_TRIP_INFERENCE_MIN_GAP_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_JOB_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_JOB_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_AUTOMATIC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_TIMELINE_MAP_MATCHING_AUTOMATIC_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_AUTOMATIC_QUIET_PERIOD_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_BACKFILL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_TIMELINE_MAP_MATCHING_BACKFILL_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_CACHE_CLEANUP_CRON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_TIMELINE_MAP_MATCHING_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_MAX_INPUT_POINTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_MAX_TRIP_DURATION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_TIMELINE_MAP_MATCHING_PROVIDER",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_QUALITY_MAX_DISCONTINUITY_PERCENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_QUALITY_MAX_SHORT_DISCONTINUITY_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_QUALITY_MIN_DISTANCE_COVERAGE_PERCENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_QUALITY_MIN_RAW_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_VALHALLA_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_TIMELINE_MAP_MATCHING_VALHALLA_BASE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_WORKER_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MAP_MATCHING_WORKER_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_MOTORCYCLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PATH_SIMPLIFICATION_ADAPTIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PATH_SIMPLIFICATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PATH_SIMPLIFICATION_MAX_POINTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PATH_SIMPLIFICATION_TOLERANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PREFERRED_MOTORIZED_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PROCESSING_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_PUBLIC_TRANSPORTATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_REGENERATION_CAMPAIGN_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_REGENERATION_CAMPAIGN_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_REGENERATION_CAMPAIGN_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_REGENERATION_CAMPAIGN_MAX_CONCURRENT_TASKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_RUNNING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_RUNNING_MAX_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_RUNNING_MAX_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_RUNNING_MIN_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_SAFETY_NET_CRON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_SAFETY_NET_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_SAFETY_NET_WINDOW_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_SHORT_DISTANCE_KM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_ACCURACY_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_MERGE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_MERGE_MAX_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_MERGE_MAX_TIME_GAP_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_MIN_ACCURACY_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_MIN_DURATION_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_RADIUS_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_USE_VELOCITY_ACCURACY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_STAYPOINT_VELOCITY_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_MAX_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_MAX_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_MAX_SPEED_VARIANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_MIN_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRAIN_MIN_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_ARRIVAL_MIN_DURATION_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_ARRIVAL_MIN_POINTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_DETECTION_ALGORITHM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MAX_DISTANCE_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MAX_DURATION_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MAX_POINT_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MAX_TIMESTAMP_DELTA_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MIN_DISTANCE_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_MOVEMENT_OVERRIDE_MIN_DURATION_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_TRIP_SUSTAINED_STOP_MIN_DURATION_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_VIEW_ITEM_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_WALKING_MAX_AVG_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMELINE_WALKING_MAX_MAX_SPEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMEZONE_LOCATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TIMEZONE_LOCATION_MAX_DISTANCE_KM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_SUMMARY_PLACES_PAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_SUMMARY_PLACES_PAGE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_VISIT_MATCHING_AUTO_APPLY_ON_REGENERATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_VISIT_MATCHING_AUTO_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_VISIT_MATCHING_EXACT_NAME_BOOST_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_VISIT_MATCHING_MAX_DISTANCE_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRIP_VISIT_MATCHING_SUGGEST_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_UI_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_UI_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_USER_DEFAULT_DISTANCE_UNIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_USER_DEFAULT_MEASURE_UNIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_USER_DEFAULT_MEASURE_UNIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_USER_DEFAULT_TEMPERATURE_UNIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_VERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GEOPULSE_VERSION_CHECK_CACHE_TTL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_VERSION_CHECK_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_VERSION_CHECK_GITHUB_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_VERSION_CHECK_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_VERSION_CHECK_RELEASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WARMUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WARMUP_MAX_ITEMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WARMUP_SAMPLE_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_AUTO_IMPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_DOWNLOAD_STALL_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_DOWNLOAD_TIMEOUT_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_LOCAL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_SETUP_START_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_SHA256",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WATER_DATASET_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_BACKFILL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_BACKFILL_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_COORDINATE_PRECISION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_COORDINATE_PRECISION",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_FAILED_TARGET_RETRY_COOLDOWN_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_FAILED_TARGET_RETRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_ONGOING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_ONGOING_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_ONGOING_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_ONGOING_INTERVAL_MINUTES",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_OPEN_METEO_API_KEY",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_ARCHIVE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_OPEN_METEO_ARCHIVE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_OPEN_METEO_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_FORECAST_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_OPEN_METEO_FORECAST_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_OPEN_METEO_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_PIRATE_API_KEY",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_PIRATE_BASE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_CONNECT_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_PIRATE_ENABLED",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_READ_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PIRATE_TIME_MACHINE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_PIRATE_TIME_MACHINE_URL",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_PRIMARY_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_PRIMARY_PROVIDER",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_QUOTA_DAILY_REQUEST_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_QUOTA_DAILY_REQUEST_LIMIT",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_QUOTA_ONGOING_RESERVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_QUOTA_ONGOING_RESERVE",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_SECONDARY_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GEOPULSE_WEATHER_SECONDARY_PROVIDER",
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_TARGETS_COMPLETED_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_TARGETS_FAILED_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_TARGETS_IN_PROGRESS_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEOPULSE_WEATHER_TARGET_CLEANUP_JOB_CRON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in demo-integrations/cmd/fake-immich/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OSM_RESOLVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OSM_RESOLVER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "helm/geopulse/Chart.yaml"
+    ],
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 2 application services (geopulse-backend, geopulse-ui). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (geopulse-backend, geopulse-ui). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (helm/geopulse/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

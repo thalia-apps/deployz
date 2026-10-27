@@ -1,0 +1,291 @@
+{
+  "id": "new-70",
+  "commit": "014f1ca99ea6adbac697b0bc458cd2de81013949",
+  "analyser": "ai@r4-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "PHOTOPRISM_TEST_DSN",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: the default was not found — set a PostgreSQL value to use the managed PostgreSQL database",
+            "read in internal/config/flags.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DOCKER_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTPS_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config_proxy.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_LIBRARY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config_storage.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTOPRISM_ASSETS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/test.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTOPRISM_DATABASE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"mysql\" is not the managed PostgreSQL engine — set a PostgreSQL value to use the managed PostgreSQL database",
+            "read in internal/config/report_sections.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PHOTOPRISM_STORAGE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/test.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTOPRISM_TEST_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/test.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTOPRISM_TEST_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/test.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported cloud: a Google Cloud deployment file is present (docker/tensorflow/cross/Dockerfile). Deployz deploys to AWS."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported cloud: a Google Cloud deployment file is present (docker/tensorflow/cross/Dockerfile). Deployz deploys to AWS."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DATABASE_DRIVER, PHOTOPRISM_DATABASE_DRIVER. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.08681508,
+        "promptTokens": 17563,
+        "completionTokens": 872
+      },
+      "latencyMs": 12990
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "/health",
+        "answer": "value",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "ai"
+      },
+      {
+        "id": "q4",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 12994,
+    "questions": 4,
+    "generatedAt": "2026-10-27T11:56:39.365Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
