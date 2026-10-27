@@ -760,11 +760,11 @@ function isUnusableDockerfile(path: string, content: string): boolean {
   if (DEV_DOCKERFILE_DIR_REGEX.test(path) && !startsSomething) return true;
   const copiesApp = lines.some((line) => /^\s*(?:COPY|ADD)\b/i.test(line));
   const installsSystemPackages = lines.some((line) => /^\s*RUN\b.*\b(?:apt-get|apt|apk|yum|dnf|microdnf)\b/i.test(line));
-  // An image that copies nothing in and starts a script by a relative path runs a bind-mounted checkout (`CMD ["sh", "./bin/docker-start"]`).
+  // A dev container installs tools, copies nothing in and starts a script by a relative path:
+  // it runs a bind-mounted checkout (actual `CMD ["sh", "./bin/docker-start"]`).
   const startsMountedScript = lines.some((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line) && /(?:^|[\s"'[,])\.\/[\w.-]/.test(line));
   const fetchesSource = lines.some((line) => /^\s*RUN\b.*\b(?:git\s+clone|curl|wget)\b/i.test(line));
-  if (startsMountedScript && !copiesApp && !fetchesSource) return true;
-  return installsSystemPackages && !startsSomething && !copiesApp;
+  return installsSystemPackages && !copiesApp && (!startsSomething || (startsMountedScript && !fetchesSource));
 }
 
 function dockerfileStartsSomething(content: string): boolean {
@@ -1895,10 +1895,15 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
   // priority the longer path wins — when a repo both registers `/health`
   // directly and mounts a health router under `/api`, the longer mounted
   // path is the one the app actually serves at that URL.
+  // One file that registers both `/health` and `/api/health` keeps the bare route: the
+  // prefixed one sits in the API group, often behind its auth (listmonk).
+  const prefixedInSameFile = (longer: HealthCandidate, shorter: HealthCandidate): boolean =>
+    longer.file !== undefined && longer.label === shorter.label && longer.path.endsWith(shorter.path);
   const best = confident.reduce((winner, candidate) => {
     if (candidate.priority < winner.priority) return candidate;
-    if (candidate.priority === winner.priority && candidate.path.length > winner.path.length) return candidate;
-    return winner;
+    if (candidate.priority !== winner.priority) return winner;
+    if (candidate.path.length > winner.path.length) return prefixedInSameFile(candidate, winner) ? winner : candidate;
+    return prefixedInSameFile(winner, candidate) ? candidate : winner;
   });
   const sources = confident.map((candidate) => candidate.label);
 

@@ -52,7 +52,7 @@ healthPath:
     - {path: docker/smoke-test.sh, line: 18, quote: "HEALTH_URL=\"http://127.0.0.1:${PORT}/health\""}
     - {path: docker/smoke-test.sh, line: 43, quote: "until curl -fs -o /dev/null --max-time 5 \"$HEALTH_URL\"; do"}
     - {path: helm/agent-canvas/values.yaml, line: 203, quote: "path: /alive"}
-    - {path: scripts/static-server.mjs, line: 580, quote: "res.writeHead(308, { Location: location });"}
+    - {path: scripts/static-server.mjs, line: 581, quote: "res.writeHead(308, { Location: location });"}
 database:
   status: optional
   engines: [sqlite, postgres]
@@ -62,7 +62,7 @@ database:
   connectionVars: [AUTOMATION_DB_URL]
   # Only the automation backend uses this DB. The agent-server keeps conversations and settings as files.
   evidence:
-    - {path: docker/entrypoint.sh, line: 503, quote: "# Default to SQLite so the automation server works out of the box without"}
+    - {path: docker/entrypoint.sh, line: 504, quote: "# Default to SQLite so the automation server works out of the box without"}
     - {path: docker/entrypoint.sh, line: 510, quote: "export AUTOMATION_DB_URL=\"sqlite+aiosqlite:///${AUTOMATION_DB_FILE}\""}
     - {path: helm/agent-canvas/values.yaml, line: 139, quote: "# automationDbUrl: \"postgresql+asyncpg://user:pass@host/db\""}
 migrations:
@@ -140,9 +140,15 @@ traps:
   - "Task hint of Docker socket / sandbox containers -> only with OH_CONVERSATION_RUNTIME=docker (README.md:116); the all-in-one image does not set it"
   - "docs/SELF_HOSTING.md mentions a static server on :3001 and ingress on 127.0.0.1:8000 for the npx install; the Docker image serves everything on :8000 (docker/entrypoint.sh:84)"
   - "FILE_STORE looks like an S3 switch -> it only covers automation tarballs and defaults to local (docker/entrypoint.sh:491); it does not move conversations or settings"
-  - "/ redirects 308 to /canvas/ -> use /health (scripts/static-server.mjs:580)"
+  - "/ redirects 308 to /canvas/ -> use /health (scripts/static-server.mjs:581)"
   - "config/defaults.json holds image and version pins that the Dockerfile reads only through build args (scripts/docker-build.mjs:52)"
   - "docker/Dockerfile VOLUME lines are not a durable store on Fargate (docker/Dockerfile:200)"
 openQuestions:
   - "Whether the automation backend runs its own DB migrations at start is not visible in this repo (code is in the openhands-automation pip package)"
   - "Whether agent-server /health needs no session key is shown only by the vendor smoke test, not by agent-server code in this repo"
+crossReview:
+  - {field: evidence line numbers, change: "scripts/static-server.mjs 580->581 (and trap ref), docker/entrypoint.sh 503->504", evidence: "scripts/static-server.mjs:581; docker/entrypoint.sh:504"}
+  - {field: dockerfile.accept, change: "none: AGENT_SERVER_IMAGE has no default, so FROM ${AGENT_SERVER_IMAGE} is empty without a build arg; all COPY sources (scripts/*.mjs, tools/, config/defaults.json, docker/entrypoint.sh) exist in git, so the file builds once the three args are given", evidence: "docker/Dockerfile:23-25,74; Dockerfile comment lines 18-21 say no hardcoded defaults"}
+  - {field: storage / blockers (Docker socket), change: "none: no docker.sock mount or OH_CONVERSATION_RUNTIME default in docker/ or helm/; docker runtime appears only in README as an opt-in", evidence: "README.md:116; git grep of docker.sock in docker/, helm/ finds nothing"}
+  - {field: healthPath, change: "none: /health, /alive and /ready are static-server proxy routes to the agent-server, and the Helm probes use /alive; bare / redirects 308", evidence: "docker/entrypoint.sh:597-600; helm/agent-canvas/values.yaml:203; scripts/static-server.mjs:581"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

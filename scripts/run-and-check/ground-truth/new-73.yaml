@@ -37,9 +37,11 @@ bindAllInterfaces:
   evidence:
     - {path: odoo/tools/config.py, line: 289, quote: "my_default='127.0.0.1'"}
     - {path: odoo/tools/config.py, line: 770, quote: "self._runtime_options['http_interface'] = '127.0.0.1'"}
+    - {path: odoo/tools/config.py, line: 136, quote: "self.env_name = 'ODOO_' + self.dest.upper()"}
 startCommand:
   source: explicit
   accept: ["odoo-bin", "--http-interface=0.0.0.0", "--proxy-mode"]
+  # The bind address and proxy mode can also be set with the generated env names ODOO_HTTP_INTERFACE and ODOO_PROXY_MODE.
 healthPath:
   accept: ["/web/health"]
   # auth='none', no session, returns {"status": "pass"} with 200 and no redirect. Without ?db_server_status it does not touch the DB.
@@ -103,7 +105,7 @@ env:
     - {name: PGUSER, secret: false, buildTime: false, note: "database user"}
     - {name: PGPASSWORD, secret: true, buildTime: false, note: "database password"}
     - {name: PGDATABASE, secret: false, buildTime: false, note: "database name (db_name); needed so the DB can be initialised with -i base"}
-  optional: [PGPORT, PGSSLMODE, ODOO_RC]
+  optional: [PGPORT, PGSSLMODE, ODOO_RC, ODOO_HTTP_INTERFACE, ODOO_PROXY_MODE]
   buildTime: []
   evidence:
     - {path: odoo/tools/config.py, line: 230, quote: "dest='admin_passwd', my_default='admin'"}
@@ -135,3 +137,8 @@ traps:
   - "admin_passwd is only a config-file option (FileOnlyOption), not an env variable or CLI flag (odoo/tools/config.py:230)"
 openQuestions:
   - "Whether the Postgres user can create extensions: not verified; with a pre-created RDS database and -i base the database manager is not needed"
+crossReview:
+  - {field: startCommand / bindAllInterfaces, change: "kept value false (default 127.0.0.1) and source explicit; added a note and evidence that every file-loadable option has an auto env name ODOO_<DEST>, so ODOO_HTTP_INTERFACE=0.0.0.0 and ODOO_PROXY_MODE work without CLI flags; added both to env.optional", evidence: "odoo/tools/config.py:134-136, 666-670"}
+  - {field: dockerfile.accept, change: "none: only four setup/docker/package.df* files exist in git (git ls-files), none is a production image; odoo-bin, requirements.txt and setup.py exist, so a Dockerfile can be added", evidence: "git ls-files"}
+  - {field: migrations, change: "none: -i/-u are file_loadable=False so they have no env name and need a command; confirmed", evidence: "odoo/tools/config.py:250-253"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

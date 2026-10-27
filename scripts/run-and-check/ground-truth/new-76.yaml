@@ -164,3 +164,7 @@ traps:
 openQuestions:
   - "Whether Deployz allows a Dockerfile that downloads a release artefact with curl during the build; the outcome depends on this"
   - "Whether a plain source build (go build of server/cmd/mattermost plus webapp build) works without the enterprise repository; enterprise code is a separate private module"
+crossReview:
+  - {field: dockerfile / outcome, change: "none: server/build/Dockerfile only curls a release tarball (MM_PACKAGE) and all its COPY sources exist in git (server/build/passwd), so context server/build would build; accept [] and the two-way outcome kept as a judgement call. No private enterprise module is in the repo, so a source build is also doubtful", evidence: "server/build/Dockerfile:31, 72; git ls-files server/build/passwd"}
+  - {field: healthPath, change: "none: /api/v4/system/ping is a plain APIHandler GET that returns the status JSON and checks the DB and file store only with get_server_status=true; no redirect", evidence: "server/channels/api4/system.go:43, 146-172"}
+  - {field: all, change: verified, evidence: "37 citations checked"}

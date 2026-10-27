@@ -15,8 +15,8 @@ outcome:
     The product needs at least two application images built from this repo (api/Dockerfile and web/Dockerfile, a
     separate Next.js server) and two more images that are not built from this repo (plugin_daemon, which serves
     model providers and tools as plugins and is reached through nginx path routing, and sandbox for code nodes). It
-    also needs a vector database service by default (weaviate; pgvector is an option, but it is a second PostgreSQL
-    with the vector extension). Deployz supports one application image. The api image alone on Postgres, Redis and
+    also needs a vector store: weaviate is the default (a separate service); VECTOR_STORE=pgvector with PGVECTOR_*
+    set to the managed PostgreSQL avoids it. Deployz supports one application image. The api image alone on Postgres, Redis and
     S3 would give an API without the web UI and without plugins.
 dockerfile:
   accept: [api/Dockerfile, web/Dockerfile]
@@ -124,26 +124,29 @@ env:
     - {name: "DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD / DB_DATABASE", secret: false, buildTime: false, note: "PostgreSQL connection; the password is secret"}
     - {name: "REDIS_HOST / REDIS_PORT / REDIS_PASSWORD", secret: false, buildTime: false, note: "Redis for cache and the Celery broker (CELERY_BROKER_URL)"}
     - {name: STORAGE_TYPE, secret: false, buildTime: false, note: "s3 with S3_BUCKET_NAME, S3_REGION and S3_USE_AWS_MANAGED_IAM=true for the task role; default opendal fs is ephemeral"}
+    - {name: MIGRATION_ENABLED, secret: false, buildTime: false, note: "set true on the web (api) service only; the entrypoint runs flask upgrade-db only when it equals true, and the image sets no default"}
     - {name: "CONSOLE_API_URL / CONSOLE_WEB_URL / SERVICE_API_URL / APP_WEB_URL", secret: false, buildTime: false, note: "public URLs; image defaults point to 127.0.0.1"}
     - {name: "PLUGIN_DAEMON_URL / PLUGIN_DAEMON_KEY / INNER_API_KEY_FOR_PLUGIN", secret: true, buildTime: false, note: "needs a separate plugin daemon service"}
     - {name: "CODE_EXECUTION_ENDPOINT / CODE_EXECUTION_API_KEY", secret: true, buildTime: false, note: "needs a separate sandbox service for code nodes"}
-    - {name: VECTOR_STORE, secret: false, buildTime: false, note: "weaviate by default; needs a vector database service (pgvector uses its own PostgreSQL with the vector extension)"}
-  optional: [MIGRATION_ENABLED, MODE, SERVER_WORKER_AMOUNT, GUNICORN_TIMEOUT, CELERY_WORKER_AMOUNT, CELERY_AUTO_SCALE, DEBUG, LOG_LEVEL, DB_TYPE, DB_SSL_MODE]
+    - {name: VECTOR_STORE, secret: false, buildTime: false, note: "weaviate by default (separate service); set pgvector with PGVECTOR_HOST/PORT/USER/PASSWORD/DATABASE for the managed PostgreSQL (the code runs CREATE EXTENSION vector)"}
+  optional: [MODE, SERVER_WORKER_AMOUNT, GUNICORN_TIMEOUT, CELERY_WORKER_AMOUNT, CELERY_AUTO_SCALE, DEBUG, LOG_LEVEL, DB_TYPE, DB_SSL_MODE]
   buildTime: []
   evidence:
     - {path: docker/.env.example, line: 33, quote: "SECRET_KEY="}
     - {path: docker/.env.example, line: 229, quote: "PLUGIN_DAEMON_URL=http://plugin_daemon:5002"}
     - {path: docker/.env.example, line: 188, quote: "CODE_EXECUTION_ENDPOINT=http://sandbox:8194"}
     - {path: docker/.env.example, line: 166, quote: "VECTOR_STORE=weaviate"}
+    - {path: docker/envs/core-services/shared.env.example, line: 532, quote: "PGVECTOR_HOST=pgvector"}
+    - {path: api/providers/vdb/vdb-pgvector/src/dify_vdb_pgvector/pgvector.py, line: 270, quote: "cur.execute(\"CREATE EXTENSION vector\")"}
     - {path: api/Dockerfile, line: 40, quote: "ENV CONSOLE_API_URL=http://127.0.0.1:5001"}
 blockers:
   expected:
     - "Second application image: web/Dockerfile builds a separate Next.js server for the UI; Deployz runs one application image per deployment (docker/docker-compose.yaml:469)"
     - "Plugin daemon service (langgenius/dify-plugin-daemon, not built from this repo) is needed for model providers and tools; nginx routes /e/ to it (docker/docker-compose.yaml:656, docker/nginx/conf.d/default.conf.template:53)"
     - "Sandbox service (langgenius/dify-sandbox, not built from this repo) for code execution (docker/docker-compose.yaml:592)"
-    - "Vector database as a separate service (weaviate by default) (docker/docker-compose.yaml:985)"
     - "Path-based routing between api, web and plugin daemon needs nginx or equivalent in front (docker/nginx/conf.d/default.conf.template:8-62)"
   mustNot:
+    - "The vector database must not be a deciding blocker: the weaviate default is a separate service, but VECTOR_STORE=pgvector can use the managed PostgreSQL (docker/envs/core-services/shared.env.example:532)"
     - "Postgres, Redis and Celery workers must not be the blockers: they are supported (managed Postgres and Redis; worker and beat from the same api image with MODE)"
     - "STORAGE_TYPE s3 must not block: S3_USE_AWS_MANAGED_IAM allows the task role"
     - "Migrations must not block: MIGRATION_ENABLED=true runs flask upgrade-db in the entrypoint"
@@ -165,3 +168,8 @@ traps:
   - "DEBUG=true switches to python -m app instead of gunicorn (api/docker/entrypoint.sh:155)"
 openQuestions:
   - "Whether a reduced deploy (api + worker only) is useful without the web image: the vendor does not document it"
+crossReview:
+  - {field: outcome.reason / blockers.expected / blockers.mustNot / env VECTOR_STORE, change: "vector database is no longer a deciding blocker: weaviate is the default separate service, but VECTOR_STORE=pgvector reads its own PGVECTOR_* settings and runs CREATE EXTENSION vector, so it can point at the managed PostgreSQL. Removed the weaviate item from blockers.expected, added a mustNot item, added 2 evidence items. Outcome stays NOT_DEPLOYABLE (web image, plugin daemon, sandbox)", evidence: "docker/envs/core-services/shared.env.example:532; api/providers/vdb/vdb-pgvector/src/dify_vdb_pgvector/pgvector.py:270"}
+  - {field: env.required MIGRATION_ENABLED, change: "moved from optional to required: the entrypoint migrates only when MIGRATION_ENABLED equals true and neither the image nor the config sets it, so a bare api container starts with an empty schema", evidence: "api/docker/entrypoint.sh:11; docker/.env.example:38"}
+  - {field: dockerfile / port / startCommand / healthPath / workers, change: "none: api/Dockerfile and web/Dockerfile both end in a stage named production, COPY sources exist, context . is needed (COPY api, dify-agent), /health returns 200 JSON without auth, worker and beat use the same image by MODE", evidence: "api/Dockerfile:28-31,36,120; web/Dockerfile:50; api/extensions/ext_app_metrics.py:20-26"}
+  - {field: all, change: verified, evidence: "49 citations checked"}

@@ -24,6 +24,7 @@ dockerfile:
   context: .
   evidence:
     - {path: Dockerfile, line: 152, quote: "FROM scratch"}
+    - {path: Dockerfile, line: 371, quote: "ENTRYPOINT [\"/bin/node\"]"}
     - {path: Dockerfile, line: 373, quote: "CMD [\"/app/startServer.js\"]"}
     - {path: Dockerfile, line: 99, quote: "RUN npm run build:docker"}
 runtime: {accept: [node]}
@@ -38,7 +39,8 @@ bindAllInterfaces:
     - {path: Dockerfile, line: 168, quote: "ENV HOSTNAME=\"0.0.0.0\""}
 startCommand:
   source: image
-  accept: ["/bin/node /app/startServer.js"]
+  accept: ["/app/startServer.js", "/bin/node"]
+  # The image has ENTRYPOINT ["/bin/node"] and CMD ["/app/startServer.js"] on separate lines (Dockerfile:371, :373).
 healthPath:
   accept: ["/api/version"]
   # /api/version is a public route and the proxy matcher skips /api, so it is not redirected to /signin and returns JSON 200
@@ -58,7 +60,7 @@ database:
     - {path: Dockerfile, line: 181, quote: "DATABASE_DRIVER=\"node\""}
     - {path: packages/database/src/core/web-server.ts, line: 25, quote: "const connectionString = serverDBEnv.DATABASE_URL;"}
     - {path: packages/database/migrations/0005_pgvector.sql, line: 2, quote: "CREATE EXTENSION IF NOT EXISTS vector;"}
-    - {path: scripts/migrateServerDB/pgSearchGuard.js, line: 69, quote: "const DEFAULT_FTS_SEARCH_PROVIDER = 'pg_search';"}
+    - {path: scripts/migrateServerDB/pgSearchGuard.js, line: 13, quote: "const DEFAULT_FTS_SEARCH_PROVIDER = 'pg_search';"}
     - {path: scripts/migrateServerDB/pgSearchGuard.js, line: 5, quote: "not provide `pg_search` (Aiven, RDS, Neon)"}
     - {path: packages/env/src/ftsSearch.ts, line: 36, quote: "['elasticsearch', 'pg_search', 'pg_like']"}
 migrations:
@@ -132,7 +134,7 @@ vendorQuestions:
     - "Is a worker or scheduler needed? (none in the web image; QStash is optional)"
 traps:
   - "docker-compose/deploy lists paradedb, redis, rustfs, elasticsearch, searxng and a lobehub-gateway image -> self-host stack, only Postgres is needed (docker-compose/deploy/docker-compose.yml:58-74)"
-  - "Default FTS provider pg_search needs the ParadeDB extension -> the migration step exits on RDS unless FTS_SEARCH_PROVIDER=pg_like (scripts/migrateServerDB/pgSearchGuard.js:69, :102)"
+  - "Default FTS provider pg_search needs the ParadeDB extension -> the migration step exits on RDS unless FTS_SEARCH_PROVIDER=pg_like (scripts/migrateServerDB/pgSearchGuard.js:13, :102)"
   - "Dockerfile builds extra esbuild bundles (elasticsearch sync, reindex, cleanup) -> optional one-off tools, not services (Dockerfile:100-103)"
   - "Final stage is FROM scratch with ENTRYPOINT /bin/node -> a normal image, CMD runs startServer.js (Dockerfile:152, :371)"
   - "Build needs NODE_OPTIONS max-old-space-size=8192 and a full pnpm install of the monorepo -> the build needs much memory (Dockerfile:60)"
@@ -140,3 +142,11 @@ traps:
 openQuestions:
   - "Whether the Deployz DATABASE_URL with sslmode=require works with node-postgres and the RDS CA in this image (NODE_EXTRA_CA_CERTS is empty, --use-openssl-ca is set)"
   - "Whether chat works well for users without S3 (avatars and file attachments are limited)"
+crossReview:
+  - {field: database.evidence, change: "pgSearchGuard.js line 69 -> 13 for DEFAULT_FTS_SEARCH_PROVIDER; trap reference :69 -> :13", evidence: "scripts/migrateServerDB/pgSearchGuard.js:13"}
+  - {field: startCommand.accept, change: "'/bin/node /app/startServer.js' -> ['/app/startServer.js', '/bin/node']; the image has ENTRYPOINT [\"/bin/node\"] and CMD [\"/app/startServer.js\"] on two lines, so the joined string is no substring of either line. Added the ENTRYPOINT line as evidence", evidence: "Dockerfile:371, 373"}
+  - {field: storage.s3 / outcome, change: "none: S3Client always gets static credentials and throws without key, secret and endpoint; no default credential chain, so the task role cannot be used", evidence: "apps/server/src/modules/S3/index.ts:71-82"}
+  - {field: healthPath, change: "none: /api/version returns JSON {version} with no auth; /api is excluded from the proxy matcher and the route is also listed public", evidence: "src/app/(backend)/api/version/route.ts:10; src/proxy.ts:8; src/libs/next/proxy/define-config.ts:223"}
+  - {field: env.FTS_SEARCH_PROVIDER, change: "none: default pg_search is confirmed (env default and guard default); the guard throws at migration when the extension is missing, and the compose file uses a ParadeDB image", evidence: "packages/env/src/ftsSearch.ts:46; scripts/migrateServerDB/pgSearchGuard.js:13, 98-101; docker-compose/deploy/docker-compose.yml:74"}
+  - {field: dockerfile, change: "none: all non-stage COPY sources exist in git (package.json, pnpm-workspace.yaml, .npmrc, patches, apps/*/package.json)", evidence: "Dockerfile:64-71"}
+  - {field: all, change: verified, evidence: "35 citations checked"}

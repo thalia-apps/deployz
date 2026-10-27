@@ -541,6 +541,17 @@ describe('a test that calls the health route (listmonk)', () => {
     expect(detectHealthEndpoint(tree('tests/specs/subscribers.spec.js')).path).toBe('/health');
   });
 
+  it('keeps the bare route when the same file also registers it under the API prefix', () => {
+    const handlers = 'func initHTTPHandlers(e *echo.Echo) {\n\tg := e.Group("", a.auth.Middleware)\n\tg.GET("/api/health", a.HealthCheck)\n\tp := e.Group("")\n\tp.GET("/health", a.HealthCheck)\n}\n';
+    expect(detectHealthEndpoint({ ...tree('tests/specs/subscribers.spec.js'), 'cmd/handlers.go': handlers }).path).toBe('/health');
+  });
+
+  it('still prefers the longer path from another file', () => {
+    expect(
+      detectHealthEndpoint({ 'package.json': '{"name": "app"}', 'src/app.js': "app.get('/health', ok);\n", 'src/api.js': "router.get('/api/health', ok);\n" }).path,
+    ).toBe('/api/health');
+  });
+
   it('still reads a route that app source registers', () => {
     expect(detectHealthEndpoint({ 'package.json': '{"name": "app"}', 'src/server.js': "app.get('/healthz', (req, res) => res.send('ok'));\n" }).path).toBe('/healthz');
   });
