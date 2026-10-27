@@ -47,6 +47,17 @@ async function insertApplication(
 ): Promise<typeof schema.applications.$inferSelect> {
   const ownOrgId = `${organizationId}-${crypto.randomUUID().slice(0, 8)}`;
   await insertOrganization(db, ownOrgId);
+  // A real-mode run mints a token only for an active binding of this
+  // organization, so a named installation is bound to the fresh org.
+  if (typeof overrides.githubInstallationId === 'string') {
+    overrides = { ...overrides, githubInstallationId: `${overrides.githubInstallationId}-${ownOrgId}` };
+    await db.insert(schema.githubInstallations).values({
+      id: overrides.githubInstallationId!,
+      organizationId: ownOrgId,
+      accountLogin: 'acme',
+      accountType: 'Organization',
+    });
+  }
   const [row] = await db
     .insert(schema.applications)
     .values({
