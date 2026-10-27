@@ -319,6 +319,47 @@ describe('post-install configuration', () => {
     expect((payload['parameters'] as Record<string, string>)['paramDesiredCount']).toBeUndefined();
   });
 
+  it('starts no task at install when a migration must run first, even with nothing to configure', async () => {
+    const [application] = await db
+      .insert(schema.applications)
+      .values({
+        organizationId,
+        name: 'Migrating',
+        repoFullName: 'acme/migrating-install',
+        repoUrl: 'https://github.com/acme/migrating-install',
+        defaultBranch: 'main',
+        analysisStatus: 'COMPLETE',
+      })
+      .returning();
+    await db.insert(schema.releases).values({
+      applicationId: application!.id,
+      version: '1.0.0',
+      gitSha: 'abc1234',
+      imageDigest: '111122223333.dkr.ecr.us-east-1.amazonaws.com/deployz-images@sha256:' + 'c'.repeat(64),
+      buildStatus: 'SUCCEEDED',
+      releaseStatus: 'READY',
+    });
+    const migrating = { ...manifest([MANIFEST_ENV[0]!, MANIFEST_ENV[4]!]), migration: { command: '/usr/bin/miniflux -migrate', mode: 'pre_deploy' } };
+    const [deployment] = await db
+      .insert(schema.deployments)
+      .values({
+        organizationId,
+        applicationId: application!.id,
+        customerId,
+        region: 'us-east-1',
+        state: 'INSTALLING',
+        desiredState: { manifest: migrating },
+        specV2: compileDeploymentIntent({ manifest: migrating as unknown as DeploymentManifest, region: 'us-east-1' }).spec,
+        enrollmentCode: 'enrol-migrating-install',
+      })
+      .returning();
+
+    const payload = await buildInstallPayload(db, deployment!, createConfigStore(db), INSTALLATION_ID);
+
+    expect(payload['startAfterConfig']).toBe(true);
+    expect((payload['parameters'] as Record<string, string>)['paramDesiredCount']).toBe('0');
+  });
+
   it('queues one CONFIG_UPDATE job per install, with key names only, and reuses it on a replay', async () => {
     const [deployment] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, deploymentId));
     const store = createConfigStore(db);

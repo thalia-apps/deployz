@@ -123,7 +123,9 @@ watchdog, and the stack-event progress route's settlement backstop):
   finished in the last 24 hours.
 - A **configured first start** (DEPLOY-009): when a vendor value or a
   Deployz-generated secret must reach the task before it can boot
-  (`configPrecedesFirstStart`, `apps/api/src/install-config.ts`) and a READY
+  (`configPrecedesFirstStart`, `apps/api/src/install-config.ts`), or the
+  frozen spec has a migration workload (the migration must run before the
+  first task: miniflux exits on an empty schema), and a READY
   release exists, the INSTALL creates the stack with `param_DesiredCount=0`
   and carries `startAfterConfig` in its payload. The stack completes without
   ever running an unconfigured task; the post-install `CONFIG_UPDATE`
@@ -220,7 +222,9 @@ install / database ready
   `MIGRATION_FAILED` (family, exit code, stopped reason). No service is
   updated, the previous release keeps serving, and the deployment
   returns to `UPDATE_AVAILABLE` — a failed migration is a failed update,
-  not a failed deployment.
+  not a failed deployment. On the first start of a zero-task install
+  nothing serves yet, so the deployment is `FAILED` (a failed environment,
+  `hasStartedInstall`); deploying again recovers it.
 - **Verdict.** Only the application container's own exit code 0 succeeds.
   ECS reports runtime containers without their `essential` flag, so the
   relay finds the application container in the exact revision the task ran

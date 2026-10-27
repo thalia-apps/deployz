@@ -95,7 +95,7 @@ HTTPS probes to the application's public address.
    created, and the relay provisions the application stack in the customer
    account with the newest READY release's image reference. Cross-account
    ECR pull is granted control-plane-side for the customer account id the
-   relay reports. When configuration must precede the first start, the
+   relay reports. When configuration or a migration must precede the first start, the
    install creates the service with zero tasks and the post-install
    CONFIG_UPDATE plus auto-deploy start it. INSTALL success auto-deploys the
    newest READY release.

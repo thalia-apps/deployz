@@ -223,8 +223,8 @@ function relayManifest(manifest: DeploymentManifest): DeploymentManifest {
 /**
  * The INSTALL job's payload: the compiled template's URL + parameters, the
  * Redis/database flags, the deployment identity tags, the canonical manifest
- * and — when configuration must precede the first start and there is a
- * release to run — `startAfterConfig`, the marker that this install starts no
+ * and — when configuration or a migration must precede the first start and
+ * there is a release to run — `startAfterConfig`, the marker that this install starts no
  * task by itself (the service is created with `param_DesiredCount=0`; the
  * post-install CONFIG_UPDATE and the auto-deploy that follow are the first
  * start).
@@ -268,7 +268,10 @@ export async function buildInstallPayload(
   }
   const requirements = requirementsFromSpec(spec)!;
   const familySuffix = requireTaskFamilySuffix(spec, installationId);
-  const startAfterConfig = await configPrecedesFirstStart(db, deployment, store);
+  // A migration must run before the first task too: the auto-deploy after a zero-task install runs it
+  // first (miniflux exits on an empty schema, so a started install fails before any migration).
+  const startAfterConfig =
+    spec.graph.workloads.some((workload) => workload.kind === 'migration') || (await configPrecedesFirstStart(db, deployment, store));
   const { parameters, releaseId } = await buildInstallParameters(db, deployment.id, {
     startAfterConfig,
   });

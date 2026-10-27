@@ -9,7 +9,9 @@ import type { ScenarioDefinition } from '../types.js';
  * (deployment state HEALTHY) while the separately-tracked runtime
  * `healthStatus` comes back UNHEALTHY", which keeps the customer-facing
  * stage at VERIFYING ("Running health checks.") rather than FAILED — see
- * `apps/api/src/deployment-status.ts`'s `everInstalled` branch.
+ * `apps/api/src/deployment-status.ts`'s `everInstalled` branch. The fixture
+ * app has a migration, so the install starts no task and the first deploy
+ * rolls the unhealthy targets.
  */
 export const healthcheckFailure: ScenarioDefinition = {
   id: 'healthcheck-failure',
