@@ -1,0 +1,373 @@
+{
+  "id": "new-55",
+  "commit": "d871a4723352453c77910957f586e76549c6e84c",
+  "analyser": "ai@r4-final-old2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "lifecycle/container/Dockerfile"
+    },
+    "build": {
+      "command": "wireit",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [ \"dumb-init\", \"--\", \"ak\" ]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": "worker"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "worker",
+        "source": "lifecycle/container/compose.yml worker"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "AUTHENTIK_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go",
+            "read in packages/ak-common/src/config/mod.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_HOST_BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_INSECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTIK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "METRICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/packages/core/environment/node.ts",
+            "read in website/docusaurus-theme/config.js",
+            "read in packages/esbuild-plugin-live-reload/plugin/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAGE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RADIUS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXY_CIDRS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/struct.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKSPACE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in internal/config/config.go",
+            "read in packages/ak-common/src/config/mod.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "twilio"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.08656956,
+        "promptTokens": 17346,
+        "completionTokens": 903
+      },
+      "latencyMs": 13502
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 13503,
+    "questions": 3,
+    "generatedAt": "2026-10-27T12:14:36.512Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

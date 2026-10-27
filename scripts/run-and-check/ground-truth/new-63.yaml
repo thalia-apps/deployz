@@ -1,0 +1,123 @@
+id: new-63
+repository: strapi/strapi
+commit: 37c8dd40f92e9973f74beb9a3e28f45f5109a887
+summary: >
+  Strapi framework monorepo (Node.js, Koa, yarn workspaces + Nx, packages/* plus examples/*). It is the framework source,
+  not a deployable app. The repo has no Dockerfile at all; the README says Strapi ships no official Docker images and
+  users build their own from their own project. The examples/* apps (getstarted, complex, kitchensink, empty) are private
+  dev and test fixtures that default to SQLite. templates/website is a project template, not a service.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No Dockerfile builds a production app from this repo. The only runnable apps are examples/* fixtures (private,
+    SQLite default, "Migration test fixture" for examples/complex) that need the whole workspace built first. Deployz
+    cannot deploy a framework library without an app. A Dockerfile written by the user for examples/getstarted would
+    deploy a test fixture, not a product, so DEPLOYABLE_WITH_CHANGES is not accepted.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker-compose.dev.yml, reason: "compose file with a Postgres dev database, not a Dockerfile"}
+    - {path: docker-compose.test.yml, reason: "compose file with a test database for the test suite, not a Dockerfile"}
+    - {path: examples/complex/docker-compose.dev.yml, reason: "compose file with dev databases (postgres, mysql, mariadb) for a fixture app, not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 76, quote: "Strapi doesn't ship official Docker images, so you build your own from your project."}
+    - {path: docker-compose.dev.yml, line: 5, quote: "image: postgres"}
+runtime: {accept: [node]}
+port:
+  accept: [1337]
+  evidence:
+    - {path: packages/core/core/src/configuration/index.ts, line: 22, quote: "port: Number(process.env.PORT) || 1337,"}
+    - {path: examples/getstarted/config/server.js, line: 7, quote: "port: env.int('PORT', 1337),"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: examples/getstarted/config/server.js, line: 6, quote: "host: env('HOST', '0.0.0.0'),"}
+startCommand:
+  source: explicit
+  accept: ["strapi start", "yarn start"]
+  evidence:
+    - {path: examples/getstarted/package.json, line: 12, quote: "\"start\": \"strapi start\","}
+healthPath:
+  accept: ["/_health"]
+  # The root package has no app; for a Strapi project the built-in /_health route returns 204 with no auth and no redirect.
+  evidence:
+    - {path: packages/core/core/src/services/server/index.ts, line: 40, quote: "router.all('/_health', healthCheck);"}
+    - {path: packages/core/core/src/services/server/index.ts, line: 15, quote: "ctx.status = 204;"}
+database:
+  status: conditional
+  engines: [sqlite, postgres, mysql, mariadb]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB: postgres}
+  connectionVars: []
+  # The fixture config has no env-driven connection: DB only selects a hardcoded profile (localhost, user strapi, password strapi).
+  # A real Strapi project reads DATABASE_* from its own config; the fixture does not.
+  evidence:
+    - {path: examples/getstarted/config/database.js, line: 7, quote: "filename: '.tmp/data.db',"}
+    - {path: examples/getstarted/config/database.js, line: 20, quote: "host: 'localhost',"}
+    - {path: examples/getstarted/config/database.js, line: 56, quote: "connection: process.env.DB ? db[process.env.DB] || db.sqlite : db.sqlite,"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: examples/getstarted/package.json, line: 12, quote: "\"start\": \"strapi start\","}
+redis:
+  status: none
+  evidence:
+    - {path: docker-compose.dev.yml, line: 5, quote: "image: postgres"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: examples/getstarted/config/server.js, line: 8, quote: "cron: {"}
+scheduledJobs:
+  status: embedded
+  items: [strapi cron tasks]
+  evidence:
+    - {path: examples/getstarted/config/server.js, line: 10, quote: "tasks: cronTasks,"}
+storage:
+  local: ephemeral
+  paths: [.tmp/data.db, public/uploads]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: examples/getstarted/config/database.js, line: 7, quote: "filename: '.tmp/data.db',"}
+env:
+  required: []
+  optional: [HOST, PORT, DB, APP_KEYS, ADMIN_JWT_SECRET]
+  buildTime: []
+  evidence:
+    - {path: examples/getstarted/config/admin.js, line: 4, quote: "secret: env('ADMIN_JWT_SECRET', 'example-token'),"}
+    - {path: examples/getstarted/config/server.js, line: 13, quote: "keys: env.array('APP_KEYS', ['toBeModified1', 'toBeModified2']),"}
+blockers:
+  expected:
+    - "No Dockerfile in the repo, and no production application: this is the Strapi framework source (packages/*). Users create their own project and Dockerfile"
+    - "The only apps are private example fixtures in examples/* (for example examples/complex is a migration test fixture) that need the full yarn workspace built first"
+  mustNot:
+    - "docker-compose.dev.yml and docker-compose.test.yml must not be taken as a production topology or as a Dockerfile"
+    - "Postgres, MySQL and MariaDB support of the examples must not be reported as the blocker; the blocker is that there is no deployable app"
+    - "The SQLite default in the fixtures must not be the stated reason for NOT_DEPLOYABLE"
+vendorQuestions:
+  legitimate:
+    - "Which Strapi project should be deployed? The monorepo has no production app; a user project with its own Dockerfile is needed"
+  unnecessary:
+    - "Which port? (1337)"
+    - "Health path? (/_health)"
+    - "Which Dockerfile? (none exists)"
+traps:
+  - "examples/getstarted, examples/kitchensink, examples/empty have start scripts and look like apps -> private dev and test fixtures, not a product (examples/getstarted/package.json:4)"
+  - "examples/complex describes itself as a migration test fixture, not an app (examples/complex/package.json:5)"
+  - "docker-compose.dev.yml, docker-compose.test.yml, examples/complex/docker-compose.dev.yml -> databases for development and tests only, no Dockerfile (docker-compose.dev.yml:5)"
+  - "README Docker section looks like Docker support -> it says Strapi ships no official image; a community CLI generates a Dockerfile for a user project (README.md:76)"
+  - "templates/website -> a project template with data and types, no Dockerfile or deploy config"
+openQuestions:
+  - "A tool that generates a Dockerfile for examples/getstarted could deploy the fixture; this is judged out of scope because the fixture is not a product"
+crossReview:
+  - {field: database.connectionVars, change: "'DATABASE_* per fixture config' -> []: the fixture database.js has no env-driven connection; DB only picks a hardcoded profile with host localhost and user/password strapi, so even the fixture cannot reach RDS without a code change", evidence: "examples/getstarted/config/database.js:13-21,56"}
+  - {field: database.engines, change: "added mysql: db = {mysql, sqlite, postgres, mariadb} (mysql profile at line 25)", evidence: "examples/getstarted/config/database.js:26,49"}
+  - {field: env, change: "added APP_KEYS (default toBeModified1,toBeModified2) to optional with evidence", evidence: "examples/getstarted/config/server.js:13"}
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE alone kept; the repo is the framework source with no Dockerfile, the only apps are private fixtures (hardcoded localhost DB, test data); a generated Dockerfile for examples/getstarted would deploy a fixture, not a product", evidence: "README.md:76; examples/complex/package.json:5; examples/getstarted/package.json:4"}
+  - {field: dockerfile, change: "none: git ls-files shows no Dockerfile or .dockerignore anywhere (only 3 compose files)", evidence: "git ls-files | grep -i dockerfile -> empty"}
+  - {field: all, change: verified, evidence: "18 citations checked"}

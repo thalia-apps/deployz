@@ -64,7 +64,9 @@ Repository (GitHub tree, bounded)
 ## Repository analysis
 
 - **Orchestrator:** `runApplicationAnalysis` (`apps/api/src/analysis.ts`).
-  Fetches a bounded file tree, runs `analyseRepo` (`packages/analysis/src/
+  Fetches a bounded file tree (on a repository above the file cap, the start
+  scripts of the Dockerfile that the analysis selects, ranked with each
+  candidate's content, always stay in the tree), runs `analyseRepo` (`packages/analysis/src/
   analyser.ts`), applies the AI fallback when needed, builds the readiness
   report and the canonical projection, backfills the contract fields the
   vendor has not edited, and persists everything in one write to
@@ -100,11 +102,15 @@ Repository (GitHub tree, bounded)
   nightly stage (also with a number: `pr-test2`), together with the stages it
   is built from. The start command is the last CMD and the last ENTRYPOINT of
   this stage and its lineage. A HEALTHCHECK `CMD` and the CMD of another stage
-  are never the start command. A Dockerfile in a test,
+  are never the start command. An ENTRYPOINT that is only a launcher or an
+  init process (`["bundle", "exec"]`, mastodon `["/usr/bin/tini", "--"]`)
+  with no CMD is no start command: the vendor gives one. A Dockerfile in a test,
   example or dev-container directory, a base image (system packages only, no
-  CMD, ENTRYPOINT, EXPOSE or COPY) and a Dockerfile that starts a dev server
-  are never selected (a dev server is `npm run dev`, `next dev`, `nodemon`,
-  `--reload` or `sleep infinity`). A Dockerfile in a `dev/` build directory
+  CMD, ENTRYPOINT, EXPOSE or COPY), a Dockerfile that starts a dev server
+  (a dev server is `npm run dev`, `next dev`, `nodemon`, `--reload` or
+  `sleep infinity`) and a Dockerfile that copies nothing in and starts a
+  script by a relative path (actual `CMD ["sh", "./bin/docker-start"]`: it
+  runs a bind-mounted checkout) are never selected. A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
   one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. A
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
@@ -139,8 +145,12 @@ Repository (GitHub tree, bounded)
   production Compose app service probes (also in the script it runs, with the
   host, port, scheme and a base path from variables:
   `http${s}://${addr}:${PORT}${base_path}/alive`); a dedicated route that the app
-  registers, with the framework prefix and URI version; the Spring actuator
-  route. A dedicated route ends in a health word, and only an API root, a
+  registers, with the framework prefix and URI version (also a Rust route
+  attribute or call: actix `#[get("/healthz")]`); the Spring actuator
+  route. A route that a test or spec calls (`page.request.get('/health')`)
+  is not a registration. When one file registers the same route bare and
+  under a prefix (listmonk `/health` and `/api/health`), the bare route is
+  used: the prefixed one is in the API group, often behind its auth. A dedicated route ends in a health word, and only an API root, a
   version or one namespace (for example system) comes before it.
   `status` is accepted only under an API root, or in a JS server. `readyz` and
   `livez` are not taken from source. A route is not used when it is in
@@ -183,7 +193,9 @@ Repository (GitHub tree, bounded)
   file list (GitHub cuts the listing of a very large repository and says
   `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=` and a generated
-  directory never reject. A Dockerfile that copies `.git`, or a RUN step
+  directory never reject. A Dockerfile that copies `.git`, a RUN step that
+  bind-mounts `.git` from the context (gitea
+  `--mount=type=bind,source=".git/"`), or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
   fallback and no `git clone` or `git init` in the Dockerfile, gives the
   required finding `build-context-git-metadata` (a repository change): the
@@ -269,8 +281,10 @@ Repository (GitHub tree, bounded)
   a connection variable that the code tests before it uses it, a backend
   selector whose default is not Redis (`CACHE_DRIVER=file`,
   `JOBS_PROVIDER=local`), a `*_MODE` setting whose default is not `queue`
-  while the code offers `queue` (n8n `EXECUTIONS_MODE`; a package.json
-  worker script is then not provisioned either), an image that installs its own Redis server, or
+  while the code offers `queue` (n8n `EXECUTIONS_MODE`), or a `MODE`
+  setting with no default that only an equality test turns to queue
+  (Flowise `process.env.MODE === MODE.QUEUE`; a package.json worker script
+  is then not provisioned either), an image that installs its own Redis server, or
   code that sets the connection itself. An env sample comment that says
   Redis is required overrides this evidence. The result is then
   `medium` confidence and the manifest does not request Redis. Evidence in
@@ -312,7 +326,9 @@ is final.
     the item. These are an unsupported datastore (MongoDB, Elasticsearch,
     ClickHouse, MariaDB, SQLite, H2 and the other database rejections, but
     not a missing PostgreSQL extension), durable local state (a declared
-    data directory, a `VOLUME`, Compose named volumes), and a second
+    data directory, a data path in the app's own `config.yaml` or
+    `config.toml` such as qdrant `storage_path: ./storage`, a `VOLUME`,
+    Compose named volumes), and a second
     application service in the production Compose file.
   - A fact that the rules did not resolve: no port, no start command, no
     health path (`vendor_required`: a health handler whose route was not

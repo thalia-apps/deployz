@@ -1,0 +1,151 @@
+{
+  "id": "new-78",
+  "commit": "222b2e44ab1c3f17e8246396ead6558e45041df7",
+  "analyser": "ai@r4-final-A2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./entrypoint.sh\"]",
+      "port": 6333
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "COLORTERM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/greeting.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MALLOC_CONF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/common/pyroscope_state.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_INIT_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/startup.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/settings.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TMPDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/common/pyroscope_state.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the app declares durable local state (storage_path = ./storage (config/config.yaml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (storage_path = ./storage (config/config.yaml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05370948,
+        "promptTokens": 12348,
+        "completionTokens": 243
+      },
+      "latencyMs": 4871
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4872,
+    "questions": 1,
+    "generatedAt": "2026-10-27T12:03:38.037Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

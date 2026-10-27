@@ -1,0 +1,136 @@
+id: new-81
+repository: Mintplex-Labs/anything-llm
+commit: 9b1fcab141000eaba9f78ed131151de04904454b
+summary: >
+  AnythingLLM document-chat app (Node.js, Express server serving a Vite/React frontend, plus a separate collector
+  process, Prisma). One image from docker/Dockerfile; its entrypoint runs the server and the collector in the same
+  container. All durable state is a SQLite file and local disk under STORAGE_DIR (documents, LanceDB vectors). The Prisma
+  datasource is fixed to sqlite with SQLite-only migrations, and there is no S3 storage, so no Deployz managed service can hold the data.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The system database is SQLite (server/prisma/schema.prisma, provider fixed, migration_lock.toml = sqlite, SQL migrations
+    use SQLite syntax). Postgres needs a manual edit of the schema file and new migrations; it is not an env switch. Uploaded documents,
+    parsed document JSON and the default LanceDB vectors are on the local disk (STORAGE_DIR). Fargate disk is ephemeral and no
+    volume is available. VECTOR_DB=pgvector would move only vectors to Postgres; settings, users, workspaces, chats and documents stay local.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: cloud-deployments/openshift/Dockerfile, reason: "OpenShift variant with arbitrary UID handling; the standard docker/Dockerfile is the main image"}
+    - {path: cloud-deployments/huggingface-spaces/Dockerfile, reason: "Hugging Face Spaces variant, not the main production image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 171, quote: "FROM backend-build AS production-build"}
+    - {path: docker/Dockerfile, line: 173, quote: "COPY --chown=anythingllm:anythingllm --from=frontend-build /app/frontend/dist /app/server/public"}
+    - {path: docker/Dockerfile, line: 186, quote: "ENTRYPOINT [\"/bin/bash\", \"/usr/local/bin/docker-entrypoint.sh\"]"}
+    - {path: docker/docker-compose.yml, line: 12, quote: "dockerfile: ./docker/Dockerfile"}
+runtime: {accept: [node]}
+port:
+  accept: [3001]
+  evidence:
+    - {path: docker/.env.example, line: 1, quote: "SERVER_PORT=3001"}
+    - {path: server/index.js, line: 198, quote: "bootHTTP(app, process.env.SERVER_PORT || 3001)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/utils/boot/index.js, line: 68, quote: ".listen(port, async () => {"}
+startCommand:
+  source: image
+  accept: ["docker-entrypoint.sh"]
+healthPath:
+  accept: ["/api/ping"]
+  evidence:
+    - {path: server/endpoints/system.js, line: 84, quote: "app.get(\"/ping\", (_, response) => {"}
+    - {path: server/index.js, line: 98, quote: "app.use(\"/api\", apiRouter);"}
+    - {path: docker/docker-healthcheck.sh, line: 5, quote: "/api/ping"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: server/prisma/schema.prisma, line: 5, quote: "Uncomment the following lines and comment out the SQLite datasource block above to use PostgreSQL"}
+    - {path: server/prisma/schema.prisma, line: 14, quote: "provider = \"sqlite\""}
+    - {path: server/prisma/schema.prisma, line: 15, quote: "url      = \"file:../storage/anythingllm.db\""}
+    - {path: server/prisma/migrations/migration_lock.toml, line: 3, quote: "provider = \"sqlite\""}
+    - {path: server/prisma/migrations/20230921191814_init/migration.sql, line: 3, quote: "\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"}
+migrations:
+  mode: startup
+  accept: ["npx prisma migrate deploy --schema=./prisma/schema.prisma"]
+  evidence:
+    - {path: docker/docker-entrypoint.sh, line: 24, quote: "npx prisma migrate deploy --schema=./prisma/schema.prisma"}
+redis:
+  status: none
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: docker/docker-entrypoint.sh, line: 27, quote: "{ node /app/collector/index.js; } &"}
+    - {path: server/utils/collectorApi/index.js, line: 22, quote: "static DEFAULT_COLLECTOR_PORT = 8888;"}
+    - {path: docker/docker-entrypoint.sh, line: 28, quote: "wait -n"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/server/storage, /app/collector/hotdir, /app/collector/outputs]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/.env.example, line: 2, quote: "STORAGE_DIR=\"/app/server/storage\""}
+    - {path: docker/docker-entrypoint.sh, line: 8, quote: "Not setting this will result in data loss on container restart since"}
+    - {path: server/utils/files/index.js, line: 10, quote: ": path.resolve(process.env.STORAGE_DIR, `documents`);"}
+    - {path: server/utils/files/index.js, line: 14, quote: ": path.resolve(process.env.STORAGE_DIR, `direct-uploads`);"}
+    - {path: server/utils/vectorDbProviders/lance/index.js, line: 29, quote: "return path.resolve(basePath, \"lancedb\");"}
+    - {path: docker/docker-compose.yml, line: 20, quote: "\"../server/storage:/app/server/storage\""}
+    - {path: server/prisma/schema.prisma, line: 15, quote: "file:../storage/anythingllm.db"}
+env:
+  required:
+    - {name: STORAGE_DIR, secret: false, buildTime: false, note: "image .env sets /app/server/storage; ephemeral on Fargate"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "needed to sign login tokens when AUTH_TOKEN is set; set a random 12+ chars value"}
+    - {name: AUTH_TOKEN, secret: true, buildTime: false, note: "single-user password; without it the instance has no authentication on a public URL (multi-user mode can be turned on in the UI)"}
+  optional: [SERVER_PORT, VECTOR_DB, PGVECTOR_CONNECTION_STRING, PGVECTOR_TABLE_NAME, LLM_PROVIDER, EMBEDDING_ENGINE, SIG_KEY, SIG_SALT, ENABLE_HTTPS, DISABLE_TELEMETRY]
+  buildTime: []
+  evidence:
+    - {path: docker/.env.example, line: 5, quote: "# SIG_KEY='passphrase'"}
+    - {path: docker/.env.example, line: 7, quote: "# JWT_SECRET=\"my-random-string-for-seeding\""}
+    - {path: server/utils/middleware/validatedRequest.js, line: 26, quote: "if (!process.env.AUTH_TOKEN) {"}
+    - {path: docker/.env.example, line: 306, quote: "# VECTOR_DB=\"pgvector\""}
+blockers:
+  expected:
+    - "SQLite is the only configured system database; the Prisma provider is fixed in schema.prisma and the migrations are SQLite SQL, so Postgres needs a source change, not an env switch"
+    - "Documents, direct uploads, vector cache and LanceDB vectors are on the local disk (STORAGE_DIR) with no S3 option; Fargate disk is ephemeral and Deployz has no volume"
+  mustNot:
+    - "Many LLM provider variables in .env.example must not be required: all are optional and commented out (LLM and embedding can be set in the UI)"
+    - "The collector must not count as a second image or service: the same image starts it in the same container"
+    - "pgvector support must not turn this into a Postgres app: it stores only vectors"
+    - "Redis must not be reported as required: the app does not use it"
+    - "Port 8888 (collector) must not be the web port: it is internal"
+vendorQuestions:
+  legitimate:
+    - "Is there a supported way to run the system database on PostgreSQL and keep documents in S3, without editing schema.prisma?"
+  unnecessary:
+    - "Which port? (3001 in .env.example and the healthcheck)"
+    - "Who runs migrations? (the entrypoint runs prisma migrate deploy on every start)"
+    - "Health path? (/api/ping)"
+    - "Is a worker process needed? (the collector starts in the same container)"
+traps:
+  - "Commented PostgreSQL datasource in schema.prisma -> not active; the active datasource is sqlite and the migrations are SQLite-only (server/prisma/schema.prisma:5-16, server/prisma/migrations/migration_lock.toml:3)"
+  - "VECTOR_DB=pgvector -> only vectors move to Postgres; the SQLite DB and documents stay on local disk (docker/.env.example:306)"
+  - "Dockerfile has several FROM stages (build-arm64, build-amd64, build, frontend-build, backend-build) -> the last stage production-build is the app; no --target needed (docker/Dockerfile:171)"
+  - "docker-compose mounts ../server/storage as a volume -> the app needs a persistent volume that Deployz cannot give (docker/docker-compose.yml:20)"
+  - "Image HEALTHCHECK uses SERVER_PORT and /api/ping -> / is the SPA, not a health endpoint (docker/docker-healthcheck.sh:5, docker/Dockerfile:181)"
+  - "The entrypoint starts server and collector with & and wait -n -> two processes in one container, not two services (docker/docker-entrypoint.sh:27-28)"
+  - "The SQLite file path is fixed in schema.prisma (file:../storage/anythingllm.db, i.e. /app/server/storage), so STORAGE_DIR does not move it; both are local disk anyway (server/prisma/schema.prisma:15)"
+openQuestions:
+  - "Whether a patched fork with Postgres in schema.prisma would count as deployable: out of scope for the repo as given"
+crossReview:
+  - {field: healthPath.evidence, change: "docker-healthcheck.sh line 6 -> 5 (also in the trap text, plus the Dockerfile HEALTHCHECK at line 181)", evidence: "docker/docker-healthcheck.sh:5; docker/Dockerfile:181"}
+  - {field: traps, change: "added the fixed SQLite file path (relative url in schema.prisma, independent of STORAGE_DIR); added it to storage evidence", evidence: "server/prisma/schema.prisma:15"}
+  - {field: outcome / database / storage / dockerfile, change: "none: NOT_DEPLOYABLE kept (datasource provider fixed to sqlite, the postgres block is commented out and migrations are SQLite SQL, no S3 option for documents or LanceDB); the last stage production-build needs no --target; all COPY sources exist in git; /api/ping returns 200 and is unauthenticated", evidence: "server/prisma/schema.prisma:5-16; docker/Dockerfile:51-173; server/endpoints/system.js:84"}
+  - {field: all, change: verified, evidence: "30 citations checked (1 line fixed)"}

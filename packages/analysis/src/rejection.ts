@@ -1081,6 +1081,9 @@ export function checkNoBuildableDockerfile(tree: FileTree): RejectionFinding {
 // runtime search paths (`PKG_CONFIG_PATH`, `USER_DATA_DIR`) are NOT durable
 // app state and never match.
 const DIRECTORY_VAR = /(?:HOMEPAGE_CONFIG_DIR|THELOUNGE_HOME|(?:^|_)(?:DATA_DIR|CONFIG_DIR|STORAGE_PATH|DATA_FOLDER)$)/;
+// The app's own YAML or TOML configuration file, and a setting in it that is the data location.
+const APP_CONFIG_FILE = /(?:^|\/)config(?:\/[\w.-]+)?\.(?:ya?ml|toml)$/i;
+const CONFIG_DATA_PATH_SETTING = /^\s*((?:storage|data|db|database)_(?:path|dir|directory))\s*[:=]\s*["']?([^\s"'#,]+)/im;
 
 /**
  * COMP-025 — an app that EXPLICITLY declares durable local state through a
@@ -1187,6 +1190,16 @@ function findExplicitDurableDir(tree: FileTree): string | null {
     // puts the quoted default on a later line than the read.
     if (/\bHOMEPAGE_CONFIG_DIR\b/.test(content) && /["'](?:\/[\w./-]+|config)["']/.test(content)) {
       return 'HOMEPAGE_CONFIG_DIR (runtime source)';
+    }
+  }
+
+  // 4. The app's own configuration file names where it keeps its data
+  //    (qdrant `storage_path: ./storage`, meilisearch `db_path = "./data.ms"`).
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !isRuntimeSourcePath(path) || !APP_CONFIG_FILE.test(path)) continue;
+    const setting = CONFIG_DATA_PATH_SETTING.exec(content);
+    if (setting?.[1] && setting[2] && isLocalDirValue(setting[2]) && !/[$<{%]|\b(?:tmp|temp|cache|logs?)\b/i.test(setting[2])) {
+      return `${setting[1]} = ${setting[2]} (${path})`;
     }
   }
 

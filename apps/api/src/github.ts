@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import {
   isRuntimeSourcePath,
   listDockerfileCandidates,
+  selectedDockerfile,
   extractCmdScriptPaths,
   dockerfileImageCommand,
   CMD_CHAIN_MAX_DEPTH,
@@ -717,10 +718,11 @@ const ENV_SAMPLE_REGEX = /(?:^|\/)\.env\.(?:example|template|sample)$/i;
 // Framework config files that read env vars under the app's own names: Rails
 // `config/*.yml` (ERB), Laravel `config/*.php`, Spring `application*.properties|yml`,
 // the .NET `appsettings.json` values that an environment variable overrides,
-// and the production JSON config of an nconf or node-config app (its database client).
+// the production JSON config of an nconf or node-config app (its database client),
+// and a root `config.toml` that can name the app's data location (meilisearch `db_path`).
 // Direct children of `config/` only — `config/locales/` would flood the cap.
 const CONFIG_ENV_FILE_REGEX =
-  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$|(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/i;
+  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.(?:ya?ml|toml)$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$|(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/i;
 // File-based health routes — the same shape detectHealthEndpoint matches on
 // the path rather than on the file's contents — and a NestJS
 // `health.controller.ts`, whose `@Controller('health')` is the only evidence.
@@ -1053,6 +1055,8 @@ async function fetchEntryContent(
 }
 
 const EMPTY_PROTECTED_PATHS: ReadonlySet<string> = new Set();
+// Bounds the Dockerfile blobs read to choose the image whose start chain survives the file cap.
+const DOCKERFILE_CANDIDATE_MAX = 20;
 
 // DEPLOY-029: resolve the selected Dockerfile's CMD/ENTRYPOINT script chain
 // — the exact paths `detectStartupMigrationEvidence` follows — against the
@@ -1079,12 +1083,16 @@ async function resolveCmdChainProtectedPaths(
     entryByPath.set(entry.path, entry);
   }
 
-  const dockerfilePath = listDockerfileCandidates(knownPaths)[0];
-  const dockerfileEntry = dockerfilePath !== undefined ? entryByPath.get(dockerfilePath) : undefined;
-  if (dockerfilePath === undefined || dockerfileEntry === undefined) return protectedPaths;
-
-  const dockerfileContent = await fetchEntryContent(ref, dockerfileEntry, entryByPath, installationToken, fetchFn);
-  if (dockerfileContent === null) return protectedPaths;
+  // The Dockerfile the analysis selects is ranked by content too (a dev or sidecar image ranks
+  // below the app), so read every candidate before choosing the one whose chain to protect.
+  for (const path of listDockerfileCandidates(knownPaths).slice(0, DOCKERFILE_CANDIDATE_MAX)) {
+    const entry = entryByPath.get(path);
+    if (entry !== undefined) knownPaths[path] = (await fetchEntryContent(ref, entry, entryByPath, installationToken, fetchFn)) ?? '';
+  }
+  const selected = selectedDockerfile(knownPaths);
+  if (selected === null || selected.content === '') return protectedPaths;
+  const dockerfilePath = selected.path;
+  const dockerfileContent = selected.content;
 
   const dockerDir = dockerfilePath.includes('/') ? dockerfilePath.split('/').slice(0, -1).join('/') : '';
   const { cmd, entrypoint } = dockerfileImageCommand(dockerfileContent);

@@ -1,0 +1,142 @@
+id: new-77
+repository: meilisearch/meilisearch
+commit: 9bbe2813f55fb856d1d710470a8020240c292e32
+summary: >
+  Meilisearch, a search engine written in Rust (actix-web HTTP API on 7700). It is the database itself: the index is
+  stored in LMDB files under the working directory (/meili_data/data.ms in the root Dockerfile image). There is no
+  external DB, Redis or worker. The only copy of the data is on local disk; scheduled snapshots and dumps also go to
+  local directories. S3 snapshot upload exists only in the enterprise build feature, needs S3 access keys or a web
+  identity token file, and restore needs a local tar.gz file.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Single image that builds from the root Dockerfile and starts with a health endpoint, but the product is a
+    persistent search database whose durable state is local LMDB files (default MEILI_DB_PATH ./data.ms in
+    WORKDIR /meili_data). Fargate local disk is ephemeral, so every restart or task replacement loses all indexes,
+    documents, API keys and tasks. No S3 or SQL store can hold the live index. The S3 snapshot upload is enterprise-only
+    (not in the default build) and cannot be restored from S3 at boot (import needs a local file). It also needs
+    static keys or a web identity token file, not the task role. Treat this as the unsupported
+    "search engine needing a persistent volume" shape.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .github/workflows/publish-docker-images.yml, reason: "CI workflow that builds and pushes the official image (passes EXTRA_ARGS feature flags), not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2, quote: "FROM    rust:1.89-alpine3.22 AS compiler"}
+    - {path: Dockerfile, line: 18, quote: "cargo build --release -p meilisearch -p meilitool ${EXTRA_ARGS}"}
+    - {path: Dockerfile, line: 21, quote: "FROM    alpine:3.22"}
+    - {path: Dockerfile, line: 46, quote: "CMD     /bin/meilisearch"}
+runtime: {accept: [rust]}
+port:
+  accept: [7700]
+  evidence:
+    - {path: Dockerfile, line: 43, quote: "EXPOSE  7700/tcp"}
+    - {path: Dockerfile, line: 24, quote: "ENV     MEILI_HTTP_ADDR 0.0.0.0:7700"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 24, quote: "0.0.0.0:7700"}
+    - {path: crates/meilisearch/src/option.rs, line: 97, quote: "const DEFAULT_HTTP_ADDR: &str = \"localhost:7700\";"}
+startCommand:
+  source: image
+  accept: ["/bin/meilisearch"]
+healthPath:
+  accept: ["/health"]
+  # GET /health is excluded from master-key auth and returns 200 {"status":"available"}. "/" also returns 200
+  # (dashboard HTML in development, JSON in production) but /health is the right check.
+  evidence:
+    - {path: crates/meilisearch/src/routes/mod.rs, line: 91, quote: "\"/health\" => get(get_health),"}
+    - {path: crates/meilisearch/src/option.rs, line: 225, quote: "automatically protecting all routes except `GET /health`"}
+    - {path: crates/meilisearch/src/routes/mod.rs, line: 611, quote: "Ok(HttpResponse::Ok().json(HealthResponse::default()))"}
+    - {path: crates/meilisearch/src/lib.rs, line: 848, quote: "config.service(web::resource(\"/\").route(web::get().to(routes::running)));"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: crates/meilisearch/src/option.rs, line: 96, quote: "const DEFAULT_DB_PATH: &str = \"./data.ms\";"}
+    - {path: crates/meilisearch/src/option.rs, line: 216, quote: "#[clap(long, env = MEILI_DB_PATH, default_value_os_t = default_db_path())]"}
+    - {path: Dockerfile, line: 40, quote: "WORKDIR /meili_data"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: crates/meilisearch/src/lib.rs, line: 361, quote: "let (index_scheduler, auth_controller) = if let Some(ref snapshot_path) = opt.import_snapshot {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: crates/meilisearch/src/lib.rs, line: 430, quote: "if let ScheduleSnapshot::Enabled(snapshot_delay) = opt.schedule_snapshot {"}
+scheduledJobs:
+  status: embedded
+  items: [scheduled snapshot, indexing task scheduler]
+  evidence:
+    - {path: crates/meilisearch/src/lib.rs, line: 434, quote: ".name(String::from(\"register-snapshot-tasks\"))"}
+    - {path: crates/meilisearch/src/option.rs, line: 343, quote: "env = MEILI_SCHEDULE_SNAPSHOT"}
+storage:
+  local: required
+  paths: [/meili_data, /meili_data/data.ms, /meili_data/snapshots, /meili_data/dumps]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 40, quote: "WORKDIR /meili_data"}
+    - {path: crates/meilisearch/src/option.rs, line: 100, quote: "const DEFAULT_SNAPSHOT_DIR: &str = \"snapshots/\";"}
+    - {path: crates/meilisearch/src/option.rs, line: 103, quote: "const DEFAULT_DUMP_DIR: &str = \"dumps/\";"}
+    - {path: crates/meilisearch/src/lib.rs, line: 365, quote: "match compression::from_tar_gz(snapshot_path, &opt.db_path) {"}
+    - {path: crates/index-scheduler/src/scheduler/mod.rs, line: 7, quote: "#[cfg(feature = \"enterprise\")]"}
+    - {path: crates/meilisearch/Cargo.toml, line: 158, quote: "enterprise = [\"meilisearch-types/enterprise\", \"index-scheduler/enterprise\"]"}
+    - {path: crates/meilisearch/src/option.rs, line: 930, quote: "env = MEILI_S3_ACCESS_KEY,"}
+env:
+  required:
+    - {name: MEILI_ENV, secret: false, buildTime: false, note: "set to production; the default is development, which serves the dashboard and allows a missing master key"}
+    - {name: MEILI_MASTER_KEY, secret: true, buildTime: false, note: "at least 16 bytes in production or startup fails; without a key all routes are open"}
+    - {name: MEILI_DB_PATH, secret: false, buildTime: false, note: "only if the data directory must move; default ./data.ms under /meili_data"}
+  optional: [MEILI_NO_ANALYTICS, MEILI_HTTP_ADDR, MEILI_MAX_INDEXING_MEMORY, MEILI_MAX_INDEXING_THREADS, MEILI_SCHEDULE_SNAPSHOT, MEILI_SNAPSHOT_DIR, MEILI_DUMP_DIR, MEILI_IMPORT_SNAPSHOT, MEILI_IMPORT_DUMP, MEILI_S3_BUCKET_URL, MEILI_S3_BUCKET_REGION, MEILI_S3_BUCKET_NAME, MEILI_S3_SNAPSHOT_PREFIX, MEILI_S3_ACCESS_KEY, MEILI_S3_SECRET_KEY, MEILI_EXPERIMENTAL_S3_ROLE_ARN, MEILI_EXPERIMENTAL_S3_WEB_IDENTITY_TOKEN_FILE]
+  buildTime: []
+  evidence:
+    - {path: crates/meilisearch/src/option.rs, line: 98, quote: "const DEFAULT_ENV: &str = \"development\";"}
+    - {path: crates/meilisearch/src/main.rs, line: 108, quote: "(\"production\", Some(master_key)) if master_key.len() < MASTER_KEY_MIN_SIZE => {"}
+    - {path: crates/meilisearch/src/main.rs, line: 117, quote: "(\"production\", None) => {"}
+    - {path: crates/meilisearch-auth/src/lib.rs, line: 390, quote: "pub const MASTER_KEY_MIN_SIZE: usize = 16;"}
+    - {path: crates/meilisearch/src/main.rs, line: 153, quote: "let enable_dashboard = &opt.env == \"development\";"}
+blockers:
+  expected:
+    - "Durable index data lives only in LMDB files on local disk (/meili_data/data.ms); Fargate local disk is ephemeral, so data is lost on restart or redeploy and there is no EFS/volume support"
+    - "No managed-store alternative: S3 snapshot upload is enterprise-edition only (not in the default build), needs static S3 keys or a web identity token file, and snapshots can only be restored from a local file"
+  mustNot:
+    - "A missing database must not be reported as a blocker: Meilisearch has its own embedded store and needs no PostgreSQL, MySQL or Redis"
+    - "Rust build must not be reported as unsupported: the root Dockerfile builds the binary from source in one multi-stage image"
+    - "The web UI/dashboard must not be reported as a separate frontend service: it is embedded in the same binary (development mode only)"
+    - "meilitool in the image must not count as a second service: it is a CLI binary, not a process"
+vendorQuestions:
+  legitimate:
+    - "Is losing all indexes on every restart acceptable, because the data can be fully re-indexed from another source of truth?"
+  unnecessary:
+    - "Which port? (7700 in Dockerfile)"
+    - "Health path? (/health, unauthenticated)"
+    - "Which database or Redis? (none; embedded LMDB)"
+    - "Who runs migrations or workers? (none; the server upgrades its own database format at start)"
+traps:
+  - "Dockerfile sets no MEILI_ENV, so the image runs in development mode: no master key needed, open API and mini-dashboard on / -> set MEILI_ENV=production and MEILI_MASTER_KEY (option.rs:98, main.rs:117)"
+  - "MEILI_S3_* options and scheduled snapshots look like an S3 storage option -> they only upload backups, need the enterprise feature, and are not the live index store (crates/meilisearch/src/option.rs:909, crates/index-scheduler/src/scheduler/mod.rs:7, community_edition.rs:67 returns RequiresEnterpriseEdition)"
+  - "MEILI_IMPORT_SNAPSHOT / MEILI_IMPORT_DUMP look like a way to restore at boot -> they read a local file path only (lib.rs:361-365)"
+  - "rust-toolchain.toml pins channel 1.98.1 while the Dockerfile uses rust:1.89 -> rustup inside the build fetches the pinned toolchain (needs network) (rust-toolchain.toml:2, Dockerfile:2)"
+  - "build.rs downloads mini-dashboard assets from github.com at build time and a release build of the workspace is slow and memory heavy (crates/meilisearch/Cargo.toml:171, crates/meilisearch/build.rs get(url))"
+  - "CMD is shell form behind ENTRYPOINT tini -> the effective command is /bin/meilisearch (Dockerfile:45-46)"
+  - "MEILI_SERVER_PROVIDER=docker only labels analytics (Dockerfile:25)"
+openQuestions:
+  - "Whether a deployment whose index is rebuilt from an external source at each start is an accepted use; the repo cannot say"
+crossReview:
+ - {field: env.optional, change: "added MEILI_EXPERIMENTAL_S3_ROLE_ARN and MEILI_EXPERIMENTAL_S3_WEB_IDENTITY_TOKEN_FILE (the only keyless S3 snapshot auth; needs a token file, not the ECS task role)", evidence: "crates/meilisearch/src/option.rs:86-88,948-967"}
+ - {field: traps (paths), change: "made the trap file paths full repo paths and added the proof that S3 snapshots are enterprise-only", evidence: "crates/index-scheduler/src/scheduler/community_edition.rs:67 RequiresEnterpriseEdition; crates/meilisearch/Cargo.toml:171"}
+ - {field: outcome / storage.local / healthPath / port / database, change: "none: NOT_DEPLOYABLE kept (live LMDB index only on local disk, S3 snapshot upload is enterprise-only and import reads a local file); /health is unauthenticated 200 (option.rs:225, routes/mod.rs:611); 7700 and 0.0.0.0 set by the Dockerfile; all COPY sources are in git (COPY . . plus --from stages)", evidence: "Dockerfile:15-46; crates/meilisearch/src/lib.rs:361-365"}
+ - {field: all, change: verified, evidence: "31 citations checked"}

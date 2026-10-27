@@ -438,7 +438,16 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // its whole context from a directory with no project file builds from the
 // root. Stored v69 rows can build the docs image or the wrong context, or ask
 // for the database variable.
-export const ANALYSIS_VERSION = 70;
+// Version 71 (2026-10 corpus round 4): a development image that copies nothing
+// and starts a mounted script ranks below the app image; a RUN that bind-mounts
+// `.git` cannot build; a test's route call is not a route; Rust route
+// attributes name a health path; an init-only ENTRYPOINT (`tini --`) with no
+// CMD is no start command; a queue mode turned on only by an equality test is
+// optional; an app config file that names its data path is durable local
+// state; the file cap protects the start chain of the content-selected image.
+// Stored v70 rows can name no health path, build the dev image, or miss the
+// local-state blocker.
+export const ANALYSIS_VERSION = 71;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
