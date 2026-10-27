@@ -1,0 +1,167 @@
+id: new-82
+repository: langgenius/dify
+commit: 80265fcfe110f0aea056fcb3566d322986014b78
+summary: >
+  Dify LLM app platform. The vendor topology (docker/docker-compose.yaml) is many containers with several different
+  images: api (Flask, gunicorn; the same image also runs the celery worker and beat by MODE), web (Next.js, a separate
+  image from web/Dockerfile), plugin_daemon (langgenius/dify-plugin-daemon, built from another repo), sandbox
+  (langgenius/dify-sandbox, built from another repo), ssrf_proxy (squid), nginx (routes /console/api, /api, /v1, /files
+  to api, /e/ to plugin_daemon and / to web), PostgreSQL (or MySQL), Redis and a vector database (weaviate default).
+  The repo builds only two application images (api and web); the plugin daemon and sandbox images are not built from
+  this repo. The frontend needs its own image, so one Deployz image cannot serve the full product.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs at least two application images built from this repo (api/Dockerfile and web/Dockerfile, a
+    separate Next.js server) and two more images that are not built from this repo (plugin_daemon, which serves
+    model providers and tools as plugins and is reached through nginx path routing, and sandbox for code nodes). It
+    also needs a vector database service by default (weaviate; pgvector is an option, but it is a second PostgreSQL
+    with the vector extension). Deployz supports one application image. The api image alone on Postgres, Redis and
+    S3 would give an API without the web UI and without plugins.
+dockerfile:
+  accept: [api/Dockerfile, web/Dockerfile]
+  reject:
+    - {path: dify-agent/Dockerfile, reason: "agent backend service image (separate optional service), not the main app"}
+    - {path: dify-agent-runtime/docker/Dockerfile, reason: "agent runtime sandbox image, not the main app"}
+    - {path: .devcontainer/Dockerfile, reason: "dev container, not a production image"}
+    - {path: docker/couchbase-server/Dockerfile, reason: "Couchbase vector store helper image"}
+  target: production
+  context: .
+  evidence:
+    - {path: api/Dockerfile, line: 36, quote: "FROM base AS production"}
+    - {path: api/Dockerfile, line: 120, quote: "COPY --chown=dify:dify api /app/api/"}
+    - {path: web/Dockerfile, line: 50, quote: "FROM base AS production"}
+    - {path: web/Dockerfile, line: 41, quote: "COPY . ."}
+    - {path: docker/docker-compose.yaml, line: 274, quote: "image: langgenius/dify-api:1.18.0"}
+    - {path: docker/docker-compose.yaml, line: 469, quote: "image: langgenius/dify-web:1.18.0"}
+runtime: {accept: [python]}
+port:
+  accept: [5001]
+  evidence:
+    - {path: api/Dockerfile, line: 45, quote: "EXPOSE 5001"}
+    - {path: api/docker/entrypoint.sh, line: 162, quote: "--bind \"${DIFY_BIND_ADDRESS:-0.0.0.0}:${DIFY_PORT:-5001}\" \\"}
+    - {path: web/Dockerfile, line: 88, quote: "EXPOSE 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: api/docker/entrypoint.sh, line: 162, quote: "${DIFY_BIND_ADDRESS:-0.0.0.0}"}
+startCommand:
+  source: image
+  # api image ENTRYPOINT runs gunicorn for the default MODE; MODE=worker runs celery, MODE=beat runs celery beat.
+  accept: ["entrypoint.sh", "gunicorn"]
+  evidence:
+    - {path: api/Dockerfile, line: 132, quote: "ENTRYPOINT [\"/bin/bash\", \"/entrypoint.sh\"]"}
+    - {path: api/docker/entrypoint.sh, line: 160, quote: "exec gunicorn \\"}
+    - {path: api/docker/entrypoint.sh, line: 21, quote: "if [[ \"${MODE}\" == \"worker\" ]]; then"}
+    - {path: docker/docker-compose.yaml, line: 276, quote: "MODE: api"}
+healthPath:
+  accept: ["/health"]
+  # API image only. Unauthenticated, returns 200 JSON without a dependency check.
+  evidence:
+    - {path: api/extensions/ext_app_metrics.py, line: 20, quote: "@app.route(\"/health\")"}
+    - {path: docker/docker-compose.yaml, line: 312, quote: "test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:5001/health\"]"}
+database:
+  status: required
+  engines: [postgresql, mysql, oceanbase, seekdb]
+  default: postgresql
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_DATABASE]
+  evidence:
+    - {path: api/configs/middleware/__init__.py, line: 142, quote: "DB_TYPE: Literal[\"postgresql\", \"mysql\", \"oceanbase\", \"seekdb\"] = Field("}
+    - {path: api/configs/middleware/__init__.py, line: 144, quote: "default=\"postgresql\","}
+    - {path: docker/.env.example, line: 78, quote: "DB_TYPE=postgresql"}
+    - {path: docker/docker-compose.yaml, line: 507, quote: "image: postgres:15-alpine"}
+    - {path: docker/docker-compose.yaml, line: 677, quote: "DB_SSL_MODE: ${DB_SSL_MODE:-disable}"}
+migrations:
+  mode: startup
+  accept: ["flask upgrade-db"]
+  evidence:
+    - {path: api/docker/entrypoint.sh, line: 11, quote: "if [[ \"${MIGRATION_ENABLED}\" == \"true\" ]]; then"}
+    - {path: api/docker/entrypoint.sh, line: 13, quote: "flask upgrade-db"}
+    - {path: docker/.env.example, line: 38, quote: "MIGRATION_ENABLED=true"}
+    - {path: docker/docker-compose.yaml, line: 169, quote: "MIGRATION_ENABLED: \"false\""}
+redis:
+  status: required
+  selectBy: {}
+  # Celery broker and cache; the compose file has a redis service and CELERY_BROKER_URL points to it.
+  evidence:
+    - {path: api/configs/middleware/cache/redis_config.py, line: 10, quote: "REDIS_HOST: str = Field("}
+    - {path: api/configs/middleware/__init__.py, line: 291, quote: "CELERY_BROKER_URL: str | None = Field("}
+    - {path: docker/.env.example, line: 124, quote: "CELERY_BROKER_URL=redis://:difyai123456@redis:6379/1"}
+    - {path: docker/docker-compose.yaml, line: 574, quote: "image: redis:6-alpine"}
+workers:
+  status: independent
+  commands: ["MODE=worker /entrypoint.sh", "MODE=beat /entrypoint.sh"]
+  evidence:
+    - {path: docker/docker-compose.yaml, line: 358, quote: "MODE: worker"}
+    - {path: docker/docker-compose.yaml, line: 438, quote: "MODE: beat"}
+    - {path: api/docker/entrypoint.sh, line: 100, quote: "exec celery -A celery_entrypoint.celery worker -P ${WORKER_POOL} $CONCURRENCY_OPTION \\"}
+    - {path: api/docker/entrypoint.sh, line: 106, quote: "exec celery -A app.celery beat --loglevel ${LOG_LEVEL:-INFO}"}
+scheduledJobs:
+  status: independent
+  items: [celery beat schedules]
+  evidence:
+    - {path: api/docker/entrypoint.sh, line: 105, quote: "elif [[ \"${MODE}\" == \"beat\" ]]; then"}
+    - {path: docker/docker-compose.yaml, line: 434, quote: "worker_beat:"}
+storage:
+  local: conditional
+  paths: [/app/api/storage]
+  s3: native
+  s3SelectBy: {STORAGE_TYPE: s3, S3_BUCKET_NAME: "<bucket>", S3_REGION: "<region>", S3_USE_AWS_MANAGED_IAM: "true"}
+  # The plugin daemon has its own storage (PLUGIN_STORAGE_TYPE=local by default) and the weaviate volume is local.
+  evidence:
+    - {path: docker/.env.example, line: 163, quote: "STORAGE_TYPE=opendal"}
+    - {path: docker/.env.example, line: 164, quote: "OPENDAL_SCHEME=fs"}
+    - {path: api/extensions/storage/storage_type.py, line: 14, quote: "S3 = \"s3\""}
+    - {path: api/extensions/storage/aws_s3_storage.py, line: 21, quote: "if dify_config.S3_USE_AWS_MANAGED_IAM:"}
+    - {path: api/configs/middleware/storage/amazon_s3_storage_config.py, line: 42, quote: "S3_USE_AWS_MANAGED_IAM: bool = Field("}
+    - {path: docker/docker-compose.yaml, line: 265, quote: "chown -R 1001:1001 /app/api/storage"}
+    - {path: docker/.env.example, line: 245, quote: "PLUGIN_STORAGE_TYPE=local"}
+env:
+  required:
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "session and encryption key; set a strong random value (api and worker)"}
+    - {name: "DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD / DB_DATABASE", secret: false, buildTime: false, note: "PostgreSQL connection; the password is secret"}
+    - {name: "REDIS_HOST / REDIS_PORT / REDIS_PASSWORD", secret: false, buildTime: false, note: "Redis for cache and the Celery broker (CELERY_BROKER_URL)"}
+    - {name: STORAGE_TYPE, secret: false, buildTime: false, note: "s3 with S3_BUCKET_NAME, S3_REGION and S3_USE_AWS_MANAGED_IAM=true for the task role; default opendal fs is ephemeral"}
+    - {name: "CONSOLE_API_URL / CONSOLE_WEB_URL / SERVICE_API_URL / APP_WEB_URL", secret: false, buildTime: false, note: "public URLs; image defaults point to 127.0.0.1"}
+    - {name: "PLUGIN_DAEMON_URL / PLUGIN_DAEMON_KEY / INNER_API_KEY_FOR_PLUGIN", secret: true, buildTime: false, note: "needs a separate plugin daemon service"}
+    - {name: "CODE_EXECUTION_ENDPOINT / CODE_EXECUTION_API_KEY", secret: true, buildTime: false, note: "needs a separate sandbox service for code nodes"}
+    - {name: VECTOR_STORE, secret: false, buildTime: false, note: "weaviate by default; needs a vector database service (pgvector uses its own PostgreSQL with the vector extension)"}
+  optional: [MIGRATION_ENABLED, MODE, SERVER_WORKER_AMOUNT, GUNICORN_TIMEOUT, CELERY_WORKER_AMOUNT, CELERY_AUTO_SCALE, DEBUG, LOG_LEVEL, DB_TYPE, DB_SSL_MODE]
+  buildTime: []
+  evidence:
+    - {path: docker/.env.example, line: 33, quote: "SECRET_KEY="}
+    - {path: docker/.env.example, line: 229, quote: "PLUGIN_DAEMON_URL=http://plugin_daemon:5002"}
+    - {path: docker/.env.example, line: 188, quote: "CODE_EXECUTION_ENDPOINT=http://sandbox:8194"}
+    - {path: docker/.env.example, line: 166, quote: "VECTOR_STORE=weaviate"}
+    - {path: api/Dockerfile, line: 40, quote: "ENV CONSOLE_API_URL=http://127.0.0.1:5001"}
+blockers:
+  expected:
+    - "Second application image: web/Dockerfile builds a separate Next.js server for the UI; Deployz runs one application image per deployment (docker/docker-compose.yaml:469)"
+    - "Plugin daemon service (langgenius/dify-plugin-daemon, not built from this repo) is needed for model providers and tools; nginx routes /e/ to it (docker/docker-compose.yaml:656, docker/nginx/conf.d/default.conf.template:53)"
+    - "Sandbox service (langgenius/dify-sandbox, not built from this repo) for code execution (docker/docker-compose.yaml:592)"
+    - "Vector database as a separate service (weaviate by default) (docker/docker-compose.yaml:985)"
+    - "Path-based routing between api, web and plugin daemon needs nginx or equivalent in front (docker/nginx/conf.d/default.conf.template:8-62)"
+  mustNot:
+    - "Postgres, Redis and Celery workers must not be the blockers: they are supported (managed Postgres and Redis; worker and beat from the same api image with MODE)"
+    - "STORAGE_TYPE s3 must not block: S3_USE_AWS_MANAGED_IAM allows the task role"
+    - "Migrations must not block: MIGRATION_ENABLED=true runs flask upgrade-db in the entrypoint"
+    - "The many optional vector stores (milvus, qdrant, oceanbase, ...) in docker-compose must not each count as required: they are compose profiles; weaviate or pgvector is the one chosen"
+vendorQuestions:
+  legitimate:
+    - "Should the deploy be limited to the API only without the web UI and plugin daemon? (not a working Dify product)"
+  unnecessary:
+    - "Which port? (5001 for api, 3000 for web)"
+    - "Who runs migrations? (entrypoint with MIGRATION_ENABLED=true)"
+    - "Which database? (PostgreSQL is the default DB_TYPE)"
+    - "Is Redis or a Celery worker needed? (yes; same api image with MODE=worker)"
+traps:
+  - "api/Dockerfile looks like a normal single web image -> it is only the API; the UI is web/Dockerfile and nginx joins them (docker/nginx/conf.d/default.conf.template:60)"
+  - "The same langgenius/dify-api image runs api, worker, beat and api_websocket by MODE -> one image, several commands (docker/docker-compose.yaml:276, :358, :438)"
+  - "Compose defines about 30 vector stores and databases with profiles -> only one vector store is active (COMPOSE_PROFILES=${VECTOR_STORE:-weaviate} in docker/.env.example:303)"
+  - "MIGRATION_ENABLED is false on some compose services -> only api runs migrations (docker/docker-compose.yaml:169)"
+  - "api image ENV URLs point to 127.0.0.1 -> must be set to the public URL (api/Dockerfile:40)"
+  - "DEBUG=true switches to python -m app instead of gunicorn (api/docker/entrypoint.sh:155)"
+openQuestions:
+  - "Whether a reduced deploy (api + worker only) is useful without the web image: the vendor does not document it"

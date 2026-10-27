@@ -1,0 +1,166 @@
+id: new-76
+repository: mattermost/mattermost
+commit: 8b2fb3709a1672973a3a1067ee044dadc96e7048
+summary: >
+  Mattermost team chat (Go server in server/, React web app in webapp/, monorepo). The repo has no Dockerfile that
+  builds the server from source: the production image (server/build/Dockerfile) downloads a prebuilt release tarball
+  (MM_PACKAGE, default latest.mattermost.com enterprise build) with curl and copies it into a distroless image.
+  The server is one Go binary (port 8065) that embeds jobs and the scheduler, needs PostgreSQL only, and migrates
+  itself at startup.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile builds the app from the repo archive; the only production Dockerfiles (server/build/Dockerfile and
+    Dockerfile.fips) fetch a prebuilt release binary from the internet, so the deployed code is not the repo source and
+    the version is not pinned to the commit. If Deployz accepts a build that downloads a release (with MM_PACKAGE pinned
+    to a version), the app is DEPLOYABLE_WITH_CHANGES: PostgreSQL, S3 by task role, SiteURL, and config persistence in the
+    database (MM_CONFIG). The other Dockerfiles are CI, dev and test images. Judgement call: a source build would need
+    a new Dockerfile (Go build of server/cmd/mattermost plus webapp build).
+dockerfile:
+  accept: []
+  reject:
+    - {path: server/build/Dockerfile, reason: "downloads a prebuilt release tarball with curl (MM_PACKAGE); does not build the repo source. It also COPYs passwd, so the build context must be server/build"}
+    - {path: server/build/Dockerfile.fips, reason: "same release-tarball download on a Chainguard FIPS base image (cgr.dev) that needs registry access"}
+    - {path: server/build/docker-preview/Dockerfile, reason: "preview image: postgres:14 plus the team-edition release tarball and an in-container database; demo only"}
+    - {path: server/build/Dockerfile.buildenv, reason: "Go and Node build toolbox for developers and CI (CMD bash), not the app"}
+    - {path: server/build/Dockerfile.buildenv-fips, reason: "FIPS build toolbox for CI"}
+    - {path: server/build/Dockerfile.elasticsearch, reason: "Elasticsearch test image"}
+    - {path: server/build/Dockerfile.opensearch, reason: "OpenSearch test image"}
+    - {path: .cursor/Dockerfile, reason: "cloud agent developer image (Docker, Go, Node, ssh)"}
+    - {path: webapp/channels/build/Dockerfile, reason: "legacy node:14 build helper, CMD node; not the app"}
+    - {path: e2e-tests/cypress/Dockerfile.webhook, reason: "e2e test webhook server"}
+    - {path: e2e-tests/playwright/lib/src/containers/assets/webhook/Dockerfile.webhook, reason: "e2e test webhook server"}
+  target: null
+  context: server/build
+  evidence:
+    - {path: server/build/Dockerfile, line: 11, quote: "ARG MM_PACKAGE=\"https://latest.mattermost.com/mattermost-enterprise-linux\""}
+    - {path: server/build/Dockerfile, line: 31, quote: "&& curl -L $MM_PACKAGE | tar -xvz"}
+    - {path: server/build/Dockerfile, line: 72, quote: "COPY  passwd /etc/passwd"}
+    - {path: server/build/Dockerfile, line: 83, quote: "CMD [\"/mattermost/bin/mattermost\"]"}
+    - {path: server/build/Dockerfile.fips, line: 28, quote: "&& curl -L $MM_PACKAGE | tar -xvz"}
+    - {path: server/build/docker-preview/Dockerfile, line: 22, quote: "ADD https://releases.mattermost.com/${MATTERMOST_VERSION}/mattermost-team-${MATTERMOST_VERSION}-linux-amd64.tar.gz ."}
+runtime: {accept: [go]}
+port:
+  accept: [8065]
+  evidence:
+    - {path: server/build/Dockerfile, line: 85, quote: "EXPOSE 8065 8067 8074"}
+    - {path: server/public/model/config.go, line: 140, quote: "ServiceSettingsDefaultListenAndAddress       = \":8065\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/public/model/config.go, line: 140, quote: "\":8065\""}
+    - {path: server/public/model/config.go, line: 574, quote: "s.ListenAddress = new(ServiceSettingsDefaultListenAndAddress)"}
+startCommand:
+  source: image
+  accept: ["/mattermost/bin/mattermost"]
+healthPath:
+  accept: ["/api/v4/system/ping"]
+  # Unauthenticated GET, returns 200 {"status":"OK"} (APIHandler, no session needed). With ?get_server_status=true it also
+  # writes to the database and tests the file store. Port 8067 is the metrics port, not for the ALB. "/" serves the SPA.
+  evidence:
+    - {path: server/channels/api4/system.go, line: 43, quote: "api.BaseRoutes.System.Handle(\"/ping\", api.APIHandler(getSystemPing)).Methods(http.MethodGet)"}
+    - {path: server/channels/api4/system.go, line: 152, quote: "s[model.STATUS] = model.StatusOk"}
+    - {path: server/channels/api4/system.go, line: 172, quote: "if r.FormValue(\"get_server_status\") == \"true\" {"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [MM_SQLSETTINGS_DATASOURCE]
+  # The only supported driver is postgres (other values fail config validation). The default DataSource points to localhost
+  # with sslmode=disable, so MM_SQLSETTINGS_DATASOURCE must be set, with sslmode=require for RDS (TLS forced).
+  evidence:
+    - {path: server/public/model/config.go, line: 1636, quote: "s.DriverName = new(DatabaseDriverPostgres)"}
+    - {path: server/public/model/config.go, line: 1640, quote: "s.DataSource = new(SqlSettingsDefaultDataSource)"}
+    - {path: server/public/model/config.go, line: 157, quote: "SqlSettingsDefaultDataSource = \"postgres://mmuser:mostest_password@localhost/mattermost_test?sslmode=disable"}
+    - {path: server/public/model/config.go, line: 4728, quote: "if *s.DriverName != DatabaseDriverPostgres {"}
+    - {path: server/config/environment.go, line: 94, quote: "applyEnvKey(strings.TrimPrefix(envKey, \"MM_\"), envValue, rvalConfig)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/channels/store/sqlstore/store.go, line: 243, quote: "err = store.migrate(migrationsDirectionUp, false, !store.disableMorphLogging)"}
+    - {path: server/channels/store/sqlstore/store.go, line: 245, quote: "failed to apply database migrations"}
+redis:
+  status: conditional
+  selectBy: {MM_CACHESETTINGS_CACHETYPE: redis, MM_CACHESETTINGS_REDISADDRESS: "host:6379"}
+  # Default cache is in-process LRU. Redis cache is an option (Enterprise); it is not needed for a single task.
+  evidence:
+    - {path: server/public/model/config.go, line: 1138, quote: "s.CacheType = new(CacheTypeLRU)"}
+    - {path: server/public/model/config.go, line: 1129, quote: "RedisAddress       *string"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/public/model/config.go, line: 3645, quote: "s.RunJobs = new(true)"}
+    - {path: server/public/model/config.go, line: 3649, quote: "s.RunScheduler = new(true)"}
+scheduledJobs:
+  status: embedded
+  items: [job server and scheduler in the web process]
+  evidence:
+    - {path: server/public/model/config.go, line: 3649, quote: "s.RunScheduler = new(true)"}
+storage:
+  local: conditional
+  paths: [/mattermost/data, /mattermost/plugins, /mattermost/client/plugins, /mattermost/config, /mattermost/logs]
+  s3: native
+  s3SelectBy: {MM_FILESETTINGS_DRIVERNAME: amazons3}
+  # Files default to local ./data/. With amazons3 and empty access keys the S3 client uses the IAM role provider
+  # (minio-go credentials.NewIAM), which covers an ECS task role. Plugins and config stay on local disk (ephemeral);
+  # config can move to the database with MM_CONFIG=postgres://... (config store).
+  evidence:
+    - {path: server/public/model/config.go, line: 2009, quote: "s.DriverName = new(ImageDriverLocal)"}
+    - {path: server/public/model/config.go, line: 159, quote: "FileSettingsDefaultDirectory                   = \"./data/\""}
+    - {path: server/public/model/config.go, line: 39, quote: "ImageDriverS3    = \"amazons3\""}
+    - {path: server/public/model/config.go, line: 2048, quote: "s.AmazonS3AccessKeyId = new(\"\")"}
+    - {path: server/platform/shared/filestore/s3store.go, line: 137, quote: "} else if b.accessKey == \"\" && b.secretKey == \"\" {"}
+    - {path: server/platform/shared/filestore/s3store.go, line: 138, quote: "creds = credentials.NewIAM(\"\")"}
+    - {path: server/config/store.go, line: 91, quote: "if IsDatabaseDSN(dsn) {"}
+    - {path: server/cmd/mattermost/commands/utils.go, line: 61, quote: "configDSN = env[\"MM_CONFIG\"]"}
+    - {path: server/build/Dockerfile, line: 88, quote: "VOLUME [\"/mattermost/data\", \"/mattermost/logs\", \"/mattermost/config\", \"/mattermost/plugins\", \"/mattermost/client/plugins\"]"}
+env:
+  required:
+    - {name: MM_SQLSETTINGS_DATASOURCE, secret: true, buildTime: false, note: "postgres://user:password@host:5432/db?sslmode=require&connect_timeout=10; default points to localhost"}
+    - {name: MM_SERVICESETTINGS_SITEURL, secret: false, buildTime: false, note: "public HTTPS URL; empty SiteURL logs an error and breaks links, email and integrations"}
+    - {name: MM_FILESETTINGS_DRIVERNAME, secret: false, buildTime: false, note: "amazons3; default local disk is ephemeral"}
+    - {name: MM_FILESETTINGS_AMAZONS3BUCKET, secret: false, buildTime: false, note: "bucket name; leave MM_FILESETTINGS_AMAZONS3ACCESSKEYID and SECRETACCESSKEY empty to use the task role"}
+    - {name: MM_FILESETTINGS_AMAZONS3REGION, secret: false, buildTime: false, note: "bucket region"}
+    - {name: MM_CONFIG, secret: true, buildTime: false, note: "set to the same postgres:// URL so System Console changes persist; otherwise config.json on ephemeral disk is regenerated"}
+  optional: [MM_FILESETTINGS_AMAZONS3ENDPOINT, MM_FILESETTINGS_AMAZONS3SSL, MM_FILESETTINGS_AMAZONS3SSE, MM_EMAILSETTINGS_SMTPSERVER, MM_EMAILSETTINGS_SMTPPORT, MM_EMAILSETTINGS_SMTPUSERNAME, MM_EMAILSETTINGS_SMTPPASSWORD, MM_CACHESETTINGS_CACHETYPE, MM_CACHESETTINGS_REDISADDRESS, MM_SERVICESETTINGS_ENABLELOCALMODE, MM_PLUGINSETTINGS_ENABLEUPLOADS]
+  buildTime: [MM_PACKAGE]
+  evidence:
+    - {path: server/public/model/config.go, line: 559, quote: "s.SiteURL = new(ServiceSettingsDefaultSiteURL)"}
+    - {path: server/channels/app/server.go, line: 551, quote: "SiteURL must be set. Some features will operate incorrectly if the SiteURL is not set."}
+    - {path: server/build/Dockerfile, line: 43, quote: "ENV MM_SERVICESETTINGS_ENABLELOCALMODE=\"true\""}
+blockers:
+  expected:
+    - "No Dockerfile builds the server from the repo: server/build/Dockerfile downloads a prebuilt release tarball (MM_PACKAGE) instead of compiling server/ and webapp/. The deployed binary is not the repo source at the pinned commit"
+  mustNot:
+    - "VOLUME declarations for data, logs, config and plugins must not block: files go to S3, config can go to the database, logs go to stdout, plugins are optional"
+    - "MySQL must not be reported as an option or blocker: the server supports PostgreSQL only"
+    - "Redis, Elasticsearch, OpenSearch and the other docker-compose services must not be required: they are optional enterprise features or dev tools"
+    - "S3 must not need static keys: empty access keys use the IAM role provider"
+    - "Ports 8067 (metrics) and 8074 must not be treated as extra web services"
+    - "Separate worker or cron service must not be required: jobs and scheduler run in the server process"
+    - "The Dockerfile HEALTHCHECK mmctl command (local mode socket) must not be used as the ALB health check"
+vendorQuestions:
+  legitimate:
+    - "Which release version to install (MM_PACKAGE) and whether enterprise or team edition is wanted: the Dockerfile default is the latest enterprise build, not the pinned commit"
+    - "Whether the repo owner accepts a Dockerfile that downloads a release instead of a source build"
+  unnecessary:
+    - "Which port? (8065 in config defaults and Dockerfile)"
+    - "Who runs migrations? (the server migrates at startup)"
+    - "Which database? (PostgreSQL only)"
+    - "Health path? (/api/v4/system/ping)"
+    - "Is a worker needed? (jobs run in the server process)"
+traps:
+  - "server/build/Dockerfile looks like the production Dockerfile but only unpacks a downloaded release tarball (server/build/Dockerfile:31); it is not a source build"
+  - "The final stage is distroless, has no shell or curl; the HEALTHCHECK uses mmctl --local (server/build/Dockerfile:79), not an HTTP path"
+  - "server/build/docker-compose.yml, server/docker-compose.yaml and docker-compose.makefile.yml list Postgres, Elasticsearch, OpenSearch, Keycloak, MinIO and more -> dev stack, not the production topology"
+  - "ENV MM_SERVICESETTINGS_ENABLELOCALMODE=true in the image enables the local socket for mmctl only (server/build/Dockerfile:43)"
+  - "Default SqlSettings.DataSource has mmuser:mostest_password@localhost and sslmode=disable -> test default to override (server/public/model/config.go:157)"
+  - "Config defaults to config/config.json on local disk; without MM_CONFIG the file is regenerated on each task start (server/cmd/mattermost/commands/utils.go:61)"
+  - "Port 8067 is the metrics listener, not the app port (server/public/model/config.go:1263)"
+openQuestions:
+  - "Whether Deployz allows a Dockerfile that downloads a release artefact with curl during the build; the outcome depends on this"
+  - "Whether a plain source build (go build of server/cmd/mattermost plus webapp build) works without the enterprise repository; enterprise code is a separate private module"

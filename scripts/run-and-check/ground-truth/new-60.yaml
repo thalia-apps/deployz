@@ -1,0 +1,166 @@
+id: new-60
+repository: knadh/listmonk
+commit: 00329644c78b80c8df117c76f8c5b15137096524
+summary: >
+  listmonk newsletter and mailing list manager (Go single binary with an embedded Bun-built admin frontend, PostgreSQL only).
+  The only production Dockerfile COPYs a prebuilt `listmonk` binary that goreleaser builds in CI, so it does not build from the repo
+  archive. No Dockerfile builds the app from source (dev/app.Dockerfile is a dev toolbox that sleeps). A deploy needs a new
+  multi-stage Dockerfile (bun frontend build, go build, stuffbin pack) added to the repo. After that it is one web container
+  plus RDS PostgreSQL, with S3 media through the task role.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The topology fits (one process, Postgres, optional S3 via IAM role). But no Dockerfile in the repo builds from source, so the
+    deploy only works after a Dockerfile is added (a repo change). DEPLOYABLE_WITH_CHANGES if the analyser proposes such a Dockerfile;
+    NOT_DEPLOYABLE is also valid because the supplied Dockerfile cannot build in Deployz. The deploy must also run
+    `--install --idempotent --yes` and `--upgrade --yes` before the web start.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "COPYs a prebuilt ./listmonk binary that is not in the repo (gitignored, built by goreleaser in CI with make build-frontend and make pack-bin); the build fails without it"}
+    - {path: dev/app.Dockerfile, reason: "dev toolbox image (Go, bun, psql) with CMD sleep infinity; it does not build or run the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 10, quote: "COPY listmonk ."}
+    - {path: Dockerfile, line: 1, quote: "FROM alpine:latest"}
+    - {path: .gitignore, line: 10, quote: "listmonk"}
+    - {path: .goreleaser.yml, line: 11, quote: "make build-frontend"}
+    - {path: .goreleaser.yml, line: 38, quote: "make pack-bin"}
+    - {path: .goreleaser.yml, line: 68, quote: "dockerfile: Dockerfile"}
+    - {path: dev/app.Dockerfile, line: 13, quote: "CMD [\"sleep\", \"infinity\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: Dockerfile, line: 20, quote: "EXPOSE 9000"}
+    - {path: config.toml.sample, line: 6, quote: "address = \"localhost:9000\""}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: config.toml.sample, line: 6, quote: "address = \"localhost:9000\""}
+    - {path: Dockerfile, line: 11, quote: "COPY config.toml.sample config.toml"}
+    - {path: docker-compose.yml, line: 28, quote: "LISTMONK_app__address: 0.0.0.0:9000"}
+startCommand:
+  source: explicit
+  accept: ["./listmonk", "listmonk"]
+  # The image CMD is ./listmonk (ENTRYPOINT docker-entrypoint.sh execs it), but a Dockerfile must be written first. The migration command must run before it.
+  # The default --config is config.toml, which the image copies from config.toml.sample.
+  evidence:
+    - {path: Dockerfile, line: 26, quote: "CMD [\"./listmonk\"]"}
+    - {path: Dockerfile, line: 23, quote: "ENTRYPOINT [\"docker-entrypoint.sh\"]"}
+    - {path: cmd/init.go, line: 181, quote: "f.StringSlice(\"config\", []string{\"config.toml\"},"}
+healthPath:
+  accept: ["/health"]
+  # /health is a public route and returns JSON with 200, no DB check. /api/health is registered in the authenticated /api block, so it is not listed.
+  evidence:
+    - {path: cmd/handlers.go, line: 338, quote: "g.GET(\"/health\", a.HealthCheck)"}
+    - {path: cmd/handlers.go, line: 278, quote: "g := e.Group(\"\")"}
+    - {path: cmd/handlers.go, line: 145, quote: "g.GET(\"/api/health\", a.HealthCheck)"}
+    - {path: cmd/handlers.go, line: 130, quote: "g = e.Group(\"\", a.auth.Middleware,"}
+    - {path: cmd/handlers.go, line: 357, quote: "return c.JSON(http.StatusOK, okResp{true})"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: ["LISTMONK_db__host", "LISTMONK_db__port", "LISTMONK_db__user", "LISTMONK_db__password", "LISTMONK_db__database", "LISTMONK_db__ssl_mode"]
+  # No DSN variable: only separate parts. The default ssl_mode is disable; RDS forces TLS, so set ssl_mode to require.
+  evidence:
+    - {path: cmd/init.go, line: 353, quote: "\"sslmode\":  c.SSLMode"}
+    - {path: config.toml.sample, line: 9, quote: "[db]"}
+    - {path: config.toml.sample, line: 18, quote: "ssl_mode = \"disable\""}
+    - {path: cmd/main.go, line: 130, quote: "key = strings.Replace(key, \"__\", \".\", -1)"}
+migrations:
+  mode: command
+  accept: ["./listmonk --install --idempotent --yes", "./listmonk --upgrade --yes"]
+  # The web start does NOT install or upgrade: it exits with a fatal error when the schema is missing or an upgrade is pending.
+  # --install --idempotent is a no-op if the DB is set up; --upgrade runs pending migrations.
+  evidence:
+    - {path: cmd/main.go, line: 168, quote: "lo.Fatal(\"the database does not appear to be setup. Run --install.\")"}
+    - {path: cmd/upgrade.go, line: 120, quote: "there are %d pending database upgrade(s)"}
+    - {path: cmd/install.go, line: 55, quote: "skipping install as database appears to be already setup"}
+    - {path: docker-compose.yml, line: 22, quote: "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config ''"}
+redis:
+  status: none
+  evidence:
+    - {path: go.mod, line: 1, quote: "module github.com/knadh/listmonk"}
+workers:
+  status: embedded
+  commands: []
+  # The campaign manager and the import workers run inside the web process.
+  evidence:
+    - {path: cmd/init.go, line: 1109, quote: "httpSrv := &http.Server{Addr: ko.String(\"app.address\"), Handler: srv}"}
+scheduledJobs:
+  status: embedded
+  items: [slow query cache refresh, database vacuum]
+  evidence:
+    - {path: cmd/init.go, line: 1194, quote: "initCron initializes cron jobs for slow query cache refresh and database vacuum."}
+storage:
+  local: conditional
+  paths: [/listmonk/uploads]
+  s3: native
+  s3SelectBy: {upload.provider: s3}
+  # Set in Admin -> Settings -> Media (stored in the DB settings table), default provider is filesystem with path "uploads".
+  # The S3 store falls back to the IAM role when both access key and secret are empty, so the ECS task role works.
+  evidence:
+    - {path: schema.sql, line: 269, quote: "('upload.provider', '\"filesystem\"')"}
+    - {path: schema.sql, line: 272, quote: "('upload.filesystem.upload_path', '\"uploads\"')"}
+    - {path: cmd/init.go, line: 824, quote: "switch provider := ko.String(\"upload.provider\")"}
+    - {path: internal/media/providers/s3/s3.go, line: 49, quote: "if opt.AccessKey == \"\" && opt.SecretKey == \"\" {"}
+    - {path: internal/media/providers/s3/s3.go, line: 51, quote: "simples3.NewUsingIAM(opt.Region)"}
+    - {path: docker-compose.yml, line: 42, quote: "./uploads:/listmonk/uploads:rw"}
+env:
+  required:
+    - {name: LISTMONK_app__address, secret: false, buildTime: false, note: "set to 0.0.0.0:9000; the config.toml copied into the image listens on localhost only"}
+    - {name: LISTMONK_db__host, secret: false, buildTime: false, note: "RDS host; also set LISTMONK_db__port, LISTMONK_db__user, LISTMONK_db__database"}
+    - {name: LISTMONK_db__password, secret: true, buildTime: false, note: "database password"}
+    - {name: LISTMONK_db__ssl_mode, secret: false, buildTime: false, note: "set to require; the default disable fails against RDS with forced TLS"}
+    - {name: LISTMONK_ADMIN_USER, secret: false, buildTime: false, note: "read only by --install (min 3 chars); without it the first visitor to the public URL creates the super admin, so set it"}
+    - {name: LISTMONK_ADMIN_PASSWORD, secret: true, buildTime: false, note: "read only by --install (min 8 chars); see LISTMONK_ADMIN_USER"}
+  optional: [LISTMONK_ADMIN_API_USER, LISTMONK_db__max_open, LISTMONK_db__max_idle, LISTMONK_db__max_lifetime, LISTMONK_db__params, TZ, PUID, PGID]
+  buildTime: []
+  # app.root_url (public HTTPS URL, default http://localhost:9000) and SMTP are DB settings, changed in the admin UI, not env.
+  evidence:
+    - {path: config.toml.sample, line: 6, quote: "address = \"localhost:9000\""}
+    - {path: config.toml.sample, line: 18, quote: "ssl_mode = \"disable\""}
+    - {path: cmd/install.go, line: 82, quote: "os.Getenv(\"LISTMONK_ADMIN_USER\")"}
+    - {path: cmd/install.go, line: 98, quote: "no superadmin user created. Visit webpage to create user."}
+    - {path: cmd/auth.go, line: 92, quote: "if needsUserSetup {"}
+    - {path: schema.sql, line: 233, quote: "('app.root_url', '\"http://localhost:9000\"')"}
+blockers:
+  expected:
+    - "No Dockerfile builds listmonk from the repo: Dockerfile COPYs a prebuilt binary made by goreleaser in CI (frontend build with bun, go build, stuffbin pack). A new multi-stage Dockerfile is needed"
+  mustNot:
+    - "Postgres-only must not block: Deployz provides PostgreSQL 16"
+    - "uploads directory must not block: S3 media provider is native and uses the IAM role when no keys are set"
+    - "Redis, Elasticsearch, Kafka or a queue must not be reported as needed: none is used"
+    - "Campaign sending and imports must not be reported as a separate worker: they run in the web process"
+    - "config.toml must not block: the LISTMONK_ env vars override it (the file only has to exist)"
+    - "SMTP must not be reported as a missing platform service: it is set in the admin UI settings"
+vendorQuestions:
+  legitimate:
+    - "Which SMTP server or provider to send mail with (configured in the UI after the first start)"
+    - "What public HTTPS URL to use for app.root_url (set in the admin UI)"
+  unnecessary:
+    - "Which port? (9000)"
+    - "Which database? (PostgreSQL only)"
+    - "Who runs migrations? (--install --idempotent and --upgrade, from the compose file)"
+    - "Is a worker needed? (embedded)"
+traps:
+  - "Dockerfile looks production ready -> it only COPYs a prebuilt binary and fails in a source-only build (Dockerfile:10)"
+  - "docker-compose.yml uses image listmonk/listmonk:latest from Docker Hub -> a registry image Deployz does not pull (docker-compose.yml:12)"
+  - "The image CMD only runs ./listmonk -> install and upgrade are not run, so a fresh DB fails with 'Run --install' (cmd/main.go:168)"
+  - "config.toml in the image listens on localhost -> unreachable from the ALB until LISTMONK_app__address is set (config.toml.sample:6)"
+  - "dev/app.Dockerfile has Go and bun -> dev toolbox with CMD sleep, not a production image (dev/app.Dockerfile:13)"
+  - "S3 settings use aws_access_key_id fields -> keys may be left empty and the IAM role is used (internal/media/providers/s3/s3.go:49)"
+  - "/api/health also exists -> it is in the authenticated API block; use /health (cmd/handlers.go:338)"
+openQuestions:
+  - "Whether a missing source Dockerfile counts as NOT_DEPLOYABLE or as a needed change: a judgement call; both are accepted"
+crossReview:
+  - {field: healthPath, change: "kept /health: the group at line 278 has no auth middleware, /api/health is in the group at line 130 with a.auth.Middleware. Added the three registrations as evidence", evidence: "cmd/handlers.go:130; cmd/handlers.go:145; cmd/handlers.go:278; cmd/handlers.go:338"}
+  - {field: startCommand, change: "kept ./listmonk (explicit, since no usable Dockerfile); added evidence for CMD, ENTRYPOINT and the default config.toml", evidence: "Dockerfile:23; Dockerfile:26; cmd/init.go:181"}
+  - {field: migrations, change: "none: web start fatals without schema (main.go:168) or with pending upgrades (upgrade.go:120, except nightly/beta builds that auto-run); commands --install --idempotent --yes then --upgrade --yes confirmed from docker-compose.yml:22", evidence: "cmd/main.go:151-186; docker-compose.yml:22"}
+  - {field: dockerfile, change: "none: Dockerfile COPYs listmonk (gitignored, not in git); only Dockerfile, dev/app.Dockerfile exist in git", evidence: "Dockerfile:10; .gitignore:10"}
+  - {field: all, change: verified, evidence: "43 citations checked"}

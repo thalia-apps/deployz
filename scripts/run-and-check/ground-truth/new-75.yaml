@@ -1,0 +1,177 @@
+id: new-75
+repository: discourse/discourse
+commit: ca1fc95945fd73fbcda5be632617526cc965070d
+summary: >
+  Discourse forum (Ruby on Rails, Ember frontend, pnpm). The repository has NO production Dockerfile: the official
+  image is built by the separate discourse_docker launcher repo, and bin/docker/* only wraps a development container.
+  Runtime topology fits Deployz once a vendor Dockerfile exists: one Rails app server (pitchfork, port 3000) with
+  Sidekiq embedded as a supervised child (UNICORN_SIDEKIQS=1), PostgreSQL and Redis both required, uploads and
+  backups on S3 through the task role (s3_use_iam_profile). Assets must be precompiled at image build.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile in the tree builds the app (the install docs use the external discourse_docker repo), so Deployz has
+    nothing to build from: NOT_DEPLOYABLE is the plain answer. DEPLOYABLE_WITH_CHANGES is also fair: PostgreSQL,
+    Redis, S3 via IAM role, one HTTP port and the /srv/status health route all fit, once the vendor writes a Dockerfile
+    that precompiles assets, runs db:migrate as the migration command and starts pitchfork with UNICORN_BIND_ALL and
+    UNICORN_SIDEKIQS=1.
+dockerfile:
+  accept: []
+  reject:
+    - {path: bin/docker/boot_dev, reason: "starts a development container from an external image (discourse_dev from discourse_docker); not a Dockerfile and not production"}
+    - {path: bin/docker/README.md, reason: "says the Dockerfile lives in the discourse/discourse_docker repo, not here"}
+  target: null
+  context: .
+  evidence:
+    - {path: bin/docker/README.md, line: 10, quote: "The Dockerfile comes from [discourse/discourse_docker on GitHub]"}
+    - {path: docs/INSTALL-cloud.md, line: 30, quote: "discourse/discourse_docker/main/install-discourse"}
+    - {path: bin/docker/boot_dev, line: 107, quote: "-e UNICORN_BIND_ALL=true"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: config/pitchfork.conf.rb, line: 32, quote: "(ENV[\"UNICORN_PORT\"] || 3000).to_i"}
+bindAllInterfaces:
+  value: false
+  # Binds 127.0.0.1 unless UNICORN_BIND_ALL is set (or UNICORN_LISTENER); with UNICORN_BIND_ALL=true it binds all interfaces.
+  evidence:
+    - {path: config/pitchfork.conf.rb, line: 32, quote: "ENV[\"UNICORN_BIND_ALL\"] ? \"\" : \"127.0.0.1:\""}
+startCommand:
+  source: explicit
+  accept: ["pitchfork -c config/pitchfork.conf.rb"]
+  # No image CMD exists. bin/pitchfork with RAILS_ENV=production loads pitchfork directly and needs -c for the config file.
+  evidence:
+    - {path: bin/pitchfork, line: 19, quote: "ARGV.push(\"-c\")"}
+    - {path: config/pitchfork.conf.rb, line: 29, quote: "worker_processes (ENV[\"UNICORN_WORKERS\"] || 3).to_i"}
+healthPath:
+  accept: ["/srv/status"]
+  # ForumsController inherits ActionController::Base (no login, no force-https redirect); returns 200 "ok" with no DB or Redis check.
+  # EnforceHostname rewrites an unknown Host header to the canonical hostname instead of redirecting.
+  evidence:
+    - {path: config/routes.rb, line: 135, quote: "get \"srv/status\" => \"forums#status\""}
+    - {path: app/controllers/forums_controller.rb, line: 5, quote: "class ForumsController < ActionController::Base"}
+    - {path: app/controllers/forums_controller.rb, line: 20, quote: "render plain: \"ok\""}
+    - {path: lib/middleware/enforce_hostname.rb, line: 21, quote: "Discourse.current_hostname_with_port"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DISCOURSE_DB_HOST, DISCOURSE_DB_PORT, DISCOURSE_DB_NAME, DISCOURSE_DB_USERNAME, DISCOURSE_DB_PASSWORD]
+  evidence:
+    - {path: config/discourse_defaults.conf, line: 28, quote: "db_host ="}
+    - {path: config/discourse_defaults.conf, line: 41, quote: "db_name = discourse"}
+    - {path: config/discourse_defaults.conf, line: 47, quote: "db_password ="}
+    - {path: config/database.yml, line: 10, quote: "adapter: postgresql"}
+migrations:
+  mode: command
+  accept: ["bundle exec rake db:migrate"]
+  # Nothing migrates at boot. db:migrate takes a Redis DistributedMutex, so it needs Redis as well as the DB.
+  evidence:
+    - {path: lib/tasks/db.rake, line: 234, quote: "task \"db:migrate\" => %w["}
+    - {path: lib/tasks/db.rake, line: 243, quote: "redis: Discourse.redis.without_namespace,"}
+redis:
+  status: required
+  selectBy: {DISCOURSE_REDIS_HOST: "host", DISCOURSE_REDIS_PORT: "6379"}
+  # Sidekiq, MessageBus, rate limits, cache and the generated secret key base all live in Redis; the default host is localhost.
+  evidence:
+    - {path: config/discourse_defaults.conf, line: 139, quote: "redis_host = localhost"}
+    - {path: config/discourse_defaults.conf, line: 163, quote: "redis_use_ssl = false"}
+    - {path: app/models/global_setting.rb, line: 41, quote: "token = Discourse.redis.without_namespace.get(REDIS_SECRET_KEY)"}
+workers:
+  status: embedded
+  commands: ["bundle exec sidekiq -q critical,8 -q default,4 -q low,2 -q ultra_low,1"]
+  # With UNICORN_SIDEKIQS=N the pitchfork service worker starts N supervised Sidekiq children in the same container.
+  # The production default is 0 (only bin/pitchfork sets 1 in development), so the env var must be set or no jobs (email, post
+  # processing, scheduled jobs) run. A separate Sidekiq service from the same image is possible but needs explicit queue options
+  # because config/sidekiq.yml has only a development section.
+  evidence:
+    - {path: config/pitchfork.conf.rb, line: 95, quote: "sidekiqs = ENV[\"UNICORN_SIDEKIQS\"].to_i"}
+    - {path: config/pitchfork.conf.rb, line: 105, quote: "Demon::Sidekiq.start(sidekiqs, logger: server.logger)"}
+    - {path: bin/pitchfork, line: 35, quote: "ENV[\"UNICORN_SIDEKIQS\"] ||= \"1\""}
+    - {path: lib/demon/sidekiq.rb, line: 137, quote: "[[\"critical\", 8], [\"default\", 4], [\"low\", 2], [\"ultra_low\", 1]]"}
+    - {path: config/sidekiq.yml, line: 2, quote: "development:"}
+    - {path: config/discourse.pill.sample, line: 107, quote: "bundle exec sidekiq"}
+scheduledJobs:
+  status: embedded
+  items: ["Sidekiq scheduled jobs (MiniScheduler) running inside the Sidekiq process"]
+  evidence:
+    - {path: config/pitchfork.conf.rb, line: 105, quote: "Demon::Sidekiq.start(sidekiqs, logger: server.logger)"}
+storage:
+  local: conditional
+  paths: [public/uploads, public/backups]
+  s3: native
+  s3SelectBy: {DISCOURSE_S3_BUCKET: bucket, DISCOURSE_S3_REGION: region, DISCOURSE_S3_USE_IAM_PROFILE: "true"}
+  # Local public/uploads by default. GlobalSetting.use_s3? (bucket + region + IAM profile, or key pair) switches uploads to S3;
+  # s3_use_iam_profile returns no static credentials, so the AWS SDK chain (ECS task role) applies. Backups default to local.
+  evidence:
+    - {path: lib/file_store/local_store.rb, line: 99, quote: "Rails.public_path.to_s"}
+    - {path: app/models/global_setting.rb, line: 102, quote: "(s3_use_iam_profile || (s3_access_key_id && s3_secret_access_key))"}
+    - {path: app/models/site_setting.rb, line: 357, quote: "SiteSetting.enable_s3_uploads || GlobalSetting.use_s3?"}
+    - {path: lib/s3_helper.rb, line: 308, quote: "return nil if obj.s3_use_iam_profile"}
+    - {path: config/discourse_defaults.conf, line: 243, quote: "s3_use_iam_profile ="}
+    - {path: config/site_settings.yml, line: 3748, quote: "default: \"local\""}
+env:
+  required:
+    - {name: RAILS_ENV, secret: false, buildTime: false, note: "production"}
+    - {name: DISCOURSE_HOSTNAME, secret: false, buildTime: false, note: "public host name; default www.example.com. EnforceHostname rewrites every request to this host, so a wrong value breaks links and logins"}
+    - {name: "DISCOURSE_DB_HOST / DISCOURSE_DB_PORT / DISCOURSE_DB_NAME / DISCOURSE_DB_USERNAME / DISCOURSE_DB_PASSWORD", secret: false, buildTime: false, note: "PostgreSQL; the password is secret"}
+    - {name: "DISCOURSE_REDIS_HOST / DISCOURSE_REDIS_PORT", secret: false, buildTime: false, note: "Redis is required; default host is localhost; DISCOURSE_REDIS_PASSWORD and DISCOURSE_REDIS_USE_SSL if the endpoint needs them"}
+    - {name: UNICORN_BIND_ALL, secret: false, buildTime: false, note: "true; otherwise pitchfork listens on 127.0.0.1 and the ALB cannot reach it"}
+    - {name: UNICORN_SIDEKIQS, secret: false, buildTime: false, note: "1 or more; production default is 0, so background jobs would not run"}
+    - {name: DISCOURSE_SERVE_STATIC_ASSETS, secret: false, buildTime: false, note: "true; there is no nginx in front, and production sets public_file_server only from this setting"}
+    - {name: "DISCOURSE_S3_BUCKET / DISCOURSE_S3_REGION / DISCOURSE_S3_USE_IAM_PROFILE", secret: false, buildTime: false, note: "S3 uploads through the task role; without them uploads use local ephemeral disk"}
+    - {name: "DISCOURSE_SMTP_ADDRESS / DISCOURSE_SMTP_PORT / DISCOURSE_SMTP_USER_NAME / DISCOURSE_SMTP_PASSWORD", secret: false, buildTime: false, note: "outgoing mail (sign-up confirmation); without smtp_address the app falls back to local sendmail; the password is secret"}
+    - {name: DISCOURSE_DEVELOPER_EMAILS, secret: false, buildTime: false, note: "comma separated emails that become admin on sign-up; the first admin account needs this or a rake admin:create run"}
+  optional: [DISCOURSE_SECRET_KEY_BASE, DISCOURSE_REDIS_PASSWORD, DISCOURSE_REDIS_USE_SSL, DISCOURSE_SMTP_DOMAIN, DISCOURSE_SMTP_ENABLE_START_TLS, DISCOURSE_CDN_URL, DISCOURSE_S3_CDN_URL, DISCOURSE_S3_ENDPOINT, DISCOURSE_S3_ACCESS_KEY_ID, DISCOURSE_S3_SECRET_ACCESS_KEY, DISCOURSE_SIDEKIQ_WORKERS, UNICORN_WORKERS, UNICORN_PORT, DISCOURSE_DB_POOL, DISCOURSE_RELATIVE_URL_ROOT, DISCOURSE_CLUSTER_NAME]
+  buildTime: [SKIP_DB_AND_REDIS]
+  evidence:
+    - {path: config/discourse_defaults.conf, line: 62, quote: "hostname = \"www.example.com\""}
+    - {path: lib/middleware/enforce_hostname.rb, line: 20, quote: "env[Rack::HTTP_HOST] = allowed_hostnames.find"}
+    - {path: config/environments/production.rb, line: 15, quote: "config.public_file_server.enabled = GlobalSetting.serve_static_assets || false"}
+    - {path: config/discourse_defaults.conf, line: 197, quote: "serve_static_assets = false"}
+    - {path: config/discourse_defaults.conf, line: 229, quote: "secret_key_base ="}
+    - {path: config/environments/production.rb, line: 30, quote: "config.action_mailer.delivery_method = :sendmail"}
+    - {path: config/discourse_defaults.conf, line: 136, quote: "developer_emails ="}
+    - {path: lib/tasks/assets.rake, line: 33, quote: "ENV[\"SKIP_DB_AND_REDIS\"] == \"1\""}
+blockers:
+  expected:
+    - "No Dockerfile in the repository builds the production app; the official image comes from the external discourse_docker repo (bin/docker/README.md:10, docs/INSTALL-cloud.md:30)"
+  mustNot:
+    - "pgvector must not block: the vector extension is only created by the bundled discourse-ai plugin migration (RDS PostgreSQL supports it); core needs only hstore, pg_trgm and unaccent"
+    - "Sidekiq must not count as an unsupported second service: it runs embedded in the pitchfork process tree (or as a same-image worker)"
+    - "Redis must not be called optional, and ElastiCache must not be a blocker: Redis is required and supported"
+    - "S3 must not require static keys: s3_use_iam_profile uses the task role"
+    - "The missing nginx must not block: serve_static_assets serves public files from Rails"
+    - "Local public/uploads must not block: S3 is native"
+    - "discourse_docker/launcher must not be treated as a Docker-in-Docker need of the app: it is an external install tool"
+vendorQuestions:
+  legitimate:
+    - "Will the vendor add a production Dockerfile (or accept one written for Deployz) that precompiles assets and installs Ruby, Node and ImageMagick/libvips dependencies?"
+    - "Plugins: bundled plugins build with the image; third-party plugins are git-cloned into plugins/ at image build, which the repo does not decide"
+  unnecessary:
+    - "Is Redis needed? (yes, required)"
+    - "Which database? (PostgreSQL only)"
+    - "Who runs migrations? (rake db:migrate; nothing at boot)"
+    - "Health path? (/srv/status)"
+    - "Is a separate Sidekiq service needed? (embedded with UNICORN_SIDEKIQS)"
+traps:
+  - "bin/docker/* -> development container wrappers, not a production Dockerfile (bin/docker/README.md:10)"
+  - "bin/pitchfork sets UNICORN_SIDEKIQS=1 only in development; the production default is 0 (bin/pitchfork:35, config/pitchfork.conf.rb:95)"
+  - "pitchfork listens on 127.0.0.1:3000 unless UNICORN_BIND_ALL is set (config/pitchfork.conf.rb:32)"
+  - "config/database.yml has no production section; production DB settings come from DISCOURSE_DB_* via GlobalSetting (config/database.yml:60)"
+  - "config/sidekiq.yml defines only development queues; a standalone Sidekiq needs -q options (config/sidekiq.yml:2, lib/demon/sidekiq.rb:137)"
+  - "config/nginx.sample.conf and discourse.pill.sample -> reference setups for the non-Docker install; Deployz has no nginx and no process supervisor (config/discourse.pill.sample:107)"
+  - "config.assets.compile = false -> assets must be precompiled at build; assets:precompile loads the Rails environment, so it needs DB and Redis unless SKIP_DB_AND_REDIS=1, which skips CSS precompile (config/environments/production.rb:20, lib/tasks/assets.rake:33)"
+  - "/ redirects (login or SPA preload) -> use /srv/status (config/routes.rb:135)"
+openQuestions:
+  - "With SKIP_DB_AND_REDIS=1 at build, CSS is not precompiled and must then be built at runtime; whether that is acceptable on a Fargate task with ephemeral disk is not stated in the repo"
+  - "Backups default to local disk (backup_location local); S3 backups are a site setting, not required to boot"
+crossReview:
+  - {field: dockerfile / outcome, change: "none: no Dockerfile or Containerfile in git ls-files (only bin/docker wrappers); NOT_DEPLOYABLE and DEPLOYABLE_WITH_CHANGES both accepted", evidence: "bin/docker/README.md:10"}
+  - {field: bindAllInterfaces, change: "none: false is right, the default listener is 127.0.0.1 unless UNICORN_BIND_ALL is set", evidence: "config/pitchfork.conf.rb:32"}
+  - {field: startCommand / workers, change: "none: bin/pitchfork adds -c and UNICORN_SIDEKIQS=1 only in development or without RAILS_ENV, so production needs explicit -c and UNICORN_SIDEKIQS", evidence: "bin/pitchfork:13-35; config/pitchfork.conf.rb:95"}
+  - {field: migrations, change: "none: no boot-time migration; command mode stands", evidence: "lib/tasks/db.rake:234"}
+  - {field: healthPath, change: "none: /srv/status renders ok from ActionController::Base with no auth", evidence: "app/controllers/forums_controller.rb:5,20"}
+  - {field: all, change: verified, evidence: "41 citations checked"}

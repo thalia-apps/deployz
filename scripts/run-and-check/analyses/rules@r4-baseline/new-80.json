@@ -1,0 +1,4753 @@
+{
+  "id": "new-80",
+  "commit": "b144f3f4c88c8962d9ef32ecd12d2c33e5dc9430",
+  "analyser": "rules@r4-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "bun run build:spa && bun run build:spa:auth && bun run build:spa:workbench && bun run build:spa:share && bun run build:spa:copy && bun run build:next",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/app/startServer.js\"]",
+      "port": 3210
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "EVAL_POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "EVAL_POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "EVAL_POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "LOBE_DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "EVAL_REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "EVAL_RUSTFS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "MINIO_LOBE_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "RUSTFS_LOBE_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AGENTS_INDEX_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AGENT_GATEWAY_INTERNAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_GATEWAY_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_GATEWAY_SERVICE_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_GATEWAY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_HOOK_WEBHOOK_EVENTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/agentHook.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AGENT_HOOK_WEBHOOK_ON_ERROR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/agentHook.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_HOOK_WEBHOOK_RESPONSE_HANDLING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/agentHook.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_HOOK_WEBHOOK_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/agentHook.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "AGENT_HOOK_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/agentHook.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_RUNTIME_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI21_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AI302_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AI360_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AIHUBMIX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AIHUBMIX_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_IMAGE_DEFAULT_IMAGE_NUM",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/image.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AKASHCHAT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTGROUP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "API_KEY_SELECT_MODE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.desktop declares APP_URL",
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/auth/workers/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ADDITIONAL_TRUSTED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ALLOWED_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/auth/workers/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_APPLE_APP_BUNDLE_IDENTIFIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_APPLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_APPLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_APP_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/auth/workers/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTH0_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTH0_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTH0_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTHELIA_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTHELIA_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTHELIA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_AUTHENTIK_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTHENTIK_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_AUTHENTIK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_CASDOOR_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_CASDOOR_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_CASDOOR_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_CLOUDFLARE_ZERO_TRUST_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_CLOUDFLARE_ZERO_TRUST_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_CLOUDFLARE_ZERO_TRUST_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COGNITO_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COGNITO_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COGNITO_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COGNITO_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COGNITO_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_COGNITO_USERPOOL_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_COOKIE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_DISABLE_EMAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_EMAIL_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ENABLE_MAGIC_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_FEISHU_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_FEISHU_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_GENERIC_OIDC_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GENERIC_OIDC_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GENERIC_OIDC_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GITHUB_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GITHUB_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_GOOGLE_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_KEYCLOAK_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_KEYCLOAK_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_KEYCLOAK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_LOGTO_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LOGTO_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LOGTO_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_MICROSOFT_AUTHORITY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_MICROSOFT_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_OKTA_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_OKTA_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_OKTA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_SSO_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_TRUSTED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_WECHAT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_WECHAT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AUTH_ZITADEL_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ZITADEL_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ZITADEL_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZUREAI_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AZUREAI_ENDPOINT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BAICHUAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BAILIANCODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BFL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CASDOOR_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CDN_USE_GLOBAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CEREBRAS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNKS_AUTO_EMBEDDING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CHUNKS_AUTO_GEN_METADATA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLARITY_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUDFLARE_BASE_URL_OR_ACCOUNT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "COHERE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "COMETAPI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_AUTH_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_CUSTOM_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMFYUI_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_IMPLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_RETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWL_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_FONT_FAMILY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOM_FONT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.desktop declares DATABASE_URL",
+            "docker-compose/eval/.env.example declares DATABASE_URL",
+            "Dockerfile declares DATABASE_URL",
+            "Dockerfile declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG_POSTHOG_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEBUG_VERCEL_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEEPSEEK_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_AGENT_CONFIG",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEFAULT_FILES_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/knowledge.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DESKTOP_BUILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.desktop declares DESKTOP_BUILD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DEVICE_GATEWAY_PUBLIC_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVICE_GATEWAY_SERVICE_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVICE_GATEWAY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SERVICE_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/email.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLED_AI21",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AI302",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AI360",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AIHUBMIX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AKASHCHAT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_ANTGROUP",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_ANTHROPIC",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AWS_BEDROCK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AZUREAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_AZURE_OPENAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_BAICHUAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_BAILIANCODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_BFL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_CEREBRAS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_CLARITY_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_CLOUDFLARE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_COHERE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_COMETAPI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_COMFYUI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_DEEPSEEK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_FAL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_FIREWORKSAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GITEE_AI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GITHUB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GITHUB_APP",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GITHUB_APP_OAUTH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GLMCODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GOOGLE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_GROQ",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_HIGRESS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_HUGGINGFACE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_HUNYUAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_INFINIAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_INTERNLM",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_JINA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_KIMICODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_LINEAR",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/linear.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_LMSTUDIO",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_LOBEHUB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_LONGCAT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_META",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_MINIMAX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_MINIMAXCODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_MISTRAL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_MODELSCOPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_MOONSHOT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_NEBIUS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_NEWAPI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_NOVITA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_NVIDIA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OLLAMA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OLLAMA_CLOUD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OPENAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OPENCODECODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OPENCODEZEN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_OPENROUTER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_PERPLEXITY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_PLAUSIBLE_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_POSTHOG_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_PPIO",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_QINIU",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_QWEN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_SAMBANOVA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_SEARCH1API",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_SENSENOVA",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_SILICONCLOUD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_SPARK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_STEPFUN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_STRAICO",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_STREAMLAKE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_TAICHU",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_TENCENT_CLOUD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_TOGETHERAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_TYPESAFE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_UMAMI_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_UNSLOTH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_UPSTAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_V0",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_VERCELAIGATEWAY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_VERTEXAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_VLLM",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_VOLCENGINE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_VOLCENGINECODINGPLAN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_WENXIN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_XAI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_XIAOMIMIMO",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_XINFERENCE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_X_ADS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_ZENMUX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_ZEROONE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLED_ZHIPU",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLE_AGENT_GATEWAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_GOOGLE_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLE_LANGFUSE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/langfuse.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLE_OIDC",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLE_VERCEL_ANALYTICS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ES_ALLOW_INSECURE_HTTP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_INDEX_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVAL_POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares EVAL_POSTGRES_DB"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EVAL_POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker-compose/eval/.env.example declares EVAL_POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EVAL_POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares EVAL_POSTGRES_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EVAL_REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares EVAL_REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EVAL_RUSTFS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares EVAL_RUSTFS_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_FLAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.desktop declares FEATURE_FLAGS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FILE_TYPE_CHUNKING_RULES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/knowledge.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIREWORKSAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FTS_SEARCH_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FTS_SEARCH_SYNC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/ftsSearch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITEE_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/scm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GLMCODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_ANALYTICS_MEASUREMENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HIGRESS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HUGGINGFACE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HUNYUAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INFINIAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERNAL_APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERNAL_JWT_EXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERNLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "JINA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "JINA_USE_CN_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWKS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KEY_VAULTS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.desktop declares KEY_VAULTS_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "KIMICODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFUSE_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/langfuse.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LANGFUSE_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/langfuse.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFUSE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/langfuse.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LINEAR_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/linear.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LINEAR_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/linear.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LMSTUDIO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOBE_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/dev/.env.example declares LOBE_DB_NAME",
+            "docker-compose/production/grafana/.env.example declares LOBE_DB_NAME",
+            "docker-compose/deploy/.env.example declares LOBE_DB_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LOGTO_WEBHOOK_SIGNING_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/auth.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LONGCAT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKET_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKET_SKILL_INSTALL_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKET_TRUSTED_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKET_TRUSTED_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_NODE_PLATFORMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_NODE_PULL_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_NODE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_SERVICE_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MESSAGE_GATEWAY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/gateway.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "META_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MIDDLEWARE_REWRITE_THROUGH_LOCAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIMAXCODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIMAX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_LOBE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/production/grafana/.env.example declares MINIO_LOBE_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MISTRAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MODELSCOPE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MOONSHOT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIMODAL_UNDERSTANDING_IMAGE_FORMATS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIMODAL_UNDERSTANDING_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIMODAL_UNDERSTANDING_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEBIUS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEWAPI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEWAPI_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DEVELOPER_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/debug.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ENABLE_SENTRY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_I18N_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/debug.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_I18N_DEBUG_BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/debug.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_I18N_DEBUG_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/debug.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_PYODIDE_INDEX_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/python.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_PYODIDE_PIP_INDEX_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/python.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_S3_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_S3_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "Dockerfile declares NEXT_PUBLIC_SENTRY_DSN",
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOVITA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NVIDIA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_CLOUD_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ONLYBOXES_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONLYBOXES_JIT_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONLYBOXES_JIT_SIGNING_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ONLYBOXES_JIT_TTL_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ONLYBOXES_LEASE_TTL_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_API_KEY",
+            "read in packages/env/src/llm.ts",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCODECODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCODEZEN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PERPLEXITY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAUSIBLE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAUSIBLE_SCRIPT_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PLUGINS_INDEX_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PLUGIN_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker-compose/dev/.env.example declares POSTGRES_PASSWORD",
+            "docker-compose/production/grafana/.env.example declares POSTGRES_PASSWORD",
+            "docker-compose/deploy/.env.example declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "POSTHOG_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PPIO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QINIU_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QWEN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_SCAN_MONITOR_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PREFIX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "REDIS_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares REDIS_URL",
+            "Dockerfile declares REDIS_URL",
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/redis.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/email.ts",
+            "resend requires RESEND_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/email.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUSTFS_LOBE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/dev/.env.example declares RUSTFS_LOBE_BUCKET",
+            "docker-compose/deploy/.env.example declares RUSTFS_LOBE_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares S3_BUCKET",
+            "Dockerfile declares S3_BUCKET",
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_ENABLE_PATH_STYLE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker-compose/eval/.env.example declares S3_ENDPOINT",
+            "docker-compose/dev/.env.example declares S3_ENDPOINT",
+            "docker-compose/production/grafana/.env.example declares S3_ENDPOINT",
+            "docker-compose/deploy/.env.example declares S3_ENDPOINT",
+            "Dockerfile declares S3_ENDPOINT",
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_INTERNAL_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_PREVIEW_URL_EXPIRE_IN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "S3_PUBLIC_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_SET_ACL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/file.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SAMBANOVA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SANDBOX_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/sandbox.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH1API_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.desktop declares SEARCH_PROVIDERS",
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARXNG_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENSENOVA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SILICONCLOUD_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/email.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/email.ts",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/email.ts",
+            "smtp requires SMTP_PASS"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/email.ts",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/email.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/email.ts",
+            "smtp requires SMTP_USER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SPARK_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSRF_ALLOW_IP_ADDRESS_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts",
+            "read in packages/ssrf-safe-fetch/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSRF_ALLOW_PRIVATE_IP_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts",
+            "read in packages/ssrf-safe-fetch/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STEPFUN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRAICO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STREAMLAKE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SYSTEM_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TAICHU_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TENCENT_CLOUD_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TOGETHERAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TOOL_NAME_MAX_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TYPESAFE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "UMAMI_SCRIPT_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "UMAMI_WEBSITE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNSLOTH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "UNSTRUCTURED_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/knowledge.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "UNSTRUCTURED_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/knowledge.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPSTAGE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "V0_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCELAIGATEWAY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_BRANCH_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VERCEL_EDGE_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_PROJECT_PRODUCTION_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VERCEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERTEXAI_CREDENTIALS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIDEO_GENERATION_PREFER_WEBHOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VISUAL_UNDERSTANDING_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VISUAL_UNDERSTANDING_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/tools.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VLLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VOLCENGINECODINGPLAN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VOLCENGINE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WENXIN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "XAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "XIAOMIMIMO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "XINFERENCE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "X_ADS_LOGIN_OR_SIGNUP_CLICKED_EVENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "X_ADS_MAIN_PAGE_VIEW_EVENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "X_ADS_PIXEL_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "X_ADS_PURCHASE_EVENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/env/src/analytics.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ZENMUX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZEROONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ZHIPU_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/env/src/llm.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend",
+      "smtp",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported database: the production Compose file docker-compose/deploy/docker-compose.yml runs paradedb/paradedb:latest-pg17. The app needs a PostgreSQL extension that managed PostgreSQL (Amazon RDS) does not provide.",
+      "Unsupported architecture: docker-compose/deploy/docker-compose.yml defines 2 application services (lobe, gateway). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: the production Compose file docker-compose/deploy/docker-compose.yml runs paradedb/paradedb:latest-pg17. The app needs a PostgreSQL extension that managed PostgreSQL (Amazon RDS) does not provide."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose/deploy/docker-compose.yml defines 2 application services (lobe, gateway). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: AGENTS_INDEX_URL, AGENT_HOOK_WEBHOOK_EVENTS, AGENT_HOOK_WEBHOOK_TOKEN, AI_IMAGE_DEFAULT_IMAGE_NUM, CHUNKS_AUTO_EMBEDDING, and 110 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 114,
+  "outcome": "NOT_DEPLOYABLE"
+}

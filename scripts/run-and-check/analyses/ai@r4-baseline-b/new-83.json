@@ -1,0 +1,219 @@
+{
+  "id": "new-83",
+  "commit": "a9b3c77a014b1d0b1b24cf3c3f578497240671a6",
+  "analyser": "ai@r4-baseline-b",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "npm run build:app",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"tini\", \"--\", \"/opt/agent-canvas/entrypoint.sh\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AGENT_SERVER_IMAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "docker/Dockerfile build arg AGENT_SERVER_IMAGE selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AUTOMATION_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "docker/entrypoint.sh declares AUTOMATION_DB_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in electron/main.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VITE_BACKEND_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_BACKEND_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_BACKEND_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_BACKEND_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_FRONTEND_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_FRONTEND_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_INSECURE_SKIP_VERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_INSECURE_SKIP_VERIFY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_MOCK_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_MOCK_API"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_USE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VITE_USE_TLS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "helm/agent-canvas/Chart.yaml"
+    ],
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported container setup: the start script docker/entrypoint.sh runs 6 long-running servers in the background (--import-modules \"$AGENT_SERVER_IMPORT_MODULES\", --log-level \"$(uvicorn_log_level, wait_for_port \"$AGENT_SERVER_PORT\", wait_for_port \"$AUTOMATION_PORT\") in one container. Deployz runs one web process and declared workers as separate services.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: the start script docker/entrypoint.sh runs 6 long-running servers in the background (--import-modules \"$AGENT_SERVER_IMPORT_MODULES\", --log-level \"$(uvicorn_log_level, wait_for_port \"$AGENT_SERVER_PORT\", wait_for_port \"$AUTOMATION_PORT\") in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: AGENT_SERVER_IMAGE. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (helm/agent-canvas/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05927328,
+        "promptTokens": 12923,
+        "completionTokens": 409
+      },
+      "latencyMs": 6619
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6620,
+    "questions": 1,
+    "generatedAt": "2026-10-27T10:57:54.674Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

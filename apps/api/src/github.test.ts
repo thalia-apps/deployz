@@ -1039,6 +1039,35 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).toHaveProperty('scripts/check-db.js', checkDbContent);
   });
 
+  it('protects the start chain of the Dockerfile the analysis selects by content, not of the first path (immich)', async () => {
+    // Two images at the same depth: by path alone `machine-learning/` sorts first, but only
+    // `server/Dockerfile` declares a port, so the analysis builds that image.
+    const filler = Array.from({ length: 247 }, (_, i) => ({ path: `src/file${i}.ts`, type: 'blob' as const, sha: `sha-filler-${i}`, size: 10 }));
+    const contentBySha: Record<string, string> = {
+      'sha-ml': 'FROM python:3.12\nCOPY machine-learning /app\nCMD ["python", "-m", "immich_ml"]\n',
+      'sha-server': 'FROM node:22\nCOPY server /app\nEXPOSE 2283\nCMD ["start.sh"]\n',
+      'sha-start': '#!/bin/sh\nexec node /app/dist/main.js\n',
+    };
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [
+            ...filler,
+            { path: 'machine-learning/Dockerfile', type: 'blob', sha: 'sha-ml', size: 60 },
+            { path: 'server/Dockerfile', type: 'blob', sha: 'sha-server', size: 60 },
+            { path: 'server/bin/start.sh', type: 'blob', sha: 'sha-start', size: 40 },
+          ],
+        });
+      }
+      const sha = url.split('/').pop() ?? '';
+      return makeFetchResponse(200, { content: Buffer.from(contentBySha[sha] ?? `content-${sha}`).toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(tree).toHaveProperty('server/bin/start.sh', contentBySha['sha-start']);
+  });
+
   it('ranks specs, fixtures and tool configs last so application source survives the cap (COMP-018)', async () => {
     // Enough cypress specs and root tool configs to fill the cap on their own,
     // listed BEFORE the application files — a large repository's source must

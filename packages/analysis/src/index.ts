@@ -20,6 +20,7 @@ export type {
 export {
   detectDockerfile,
   listDockerfileCandidates,
+  selectedDockerfile,
   detectFramework,
   detectPort,
   detectHealthEndpoint,

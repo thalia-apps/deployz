@@ -1,0 +1,156 @@
+id: new-67
+repository: makeplane/plane
+commit: a9e70360c5bc5b1beb5f70fe4c2fa765743147ec
+summary: >
+  Plane project management (Django/DRF API, Celery worker and beat, a static React web app, a React Router space app,
+  a static admin app, a Node live server, a Caddy proxy). The repo builds each part as its own image
+  (apps/*/Dockerfile.*). The only all-in-one Dockerfile (deployments/aio/community/Dockerfile) does not build from
+  source: it copies from pre-built makeplane/plane-* registry images and needs a dist/ folder made by build.sh.
+  The backend needs RabbitMQ (AMQP_URL) for Celery. This is a multi-image app with RabbitMQ, which Deployz cannot run.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product needs at least two application images (api in Python and web in static Caddy, plus space, admin, live and
+    proxy), and the Celery worker and beat need RabbitMQ, which Deployz does not offer. The AIO Dockerfile is the only
+    single-image route, but it pulls pre-built images from Docker Hub, needs generated dist/ files, and its start script
+    requires RabbitMQ and static AWS keys. The backend image alone (Dockerfile.api) builds from source and serves the API,
+    but has no UI and no RabbitMQ, so background tasks (email, webhooks, imports) fail.
+dockerfile:
+  accept: []
+  reject:
+    - {path: deployments/aio/community/Dockerfile, reason: "builds FROM pre-built makeplane/plane-* registry images (not from source) and COPYs dist/Caddyfile and dist/plane.env that build.sh generates; not buildable from the repo archive alone"}
+    - {path: apps/api/Dockerfile.api, reason: "builds only the Django API (and, with another command, worker and beat); no web UI, so it is not the whole product"}
+    - {path: apps/web/Dockerfile.web, reason: "static Caddy image for the web UI only; needs the API as a second image"}
+    - {path: apps/space/Dockerfile.space, reason: "separate public-space app image"}
+    - {path: apps/admin/Dockerfile.admin, reason: "separate god-mode admin static image"}
+    - {path: apps/live/Dockerfile.live, reason: "separate live collaboration server image"}
+    - {path: apps/proxy/Dockerfile.ce, reason: "Caddy proxy image that routes between the other images"}
+    - {path: apps/web/Dockerfile.dev, reason: "development image (also api, space, live Dockerfile.dev)"}
+  target: null
+  context: .
+  evidence:
+    - {path: deployments/aio/community/Dockerfile, line: 9, quote: "FROM makeplane/plane-frontend:${PLANE_VERSION} AS web-img"}
+    - {path: deployments/aio/community/Dockerfile, line: 73, quote: "COPY --from=backend-img /code /app/backend"}
+    - {path: deployments/aio/community/Dockerfile, line: 71, quote: "COPY dist/Caddyfile /app/proxy/Caddyfile"}
+    - {path: deployments/aio/community/build.sh, line: 98, quote: "cp ../../../apps/proxy/Caddyfile.aio.ce $DIST_DIR/Caddyfile"}
+    - {path: apps/api/Dockerfile.api, line: 83, quote: "CMD [\"./bin/docker-entrypoint-api.sh\"]"}
+    - {path: apps/web/Dockerfile.web, line: 106, quote: "FROM caddy:2.11.4-alpine AS production"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: apps/api/Dockerfile.api, line: 81, quote: "EXPOSE 8000"}
+    - {path: apps/api/bin/docker-entrypoint-api.sh, line: 38, quote: "--bind 0.0.0.0:\"${PORT:-8000}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/api/bin/docker-entrypoint-api.sh, line: 38, quote: "--bind 0.0.0.0:"}
+startCommand:
+  source: image
+  accept: ["./bin/docker-entrypoint-api.sh"]
+healthPath:
+  accept: ["/"]
+  # Backend only: plane.web.urls maps "" to a JSON {"status": "OK"} view with no auth and no redirect.
+  # In the full product the same path on the public host is the static web app, behind the Caddy proxy.
+  evidence:
+    - {path: apps/api/plane/web/urls.py, line: 8, quote: "path(\"\", health_check)"}
+    - {path: apps/api/plane/web/views.py, line: 9, quote: "JsonResponse({\"status\": \"OK\"})"}
+database:
+  status: required
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, "POSTGRES_HOST/POSTGRES_PORT/POSTGRES_DB/POSTGRES_USER/POSTGRES_PASSWORD"]
+  evidence:
+    - {path: apps/api/plane/settings/common.py, line: 214, quote: "DATABASES = {\"default\": dj_database_url.config()}"}
+    - {path: apps/api/plane/settings/common.py, line: 218, quote: "\"ENGINE\": \"django.db.backends.postgresql\","}
+migrations:
+  mode: command
+  accept: ["python manage.py migrate"]
+  evidence:
+    - {path: apps/api/bin/docker-entrypoint-migrator.sh, line: 6, quote: "python manage.py migrate $1"}
+    - {path: apps/api/bin/docker-entrypoint-api.sh, line: 5, quote: "python manage.py wait_for_migrations"}
+    - {path: deployments/aio/community/supervisor.conf, line: 9, quote: "command=sh -c \"./bin/docker-entrypoint-migrator.sh\""}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: apps/api/plane/settings/common.py, line: 249, quote: "REDIS_URL = os.environ.get(\"REDIS_URL\")"}
+    - {path: apps/api/plane/settings/common.py, line: 276, quote: "\"BACKEND\": \"django_redis.cache.RedisCache\","}
+    - {path: deployments/aio/community/start.sh, line: 27, quote: "\"REDIS_URL\" \"AMQP_URL\""}
+workers:
+  status: independent
+  commands: ["./bin/docker-entrypoint-worker.sh", "./bin/docker-entrypoint-beat.sh"]
+  evidence:
+    - {path: apps/api/bin/docker-entrypoint-worker.sh, line: 8, quote: "celery -A plane worker -l info"}
+    - {path: apps/api/bin/docker-entrypoint-beat.sh, line: 8, quote: "celery -A plane beat -l info"}
+    - {path: apps/api/plane/settings/common.py, line: 364, quote: "CELERY_BROKER_URL = AMQP_URL"}
+scheduledJobs:
+  status: independent
+  items: [celery beat with django_celery_beat DatabaseScheduler]
+  evidence:
+    - {path: apps/api/plane/celery.py, line: 124, quote: "app.conf.beat_scheduler = \"django_celery_beat.schedulers.DatabaseScheduler\""}
+storage:
+  local: ephemeral
+  paths: [/app/data, /app/logs, /code/plane/logs]
+  s3: native
+  s3SelectBy: {AWS_S3_BUCKET_NAME: bucket, AWS_REGION: region}
+  # The Django S3 client passes AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as None when unset, so boto3 uses the default
+  # chain (task role). The AIO start.sh still requires both keys, and uses presigned POST for uploads.
+  evidence:
+    - {path: apps/api/plane/settings/common.py, line: 334, quote: "AWS_ACCESS_KEY_ID = os.environ.get(\"AWS_ACCESS_KEY_ID\")"}
+    - {path: apps/api/plane/settings/storage.py, line: 61, quote: "aws_access_key_id=self.aws_access_key_id,"}
+    - {path: apps/api/plane/settings/common.py, line: 333, quote: "boto3 resolves credentials through its default chain"}
+    - {path: deployments/aio/community/start.sh, line: 28, quote: "\"AWS_REGION\" \"AWS_ACCESS_KEY_ID\" \"AWS_SECRET_ACCESS_KEY\" \"AWS_S3_BUCKET_NAME\""}
+    - {path: deployments/aio/community/Dockerfile, line: 96, quote: "VOLUME [\"/app/data\", \"/app/logs\"]"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL, includes the password"}
+    - {name: REDIS_URL, secret: true, buildTime: false, note: "redis:// or rediss:// URL"}
+    - {name: AMQP_URL, secret: true, buildTime: false, note: "RabbitMQ URL for Celery; Deployz cannot provide RabbitMQ (blocker)"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "a random key is made at start if missing, so sessions break on restart or with several tasks; the placeholder value is refused"}
+    - {name: LIVE_SERVER_SECRET_KEY, secret: true, buildTime: false, note: "shared with the live server image (a second image)"}
+    - {name: WEB_URL, secret: false, buildTime: false, note: "public URL used for CORS and links"}
+    - {name: AWS_S3_BUCKET_NAME, secret: false, buildTime: false, note: "upload bucket"}
+    - {name: AWS_REGION, secret: false, buildTime: false, note: "bucket region"}
+  optional: [CORS_ALLOWED_ORIGINS, ALLOWED_HOSTS, GUNICORN_WORKERS, FILE_SIZE_LIMIT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT_URL, USE_MINIO, RABBITMQ_HOST, RABBITMQ_USER, RABBITMQ_PASSWORD, REDIS_SSL_CERT_REQS, API_KEY_RATE_LIMIT, DEBUG]
+  buildTime: []
+  evidence:
+    - {path: apps/api/plane/settings/common.py, line: 33, quote: "SECRET_KEY = os.environ.get(\"SECRET_KEY\") or get_random_secret_key()"}
+    - {path: deployments/aio/community/start.sh, line: 27, quote: "local keys=(\"DOMAIN_NAME\" \"DATABASE_URL\" \"REDIS_URL\" \"AMQP_URL\""}
+    - {path: apps/api/plane/settings/common.py, line: 95, quote: "ALLOWED_HOSTS = os.environ.get(\"ALLOWED_HOSTS\", \"*\").split(\",\")"}
+blockers:
+  expected:
+    - "RabbitMQ is required as the Celery broker (AMQP_URL, or RABBITMQ_* with a localhost:5672 default); Deployz has no RabbitMQ and Redis cannot replace it (apps/api/plane/settings/common.py:364)"
+    - "Multi-image product: web (static Caddy), space, admin, live and proxy are separate images; the API image has no UI, so one image cannot serve the product (docker-compose.yml, deployments/aio/community/supervisor.conf)"
+    - "The only all-in-one Dockerfile pulls pre-built makeplane/plane-* images from a registry and needs generated dist/ files, so Deployz cannot build it from the repo archive (deployments/aio/community/Dockerfile:9)"
+  mustNot:
+    - "PostgreSQL, Redis and S3 must not be reported as blockers: all three are supported managed services"
+    - "Missing static AWS keys must not block the backend itself: the Django S3 client falls back to the boto3 default credential chain (the AIO start.sh check is stricter)"
+    - "The AIO image must not be called deployable only because it is one image: it is built from other registry images and needs RabbitMQ"
+    - "Celery worker and beat must not be reported as blockers: separate commands from the same backend image are allowed"
+    - "MinIO in docker-compose.yml must not be reported as required: AWS S3 works (USE_MINIO=0)"
+vendorQuestions:
+  legitimate:
+    - "Is there a supported way to run Celery without RabbitMQ (for example a Redis broker)? The code supports only AMQP"
+    - "Does the user want only the API, or the full web UI? The UI needs the separate web, space, admin and live images"
+  unnecessary:
+    - "Which port? (8000 in Dockerfile.api, PORT in the entrypoint)"
+    - "Who runs migrations? (a separate migrator command: python manage.py migrate)"
+    - "Is a worker process needed? (yes: celery worker and beat from the backend image)"
+    - "Which database? (PostgreSQL only)"
+traps:
+  - "deployments/aio/community/Dockerfile looks like a single-image option -> it copies from pre-built makeplane/plane-* registry images and dist/ files made by build.sh, and runs 7 supervisor programs (deployments/aio/community/Dockerfile:9, deployments/aio/community/supervisor.conf:7)"
+  - "AIO README says S3-compatible storage with access keys -> the backend alone uses the default credential chain when keys are unset (apps/api/plane/settings/common.py:333-335)"
+  - "apps/api/Dockerfile.api builds from source -> it is only the API, with no UI and no RabbitMQ (apps/api/Dockerfile.api:83)"
+  - "docker-compose.yml lists plane-mq (RabbitMQ), plane-minio, plane-db and plane-redis -> compose is the production reference topology of 10+ containers (docker-compose.yml:130-132)"
+  - "GET / on the API returns 200 JSON, but on the public host / is the static web app behind the proxy (apps/api/plane/web/urls.py:8)"
+  - "apps/web builds with VITE_* ARGs defaulting to empty values -> the web image is static and routes /api to another service by proxy only (apps/web/Dockerfile.web:46)"
+openQuestions:
+  - "Whether the API image alone is useful as a deploy: it has no UI, so it is not counted as the product"
+crossReview:
+  - {field: outcome, change: "none: NOT_DEPLOYABLE confirmed; Celery needs an AMQP broker (AMQP_URL or RABBITMQ_* with a localhost:5672 default), compose runs rabbitmq as plane-mq, and no single image serves UI plus API (the AIO image copies from registry images and dist/ files)", evidence: "apps/api/plane/settings/common.py:360-366; docker-compose.yml:130-132; deployments/aio/community/Dockerfile:9,71"}
+  - {field: dockerfile, change: "none: no single Dockerfile builds the whole product from the repo; accept stays empty", evidence: "deployments/aio/community/Dockerfile:9; apps/web/Dockerfile.web:106"}
+  - {field: healthPath, change: "none: GET / on the API is an unauthenticated JSON 200 (backend only)", evidence: "apps/api/plane/web/urls.py:8"}
+  - {field: all, change: verified, evidence: "31 citations checked"}

@@ -1,0 +1,131 @@
+id: new-78
+repository: qdrant/qdrant
+commit: 222b2e44ab1c3f17e8246396ead6558e45041df7
+summary: >
+  Qdrant vector database (Rust, actix-web REST on 6333 and tonic gRPC on 6334). The root Dockerfile builds the
+  binary from source and runs it through entrypoint.sh. The database IS the app: all collections, vectors and
+  indexes live on local disk (./storage). There is no S3 or SQL backend for this data. S3 is only an optional
+  target for snapshot backups. On Fargate local disk is ephemeral, so the data would be lost on each restart.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only durable store is the local storage_path (./storage). Deployz offers no persistent volume or EFS, and
+    there is no S3, Postgres or Redis option for collections. S3 supports snapshots only (backups, not the live
+    data). An ephemeral deploy would boot and answer health checks but lose all data on every task restart.
+    Qdrant is also itself a vector DB, which is on the unsupported list as a separate service.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: tools/schema2openapi/Dockerfile, reason: "builds a docs/schema tool, not the Qdrant server"}
+    - {path: tools/compose/docker-compose.yaml, reason: "compose file, not a Dockerfile"}
+    - {path: tests/consensus_tests/docker-compose.yaml, reason: "test compose for cluster tests"}
+  target: qdrant
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 166, quote: "FROM qdrant-${GPU:+gpu-}${GPU:-cpu} AS qdrant"}
+    - {path: Dockerfile, line: 143, quote: "FROM debian:13-slim AS qdrant-cpu"}
+    - {path: Dockerfile, line: 246, quote: "CMD [\"./entrypoint.sh\"]"}
+runtime: {accept: [rust]}
+port:
+  accept: [6333]
+  evidence:
+    - {path: Dockerfile, line: 236, quote: "EXPOSE 6333"}
+    - {path: Dockerfile, line: 237, quote: "EXPOSE 6334"}
+    - {path: config/config.yaml, line: 394, quote: "http_port: 6333"}
+    - {path: config/config.yaml, line: 412, quote: "grpc_port: 6334"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config/config.yaml, line: 391, quote: "host: 0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["./entrypoint.sh"]
+healthPath:
+  accept: ["/healthz", "/livez", "/readyz"]
+  # The three paths return 200 on the REST port 6333. They are on the API key whitelist, so they work without a key.
+  evidence:
+    - {path: src/actix/api/service_api.rs, line: 150, quote: "#[get(\"/healthz\")]"}
+    - {path: src/actix/api/service_api.rs, line: 155, quote: "#[get(\"/livez\")]"}
+    - {path: src/actix/api/service_api.rs, line: 160, quote: "#[get(\"/readyz\")]"}
+    - {path: src/actix/mod.rs, line: 93, quote: "WhitelistItem::exact(\"/healthz\"),"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: config/config.yaml, line: 20, quote: "storage_path: ./storage"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: tools/entrypoint.sh, line: 21, quote: "./qdrant $@ &"}
+redis:
+  status: none
+  evidence:
+    - {path: config/config.yaml, line: 488, quote: "enabled: false"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: tools/entrypoint.sh, line: 21, quote: "./qdrant $@ &"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: tools/entrypoint.sh, line: 21, quote: "./qdrant $@ &"}
+storage:
+  local: required
+  paths: [/qdrant/storage, /qdrant/snapshots]
+  s3: none
+  s3SelectBy: {}
+  # s3 is none for the live data. Snapshots can go to S3 (snapshots_config.snapshots_storage: s3) but that is backup only.
+  evidence:
+    - {path: config/config.yaml, line: 20, quote: "storage_path: ./storage"}
+    - {path: config/config.yaml, line: 23, quote: "snapshots_path: ./snapshots"}
+    - {path: config/config.yaml, line: 27, quote: "snapshots_storage: local"}
+    - {path: config/config.yaml, line: 31, quote: "# s3_config:"}
+    - {path: Dockerfile, line: 219, quote: "mkdir -p \"$APP\"/storage \"$APP\"/snapshots;"}
+env:
+  required:
+    - {name: QDRANT__SERVICE__API_KEY, secret: true, buildTime: false, note: "api_key is unset by default, so the public HTTPS endpoint would be open to anyone; set it. It is not needed to boot. Config keys map to QDRANT__SECTION__KEY env vars"}
+  optional: [QDRANT__SERVICE__READ_ONLY_API_KEY, QDRANT__SERVICE__HTTP_PORT, QDRANT__SERVICE__GRPC_PORT, QDRANT__STORAGE__STORAGE_PATH, QDRANT__STORAGE__SNAPSHOTS_CONFIG__SNAPSHOTS_STORAGE, QDRANT_ALLOW_RECOVERY_MODE, RUN_MODE]
+  buildTime: []
+  evidence:
+    - {path: config/config.yaml, line: 435, quote: "# api_key: your_secret_api_key_here"}
+    - {path: src/settings.rs, line: 318, quote: "let env = env::var(\"RUN_MODE\").unwrap_or_else(|_| \"development\".into());"}
+    - {path: Dockerfile, line: 234, quote: "RUN_MODE=production"}
+blockers:
+  expected:
+    - "Durable local disk is required: all collections, vectors and indexes are stored in ./storage (storage_path) and Deployz has no persistent volume or EFS; Fargate disk is ephemeral so data is lost on every restart"
+    - "Qdrant is a vector database; Deployz does not offer vector DBs as a managed or separate service"
+  mustNot:
+    - "S3 snapshot storage must not be read as S3 data storage: snapshots are backups only, the live data stays on local disk"
+    - "The gRPC port 6334 must not block: the REST port 6333 serves everything and the ALB uses one HTTP port; gRPC is optional"
+    - "A missing database, Redis or migration step must not be reported as a gap: Qdrant needs none of them"
+    - "Cluster mode and consensus (cluster.enabled: false by default) must not be raised as a requirement"
+    - "GPU build args and the cargo-chef, mold and xx build stages must not block: GPU is off by default"
+vendorQuestions:
+  legitimate:
+    - "Is losing all vectors on each task restart acceptable (for example a cache or demo index that is rebuilt from another source)?"
+    - "Should snapshots go to S3 for backup and manual restore, accepting that restore is a manual step?"
+  unnecessary:
+    - "Which port? (6333 REST, 6334 gRPC; both in the image and config)"
+    - "Who runs migrations? (none)"
+    - "Health path? (/healthz, /livez, /readyz)"
+    - "Is Redis or a database needed? (no)"
+traps:
+  - "snapshots_storage supports s3, gcs and azure -> backups only, the live collections stay on local ./storage (config/config.yaml:27-31)"
+  - "Two ports 6333 and 6334 -> REST on 6333 is enough for the ALB; gRPC 6334 is optional (Dockerfile:236-237)"
+  - "Dockerfile has GPU, cargo-chef and many ARGs -> the default CPU path builds the qdrant stage (Dockerfile:166)"
+  - "The web UI is downloaded from GitHub during the build -> network needed at build time, not a repo-local source (Dockerfile:133, tools/sync-web-ui.sh)"
+  - "Rust release build with cargo install and a full workspace compile -> long build and high memory (Dockerfile:111-130)"
+  - "api_key is commented out in the default config -> without it the endpoint is open (config/config.yaml:435)"
+  - "entrypoint.sh recovery mode on exit code 137 -> OOM handling inside one container, not a second process (tools/entrypoint.sh:36)"
+openQuestions:
+  - "Whether a rebuildable, ephemeral index is acceptable to the vendor (then DEPLOYABLE_WITH_CHANGES could be argued, but Deployz data-loss rules make NOT_DEPLOYABLE the safe verdict)"
+crossReview:
+ - {field: outcome / storage.local / healthPath / port / bindAllInterfaces, change: "none: NOT_DEPLOYABLE kept (collections live only in ./storage; S3 is snapshot backup only); /healthz, /livez, /readyz are whitelisted from the API key (src/actix/mod.rs:91-94) and return 200 on 6333 (readyz returns 503 while shards load); RUN_MODE=production loads config/production.yaml which keeps host 0.0.0.0 and port 6333; target qdrant is the final stage so null also works; all COPY sources exist in git", evidence: "src/actix/mod.rs:91-94; src/actix/api/service_api.rs:150-175; config/production.yaml; Dockerfile:166-246"}
+ - {field: all, change: verified, evidence: "25 citations checked"}

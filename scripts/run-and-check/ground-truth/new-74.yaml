@@ -1,0 +1,172 @@
+id: new-74
+repository: mastodon/mastodon
+commit: ba727f1d0bfde4bbfec61c84393cb6a5e88111d5
+summary: >
+  Mastodon federated social network (Ruby on Rails, Puma, Sidekiq, webpack/Vite front end). The root Dockerfile builds one
+  Rails image (ENTRYPOINT tini, no CMD). Production needs PostgreSQL, Redis, a Sidekiq worker process from the same
+  image, and S3 or local disk for media. The live-update streaming API is a separate Node app with its own image
+  (streaming/Dockerfile, port 4000); the Rails image has no Node runtime and cannot run it. Without streaming the web
+  UI and federation work, but timelines and notifications do not update live.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    Web (puma :3000) + Sidekiq (same image, `bundle exec sidekiq`) + Postgres + Redis + S3 fit Deployz, with an explicit
+    start command, a migration command, and several required secrets. The streaming service needs a second image
+    (streaming/Dockerfile), which Deployz does not support. It is optional for core function (REST API, federation,
+    posting), so DEPLOYABLE_WITH_CHANGES is the main result, with the loss of live streaming reported. NOT_DEPLOYABLE is
+    accepted because a strict reading treats the second image as a blocker for the official topology.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: streaming/Dockerfile, reason: "second image for the Node streaming API; not the app image and Deployz builds only one image"}
+    - {path: .devcontainer/Dockerfile, reason: "development container, not production"}
+    - {path: docker-compose.yml, reason: "compose file that pulls prebuilt ghcr.io images; not a Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 374, quote: "FROM ruby AS mastodon"}
+    - {path: Dockerfile, line: 416, quote: "ENTRYPOINT [\"/usr/bin/tini\", \"--\"]"}
+    - {path: Dockerfile, line: 3, quote: "This file is designed for production server deployment"}
+    - {path: streaming/Dockerfile, line: 17, quote: "AS streaming"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 414, quote: "EXPOSE 3000"}
+    - {path: config/puma.rb, line: 12, quote: "ENV.fetch('PORT', 3000)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 66, quote: "BIND=\"0.0.0.0\""}
+    - {path: config/puma.rb, line: 12, quote: "ENV.fetch('BIND', '127.0.0.1')"}
+startCommand:
+  source: explicit
+  accept: ["bundle exec puma -C config/puma.rb"]
+  # The image has an ENTRYPOINT (tini) and no CMD, so a command must be given. bin/heroku-web is the Procfile alternative.
+  evidence:
+    - {path: Dockerfile, line: 416, quote: "ENTRYPOINT [\"/usr/bin/tini\", \"--\"]"}
+    - {path: docker-compose.yml, line: 65, quote: "command: bundle exec puma -C config/puma.rb"}
+    - {path: Procfile, line: 1, quote: "web: bin/heroku-web"}
+healthPath:
+  accept: ["/health"]
+  # HealthController renders 'OK' with no auth. force_ssl skips the redirect for paths starting with /health,
+  # and host authorization is excluded for /health, so an ALB probe over HTTP with any Host header gets 200.
+  evidence:
+    - {path: config/routes.rb, line: 22, quote: "get 'health', to: 'health#show'"}
+    - {path: app/controllers/health_controller.rb, line: 5, quote: "render plain: 'OK'"}
+    - {path: config/environments/production.rb, line: 43, quote: "request.path.start_with?('/health')"}
+    - {path: config/initializers/1_hosts.rb, line: 34, quote: "request.path == '/health'"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS, DB_SSLMODE]
+  evidence:
+    - {path: config/database.yml, line: 2, quote: "adapter: postgresql"}
+    - {path: config/database.yml, line: 7, quote: "sslmode: <%= ENV['DB_SSLMODE'] || \"prefer\" %>"}
+    - {path: config/database.yml, line: 53, quote: "host: <%= ENV['DB_HOST'] || 'localhost' %>"}
+    - {path: config/database.yml, line: 50, quote: "database: <%= ENV['DB_NAME'] || 'mastodon_production' %>"}
+migrations:
+  mode: command
+  accept: ["bundle exec rails db:migrate", "bin/rails db:migrate"]
+  evidence:
+    - {path: app.json, line: 103, quote: "bundle exec rails db:migrate && bundle exec rails db:seed"}
+    - {path: .github/workflows/test-migrations.yml, line: 85, quote: "bin/rails db:migrate"}
+redis:
+  status: required
+  evidence:
+    - {path: config/initializers/sidekiq.rb, line: 7, quote: "config.redis = REDIS_CONFIGURATION.sidekiq"}
+    - {path: lib/mastodon/redis_configuration.rb, line: 47, quote: "return { url:, driver: } if url"}
+    - {path: lib/mastodon/redis_configuration.rb, line: 43, quote: "host     = ENV.fetch(\"#{prefix}HOST\", defaults[:host])"}
+workers:
+  status: independent
+  commands: ["bundle exec sidekiq"]
+  # Sidekiq runs all background work: federation delivery, mail, media processing, and the scheduler (sidekiq-scheduler).
+  evidence:
+    - {path: Procfile, line: 2, quote: "worker: bundle exec sidekiq"}
+    - {path: docker-compose.yml, line: 108, quote: "command: bundle exec sidekiq"}
+    - {path: config/sidekiq.yml, line: 12, quote: ":scheduler:"}
+scheduledJobs:
+  status: embedded
+  items: [scheduled statuses, trends refresh, vacuum, user cleanup, ip cleanup, instance refresh, server checks, accounts statuses cleanup]
+  evidence:
+    - {path: config/sidekiq.yml, line: 15, quote: "scheduled_statuses_scheduler:"}
+    - {path: config/sidekiq.yml, line: 31, quote: "vacuum_scheduler:"}
+    - {path: config/sidekiq.yml, line: 87, quote: "server_checks_scheduler:"}
+storage:
+  local: conditional
+  paths: [/opt/mastodon/public/system]
+  s3: native
+  s3SelectBy: {S3_ENABLED: "true", S3_BUCKET: "<bucket>", S3_REGION: "<region>"}
+  evidence:
+    - {path: config/initializers/paperclip.rb, line: 38, quote: "if ENV['S3_ENABLED'] == 'true'"}
+    - {path: config/initializers/paperclip.rb, line: 163, quote: "File.join(':rails_root', 'public', 'system')"}
+    - {path: config/initializers/paperclip.rb, line: 62, quote: "access_key_id: ENV.fetch('AWS_ACCESS_KEY_ID', nil),"}
+    - {path: config/initializers/paperclip.rb, line: 63, quote: "secret_access_key: ENV.fetch('AWS_SECRET_ACCESS_KEY', nil),"}
+    - {path: config/initializers/paperclip.rb, line: 57, quote: "s3_permissions: ENV.fetch('S3_PERMISSION') { 'public-read' },"}
+    - {path: config/initializers/paperclip.rb, line: 75, quote: "if ENV['S3_PERMISSION'] == ''"}
+    - {path: Dockerfile, line: 406, quote: "mkdir -p /opt/mastodon/public/system"}
+env:
+  required:
+    - {name: LOCAL_DOMAIN, secret: false, buildTime: false, note: "public host name (no scheme); it is the account domain and cannot change later; defaults to localhost:3000, and requests for other hosts are rejected by host authorization"}
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "random secret (rails secret); no default"}
+    - {name: ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY, secret: true, buildTime: false, note: "the app aborts at boot if missing; do not change after first use"}
+    - {name: ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY, secret: true, buildTime: false, note: "the app aborts at boot if missing"}
+    - {name: ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT, secret: true, buildTime: false, note: "the app aborts at boot if missing"}
+    - {name: "DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASS", secret: false, buildTime: false, note: "the password is secret; defaults are localhost, mastodon_production, mastodon"}
+    - {name: "REDIS_HOST / REDIS_PORT (or REDIS_URL)", secret: false, buildTime: false, note: "default is localhost:6379; use REDIS_URL with rediss:// for TLS"}
+    - {name: S3_ENABLED, secret: false, buildTime: false, note: "true, with S3_BUCKET and S3_REGION; otherwise media goes to ephemeral local disk"}
+    - {name: S3_BUCKET, secret: false, buildTime: false, note: "bucket name; set S3_PERMISSION to an empty value for buckets with ACLs disabled, else the default public-read ACL is sent"}
+  optional: [WEB_DOMAIN, ALTERNATE_DOMAINS, S3_REGION, S3_PERMISSION, S3_ALIAS_HOST, S3_CLOUDFRONT_HOST, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, DB_SSLMODE, STREAMING_API_BASE_URL, ES_ENABLED, ES_HOST, ES_PORT, SMTP_SERVER, SMTP_PORT, SMTP_LOGIN, SMTP_PASSWORD, SMTP_FROM_ADDRESS, WEB_CONCURRENCY, MAX_THREADS, SIDEKIQ_CONCURRENCY, TRUSTED_PROXY_IP, SINGLE_USER_MODE]
+  buildTime: []
+  evidence:
+    - {path: config/initializers/1_hosts.rb, line: 4, quote: "host     = ENV.fetch('LOCAL_DOMAIN') { \"localhost:#{port}\" }"}
+    - {path: config/initializers/1_hosts.rb, line: 31, quote: "config.hosts << host if host.present?"}
+    - {path: .env.production.sample, line: 45, quote: "SECRET_KEY_BASE="}
+    - {path: config/initializers/active_record_encryption.rb, line: 16, quote: "abort <<~MESSAGE"}
+    - {path: config/initializers/active_record_encryption.rb, line: 6, quote: "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"}
+    - {path: config/environments/production.rb, line: 32, quote: "config.action_dispatch.trusted_proxies = ENV['TRUSTED_PROXY_IP']"}
+    - {path: config/initializers/chewy.rb, line: 3, quote: "enabled         = ENV['ES_ENABLED'] == 'true'"}
+    - {path: config/initializers/1_hosts.rb, line: 22, quote: "config.x.streaming_api_base_url = ENV.fetch('STREAMING_API_BASE_URL') do"}
+blockers:
+  expected:
+    - "Streaming API (live timeline and notification updates) is a separate Node app built from streaming/Dockerfile; Deployz builds one image, and the Rails image has no Node runtime. Report as a degraded feature, not a boot failure."
+  mustNot:
+    - "Elasticsearch must not block: it is optional (ES_ENABLED defaults off) and only adds full-text search"
+    - "Local public/system directory must not block: S3 is native via S3_ENABLED"
+    - "docker-compose db and redis services, and the volumes in it, must not count as required services or persistent volumes: Deployz provides RDS and Redis, and media goes to S3"
+    - "Sidekiq must not be treated as a second image: it runs from the same image with `bundle exec sidekiq`"
+    - "Static keys must not be reported as a blocker for the whole S3 feature without checking: the sample sets AWS_ACCESS_KEY_ID but the code passes nil when unset"
+    - "The multi-stage Dockerfile (libvips, ffmpeg, precompiler) must not need a --target: the last stage is the app"
+vendorQuestions:
+  legitimate:
+    - "Is live streaming needed? It cannot run from the app image; without it timelines do not update live"
+    - "Which public domain is LOCAL_DOMAIN? It is permanent for the instance"
+    - "SMTP settings for sign-up and notification mail (SMTP_*), since the app has no default mail transport"
+  unnecessary:
+    - "Which port? (3000 in the Dockerfile and puma.rb)"
+    - "Is a worker needed? (yes, `bundle exec sidekiq`, from the Procfile)"
+    - "Is Elasticsearch needed? (optional)"
+    - "Health path? (/health)"
+traps:
+  - "docker-compose.yml shows web + streaming + sidekiq + db + redis with ghcr.io images and volumes -> reference topology; db and redis map to Deployz managed services, streaming is the second image (docker-compose.yml:81-100)"
+  - "Procfile has a streaming note: separate Heroku app with RUN_STREAMING=true -> bin/heroku-web runs `node ./streaming` only with buildpacks; the Docker image has no Node (Procfile:4-14, bin/heroku-web:2)"
+  - "Dockerfile has a node stage -> Node is only copied into the precompiler stage for asset build, not into the final image (Dockerfile:339, Dockerfile:374)"
+  - "SECRET_KEY_BASE_DUMMY=1 in the Dockerfile -> build-time placeholder only for assets:precompile; real secrets are needed at runtime (Dockerfile:367)"
+  - "puma defaults bind 127.0.0.1 -> the image sets BIND=0.0.0.0, so it listens on all interfaces (config/puma.rb:12, Dockerfile:66)"
+  - "force_ssl is on -> HTTP requests redirect to HTTPS except /health; the ALB must send X-Forwarded-Proto or probe /health (config/environments/production.rb:41-46)"
+  - "Rails serves public/packs and assets itself -> RAILS_SERVE_STATIC_FILES=true is set in the image, so no nginx is needed (Dockerfile:38, config/application.rb:89)"
+  - "Dockerfile syntax line pins BuildKit features (cache mounts) -> build needs BuildKit (Dockerfile:1)"
+openQuestions:
+  - "Whether the kt-paperclip S3 storage falls back to the AWS SDK default credential chain (ECS task role) when AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are nil: the repo passes nil (config/initializers/paperclip.rb:62-63) but the gem is not in the repo"
+  - "Whether the UI degrades cleanly without a streaming service: the web app builds ws URLs on the web host by default, so the websocket connection would fail"
+  - "Whether a new instance boots on a database with pending migrations before db:migrate runs; the migration command must run first"
+crossReview:
+  - {field: traps (SECRET_KEY_BASE_DUMMY), change: "line reference Dockerfile:368 -> Dockerfile:367", evidence: "Dockerfile:367 SECRET_KEY_BASE_DUMMY=1 \\"}
+  - {field: startCommand, change: "none: the root Dockerfile has no CMD (only ENTRYPOINT tini at line 416, git grep confirms); compose supplies the puma command; RAILS_ENV=production and BIND=0.0.0.0 are set in the image", evidence: "Dockerfile:416; docker-compose.yml:65; Dockerfile:66"}
+  - {field: outcome / blockers (streaming), change: "none: streaming/Dockerfile is a separate node image (CMD node ./streaming/index.js, port 4000) and the Rails image copies no Node; two outcomes kept", evidence: "streaming/Dockerfile:109-111; Dockerfile:339 (node only in precompiler stage)"}
+  - {field: migrations / workers, change: "none: no entrypoint runs migrations (no CMD), so command mode stands; Sidekiq is the same image with bundle exec sidekiq", evidence: "docker-compose.yml:108; Procfile:2"}
+  - {field: openQuestions (S3 task role), change: "none: kt-paperclip is not in the repo, so the fallback to the AWS default credential chain stays open", evidence: "config/initializers/paperclip.rb:62-63"}
+  - {field: all, change: verified, evidence: "45 citations checked"}

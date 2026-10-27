@@ -1,0 +1,148 @@
+id: new-83
+repository: OpenHands/OpenHands
+commit: a9b3c77a014b1d0b1b24cf3c3f578497240671a6
+summary: >
+  OpenHands repo is now "agent-canvas": a React Router web UI plus an all-in-one image (docker/Dockerfile). One container
+  runs three processes started by docker/entrypoint.sh: the OpenHands agent-server (:18000, from the base image), the
+  automation backend (:18001, pip package) and a Node static server (:8000) that serves the UI under /canvas and proxies
+  /api, /sockets, /health to the two backends. The agent runs shell commands inside the container. Conversations, settings,
+  secrets and the agent workspace live on local disk under ~/.openhands and ~/workspace; the vendor Helm chart needs a 20Gi
+  PVC for them. Only the automation DB can move to PostgreSQL. The Dockerfile has no default for its base image arg.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Core durable state (conversation history, settings, encrypted secrets, workspace) is written to local disk with no S3 or
+    database option in this repo, so on Fargate it is lost on every task replacement; this is a persistent-volume
+    requirement, hence NOT_DEPLOYABLE. DEPLOYABLE_WITH_CHANGES is acceptable if one treats the app as a stateless demo (UI
+    still works with fixed LOCAL_BACKEND_API_KEY and OH_SECRET_KEY) after adding default values for the missing build args.
+    The Docker socket is not needed: OH_CONVERSATION_RUNTIME=docker is an opt-in that the image does not set.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile, reason: "ARG AGENT_SERVER_IMAGE (and AGENT_SERVER_VERSION, AUTOMATION_VERSION) have no default; FROM ${AGENT_SERVER_IMAGE} is blank unless the caller passes build args (scripts/docker-build.mjs or CI). A build from the repo archive alone fails. Fix would be a default such as ghcr.io/openhands/agent-server:<version>-python"}
+    - {path: examples/acp-docker/docker-compose.yml, reason: "example compose, not the app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 23, quote: "ARG AGENT_SERVER_IMAGE"}
+    - {path: docker/Dockerfile, line: 74, quote: "FROM ${AGENT_SERVER_IMAGE} AS final"}
+    - {path: docker/Dockerfile, line: 128, quote: "openhands-automation==${AUTOMATION_VERSION}"}
+    - {path: scripts/docker-build.mjs, line: 52, quote: "`AGENT_SERVER_IMAGE=${agentServerImage}`,"}
+runtime: {accept: [node, python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: docker/Dockerfile, line: 204, quote: "EXPOSE 8000"}
+    - {path: docker/entrypoint.sh, line: 84, quote: "PORT=\"${PORT:-${CONFIG_PROXY_PORT:-8000}}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/entrypoint.sh, line: 574, quote: "STATIC_SERVER_BIND_HOST=\"::\""}
+startCommand:
+  source: image
+  accept: ["/opt/agent-canvas/entrypoint.sh"]
+  evidence:
+    - {path: docker/Dockerfile, line: 206, quote: "ENTRYPOINT [\"tini\", \"--\", \"/opt/agent-canvas/entrypoint.sh\"]"}
+healthPath:
+  accept: ["/health", "/alive", "/ready"]
+  # /health, /alive, /ready are proxied to the agent-server before the /canvas base-path logic; the vendor smoke test and Helm
+  # probes call them with no session key. A bare / answers 308 to /canvas/, so it is not a 2xx check.
+  evidence:
+    - {path: docker/entrypoint.sh, line: 599, quote: "--route \"/health=http://127.0.0.1:${AGENT_SERVER_PORT}\""}
+    - {path: docker/smoke-test.sh, line: 18, quote: "HEALTH_URL=\"http://127.0.0.1:${PORT}/health\""}
+    - {path: docker/smoke-test.sh, line: 43, quote: "until curl -fs -o /dev/null --max-time 5 \"$HEALTH_URL\"; do"}
+    - {path: helm/agent-canvas/values.yaml, line: 203, quote: "path: /alive"}
+    - {path: scripts/static-server.mjs, line: 580, quote: "res.writeHead(308, { Location: location });"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {AUTOMATION_DB_URL: "postgresql+asyncpg://user:pass@host/db"}
+  connectionVars: [AUTOMATION_DB_URL]
+  # Only the automation backend uses this DB. The agent-server keeps conversations and settings as files.
+  evidence:
+    - {path: docker/entrypoint.sh, line: 503, quote: "# Default to SQLite so the automation server works out of the box without"}
+    - {path: docker/entrypoint.sh, line: 510, quote: "export AUTOMATION_DB_URL=\"sqlite+aiosqlite:///${AUTOMATION_DB_FILE}\""}
+    - {path: helm/agent-canvas/values.yaml, line: 139, quote: "# automationDbUrl: \"postgresql+asyncpg://user:pass@host/db\""}
+migrations:
+  mode: unknown
+  accept: []
+  evidence:
+    - {path: docker/entrypoint.sh, line: 516, quote: "uvicorn openhands.automation.app:app"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # agent-server, automation (uvicorn) and the static server are started by one entrypoint in the same container.
+  evidence:
+    - {path: docker/entrypoint.sh, line: 472, quote: "openhands-agent-server --port \"$AGENT_SERVER_PORT\""}
+    - {path: docker/entrypoint.sh, line: 516, quote: "uvicorn openhands.automation.app:app"}
+scheduledJobs:
+  status: embedded
+  items: [user-defined automations run by the automation backend]
+  evidence:
+    - {path: docker/entrypoint.sh, line: 516, quote: "uvicorn openhands.automation.app:app"}
+storage:
+  local: required
+  paths: [/home/openhands/.openhands, /home/openhands/workspace, /projects]
+  s3: none
+  s3SelectBy: {}
+  # FILE_STORE only moves automation tarballs, and the entrypoint forces local by default. No S3 option for conversations,
+  # settings, secrets or the workspace exists in this repo.
+  evidence:
+    - {path: docker/entrypoint.sh, line: 186, quote: "export OH_PERSISTENCE_DIR=\"${OH_PERSISTENCE_DIR:-${OPENHANDS_DIR}}\""}
+    - {path: docker/entrypoint.sh, line: 192, quote: "export OH_CONVERSATIONS_PATH="}
+    - {path: docker/entrypoint.sh, line: 491, quote: "export FILE_STORE=\"${FILE_STORE:-local}\""}
+    - {path: docker/Dockerfile, line: 200, quote: "VOLUME [\"/home/openhands/.openhands\", \"/projects\"]"}
+    - {path: helm/agent-canvas/values.yaml, line: 116, quote: "- mountPath: /home/openhands/.openhands"}
+    - {path: helm/agent-canvas/README.md, line: 80, quote: "- `~/.openhands` — agent-server settings, encrypted secrets,"}
+env:
+  required:
+    - {name: LOCAL_BACKEND_API_KEY, secret: true, buildTime: false, note: "session API key for the UI and API. If unset a random key is written to a local file and not shown in the UI (the key is injected into HTML only with AGENT_CANVAS_ALLOW_LAN_SESSION_KEY=true), so set a fixed value and enter it in the UI"}
+    - {name: OH_SECRET_KEY, secret: true, buildTime: false, note: "encrypts stored settings and secrets; auto-generated and persisted to local disk if unset, so it changes on every new task"}
+    - {name: AUTOMATION_BASE_URL, secret: false, buildTime: false, note: "public HTTPS base URL; default http://127.0.0.1:8000 is used in callback URLs"}
+    - {name: AGENT_SERVER_IMAGE, secret: false, buildTime: true, note: "build arg with no default, for example ghcr.io/openhands/agent-server:1.58.1-python (config/defaults.json versions.agentServer)"}
+    - {name: AGENT_SERVER_VERSION, secret: false, buildTime: true, note: "build arg, 1.58.1 in config/defaults.json"}
+    - {name: AUTOMATION_VERSION, secret: false, buildTime: true, note: "build arg, 1.26.0 in config/defaults.json"}
+  optional: [AUTOMATION_DB_URL, AUTOMATION_KV_SECRET, FILE_STORE, LOCAL_STORAGE_PATH, AUTOMATION_WORKSPACE_BASE, AGENT_CANVAS_BASE_PATH, PORT, LOG_LEVEL, OH_CONVERSATION_RUNTIME, OH_ENABLE_BROWSER, MARS_WEB, PUBLIC_MODE_PORT, AGENT_CANVAS_ALLOW_LAN_SESSION_KEY, VITE_BASE_PATH, VITE_POSTHOG_API_KEY]
+  buildTime: [AGENT_SERVER_IMAGE, AGENT_SERVER_VERSION, AUTOMATION_VERSION, VITE_BASE_PATH]
+  evidence:
+    - {path: docker/entrypoint.sh, line: 200, quote: "if [ -z \"${OH_SECRET_KEY:-}\" ]; then"}
+    - {path: docker/entrypoint.sh, line: 218, quote: "if [ -z \"${LOCAL_BACKEND_API_KEY:-}\" ] && [ -z \"${OH_SESSION_API_KEYS_0:-}\" ]; then"}
+    - {path: docker/entrypoint.sh, line: 581, quote: "if [ \"${AGENT_CANVAS_ALLOW_LAN_SESSION_KEY:-false}\" = \"true\" ]; then"}
+    - {path: docker/entrypoint.sh, line: 498, quote: "export AUTOMATION_BASE_URL=\"${AUTOMATION_BASE_URL:-http://127.0.0.1:${PORT}}\""}
+    - {path: config/defaults.json, line: 4, quote: "\"agentServer\": \"1.58.1\""}
+blockers:
+  expected:
+    - "Conversations, settings, encrypted secrets and the agent workspace are durable only on local disk (~/.openhands, ~/workspace); the vendor Helm chart needs a PVC. No S3 or DB option for them; Fargate disk is ephemeral"
+    - "docker/Dockerfile cannot build from the repo alone: AGENT_SERVER_IMAGE, AGENT_SERVER_VERSION and AUTOMATION_VERSION have no defaults (the base image is ghcr.io/openhands/agent-server, passed only by CI or scripts/docker-build.mjs)"
+  mustNot:
+    - "Docker socket / Docker-in-Docker must not block: OH_CONVERSATION_RUNTIME=docker is opt-in and the all-in-one image runs the agent in the same container"
+    - "Three processes (agent-server, automation, static server) must not count as several services: one entrypoint starts them in one container and one port (8000) is exposed"
+    - "SQLite for the automation DB must not block by itself: PostgreSQL is selectable with AUTOMATION_DB_URL"
+    - "Redis, MongoDB, queues or search engines must not be reported: none are used"
+    - "The /canvas base path must not be a blocker: it is set by VITE_BASE_PATH and handled by the static server (a bare / answers 308)"
+vendorQuestions:
+  legitimate:
+    - "Is losing conversation history, settings and workspace on every redeploy acceptable (no persistent volume on Fargate)?"
+    - "Which base image version and automation version to build with (build args have no default)?"
+    - "The agent executes arbitrary shell commands inside the container; is a public deployment with only a shared API key acceptable?"
+  unnecessary:
+    - "Which port? (8000 in EXPOSE and entrypoint)"
+    - "Is a Docker socket needed? (only for the opt-in docker conversation runtime)"
+    - "Is Redis or a worker needed? (no)"
+    - "Health path? (/health, /alive, /ready)"
+traps:
+  - "Task hint of Docker socket / sandbox containers -> only with OH_CONVERSATION_RUNTIME=docker (README.md:116); the all-in-one image does not set it"
+  - "docs/SELF_HOSTING.md mentions a static server on :3001 and ingress on 127.0.0.1:8000 for the npx install; the Docker image serves everything on :8000 (docker/entrypoint.sh:84)"
+  - "FILE_STORE looks like an S3 switch -> it only covers automation tarballs and defaults to local (docker/entrypoint.sh:491); it does not move conversations or settings"
+  - "/ redirects 308 to /canvas/ -> use /health (scripts/static-server.mjs:580)"
+  - "config/defaults.json holds image and version pins that the Dockerfile reads only through build args (scripts/docker-build.mjs:52)"
+  - "docker/Dockerfile VOLUME lines are not a durable store on Fargate (docker/Dockerfile:200)"
+openQuestions:
+  - "Whether the automation backend runs its own DB migrations at start is not visible in this repo (code is in the openhands-automation pip package)"
+  - "Whether agent-server /health needs no session key is shown only by the vendor smoke test, not by agent-server code in this repo"
