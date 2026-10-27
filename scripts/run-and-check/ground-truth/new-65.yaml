@@ -1,0 +1,201 @@
+id: new-65
+repository: baserow/baserow
+commit: 7e1eca2ea879a32bdd5e4e75134f35d9b6e476d4
+summary: >
+  Baserow no-code database (Django/ASGI backend, Nuxt SSR web-frontend, Celery workers and beat, Redis, PostgreSQL).
+  The repo has two source Dockerfiles (backend/Dockerfile, web-frontend/Dockerfile), one image each. The
+  deploy/all-in-one/Dockerfile does not build from source: it starts FROM the published baserow/backend and
+  baserow/web-frontend registry images (ARG BACKEND_IMAGE, WEBFRONTEND_IMAGE) and adds Caddy and supervisord.
+  So no single Dockerfile in the repo builds the whole app from the repo archive alone.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The full app needs two application images (backend and web-frontend) behind a router, or the all-in-one image,
+    which copies from pre-built registry application images and so cannot be built from the repo archive.
+    NOT_DEPLOYABLE is the direct result for the repo as given. DEPLOYABLE_WITH_CHANGES is a valid judgement call only
+    if the customer writes a new single Dockerfile that builds both parts from source and runs Caddy, Nuxt, gunicorn
+    and Celery with supervisord; the app itself then works with external PostgreSQL, Redis and S3 (task role).
+dockerfile:
+  accept: []
+  reject:
+    - {path: deploy/all-in-one/Dockerfile, reason: "FROM ${BACKEND_IMAGE} and ${WEBFRONTEND_IMAGE} (default baserow/backend, baserow/web-frontend) pull pre-built application images from a registry and copy /baserow out of them; not buildable from the repo archive alone"}
+    - {path: backend/Dockerfile, reason: "builds only the Django backend and Celery image (CMD gunicorn); no web-frontend, no router; the UI needs the second image"}
+    - {path: web-frontend/Dockerfile, reason: "builds only the Nuxt web-frontend (port 3000); no backend API"}
+    - {path: deploy/render/Dockerfile, reason: "FROM the published registry image baserow/baserow (ARG FROM_IMAGE) plus one env file; a platform wrapper, builds nothing from source"}
+    - {path: deploy/cloudron/Dockerfile, reason: "FROM the published registry image baserow/baserow (ARG FROM_IMAGE) plus one env file; a platform wrapper, builds nothing from source"}
+    - {path: heroku.Dockerfile, reason: "FROM the published registry image baserow/baserow (ARG FROM_IMAGE) plus one env file; a platform wrapper, builds nothing from source"}
+    - {path: embeddings/Dockerfile, reason: "separate helper image that downloads an embedding model; not the app"}
+    - {path: formula/Dockerfile, reason: "separate helper image (openjdk base); not the app"}
+    - {path: deploy/apache/recommended/Dockerfile, reason: "reverse proxy variant, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: deploy/all-in-one/Dockerfile, line: 4, quote: "ARG BACKEND_IMAGE=baserow/backend"}
+    - {path: deploy/all-in-one/Dockerfile, line: 8, quote: "FROM ${BACKEND_IMAGE} AS backend_image"}
+    - {path: deploy/all-in-one/Dockerfile, line: 10, quote: "FROM ${WEBFRONTEND_IMAGE} AS web_frontend_image"}
+    - {path: deploy/all-in-one/Dockerfile, line: 98, quote: "COPY --chown=$UID:$GID --from=web_frontend_image /baserow/web-frontend /baserow/web-frontend"}
+    - {path: deploy/all-in-one/Dockerfile, line: 101, quote: "COPY --chown=$UID:$GID --from=backend_image /baserow/backend /baserow/backend"}
+    - {path: deploy/render/Dockerfile, line: 1, quote: "ARG FROM_IMAGE=baserow/baserow:2.4.1"}
+    - {path: heroku.Dockerfile, line: 1, quote: "ARG FROM_IMAGE=baserow/baserow:2.4.1"}
+    - {path: backend/Dockerfile, line: 502, quote: "CMD [\"gunicorn\"]"}
+    - {path: web-frontend/Dockerfile, line: 286, quote: "ENTRYPOINT [\"/baserow/web-frontend/docker/docker-entrypoint.sh\"]"}
+runtime: {accept: [python, node]}
+port:
+  accept: [80]
+  evidence:
+    - {path: deploy/all-in-one/Dockerfile, line: 116, quote: "EXPOSE 80"}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 36, quote: "BASEROW_CADDY_ADDRESSES=\"${BASEROW_CADDY_ADDRESSES:-\":80\"}\""}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 39, quote: "PRIVATE_BACKEND_URL='http://localhost:8000'"}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 44, quote: "PRIVATE_WEB_FRONTEND_URL='http://localhost:3000'"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 36, quote: "BASEROW_CADDY_ADDRESSES"}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 45, quote: "BASEROW_BACKEND_BIND_ADDRESS=127.0.0.1"}
+    - {path: backend/docker/docker-entrypoint.sh, line: 31, quote: "BASEROW_BACKEND_BIND_ADDRESS=${BASEROW_BACKEND_BIND_ADDRESS:-0.0.0.0}"}
+startCommand:
+  source: image
+  accept: ["/baserow.sh start", "/baserow.sh"]
+  # all-in-one only: ENTRYPOINT ["/baserow.sh"] CMD ["start"]. backend/Dockerfile (CMD gunicorn) alone is not the whole app.
+  evidence:
+    - {path: deploy/all-in-one/Dockerfile, line: 114, quote: "ENTRYPOINT [\"/baserow.sh\"]"}
+    - {path: deploy/all-in-one/Dockerfile, line: 115, quote: "CMD [\"start\"]"}
+    - {path: deploy/all-in-one/baserow.sh, line: 300, quote: "exec /baserow/supervisor/start.sh"}
+    - {path: deploy/all-in-one/supervisor/start.sh, line: 105, quote: "exec /usr/local/bin/supervisord"}
+healthPath:
+  accept: ["/_health/", "/_health"]
+  # In the all-in-one image Caddy proxies /api/* to the backend only when the Host header matches BASEROW_PUBLIC_URL
+  # (@is_baserow_tool). An ALB health check sends the task IP as Host, so /api/_health/ then goes to the Nuxt server.
+  # /_health/ is a Nuxt page ("OK") and works for any Host. /api/_health/ (Django, "OK") is valid only with the public Host.
+  evidence:
+    - {path: web-frontend/modules/core/pages/_health.vue, line: 2, quote: "<div>OK</div>"}
+    - {path: backend/src/baserow/api/urls.py, line: 64, quote: "path(\"_health/\", include(health_urls, namespace=\"health\")),"}
+    - {path: backend/src/baserow/api/health/urls.py, line: 14, quote: "return HttpResponse(\"OK\")"}
+    - {path: Caddyfile, line: 42, quote: "@is_baserow_tool {"}
+    - {path: Caddyfile, line: 66, quote: "@backend_routes path /api/* /ws/*"}
+    - {path: Caddyfile, line: 80, quote: "reverse_proxy {$PRIVATE_WEB_FRONTEND_URL:localhost:3000}"}
+database:
+  status: required
+  engines: [postgres]
+  default: "embedded PostgreSQL 15 inside the all-in-one container when DATABASE_URL and DATABASE_HOST are unset (data on local disk)"
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://user:password@host:5432/baserow"}
+  connectionVars: [DATABASE_URL, "DATABASE_HOST/DATABASE_PORT/DATABASE_NAME/DATABASE_USER/DATABASE_PASSWORD", DATABASE_OPTIONS]
+  evidence:
+    - {path: backend/src/baserow/config/settings/base.py, line: 274, quote: "if \"DATABASE_URL\" in os.environ:"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 275, quote: "dj_database_url.parse(os.getenv(\"DATABASE_URL\"))"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 279, quote: "\"ENGINE\": \"django.db.backends.postgresql\","}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 26, quote: "DATABASE_HOST=\"${DATABASE_HOST:-embed}\""}
+    - {path: deploy/all-in-one/baserow.sh, line: 146, quote: "if [[ \"$DATABASE_HOST\" == \"embed\" && -z \"${DATABASE_URL:-}\" ]]; then"}
+    - {path: deploy/all-in-one/supervisor/start.sh, line: 34, quote: "if [[ \"$DATABASE_HOST\" == \"localhost\" && -z \"${DATABASE_URL:-}\" ]]; then"}
+migrations:
+  mode: startup
+  accept: ["manage.py locked_migrate", "manage.py migrate"]
+  evidence:
+    - {path: backend/docker/docker-entrypoint.sh, line: 28, quote: "MIGRATE_ON_STARTUP=${MIGRATE_ON_STARTUP:-true}"}
+    - {path: backend/docker/docker-entrypoint.sh, line: 210, quote: "manage.py \"$migration_command\""}
+    - {path: backend/docker/docker-entrypoint.sh, line: 237, quote: "run_setup_commands_if_configured"}
+    - {path: backend/docker/docker-entrypoint.sh, line: 207, quote: "migration_command=\"locked_migrate\""}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: backend/src/baserow/config/settings/base.py, line: 184, quote: "REDIS_URL = os.getenv("}
+    - {path: backend/src/baserow/config/settings/base.py, line: 194, quote: "CELERY_BROKER_URL = REDIS_URL"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 234, quote: "CELERY_REDBEAT_REDIS_URL = REDIS_URL"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 267, quote: "\"hosts\": [REDIS_URL],"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 343, quote: "\"LOCATION\": REDIS_URL,"}
+    - {path: deploy/all-in-one/baserow.sh, line: 181, quote: "if [[ \"$REDIS_HOST\" == \"embed\" && -z \"${REDIS_URL:-}\" ]]; then"}
+    - {path: deploy/all-in-one/supervisor/start.sh, line: 59, quote: "if [[ \"$REDIS_HOST\" == \"localhost\" && -z \"${REDIS_URL:-}\" ]]; then"}
+workers:
+  status: embedded
+  # In the all-in-one image supervisord runs celeryworker, exportworker and beatworker in the same container, so no
+  # separate Deployz worker service is needed there. In the separate backend image topology the same three are
+  # independent processes (celery-worker, celery-exportworker, celery-beat) from the one backend image.
+  commands: [celery-worker, celery-exportworker, celery-beat]
+  evidence:
+    - {path: deploy/all-in-one/supervisor/supervisor.conf, line: 50, quote: "[program:celeryworker]"}
+    - {path: deploy/all-in-one/supervisor/supervisor.conf, line: 63, quote: "[program:exportworker]"}
+    - {path: deploy/all-in-one/supervisor/supervisor.conf, line: 76, quote: "[program:beatworker]"}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 69, quote: "DEFAULT_CELERY_WORKER_STARTUP_COMMAND='celery-worker'"}
+    - {path: backend/docker/docker-entrypoint.sh, line: 377, quote: "celery-worker)"}
+    - {path: backend/docker/docker-entrypoint.sh, line: 413, quote: "celery -A baserow beat"}
+    - {path: deploy/all-in-one/supervisor/supervisor.conf, line: 103, quote: "If an application crashes during runtime we want the entire container to die."}
+scheduledJobs:
+  status: embedded
+  items: [celery beat with RedBeat scheduler (one instance only)]
+  evidence:
+    - {path: backend/docker/docker-entrypoint.sh, line: 413, quote: "-S redbeat.RedBeatScheduler"}
+storage:
+  local: conditional
+  paths: [/baserow/data/media, /baserow/media, /baserow/data (embedded postgres, redis, caddy, generated secrets)]
+  s3: native
+  s3SelectBy: {AWS_STORAGE_BUCKET_NAME: bucket, AWS_S3_REGION_NAME: region}
+  # django-storages S3Boto3Storage. AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are optional (copied from env only if present),
+  # so boto3 uses its default chain and the ECS task role works. AWS_DEFAULT_ACL defaults to "public-read"; a bucket with
+  # ACLs blocked needs AWS_DEFAULT_ACL set to an empty string (an empty env value is kept, see utils.py:112-119).
+  evidence:
+    - {path: backend/src/baserow/config/settings/base.py, line: 766, quote: "AWS_STORAGE_ENABLED = os.getenv(\"AWS_STORAGE_BUCKET_NAME\", \"\") != \"\""}
+    - {path: backend/src/baserow/config/settings/base.py, line: 782, quote: "storages.backends.s3boto3.S3Boto3Storage"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 791, quote: "\"AWS_ACCESS_KEY_ID\","}
+    - {path: backend/src/baserow/config/settings/base.py, line: 801, quote: "Setting(\"AWS_DEFAULT_ACL\", default=\"public-read\")"}
+    - {path: backend/src/baserow/config/settings/utils.py, line: 112, quote: "value = os.getenv(env_var, None)"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 1324, quote: "MEDIA_ROOT = os.getenv(\"MEDIA_ROOT\", \"/baserow/media\")"}
+    - {path: deploy/all-in-one/supervisor/default_baserow_env.sh, line: 52, quote: "MEDIA_ROOT=\"$DATA_DIR/media\""}
+    - {path: Caddyfile, line: 32, quote: "root {$MEDIA_ROOT:/baserow/media/}"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "external PostgreSQL; without it the all-in-one image starts an embedded Postgres on local disk (ephemeral). Or DATABASE_HOST/PORT/NAME/USER/PASSWORD"}
+    - {name: REDIS_URL, secret: true, buildTime: false, note: "external Redis; without it the all-in-one image starts an embedded Redis. Or REDIS_HOST/PORT/PASSWORD/PROTOCOL"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "if unset, the all-in-one entrypoint generates one in /baserow/data/.secret; on Fargate this is lost on restart and differs per task, so set it"}
+    - {name: BASEROW_JWT_SIGNING_KEY, secret: true, buildTime: false, note: "falls back to SECRET_KEY in settings; the all-in-one entrypoint generates one into local disk if unset"}
+    - {name: BASEROW_PUBLIC_URL, secret: false, buildTime: false, note: "public HTTPS URL of the ALB; sets PUBLIC_BACKEND_URL and PUBLIC_WEB_FRONTEND_URL; Caddy routes /api only for a matching Host"}
+    - {name: AWS_STORAGE_BUCKET_NAME, secret: false, buildTime: false, note: "enables S3 user-file storage; key and secret are optional so the task role is used; also set AWS_S3_REGION_NAME"}
+    - {name: DISABLE_VOLUME_CHECK, secret: false, buildTime: false, note: "set to yes; baserow.sh exits when /baserow/data is not a mount"}
+  optional: [AWS_S3_REGION_NAME, AWS_DEFAULT_ACL, AWS_QUERYSTRING_AUTH, AWS_S3_CUSTOM_DOMAIN, MEDIA_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BASEROW_EXTRA_PUBLIC_URLS, BASEROW_ENABLE_SECURE_PROXY_SSL_HEADER, BASEROW_CADDY_ADDRESSES, BASEROW_AMOUNT_OF_WORKERS, BASEROW_AMOUNT_OF_GUNICORN_WORKERS, BASEROW_RUN_MINIMAL, MIGRATE_ON_STARTUP, SYNC_TEMPLATES_ON_STARTUP, EMAIL_SMTP, EMAIL_SMTP_HOST, EMAIL_SMTP_PASSWORD, FROM_EMAIL]
+  buildTime: []
+  evidence:
+    - {path: deploy/all-in-one/baserow.sh, line: 112, quote: "if [[ -z \"${DISABLE_VOLUME_CHECK:-}\" ]]; then"}
+    - {path: deploy/all-in-one/baserow.sh, line: 201, quote: "create_secret_env_if_missing .secret SECRET_KEY"}
+    - {path: deploy/all-in-one/baserow.sh, line: 204, quote: "create_secret_env_if_missing .jwt_signing_key BASEROW_JWT_SIGNING_KEY"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 592, quote: "\"SIGNING_KEY\": os.getenv(\"BASEROW_JWT_SIGNING_KEY\") or os.getenv(\"SECRET_KEY\"),"}
+    - {path: backend/src/baserow/config/settings/base.py, line: 897, quote: "BASEROW_PUBLIC_URL = os.getenv(\"BASEROW_PUBLIC_URL\", \"\")"}
+    - {path: deploy/all-in-one/baserow.sh, line: 134, quote: "DATABASE_HOST\" == *\"localhost\"*"}
+blockers:
+  expected:
+    - "Two application images: the app is split into a Django backend image and a Nuxt web-frontend image (backend/Dockerfile, web-frontend/Dockerfile), and Deployz builds one Dockerfile per app"
+    - "The only single-container Dockerfile, deploy/all-in-one/Dockerfile, is built FROM the published baserow/backend and baserow/web-frontend registry images (ARG BACKEND_IMAGE, WEBFRONTEND_IMAGE), so it does not build from the repo archive alone"
+  mustNot:
+    - "Embedded PostgreSQL and Redis in the all-in-one image must not block: DATABASE_URL and REDIS_URL switch them off"
+    - "Celery workers and beat must not need separate services in the all-in-one image: supervisord runs them in the same container"
+    - "S3 must not need static access keys: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are optional, boto3 default credentials (task role) work"
+    - "Local /baserow/data must not be called required durable storage: media goes to S3 and the databases are external"
+    - "Caddy automatic HTTPS must not block: the image listens on :80 by default and the ALB terminates TLS"
+vendorQuestions:
+  legitimate:
+    - "Is a customer-written single Dockerfile that merges backend and web-frontend acceptable, since the repo ships none that builds from source alone?"
+    - "Whether the premium and enterprise features need a license key (BASEROW_ENTERPRISE license is entered in the UI); not decided by the repo build"
+  unnecessary:
+    - "Which port? (80 for Caddy in all-in-one; 8000 backend and 3000 frontend internally)"
+    - "Who runs migrations? (MIGRATE_ON_STARTUP defaults to true; the backend runs locked_migrate before gunicorn)"
+    - "Is Redis needed? (yes, Celery broker, channels and cache)"
+    - "Are Celery workers and beat needed? (yes; the all-in-one supervisord runs them)"
+    - "Which health path? (/_health/)"
+traps:
+  - "deploy/all-in-one/Dockerfile looks like a one-container build, but FROM ${BACKEND_IMAGE} / ${WEBFRONTEND_IMAGE} pull registry application images (deploy/all-in-one/Dockerfile:8, :10)"
+  - "Two final targets named prod/local in backend/Dockerfile and web-frontend/Dockerfile; each is only half of the app (backend/Dockerfile:505, web-frontend/Dockerfile:289)"
+  - "DATABASE_HOST default 'embed' starts a local PostgreSQL with data on /baserow/data (ephemeral on Fargate) (deploy/all-in-one/supervisor/default_baserow_env.sh:26)"
+  - "baserow.sh refuses to start when /baserow/data is not a mount unless DISABLE_VOLUME_CHECK is set (deploy/all-in-one/baserow.sh:112)"
+  - "DATABASE_HOST=localhost is rejected by the entrypoint check (deploy/all-in-one/baserow.sh:134)"
+  - "/api/_health/ is proxied by Caddy only for a Host matching BASEROW_PUBLIC_URL; an ALB check with the task IP reaches the Nuxt server instead, so use /_health/ (Caddyfile:42, :66, :80)"
+  - "AWS_DEFAULT_ACL defaults to public-read; buckets that block ACLs reject uploads until it is set empty (backend/src/baserow/config/settings/base.py:801)"
+  - "Version banner and docker-compose.* files are for local or compose installs, not the Deployz topology (deploy/all-in-one/supervisor/start.sh:17)"
+openQuestions:
+  - "pgvector is optional: the backend checks at migrate time whether the extension is available and adjusts its models (backend/src/baserow/core/apps.py:749); only the embedded DB creates it (deploy/all-in-one/supervisor/docker-postgres-setup.sh:61), so RDS without it is fine but vector features are then off"
+  - "Whether a judge should accept the registry-image all-in-one as buildable when BACKEND_IMAGE and WEBFRONTEND_IMAGE point to public images; this file treats it as not buildable from the repo alone"
+crossReview:
+  - {field: dockerfile.reject, change: "deploy/render and deploy/cloudron reasons 'third-party platform wrapper' -> exact reason: both are FROM the registry image baserow/baserow (ARG FROM_IMAGE) and build nothing from source. Added heroku.Dockerfile (same pattern), embeddings/Dockerfile and formula/Dockerfile (separate helper images). Added two evidence lines", evidence: "deploy/render/Dockerfile:1; heroku.Dockerfile:1; git ls-files lists 12 Dockerfiles"}
+  - {field: openQuestions (pgvector), change: "resolved: the extension is optional; the backend probes for it at post-migrate and adjusts its models, so external PostgreSQL without pgvector is fine (vector features off)", evidence: "backend/src/baserow/core/apps.py:749-751"}
+  - {field: dockerfile.accept, change: "none: [] kept; no Dockerfile in git builds the whole app from the repo alone (backend/Dockerfile and web-frontend/Dockerfile are half each; all-in-one, render, cloudron and heroku start FROM registry application images)", evidence: "deploy/all-in-one/Dockerfile:4-10; deploy/render/Dockerfile:1"}
+  - {field: healthPath, change: "none: /_health/ kept. Caddy sends non-matching Host (ALB task IP) to the Nuxt server; _health.vue is a plain page returning OK. /api/_health/ stays listed as valid only for a matching Host", evidence: "Caddyfile:42-44,66,80; web-frontend/modules/core/pages/_health.vue:2"}
+  - {field: all, change: verified, evidence: "65 citations checked"}

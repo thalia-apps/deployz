@@ -20,7 +20,7 @@ import { and, eq, inArray, isNotNull, isNull, lt, notInArray, or, sql } from 'dr
 import { reconcileBilling } from '@deployz/api/billing';
 import { markDeploymentLive, syncServingBilling } from '@deployz/api/billing-lifecycle';
 import { fanOutConfigUpdate, listVendorValues } from '@deployz/api/config';
-import { mintInstallationToken } from '@deployz/api/github';
+import { createGithubStore, mintInstallationToken, requireActiveInstallation } from '@deployz/api/github';
 import type { SecretCipher } from '@deployz/api/pending-secrets';
 import {
   flipHealthyDeploymentsToUpdateAvailable,
@@ -339,6 +339,15 @@ async function buildRelease(deps: WorkerDeps, releaseId: string): Promise<void> 
   const installationId = application.githubInstallationId;
   if (!installationId) {
     await failRelease(db, releaseId, 'No GitHub installation is linked to this application', 'build_failed');
+    return;
+  }
+  // Checked when the build starts: a build queued before a disconnect must
+  // not get a token after it. A retry cannot help, so the message is settled.
+  const connection = await createGithubStore(db).get(installationId);
+  try {
+    requireActiveInstallation(connection, application.organizationId);
+  } catch (error) {
+    await failRelease(db, releaseId, (error as Error).message, 'build_failed');
     return;
   }
 

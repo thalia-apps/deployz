@@ -1,0 +1,3278 @@
+{
+  "id": "new-81",
+  "commit": "9b1fcab141000eaba9f78ed131151de04904454b",
+  "analyser": "rules@r5-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "vite build && node scripts/postbuild.js",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/bin/bash\", \"/usr/local/bin/docker-entrypoint.sh\"]",
+      "port": 3001
+    },
+    "health": {
+      "path": "/ping",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AGENT_ANYSEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_AUTO_APPROVED_SKILLS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/utils/helpers/agents.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AGENT_BAIDU_SEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_BING_SEARCH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_BRAVE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_CRW_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_CRW_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_EXA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_FIRECRAWL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_KEENABLE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_KEENABLE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_PERPLEXITY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SEARCHAPI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SEARCHAPI_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SEARXNG_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SERPAPI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SERPAPI_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SERPER_DEV_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_SERPLY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_TAVILY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AGENT_YOU_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ANTHROPIC_CACHE_CONTROL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ANYTHINGLLM_CHROMIUM_ARGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANYTHINGLLM_FETCH_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/boot/patchSdkTimeouts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANYTHINGLLM_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/boot/patchSdkTimeouts.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANYTHING_LLM_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/telemetry.js",
+            "read in server/utils/helpers/updateENV.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APIPIE_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "APIPIE_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/endpoints/system.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/boot/markOnboarded.js",
+            "read in server/utils/middleware/validatedRequest.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BEDROCK_LLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BEDROCK_LLM_MAX_TOKENS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BEDROCK_LLM_MODEL_PREFERENCE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AWS_BEDROCK_LLM_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BEDROCK_LLM_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_MODEL_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_MODEL_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CEREBRAS_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CEREBRAS_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CHROMACLOUD_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHROMACLOUD_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHROMACLOUD_TENANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHROMA_API_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHROMA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHROMA_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COHERE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COHERE_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COLLECTOR_ALLOW_ANY_IP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COLLECTOR_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in collector/utils/http/index.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COMETAPI_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COMETAPI_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COMETAPI_LLM_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMMUNITY_HUB_BUNDLE_DOWNLOADS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/middleware/communityHubDownloadsEnabled.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEEPSEEK_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEEPSEEK_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DEPLOYMENT_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_SWAGGER_DOCS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/swagger/utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/models/telemetry.js",
+            "read in server/utils/database/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCUMENT_SYNC_STALE_AFTER_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/documentSyncQueue.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDED_LEMONADE_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBEDDING_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/chat.js",
+            "read in server/endpoints/workspaceThreads.js",
+            "read in server/endpoints/workspaces.js",
+            "read in server/models/documents.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/EmbeddingWorkerManager.js",
+            "read in server/endpoints/embed/index.js",
+            "read in server/utils/helpers/index.js",
+            "read in server/utils/helpers/updateENV.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_MODEL_MAX_CHUNK_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_MODEL_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_OUTPUT_DIMENSIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/index.js",
+            "read in server/utils/boot/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_HTTP_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in collector/index.js",
+            "read in server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_HTTP_LOGGER_TIMESTAMPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in collector/index.js",
+            "read in server/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIREWORKS_AI_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FIREWORKS_AI_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FOUNDRY_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/endpoints/utils/foundryUtilsEndpoints.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FOUNDRY_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FOUNDRY_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GEMINI_EMBEDDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GEMINI_SAFETY_SETTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_EMBEDDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_EMBEDDING_MAX_CONCURRENT_CHUNKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_EMBEDDING_PASSAGE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_EMBEDDING_QUERY_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_MAX_TOKENS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITEE_AI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITEE_AI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITEE_AI_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROQ_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROQ_STT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTPS_CERT_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/utils/boot/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HTTPS_KEY_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/utils/boot/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "IMAGE_GEN_GEMINI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LEMONADE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LEMONADE_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LLMMAN_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LLMMAN_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LOCALAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_LOCALAI_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_MODEL_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_OLLAMA_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_OLLAMA_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_OPENAI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_OPENROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/agentSkillWhitelist.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_GEN_SIZE_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/ImageGenerators/base.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/system.js",
+            "read in server/models/temporaryAuthToken.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/endpoints/system.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/boot/markOnboarded.js",
+            "read in server/utils/http/index.js",
+            "read in server/utils/middleware/validatedRequest.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "KOBOLD_CPP_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "KOBOLD_CPP_MAX_TOKENS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KOBOLD_CPP_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "KOBOLD_CPP_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LEMONADE_LLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/endpoints/utils/lemonadeUtilsEndpoints.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LEMONADE_LLM_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/endpoints/utils/lemonadeUtilsEndpoints.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LEMONADE_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LEMONADE_LLM_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LITE_LLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LITE_LLM_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LITE_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LITE_LLM_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLMMAN_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLMMAN_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLMMAN_KEEP_ALIVE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLMMAN_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLMMAN_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLM_PROVIDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/chat.js",
+            "read in server/endpoints/utils.js",
+            "read in server/endpoints/workspaceThreads.js",
+            "read in server/endpoints/workspaces.js",
+            "read in server/models/documents.js",
+            "read in server/models/systemSettings.js",
+            "read in server/models/workspace.js",
+            "read in server/endpoints/embed/index.js",
+            "read in server/jobs/helpers/memory-extraction-utils.js",
+            "read in server/utils/agents/ephemeral.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/boot/eagerLoadContextWindows.js",
+            "read in server/utils/boot/markOnboarded.js",
+            "read in server/utils/helpers/index.js",
+            "read in server/utils/helpers/reasoningEffort.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LMSTUDIO_AUTH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "LMSTUDIO_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LMSTUDIO_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LMSTUDIO_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_AI_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOCAL_AI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOCAL_AI_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMORY_EXTRACTION_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/BackgroundWorkers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMORY_IDLE_THRESHOLD_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/jobs/extract-memories.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIMAX_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MINIMAX_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MISTRAL_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MISTRAL_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MODEL_ROUTER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/models/workspace.js",
+            "read in server/utils/agents/ephemeral.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOONSHOT_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MOONSHOT_AI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in collector/index.js",
+            "read in server/index.js",
+            "read in server/endpoints/system.js",
+            "read in server/endpoints/utils.js",
+            "read in server/models/communityHub.js",
+            "read in server/models/mobileDevice.js",
+            "read in server/models/systemSettings.js",
+            "read in server/models/telemetry.js",
+            "read in server/swagger/utils.js",
+            "read in collector/utils/comKey/index.js",
+            "read in collector/utils/files/index.js",
+            "read in collector/utils/http/index.js",
+            "read in collector/utils/logger/index.js",
+            "read in server/endpoints/utils/outlookAgentUtils.js",
+            "read in server/jobs/helpers/index.js",
+            "read in server/utils/DocumentManager/index.js",
+            "read in server/utils/PushNotifications/index.js",
+            "read in server/utils/agents/imported.js",
+            "read in server/utils/comKey/index.js",
+            "read in server/utils/database/index.js",
+            "read in server/utils/files/index.js",
+            "read in server/utils/files/multer.js",
+            "read in server/utils/helpers/tiktoken.js",
+            "read in server/utils/helpers/updateENV.js",
+            "read in server/utils/http/index.js",
+            "read in server/utils/logger/index.js",
+            "read in server/utils/middleware/validatedRequest.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOVITA_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NOVITA_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NOVITA_LLM_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NTBA_FIX_350",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/jobs/handle-telegram-chat.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NVIDIA_NIM_LLM_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js",
+            "read in server/utils/helpers/updateENV.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NVIDIA_NIM_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NVIDIA_NIM_LLM_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OLLAMA_EMBEDDING_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_KEEP_ALIVE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OLLAMA_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OMLX_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OMLX_LLM_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OMLX_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OMLX_LLM_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENROUTER_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENROUTER_SERVICE_TIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPEN_AI_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/collectorApi/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPEN_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PASSWORDLOWERCASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDMAXCHAR",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDMINCHAR",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDNUMERIC",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDREQUIREMENTS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDSYMBOL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORDUPPERCASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/user.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/helpers/shell.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PERPLEXITY_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PERPLEXITY_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PGVECTOR_CONNECTION_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/helpers/updateENV.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PINECONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PINECONE_INDEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PPIO_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PPIO_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PRIVATEMODE_LLM_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PRIVATEMODE_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "QDRANT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SAMBANOVA_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SAMBANOVA_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SCHEDULED_JOB_MAX_CONCURRENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/BackgroundWorkers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCHEDULED_JOB_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/jobs/helpers/scheduled-job-helper.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/index.js",
+            "read in server/models/mobileDevice.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIMPLE_SSO_NO_LOGIN_REDIRECT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STORAGE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in collector/utils/OCRLoader/index.js",
+            "read in collector/utils/comKey/index.js",
+            "read in collector/utils/files/index.js",
+            "read in server/jobs/helpers/index.js",
+            "read in server/utils/DocumentManager/index.js",
+            "read in server/utils/PushNotifications/index.js",
+            "read in server/utils/agentFlows/index.js",
+            "read in server/utils/agents/imported.js",
+            "read in server/utils/comKey/index.js",
+            "read in server/utils/files/index.js",
+            "read in server/utils/files/logo.js",
+            "read in server/utils/files/multer.js",
+            "read in server/utils/files/pfp.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_DEEPGRAM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_DEEPGRAM_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_GROQ_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STT_GROQ_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_LEMONADE_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_LEMONADE_MODEL_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_OPEN_AI_COMPATIBLE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_OPEN_AI_COMPATIBLE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_OPEN_AI_COMPATIBLE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_OPEN_AI_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STT_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/system.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/SpeechToText/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TARGET_OCR_LANG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEXT_GEN_WEB_UI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TEXT_GEN_WEB_UI_BASE_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TEXT_GEN_WEB_UI_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOGETHER_AI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TOGETHER_AI_MAX_TOKENS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOGETHER_AI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TTS_ELEVEN_LABS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_ELEVEN_LABS_VOICE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_KOKORO_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_KOKORO_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_KOKORO_VOICE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_COMPATIBLE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_COMPATIBLE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_COMPATIBLE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_COMPATIBLE_VOICE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_OPEN_AI_VOICE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_PIPER_VOICE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TTS_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/chat.js",
+            "read in server/endpoints/workspaceThreads.js",
+            "read in server/endpoints/workspaces.js",
+            "read in server/models/documents.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/TextToSpeech/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VECTOR_DB",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/chat.js",
+            "read in server/endpoints/utils.js",
+            "read in server/endpoints/workspaceThreads.js",
+            "read in server/endpoints/workspaces.js",
+            "read in server/models/documents.js",
+            "read in server/models/systemSettings.js",
+            "read in server/endpoints/embed/index.js",
+            "read in server/utils/boot/markOnboarded.js",
+            "read in server/utils/helpers/index.js",
+            "read in server/utils/helpers/updateENV.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VERTEX_AI_LLM_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VERTEX_AI_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VERTEX_AI_LLM_MODEL_TOKEN_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERTEX_AI_LLM_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERTEX_AI_LLM_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOYAGEAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_GRPC_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_GRPC_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHISPER_GENERIC_OPEN_AI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WHISPER_GENERIC_OPEN_AI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHISPER_GENERIC_OPEN_AI_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHISPER_MODEL_PREF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHISPER_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/collectorApi/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XAI_LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "XAI_LLM_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ZAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/customModels.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ZAI_MODEL_PREF",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/endpoints/utils.js",
+            "read in server/models/systemSettings.js",
+            "read in server/utils/agents/index.js",
+            "read in server/utils/helpers/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ZILLIZ_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ZILLIZ_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/models/systemSettings.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "cloud-deployments/digitalocean/terraform/main.tf"
+    ],
+    "externalServices": [
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported database: Prisma configured with the SQLite provider. Deployz hosts PostgreSQL and MySQL only.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: Prisma configured with the SQLite provider. Deployz hosts PostgreSQL and MySQL only."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: AGENT_AUTO_APPROVED_SKILLS, ANTHROPIC_API_KEY, ANTHROPIC_MODEL_PREF, APIPIE_LLM_API_KEY, APIPIE_LLM_MODEL_PREF, and 76 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (cloud-deployments/digitalocean/terraform/main.tf). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 79,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -2,7 +2,7 @@ import { createHmac, createVerify, generateKeyPairSync } from 'node:crypto';
 
 import { PGlite } from '@electric-sql/pglite';
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import {
@@ -21,12 +21,16 @@ import {
   ANALYSIS_MAX_FILES,
   buildAppJwt,
   buildFileTreeForAnalysis,
+  canReadRepository,
   createAppJwt,
+  createInstallState,
   InMemoryGithubInstallationStore,
   createInstallationToken,
   fetchFilesForAnalysis,
   fetchHeadSha,
+  fetchInstallationLiveState,
   fetchRepositoryTreeEntries,
+  FixtureGithubConnections,
   getCommit,
   getFileTreeForAnalysis,
   getFixtureCommit,
@@ -34,16 +38,22 @@ import {
   GITHUB_FIXTURE_FILE_TREES,
   GITHUB_FIXTURE_INSTALLATIONS,
   GITHUB_SCOPED_PERMISSIONS,
+  githubManageUrl,
   handleInstallationWebhook,
+  isDashboardReturnPath,
   listBranchCommits,
   listFixtureBranchCommits,
-  listInstallations,
   listRepositories,
   mintInstallationToken,
   parseRepoFullName,
+  reconciledStatus,
+  requireActiveInstallation,
+  verifyInstallState,
   verifyWebhookSignature,
   type AppJwtSigner,
   type FetchFn,
+  type GithubConnectionStatus,
+  type GithubLiveState,
   type GithubWebhookEvent,
 } from './github.js';
 
@@ -229,20 +239,75 @@ describe('github — installation token vending + S4 permission scope', () => {
   });
 });
 
-describe('github — installation deleted handling', () => {
-  it('removes the installation on installation.deleted', async () => {
+describe('github — installation webhook reconciliation', () => {
+  const record = (status: GithubConnectionStatus = 'active') => ({
+    id: '77',
+    organizationId: 'org-1',
+    accountLogin: 'acme',
+    accountType: 'Organization' as const,
+    accountId: '9001',
+    status,
+  });
+  const live = (state: GithubLiveState['state']) => async (): Promise<GithubLiveState> =>
+    state === 'missing'
+      ? { state }
+      : { state, accountLogin: 'acme', accountType: 'Organization', accountId: '9001' };
+  const event = (action: string): GithubWebhookEvent => ({ type: 'installation', action, installation: { id: 77 } });
+
+  // The row stays, so applications keep their repository association and the
+  // vendor sees an access issue instead of a connection that vanished.
+  it('marks an uninstalled installation as an access issue and keeps the row', async () => {
     const store = new InMemoryGithubInstallationStore();
-    await store.set({ id: '77', organizationId: 'org-1', accountLogin: 'acme', accountType: 'Organization' });
-    const event: GithubWebhookEvent = { type: 'installation', action: 'deleted', installation: { id: 77 } };
-    const result = await handleInstallationWebhook(store, event);
-    expect(result).toBe('removed');
-    expect(await store.listByOrganization('org-1')).toEqual([]);
+    await store.set(record());
+    expect(await handleInstallationWebhook(store, event('deleted'), live('missing'))).toBe('updated');
+    expect((await store.get('77'))?.status).toBe('access_issue');
+  });
+
+  it('marks a suspended installation as an access issue', async () => {
+    const store = new InMemoryGithubInstallationStore();
+    await store.set(record());
+    expect(await handleInstallationWebhook(store, event('suspend'), live('suspended'))).toBe('updated');
+    expect((await store.get('77'))?.status).toBe('access_issue');
+  });
+
+  it('restores access on unsuspend only after GitHub confirms the installation is active', async () => {
+    const store = new InMemoryGithubInstallationStore();
+    await store.set(record('access_issue'));
+    // GitHub still reports it suspended: the event alone restores nothing.
+    expect(await handleInstallationWebhook(store, event('unsuspend'), live('suspended'))).toBe('unchanged');
+    expect((await store.get('77'))?.status).toBe('access_issue');
+    expect(await handleInstallationWebhook(store, event('unsuspend'), live('active'))).toBe('updated');
+    expect((await store.get('77'))?.status).toBe('active');
+  });
+
+  // A replayed `suspend` after the unsuspend reads GitHub's current state,
+  // so it cannot take access away again.
+  it('ignores a replayed suspend once GitHub reports the installation active', async () => {
+    const store = new InMemoryGithubInstallationStore();
+    await store.set(record());
+    expect(await handleInstallationWebhook(store, event('suspend'), live('active'))).toBe('unchanged');
+    expect((await store.get('77'))?.status).toBe('active');
+  });
+
+  it('never ends a disconnect the organization chose', async () => {
+    const store = new InMemoryGithubInstallationStore();
+    await store.set(record('disconnected'));
+    for (const action of ['unsuspend', 'new_permissions_accepted', 'deleted']) {
+      await handleInstallationWebhook(store, event(action), live('active'));
+    }
+    expect((await store.get('77'))?.status).toBe('disconnected');
+  });
+
+  it('ignores an installation Deployz has no binding for', async () => {
+    const store = new InMemoryGithubInstallationStore();
+    const readLiveState = vi.fn(live('missing'));
+    expect(await handleInstallationWebhook(store, event('deleted'), readLiveState)).toBe('ignored');
+    expect(readLiveState).not.toHaveBeenCalled();
   });
 
   it('ignores non-installation events', async () => {
     const store = new InMemoryGithubInstallationStore();
-    const event: GithubWebhookEvent = { type: 'push' };
-    expect(await handleInstallationWebhook(store, event)).toBe('ignored');
+    expect(await handleInstallationWebhook(store, { type: 'push' }, live('active'))).toBe('ignored');
   });
 
   // installation.created carries a GitHub account, not a Deployz tenant —
@@ -250,24 +315,101 @@ describe('github — installation deleted handling', () => {
   // is present.
   it('ignores installation.created', async () => {
     const store = new InMemoryGithubInstallationStore();
-    const event: GithubWebhookEvent = {
+    const created: GithubWebhookEvent = {
       type: 'installation',
       action: 'created',
       installation: { id: 77, account: { login: 'acme', type: 'Organization' } },
     };
-    expect(await handleInstallationWebhook(store, event)).toBe('ignored');
+    expect(await handleInstallationWebhook(store, created, live('active'))).toBe('ignored');
     expect(await store.listByOrganization('org-1')).toEqual([]);
+  });
+
+  it('keeps the organization choice and follows GitHub otherwise', () => {
+    expect(reconciledStatus('disconnected', 'active')).toBe('disconnected');
+    expect(reconciledStatus('active', 'missing')).toBe('access_issue');
+    expect(reconciledStatus('active', 'suspended')).toBe('access_issue');
+    expect(reconciledStatus('access_issue', 'active')).toBe('active');
   });
 });
 
-describe('github — fixture-backed list helpers', () => {
-  it('lists fixture installations in fixture mode', async () => {
-    const installations = await listInstallations(new InMemoryGithubInstallationStore(), 'org-1', {
-      fixtureMode: true,
+describe('github — requireActiveInstallation (the one token gate)', () => {
+  const record = (status: GithubConnectionStatus) => ({
+    id: '77',
+    organizationId: 'org-1',
+    accountLogin: 'acme',
+    accountType: 'Organization' as const,
+    accountId: null,
+    status,
+  });
+
+  it('passes an active binding of the same organization', () => {
+    expect(requireActiveInstallation(record('active'), 'org-1').id).toBe('77');
+  });
+
+  it.each([
+    ['no binding', null, 'org-1', 'not_connected'],
+    ['another organization', record('active'), 'org-2', 'not_connected'],
+    ['a disconnected binding', record('disconnected'), 'org-1', 'disconnected'],
+    ['an access issue', record('access_issue'), 'org-1', 'access_issue'],
+  ])('refuses %s with 409 GITHUB_NOT_CONNECTED', (_name, input, organizationId, connectionStatus) => {
+    expect(() => requireActiveInstallation(input, organizationId)).toThrow(
+      expect.objectContaining({ statusCode: 409, code: 'GITHUB_NOT_CONNECTED', details: { connectionStatus } }),
+    );
+  });
+});
+
+describe('github — install state', () => {
+  const secret = 'state-secret';
+
+  it('round-trips a dashboard return path', () => {
+    const state = createInstallState(secret, 'org-1', 1_000, '/dashboard/applications/abc/config');
+    expect(verifyInstallState(secret, state, 'org-1', 2_000)).toEqual({ returnPath: '/dashboard/applications/abc/config' });
+    expect(verifyInstallState(secret, createInstallState(secret, 'org-1', 1_000), 'org-1', 2_000)).toEqual({
+      returnPath: null,
     });
-    expect(installations).toEqual([
-      { id: 'fixture-install-1', accountLogin: 'deployz-demo', accountType: 'Organization' },
+  });
+
+  it('refuses another organization, an expired state and a changed return path', () => {
+    const state = createInstallState(secret, 'org-1', 1_000, '/dashboard/settings');
+    expect(verifyInstallState(secret, state, 'org-2', 2_000)).toBe(false);
+    expect(verifyInstallState(secret, state, 'org-1', 1_000 + 11 * 60 * 1000)).toBe(false);
+    const [expiry, organizationId, , signature] = state.split('.');
+    const tampered = [expiry, organizationId, Buffer.from('/dashboard/x').toString('base64url'), signature].join('.');
+    expect(verifyInstallState(secret, tampered, 'org-1', 2_000)).toBe(false);
+  });
+
+  it.each(['https://evil.example', '//evil.example', '/dashboard/../admin', '/dashboard?x=1', '/settings'])(
+    'accepts no return path outside the dashboard (%s)',
+    (path) => {
+      expect(isDashboardReturnPath(path)).toBe(false);
+    },
+  );
+});
+
+describe('github — fixture-backed list helpers', () => {
+  it('lists the fixture installation as active for every organization', () => {
+    const connections = new FixtureGithubConnections();
+    expect(connections.list('org-1')).toEqual([
+      {
+        id: 'fixture-install-1',
+        organizationId: 'org-1',
+        accountLogin: 'deployz-demo',
+        accountType: 'Organization',
+        accountId: null,
+        status: 'active',
+      },
     ]);
+  });
+
+  // Every organization shares the fixture installation, so a disconnect is
+  // kept per organization.
+  it('keeps a fixture disconnect to the organization that made it', () => {
+    const connections = new FixtureGithubConnections();
+    expect(connections.setStatus('fixture-install-1', 'org-1', 'disconnected')).toBe(true);
+    expect(connections.setStatus('fixture-install-1', 'org-1', 'disconnected')).toBe(false);
+    expect(connections.get('fixture-install-1', 'org-1')?.status).toBe('disconnected');
+    expect(connections.get('fixture-install-1', 'org-2')?.status).toBe('active');
+    expect(connections.get('nope', 'org-1')).toBeNull();
   });
 
   it('lists fixture repositories for a known installation', async () => {
@@ -289,12 +431,51 @@ describe('github — fixture-backed list helpers', () => {
       code: 'GITHUB_INSTALLATION_NOT_FOUND',
     });
   });
+});
 
-  it('is empty when not in fixture mode and the store is empty', async () => {
-    const installations = await listInstallations(new InMemoryGithubInstallationStore(), 'org-1', {
-      fixtureMode: false,
+describe('github — installation live state and repository access', () => {
+  it('reads suspension and the immutable account id from GitHub', async () => {
+    const fetchFn: FetchFn = async () =>
+      makeFetchResponse(200, { account: { login: 'acme', type: 'User', id: 9001 }, suspended_at: '2026-10-01T00:00:00Z' });
+    expect(await fetchInstallationLiveState('77', 'jwt', fetchFn)).toEqual({
+      state: 'suspended',
+      accountLogin: 'acme',
+      accountType: 'User',
+      accountId: '9001',
     });
-    expect(installations).toEqual([]);
+  });
+
+  it('reads a 404 as an installation GitHub no longer has, and other failures as errors', async () => {
+    expect(await fetchInstallationLiveState('77', 'jwt', async () => makeFetchResponse(404, {}))).toEqual({
+      state: 'missing',
+    });
+    await expect(fetchInstallationLiveState('77', 'jwt', async () => makeFetchResponse(500, {}))).rejects.toMatchObject({
+      code: 'GITHUB_INSTALLATION_FETCH_FAILED',
+    });
+  });
+
+  it('reads a repository the token cannot see as inaccessible', async () => {
+    const urls: string[] = [];
+    const fetchFn = (status: number): FetchFn => async (url) => {
+      urls.push(url);
+      return makeFetchResponse(status, {});
+    };
+    expect(await canReadRepository('acme/app', 'token', fetchFn(200))).toBe(true);
+    expect(await canReadRepository('acme/app', 'token', fetchFn(404))).toBe(false);
+    expect(await canReadRepository('acme/app', 'token', fetchFn(403))).toBe(false);
+    await expect(canReadRepository('acme/app', 'token', fetchFn(502))).rejects.toMatchObject({
+      code: 'GITHUB_REPO_CHECK_FAILED',
+    });
+    expect(urls[0]).toBe('https://api.github.com/repos/acme/app');
+  });
+
+  it('links a user account and an organization account to their own installation settings', () => {
+    expect(githubManageUrl({ id: '77', accountLogin: 'me', accountType: 'User' })).toBe(
+      'https://github.com/settings/installations/77',
+    );
+    expect(githubManageUrl({ id: '77', accountLogin: 'acme', accountType: 'Organization' })).toBe(
+      'https://github.com/organizations/acme/settings/installations/77',
+    );
   });
 });
 
@@ -1083,6 +1264,35 @@ describe('github — repository tree fetch (§18 analysis input)', () => {
     expect(tree).toHaveProperty('Dockerfile', dockerfileContent);
     expect(tree).toHaveProperty('scripts/start-docker.sh', startScriptContent);
     expect(tree).toHaveProperty('scripts/check-db.js', checkDbContent);
+  });
+
+  it('protects the start chain of the Dockerfile the analysis selects by content, not of the first path (immich)', async () => {
+    // Two images at the same depth: by path alone `machine-learning/` sorts first, but only
+    // `server/Dockerfile` declares a port, so the analysis builds that image.
+    const filler = Array.from({ length: 247 }, (_, i) => ({ path: `src/file${i}.ts`, type: 'blob' as const, sha: `sha-filler-${i}`, size: 10 }));
+    const contentBySha: Record<string, string> = {
+      'sha-ml': 'FROM python:3.12\nCOPY machine-learning /app\nCMD ["python", "-m", "immich_ml"]\n',
+      'sha-server': 'FROM node:22\nCOPY server /app\nEXPOSE 2283\nCMD ["start.sh"]\n',
+      'sha-start': '#!/bin/sh\nexec node /app/dist/main.js\n',
+    };
+    const fetchFn: FetchFn = async (url) => {
+      if (url.includes('/git/trees/')) {
+        return makeFetchResponse(200, {
+          tree: [
+            ...filler,
+            { path: 'machine-learning/Dockerfile', type: 'blob', sha: 'sha-ml', size: 60 },
+            { path: 'server/Dockerfile', type: 'blob', sha: 'sha-server', size: 60 },
+            { path: 'server/bin/start.sh', type: 'blob', sha: 'sha-start', size: 40 },
+          ],
+        });
+      }
+      const sha = url.split('/').pop() ?? '';
+      return makeFetchResponse(200, { content: Buffer.from(contentBySha[sha] ?? `content-${sha}`).toString('base64'), encoding: 'base64' });
+    };
+
+    const tree = await buildFileTreeForAnalysis(REF, 'tok', fetchFn);
+
+    expect(tree).toHaveProperty('server/bin/start.sh', contentBySha['sha-start']);
   });
 
   it('ranks specs, fixtures and tool configs last so application source survives the cap (COMP-018)', async () => {

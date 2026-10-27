@@ -22,7 +22,9 @@ import type {
 export type GithubState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'empty'; connectUrl: string | null; canConnect: boolean }
+  /** `inactive`: the organization has connections, but none is active
+   *  (disconnected, or an access issue). Settings is where they are repaired. */
+  | { status: 'empty'; connectUrl: string | null; canConnect: boolean; inactive: boolean }
   | {
       status: 'loaded';
       connectUrl: string | null;
@@ -40,17 +42,19 @@ interface GithubStateSources {
 }
 
 export async function loadGithubState(sources: GithubStateSources): Promise<GithubState> {
-  let installations: GithubInstallation[];
+  let all: GithubInstallation[];
   let connectUrl: string | null;
   let canConnect: boolean | undefined;
   try {
-    ({ installations, connectUrl, canConnect } = await sources.fetchInstallations());
+    ({ installations: all, connectUrl, canConnect } = await sources.fetchInstallations());
   } catch {
     return { status: 'error', message: "We couldn't reach GitHub. Try again in a moment." };
   }
 
+  // Only an active connection can list repositories or back a new application.
+  const installations = all.filter((installation) => installation.status === 'active');
   if (installations.length === 0) {
-    return { status: 'empty', connectUrl, canConnect: canConnect !== false };
+    return { status: 'empty', connectUrl, canConnect: canConnect !== false, inactive: all.length > 0 };
   }
 
   const repositories: Record<string, GithubRepository[]> = {};

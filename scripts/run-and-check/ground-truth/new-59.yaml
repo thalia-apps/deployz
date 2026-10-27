@@ -1,0 +1,160 @@
+id: new-59
+repository: go-gitea/gitea
+commit: f35c67bd79b3bff9c28eb8171d53586cc800bd5c
+summary: >
+  Gitea self-hosted Git service (Go, one binary with embedded frontend). Two Dockerfiles build one image each from
+  source: Dockerfile (root, s6 supervisor with sshd on 22 and HTTP 3000) and Dockerfile.rootless (HTTP 3000, built-in
+  SSH 2222). All Git repositories are bare repos on a local filesystem path ([repository] ROOT); no S3 or database
+  alternative exists for them. The database can be PostgreSQL or MySQL, and attachments, LFS, packages and avatars
+  can use S3 through the task role. The Git repository data on local disk makes the app not deployable on ephemeral
+  Fargate storage. Both Dockerfiles also bind-mount the .git directory, which a build context without .git does not have.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data (Git repositories, in [repository] ROOT) is durable only on a local disk path, with no object-store
+    or database backend. Deployz has no persistent volume or EFS, so a push would be lost at the next task restart.
+    S3 for attachments and LFS does not remove this. The Dockerfile build also needs the .git directory.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "builds the app, but the RUN make backend step bind-mounts .git/ which a build context without .git does not have; also runs sshd and s6 in one container and keeps data in the /data volume"}
+    - {path: Dockerfile.rootless, reason: "same .git bind mount in the build; the image is the better fit (one process, HTTP 3000), but state is in the /var/lib/gitea volume"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 34, quote: "--mount=type=bind,source=\".git/\",target=\".git/\" \\"}
+    - {path: Dockerfile.rootless, line: 33, quote: "--mount=type=bind,source=\".git/\",target=\".git/\" \\"}
+    - {path: Dockerfile.rootless, line: 87, quote: "ENTRYPOINT [\"/usr/bin/dumb-init\", \"--\", \"/usr/local/bin/docker-entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 82, quote: "VOLUME [\"/data\"]"}
+    - {path: Dockerfile.rootless, line: 83, quote: "VOLUME [\"/var/lib/gitea\", \"/etc/gitea\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: modules/setting/server.go, line: 152, quote: "HTTPPort = sec.Key(\"HTTP_PORT\").MustString(\"3000\")"}
+    - {path: Dockerfile.rootless, line: 44, quote: "EXPOSE 2222 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: modules/setting/server.go, line: 151, quote: "HTTPAddr = sec.Key(\"HTTP_ADDR\").MustString(\"0.0.0.0\")"}
+startCommand:
+  source: image
+  accept: ["docker-entrypoint.sh"]
+  # Dockerfile.rootless ENTRYPOINT runs docker-entrypoint.sh, which writes app.ini and then runs `gitea web`.
+  # The root Dockerfile CMD is `/usr/bin/s6-svscan /etc/s6`, which starts sshd and gitea web.
+  evidence:
+    - {path: docker/rootless/usr/local/bin/docker-entrypoint.sh, line: 16, quote: "exec /usr/local/bin/gitea -c \"${GITEA_APP_INI}\" web"}
+    - {path: Dockerfile, line: 86, quote: "CMD [\"/usr/bin/s6-svscan\", \"/etc/s6\"]"}
+healthPath:
+  accept: ["/api/healthz"]
+  # / redirects to /install until INSTALL_LOCK is true, so it is not a safe path. /api/healthz is unauthenticated and
+  # returns 200 JSON (the install router serves it too, so it is 200 before install); with INSTALL_LOCK set it also pings the database and cache and returns 424 on failure.
+  evidence:
+    - {path: routers/web/web.go, line: 298, quote: "routes.Get(\"/api/healthz\", healthcheck.Check)"}
+    - {path: routers/install/routes.go, line: 36, quote: "r.Get(\"/api/healthz\", healthcheck.Check)"}
+    - {path: routers/web/healthcheck/check.go, line: 84, quote: "if setting.InstallLock {"}
+    - {path: routers/web/healthcheck/check.go, line: 45, quote: "return http.StatusFailedDependency"}
+database:
+  status: required
+  engines: [sqlite3, postgres, mysql, mssql]
+  default: sqlite3
+  deployzEngine: postgres
+  selectBy: {DB_TYPE: postgres}
+  connectionVars: [DB_TYPE, DB_HOST, DB_NAME, DB_USER, DB_PASSWD, "GITEA__database__SSL_MODE"]
+  # In the rootless image DB_* are template variables for app.ini; any [database] key can also be set as GITEA__database__<KEY>.
+  # SSL_MODE defaults to disable, so RDS with forced TLS needs SSL_MODE=require (or verify-full).
+  evidence:
+    - {path: docker/rootless/usr/local/bin/docker-setup.sh, line: 38, quote: "DB_TYPE=${DB_TYPE:-\"sqlite3\"} \\"}
+    - {path: docker/rootless/etc/templates/app.ini, line: 29, quote: "DB_TYPE = $DB_TYPE"}
+    - {path: modules/setting/database.go, line: 15, quote: "SupportedDatabaseTypes = []string{\"mysql\", \"postgres\", \"mssql\"}"}
+    - {path: modules/setting/database.go, line: 64, quote: "Database.SSLMode = sec.Key(\"SSL_MODE\").MustString(\"disable\")"}
+    - {path: modules/setting/config_env.go, line: 99, quote: "GITEA__SECTION__KEY"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: modules/setting/database.go, line: 89, quote: "Database.AutoMigration = sec.Key(\"AUTO_MIGRATION\").MustBool(true)"}
+    - {path: routers/common/db.go, line: 44, quote: "if setting.Database.AutoMigration {"}
+    - {path: routers/init.go, line: 136, quote: "mustInitCtx(ctx, common.InitDBEngine)"}
+redis:
+  status: optional
+  selectBy: {"GITEA__cache__ADAPTER": redis}
+  # Cache default is memory, session default is file, queue default is level (local disk). Redis is supported for cache,
+  # session and queue, but one instance does not need it.
+  evidence:
+    - {path: modules/setting/cache.go, line: 30, quote: "Adapter:  \"memory\","}
+    - {path: modules/setting/session.go, line: 44, quote: "SessionConfig.Provider = sec.Key(\"PROVIDER\").MustString(\"file\")"}
+    - {path: modules/setting/queue.go, line: 32, quote: "Type:    \"level\",         // dummy, channel, level, redis"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: docker/root/etc/s6/gitea/run, line: 5, quote: "exec su-exec $USER /usr/local/bin/gitea web"}
+    - {path: modules/setting/queue.go, line: 32, quote: "Type:    \"level\","}
+scheduledJobs:
+  status: embedded
+  items: [cron tasks inside the gitea web process (cleanup, mirror sync, repo health checks)]
+  evidence:
+    - {path: services/cron/setting.go, line: 55, quote: "func (b *BaseConfig) IsEnabled() bool {"}
+storage:
+  local: required
+  paths: [/data/git/repositories, /var/lib/gitea/git/repositories, /data/gitea, /data/ssh, "SQLite database /data/gitea/gitea.db"]
+  s3: native
+  s3SelectBy: {"GITEA__storage__STORAGE_TYPE": minio, "GITEA__storage__MINIO_ENDPOINT": "s3.<region>.amazonaws.com", "GITEA__storage__MINIO_BUCKET": "<bucket>", "GITEA__storage__MINIO_LOCATION": "<region>"}
+  # S3 (minio driver) covers attachments, LFS, avatars, packages, archives and Actions logs/artifacts only. Git repositories
+  # (the [repository] ROOT path) have no S3 backend; ROOT is a filesystem path. Static MINIO keys are optional: without
+  # MINIO_ACCESS_KEY_ID the credential chain (env, shared file, IAM role) is used.
+  evidence:
+    - {path: modules/setting/repository.go, line: 314, quote: "RepoRootPath = sec.Key(\"ROOT\").MustString(filepath.Join(AppDataPath, \"gitea-repositories\"))"}
+    - {path: docker/rootless/etc/templates/app.ini, line: 6, quote: "ROOT = $GITEA_WORK_DIR/git/repositories"}
+    - {path: modules/setting/storage.go, line: 106, quote: "storageSec.Key(\"STORAGE_TYPE\").MustString(\"local\")"}
+    - {path: modules/setting/storage.go, line: 21, quote: "MinioStorageType StorageType = \"minio\""}
+    - {path: modules/storage/minio.go, line: 171, quote: "if config.AccessKeyID != \"\" {"}
+    - {path: modules/storage/minio.go, line: 188, quote: "&credentials.IAM{"}
+env:
+  required:
+    - {name: DB_TYPE, secret: false, buildTime: false, note: "postgres or mysql; the image default sqlite3 is ephemeral"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "host:port of the database"}
+    - {name: DB_NAME, secret: false, buildTime: false, note: "default gitea"}
+    - {name: DB_USER, secret: false, buildTime: false, note: "default root"}
+    - {name: DB_PASSWD, secret: true, buildTime: false, note: "database password"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "set it so INSTALL_LOCK becomes true; without it the web install page is open to the first visitor"}
+    - {name: ROOT_URL, secret: false, buildTime: false, note: "public HTTPS URL; default empty"}
+  optional: [INSTALL_LOCK, APP_NAME, HTTP_PORT, DISABLE_SSH, SSH_PORT, SSH_DOMAIN, SSH_LISTEN_PORT, DISABLE_REGISTRATION, REQUIRE_SIGNIN_VIEW, LFS_START_SERVER, GITEA__database__SSL_MODE]
+  buildTime: []
+  evidence:
+    - {path: docker/rootless/usr/local/bin/docker-setup.sh, line: 24, quote: "if [ -n \"$SECRET_KEY\" ] && [ -z \"$INSTALL_LOCK\" ]; then"}
+    - {path: docker/rootless/usr/local/bin/docker-setup.sh, line: 34, quote: "ROOT_URL=${ROOT_URL:-\"\"} \\"}
+    - {path: docker/rootless/usr/local/bin/docker-setup.sh, line: 42, quote: "DB_PASSWD=${DB_PASSWD:-\"\"} \\"}
+blockers:
+  expected:
+    - "Git repositories are durable only on a local filesystem path ([repository] ROOT); Deployz has no persistent volume or EFS, and Gitea has no S3 or database backend for repositories"
+    - "Both Dockerfiles bind-mount the .git directory in the build (RUN make backend), which a repo archive without .git does not contain"
+  mustNot:
+    - "SQLite default must not block by itself: PostgreSQL and MySQL are supported (the blocker is the Git repository storage)"
+    - "Redis must not be required: cache, session and queue default to memory, file and level"
+    - "MSSQL support must not be reported as an unsupported DB: PostgreSQL and MySQL are available"
+    - "Attachments, LFS and packages on local disk must not be the reason: the minio storage type can send them to S3 (the real blocker is the Git repositories)"
+    - "A separate worker or scheduler must not be needed: queues and cron run in the web process"
+    - "SSH on port 22 or 2222 must not be the primary blocker: DISABLE_SSH=true turns it off and HTTP clone still works"
+vendorQuestions:
+  legitimate:
+    - "Is HTTP-only Git (no SSH) acceptable? Deployz exposes one HTTP port, so SSH clone is not reachable"
+  unnecessary:
+    - "Which port? (3000 in the image and defaults)"
+    - "Who runs migrations? (AUTO_MIGRATION is true by default and runs at start)"
+    - "Is a worker process needed? (queues and cron are embedded)"
+    - "Which health path? (/api/healthz)"
+traps:
+  - "Dockerfile has EXPOSE 22 3000 and runs sshd under s6 -> root image is a multi-process container; Dockerfile.rootless uses the built-in SSH on 2222 (Dockerfile:49, Dockerfile.rootless:44)"
+  - "ENV USER=git, VOLUME /data -> the volume holds repositories, config and the SQLite database (Dockerfile:79-82)"
+  - "Many DB and S3 options in config -> S3 storage does not include Git repositories (modules/setting/repository.go:314)"
+  - "HEALTHCHECK is intentionally absent -> the comment says never use the health endpoint as a restart trigger, because migrations can take long (routers/web/healthcheck/check.go:68-75)"
+  - "/ redirects to /install before install -> use /api/healthz (routers/web/web.go:298)"
+  - "In the rootless image the SSH server is always the built-in one -> START_SSH_SERVER = true in the template, so port 2222 listens even if unused (docker/rootless/etc/templates/app.ini:21)"
+openQuestions:
+  - "Whether Deployz build contexts could include .git: the brief says no, so no Dockerfile is accepted; if .git were present, Dockerfile.rootless would build"
+crossReview:
+  - {field: healthPath, change: "kept /api/healthz; added the install-router registration (it also answers 200 before install) as evidence", evidence: "routers/install/routes.go:36; routers/web/healthcheck/check.go:84"}
+  - {field: dockerfile / outcome, change: "none: both Dockerfiles bind-mount .git/ with no optional flag in the make backend step (version data via git describe), so a context without .git fails; Git repositories only have a filesystem ROOT path, no S3 or DB backend, so NOT_DEPLOYABLE stays the only accepted outcome", evidence: "Dockerfile:34; Dockerfile.rootless:33; modules/setting/repository.go:314; Makefile:98"}
+  - {field: all, change: verified, evidence: "37 citations checked"}

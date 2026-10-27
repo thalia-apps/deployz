@@ -178,7 +178,8 @@
     },
     "externalServices": [],
     "unsupported": [
-      "Unsupported container setup: the start script docker/entrypoint.sh runs 3 long-running servers in the background (run_with_restart \"Admin, run_with_restart \"RAGFlow, run_with_restart \"ingestor\") in one container. Deployz runs one web process and declared workers as separate services."
+      "Unsupported container setup: the start script docker/entrypoint.sh runs 3 long-running servers in the background (run_with_restart \"Admin, run_with_restart \"RAGFlow, run_with_restart \"ingestor\") in one container. Deployz runs one web process and declared workers as separate services.",
+      "The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain"
     ]
   },
   "gate": {
@@ -189,6 +190,12 @@
         "category": "compatibility",
         "severity": "error",
         "message": "Unsupported container setup: the start script docker/entrypoint.sh runs 3 long-running servers in the background (run_with_restart \"Admin, run_with_restart \"RAGFlow, run_with_restart \"ingestor\") in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain"
       },
       {
         "id": "port-missing",

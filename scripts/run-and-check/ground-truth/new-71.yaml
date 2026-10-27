@@ -1,0 +1,144 @@
+id: new-71
+repository: nextcloud/server
+commit: 5dfaf6cdd7b8cd5e7a95b1da8e7042ddbf69ea1a
+summary: >
+  Nextcloud server (PHP 8.3+, web app served by Apache/nginx plus PHP, with occ CLI and cron.php). The repository has no
+  production Dockerfile (the official image is in nextcloud/docker); the only Dockerfile is the .devcontainer development
+  image. The 3rdparty directory is a git submodule and is absent from a repository archive, so lib/OC.php stops at start.
+  Install state lives in config/config.php on local disk.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No Dockerfile builds a production image from the repository alone, and the PHP dependencies in the 3rdparty submodule
+    are not in an archive. A Dockerfile would also have to fetch the submodule and write config.php (install state, secrets,
+    S3 primary storage) to local disk, which is ephemeral. The software itself can use PostgreSQL/MySQL, Redis and S3 with
+    the task role, so this is a repository packaging blocker, not an app limit.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "Ubuntu development image with xdebug and apache; source is bind-mounted at /var/www/html, not built from source"}
+    - {path: .devcontainer/docker-compose.yml, reason: "development compose with docker socket, adminer and mail; not production"}
+  target: null
+  context: .
+  evidence:
+    - {path: .devcontainer/Dockerfile, line: 1, quote: "FROM ubuntu:noble"}
+    - {path: .devcontainer/docker-compose.yml, line: 9, quote: "- ..:/var/www/html"}
+    - {path: .devcontainer/docker-compose.yml, line: 8, quote: "- /var/run/docker.sock:/var/run/docker-host.sock"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: .devcontainer/docker-compose.yml, line: 12, quote: "- 80:80"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: .devcontainer/docker-compose.yml, line: 12, quote: "- 80:80"}
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground", "apachectl", "php-fpm", "frankenphp"]
+  evidence:
+    - {path: Caddyfile, line: 5, quote: "DO NOT USE THIS IN PRODUCTION, YOU HAVE BEEN WARNED."}
+healthPath:
+  accept: ["/status.php"]
+  # status.php returns 200 JSON, also before install (lib/OC.php lets /status.php through the not-installed redirect).
+  # After install, a Host header that is not in trusted_domains gets 400, so the ALB check needs a trusted host.
+  evidence:
+    - {path: status.php, line: 45, quote: "header('Content-Type: application/json');"}
+    - {path: lib/OC.php, line: 247, quote: "OC::$SUBURI !== '/status.php'"}
+    - {path: lib/OC.php, line: 952, quote: "if (substr($request->getRequestUri(), -11) === '/status.php') {"}
+    - {path: lib/OC.php, line: 953, quote: "http_response_code(400);"}
+database:
+  status: required
+  engines: [sqlite3, mysql, pgsql, oci]
+  default: sqlite3
+  deployzEngine: postgres
+  selectBy: {dbtype: pgsql}
+  connectionVars: [dbhost, dbname, dbuser, dbpassword]
+  evidence:
+    - {path: config/config.sample.php, line: 129, quote: "'dbtype' => 'sqlite3',"}
+    - {path: config/config.sample.php, line: 125, quote: "- pgsql (PostgreSQL)"}
+    - {path: config/config.sample.php, line: 124, quote: "- mysql (MySQL/MariaDB)"}
+    - {path: core/Command/Maintenance/Install.php, line: 55, quote: "'Supported database type', 'sqlite'"}
+migrations:
+  mode: command
+  accept: ["php occ maintenance:install", "php occ upgrade"]
+  evidence:
+    - {path: core/Command/Maintenance/Install.php, line: 53, quote: "->setName('maintenance:install')"}
+    - {path: lib/private/Setup.php, line: 489, quote: "$config->setSystemValue('installed', true);"}
+    - {path: lib/OC.php, line: 247, quote: "!$systemConfig->getValue('installed', false)"}
+redis:
+  status: optional
+  selectBy: {memcache.distributed: "\\OC\\Memcache\\Redis", redis: host/port}
+  evidence:
+    - {path: config/config.sample.php, line: 1847, quote: "'memcache.local' => '\\\\OC\\\\Memcache\\\\APCu',"}
+    - {path: config/config.sample.php, line: 1967, quote: "'redis' => ["}
+    - {path: composer.json, line: 30, quote: "\"ext-apcu\": \"*\","}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: cron.php, line: 25, quote: "php -f cron.php -- [-h] [--verbose] [<job-classes>...]"}
+scheduledJobs:
+  status: independent
+  items: ["php -f cron.php (background jobs, every 5 minutes)"]
+  evidence:
+    - {path: cron.php, line: 52, quote: "$cronService->run($jobClasses);"}
+storage:
+  local: required
+  paths: [config/config.php, data (datadirectory)]
+  s3: native
+  s3SelectBy: {objectstore: "config.php array with class OC\\Files\\ObjectStore\\S3 and bucket/region"}
+  # S3 primary storage works with the ECS task role: key/secret are optional and the AWS default credential chain is a fallback.
+  # It must be set in config.php (a nested array; NC_ env vars are read as flat strings), so it needs a *.config.php file in the image.
+  evidence:
+    - {path: config/config.sample.php, line: 110, quote: "'datadirectory' => '/var/www/nextcloud/data',"}
+    - {path: config/config.sample.php, line: 2176, quote: "'class' => 'OC\\\\Files\\\\ObjectStore\\\\S3',"}
+    - {path: lib/private/Files/ObjectStore/S3ConnectionTrait.php, line: 114, quote: "CredentialProvider::defaultProvider(['use_aws_shared_config_files' => false])"}
+    - {path: lib/private/Config.php, line: 206, quote: "$extra = glob($this->configDir . '*.' . $this->configFileName);"}
+    - {path: lib/private/Config.php, line: 262, quote: "$envRaw = getenv();"}
+env:
+  required:
+    - {name: dbtype / dbhost / dbname / dbuser / dbpassword, secret: false, buildTime: false, note: "config.php keys written by maintenance:install (--database pgsql --database-host --database-name --database-user --database-pass); the password is secret"}
+    - {name: instanceid / passwordsalt / secret, secret: true, buildTime: false, note: "generated at install into config.php on local disk; losing config.php invalidates sessions and encrypted data"}
+    - {name: trusted_domains, secret: false, buildTime: false, note: "public host name; any other Host gets HTTP 400 after install"}
+    - {name: overwriteprotocol, secret: false, buildTime: false, note: "set https behind the ALB TLS termination; also overwrite.cli.url and trusted_proxies for the ALB"}
+    - {name: admin-user / admin-pass, secret: true, buildTime: false, note: "occ maintenance:install options for the first admin"}
+  optional: [datadirectory, memcache.local, memcache.distributed, redis, objectstore, mail_smtpmode, loglevel, logfile]
+  buildTime: []
+  evidence:
+    - {path: config/config.sample.php, line: 43, quote: "'instanceid' => '',"}
+    - {path: config/config.sample.php, line: 68, quote: "'passwordsalt' => '',"}
+    - {path: config/config.sample.php, line: 74, quote: "'secret' => '',"}
+    - {path: config/config.sample.php, line: 88, quote: "'trusted_domains' => ["}
+    - {path: config/config.sample.php, line: 794, quote: "'overwriteprotocol' => '',"}
+    - {path: core/Command/Maintenance/Install.php, line: 69, quote: "'Login of the admin account', 'admin'"}
+blockers:
+  expected:
+    - "No production Dockerfile in the repository; the only Dockerfile is .devcontainer/Dockerfile (development)"
+    - "3rdparty is a git submodule, empty in a repository archive; lib/OC.php throws without 3rdparty/autoload.php"
+    - "config/config.php (install state, instanceid, secret, objectstore) is written to local disk at install and is lost on task restart"
+  mustNot:
+    - "SQLite default must not block: pgsql and mysql are supported"
+    - "S3 primary storage must not be reported as needing static keys: key/secret are optional and the AWS default chain is used"
+    - "Redis must not be required: APCu and the database are the defaults"
+    - "The committed dist/ JS must not trigger a Node build blocker: built frontend files are in the repository"
+vendorQuestions:
+  legitimate:
+    - "Is there a supported production image to use (the official nextcloud/docker image) because this repository has no Dockerfile?"
+  unnecessary:
+    - "Which port? (web server, 80)"
+    - "Is a worker process needed? (no, only cron)"
+    - "Which health path? (/status.php)"
+traps:
+  - ".devcontainer/Dockerfile and docker-compose.yml look like deployment files -> development only, source bind-mounted (.devcontainer/docker-compose.yml:9)"
+  - "Caddyfile with FrankenPHP -> marked experimental, not for production (Caddyfile:5)"
+  - "config.sample.php shows 'key' and 'secret' for S3 -> optional; the task role works through the default credential chain (lib/private/Files/ObjectStore/S3ConnectionTrait.php:114)"
+  - "dbtype defaults to sqlite3 -> ephemeral; select pgsql/mysql at install (config/config.sample.php:129)"
+  - "status.php returns 400 for a Host not in trusted_domains after install -> not an app failure (lib/OC.php:952)"
+  - "composer.json lists ext-apcu, ext-gd, ext-posix and others -> PHP extensions the image must install (composer.json:30)"
+openQuestions:
+  - "Whether a generated Dockerfile (PHP + web server + submodule fetch) is in scope; the repository itself does not provide one"
+crossReview:
+  - {field: dockerfile / outcome, change: "none: git ls-files lists only .devcontainer/Dockerfile (development) and a Caddyfile; 3rdparty is one gitlink entry (submodule), so no archive has it; NOT_DEPLOYABLE stands", evidence: ".gitmodules [submodule \"3rdparty\"]; .devcontainer/Dockerfile:1"}
+  - {field: healthPath, change: "none: /status.php answers JSON 200 without login (Host check applies after install)", evidence: "status.php:45; lib/OC.php:952-953"}
+  - {field: all, change: verified, evidence: "33 citations checked"}

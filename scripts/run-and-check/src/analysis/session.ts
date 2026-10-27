@@ -99,12 +99,21 @@ export async function openAnalysisSession(fetchFn: FetchFn, engine: SessionEngin
       // every entry (and every rerun of one) gets its own organization.
       const organizationId = `${entry.id}-${randomUUID().slice(0, 8)}`;
       await db.insert(schema.organization).values({ id: organizationId, name: entry.repository, slug: organizationId });
+      // The analysis mints a token only for an active binding of the
+      // application's own organization, as in production.
+      const installationId = `benchmark-${organizationId}`;
+      await db.insert(schema.githubInstallations).values({
+        id: installationId,
+        organizationId,
+        accountLogin: entry.repository.split('/')[0]!,
+        accountType: 'Organization',
+      });
       const [inserted] = await db
         .insert(schema.applications)
         .values({
           organizationId,
           name: entry.repository,
-          githubInstallationId: 'benchmark',
+          githubInstallationId: installationId,
           repoFullName: entry.repository,
           repoUrl: `https://github.com/${entry.repository}`,
           defaultBranch: entry.commit,

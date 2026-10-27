@@ -1,0 +1,152 @@
+id: new-72
+repository: penpot/penpot
+commit: 112e6dedd7b10e5818d31f7ce6302f85d9168e26
+summary: >
+  Penpot design platform. Production topology is several images: backend (Clojure/JVM, port 6060), frontend (nginx
+  with static bundle, port 8080, proxies /api to backend and /api/export to exporter), exporter (Node, port 6061),
+  plus optional mcp and admin-console images, with PostgreSQL and Valkey/Redis. The production Dockerfiles in
+  docker/images only COPY bundles that manage.sh builds outside Docker, so no Dockerfile builds the app from the repo
+  archive. The frontend and backend are two different images.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No single Dockerfile builds the app from source: docker/images/Dockerfile.backend, .frontend, .exporter and .mcp
+    copy prebuilt bundle-* directories (made by ./manage.sh build-bundle). The app also needs at least a separate
+    frontend (nginx) image and a backend image, which Deployz cannot run together (one app image per deploy). The
+    backend itself is fine for Postgres, Redis and S3 task-role storage, but it does not serve the web UI.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/images/Dockerfile.backend, reason: "copies prebuilt bundle-backend (ARG BUNDLE_PATH) made outside Docker; base image from dhi.io registry; backend only, no UI"}
+    - {path: docker/images/Dockerfile.frontend, reason: "copies prebuilt bundle-frontend; nginx image from dhi.io; needs backend and exporter as separate services"}
+    - {path: docker/images/Dockerfile.exporter, reason: "copies prebuilt bundle-exporter; second image"}
+    - {path: docker/images/Dockerfile.mcp, reason: "copies prebuilt bundle-mcp; optional extra image"}
+    - {path: docker/devenv/Dockerfile, reason: "developer environment image, not the production app"}
+    - {path: docker/gitpod/Dockerfile, reason: "Gitpod dev image"}
+    - {path: docker/images/Dockerfile.media-processor, reason: "Node media-processor service image (dhi.io base); another separate image, not the app"}
+    - {path: docker/images/Dockerfile.storybook, reason: "storybook, not the app"}
+  target: null
+  context: docker/images
+  evidence:
+    - {path: docker/images/Dockerfile.backend, line: 113, quote: "ARG BUNDLE_PATH=\"./bundle-backend/\""}
+    - {path: docker/images/Dockerfile.backend, line: 114, quote: "COPY --chown=penpot:penpot $BUNDLE_PATH /opt/penpot/backend/"}
+    - {path: docker/images/Dockerfile.frontend, line: 23, quote: "COPY $BUNDLE_PATH /var/www/app/"}
+    - {path: docker/images/Dockerfile.exporter, line: 90, quote: "COPY --chown=penpot:penpot $BUNDLE_PATH /opt/penpot/exporter/"}
+    - {path: docker/images/Dockerfile.mcp, line: 7, quote: "COPY $BUNDLE_PATH /opt/penpot/mcp/"}
+    - {path: manage.sh, line: 1327, quote: "function build-backend-bundle {"}
+runtime: {accept: [java]}
+port:
+  accept: [6060, 8080]
+  evidence:
+    - {path: backend/src/app/http.clj, line: 49, quote: "{::port 6060"}
+    - {path: docker/images/files/nginx.conf.template, line: 92, quote: "listen 8080 default_server"}
+    - {path: exporter/src/app/config.cljs, line: 29, quote: ":http-server-port 6061"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/src/app/http.clj, line: 50, quote: "::host \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["bash run.sh", "java", "penpot.jar"]
+  evidence:
+    - {path: docker/images/Dockerfile.backend, line: 118, quote: "CMD [\"/bin/bash\", \"run.sh\"]"}
+    - {path: docker/images/Dockerfile.frontend, line: 52, quote: "CMD [\"nginx\", \"-g\", \"daemon off;\"]"}
+    - {path: docker/images/Dockerfile.exporter, line: 129, quote: "CMD [\"node\", \"app.js\"]"}
+healthPath:
+  accept: ["/readyz"]
+  # Backend /readyz runs a DB query and returns 200 OK, 503 when offline or DB fails. Nginx frontend proxies /readyz to the backend.
+  # /dbg/health needs authorization. / on the frontend is the SPA (also 200 but not a dependency check).
+  evidence:
+    - {path: backend/src/app/http/debug.clj, line: 987, quote: "[[\"/readyz\" {:handler (partial health-handler cfg)}]"}
+    - {path: backend/src/app/http/debug.clj, line: 868, quote: "(db/exec-one! pool [\"select count(*) as count from server_prop;\"])"}
+    - {path: docker/images/files/nginx.conf.template, line: 169, quote: "location /readyz {"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [PENPOT_DATABASE_URI, PENPOT_DATABASE_USERNAME, PENPOT_DATABASE_PASSWORD]
+  evidence:
+    - {path: backend/src/app/config.clj, line: 36, quote: ":database-uri \"postgresql://postgres/penpot\""}
+    - {path: backend/src/app/config.clj, line: 224, quote: "[:database-uri {:optional true} ::sm/uri]"}
+    - {path: docker/images/docker-compose.yaml, line: 54, quote: "PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/src/app/main.clj, line: 430, quote: ":app.migrations/migrations"}
+    - {path: backend/src/app/migrations.clj, line: 547, quote: "(defmethod ig/init-key ::migrations"}
+redis:
+  status: required
+  selectBy: {PENPOT_REDIS_URI: "redis://host:6379/0"}
+  evidence:
+    - {path: backend/src/app/config.clj, line: 56, quote: ":redis-uri \"redis://redis/0\""}
+    - {path: backend/src/app/main.clj, line: 441, quote: "(cf/get :redis-uri)"}
+    - {path: docker/images/docker-compose.yaml, line: 158, quote: "Valkey (or previously redis) is used for the websockets notifications"}
+    - {path: exporter/src/app/config.cljs, line: 32, quote: ":redis-uri \"redis://redis/0\""}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: backend/scripts/run.template.sh, line: 26, quote: "exec $JAVA_CMD $JAVA_OPTS -jar penpot.jar -m $ENTRYPOINT"}
+scheduledJobs:
+  status: embedded
+  items: []
+  evidence:
+    - {path: backend/scripts/run.template.sh, line: 23, quote: "ENTRYPOINT=${1:-app.main};"}
+storage:
+  local: conditional
+  paths: [/opt/data/assets]
+  s3: native
+  s3SelectBy: {PENPOT_OBJECTS_STORAGE_BACKEND: s3}
+  evidence:
+    - {path: backend/src/app/config.clj, line: 60, quote: ":objects-storage-backend \"fs\""}
+    - {path: backend/src/app/config.clj, line: 336, quote: "[:objects-storage-s3-bucket {:optional true} :string]"}
+    - {path: backend/src/app/storage/s3.clj, line: 38, quote: "software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider"}
+    - {path: backend/src/app/storage/s3.clj, line: 280, quote: "(.credentialsProvider ^S3AsyncClientBuilder builder creds-provider)"}
+    - {path: docker/images/docker-compose.yaml, line: 164, quote: "PENPOT_OBJECTS_STORAGE_BACKEND: fs"}
+env:
+  required:
+    - {name: PENPOT_PUBLIC_URI, secret: false, buildTime: false, note: "public HTTPS URL; required by config, default http://localhost:3449"}
+    - {name: PENPOT_SECRET_KEY, secret: true, buildTime: false, note: "master key for sessions and tokens; compose sample uses an insecure placeholder"}
+    - {name: PENPOT_DATABASE_URI, secret: false, buildTime: false, note: "PostgreSQL URI, with PENPOT_DATABASE_USERNAME and secret PENPOT_DATABASE_PASSWORD"}
+    - {name: PENPOT_REDIS_URI, secret: false, buildTime: false, note: "Valkey/Redis URI for the backend and exporter"}
+    - {name: PENPOT_OBJECTS_STORAGE_BACKEND, secret: false, buildTime: false, note: "s3 with PENPOT_OBJECTS_STORAGE_S3_BUCKET and region; default fs is ephemeral"}
+  optional: [PENPOT_FLAGS, PENPOT_OBJECTS_STORAGE_S3_REGION, PENPOT_OBJECTS_STORAGE_S3_ENDPOINT, PENPOT_SMTP_HOST, PENPOT_TELEMETRY_ENABLED, PENPOT_HTTP_SERVER_MAX_BODY_SIZE, PENPOT_BACKEND_URI, PENPOT_EXPORTER_URI, PENPOT_ADMIN_CONSOLE_URI, JVM_OPTS]
+  buildTime: []
+  evidence:
+    - {path: backend/src/app/config.clj, line: 139, quote: "[:public-uri {:optional false} ::sm/uri]"}
+    - {path: backend/src/app/config.clj, line: 135, quote: "[:secret-key {:optional true} :string]"}
+    - {path: docker/images/docker-compose.yaml, line: 49, quote: "PENPOT_SECRET_KEY: change-this-insecure-key"}
+    - {path: docker/images/files/nginx-entrypoint.sh, line: 71, quote: "export PENPOT_BACKEND_URI=${PENPOT_BACKEND_URI:-http://penpot-backend:6060}"}
+blockers:
+  expected:
+    - "No Dockerfile builds the app from the repo archive: docker/images Dockerfiles COPY prebuilt bundle-* directories produced by manage.sh build-bundle (CI), not available in the archive"
+    - "Needs at least two application images (nginx frontend and Java backend), plus a Node exporter image for export; Deployz runs one image per deploy"
+  mustNot:
+    - "S3 must not block: the backend uses the AWS default credential chain, so the ECS task role works"
+    - "PostgreSQL and Valkey/Redis must not block: both are supported managed services"
+    - "Local disk /opt/data/assets must not block: S3 backend is native"
+    - "Migrations must not need a separate command: they run at backend start"
+vendorQuestions:
+  legitimate:
+    - "Can the prebuilt images (penpotapp/backend, frontend, exporter) be used? They would be several images, not built from the repo"
+  unnecessary:
+    - "Which port? (6060 backend, 8080 frontend, 6061 exporter)"
+    - "Who runs migrations? (backend at startup)"
+    - "Which database? (PostgreSQL only)"
+traps:
+  - "docker/images/docker-compose.yaml looks like a one-file deploy -> it pulls published penpotapp/* images and has Mailpit, Postgres, Valkey, a mcp and an admin console service (docker/images/docker-compose.yaml:91-310)"
+  - "Dockerfile.backend looks like a source build -> it only copies ./bundle-backend/ (docker/images/Dockerfile.backend:113-114)"
+  - "base images come from dhi.io -> registry that needs entitlement (docker/images/Dockerfile.backend:1)"
+  - "docker/devenv/Dockerfile and docker-compose.main.yml -> developer environment, not production"
+  - "/dbg/health -> needs authorization; use /readyz (backend/src/app/http/debug.clj:987)"
+  - "compose sets AWS_ACCESS_KEY_ID in a comment for S3 -> static keys are not required, DefaultCredentialsProvider is used (backend/src/app/storage/s3.clj:38)"
+openQuestions:
+  - "Whether a single-image deploy could be assembled by the vendor (backend plus nginx frontend in one image) is a vendor decision, not in the repo"
+crossReview:
+  - {field: dockerfile.reject, change: "added docker/images/Dockerfile.media-processor (another separate dhi.io image in git); docker/imagemagick/Dockerfile is a build helper and is not an app image", evidence: "docker/images/Dockerfile.media-processor:2 FROM dhi.io/node"}
+  - {field: outcome / dockerfile.accept, change: "none: git ls-files lists only docker/devenv, gitpod, imagemagick and docker/images Dockerfiles; backend and frontend both COPY prebuilt bundles and are two different images, so NOT_DEPLOYABLE stands", evidence: "docker/images/Dockerfile.backend:114; docker/images/Dockerfile.frontend:23"}
+  - {field: healthPath, change: "none: /readyz returns 200 OK from a DB query, 503 otherwise, no auth", evidence: "backend/src/app/http/debug.clj:868"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

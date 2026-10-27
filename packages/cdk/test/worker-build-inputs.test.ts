@@ -68,6 +68,13 @@ describe('release build inputs', () => {
       .values({ id: 'org-audit', name: 'Audit Org', slug: 'audit-org-1234' })
       .returning();
     organizationId = org!.id;
+    // The build mints a token only for an active binding of the organization.
+    await db.insert(schema.githubInstallations).values({
+      id: '4242',
+      organizationId,
+      accountLogin: 'acme',
+      accountType: 'Organization',
+    });
   }, 60_000);
 
   afterAll(async () => {

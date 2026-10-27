@@ -1,11 +1,12 @@
 import { createHmac, createSign, timingSafeEqual } from 'node:crypto';
 import { posix as posixPath } from 'node:path';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 
 import {
   isRuntimeSourcePath,
   listDockerfileCandidates,
+  selectedDockerfile,
   extractCmdScriptPaths,
   dockerfileImageCommand,
   CMD_CHAIN_MAX_DEPTH,
@@ -106,33 +107,54 @@ function signInstallState(secret: string, payload: string): string {
   return createHmac('sha256', secret).update(payload).digest('hex');
 }
 
-// `<expiryMs>.<organizationId>.<hmac>`. GitHub hands `state` back unchanged on
-// the Setup URL redirect, so a callback that carries a valid one was started
-// by a session of that organization.
-export function createInstallState(secret: string, organizationId: string, nowMs: number): string {
-  const payload = `${nowMs + INSTALL_STATE_TTL_MS}.${organizationId}`;
+// `<expiryMs>.<organizationId>.<returnPath>.<hmac>`, the return path base64url
+// encoded. GitHub hands `state` back unchanged on the Setup URL redirect, so a
+// callback that carries a valid one was started by a session of that
+// organization, and the vendor goes back to the page that started it.
+export function createInstallState(
+  secret: string,
+  organizationId: string,
+  nowMs: number,
+  returnPath: string | null = null,
+): string {
+  const encodedReturnPath = Buffer.from(returnPath ?? '', 'utf8').toString('base64url');
+  const payload = `${nowMs + INSTALL_STATE_TTL_MS}.${organizationId}.${encodedReturnPath}`;
   return `${payload}.${signInstallState(secret, payload)}`;
 }
 
+// A dashboard page only: the return path becomes a redirect target, so
+// anything else (another origin, a protocol-relative URL) is refused.
+export function isDashboardReturnPath(path: string): boolean {
+  return /^\/dashboard(?:\/[A-Za-z0-9_-]+)*$/.test(path);
+}
+
+/** The verified state's return path (null when it has none), or `false` for an invalid state. */
 export function verifyInstallState(
   secret: string,
   state: string | undefined,
   organizationId: string,
   nowMs: number,
-): boolean {
+): { returnPath: string | null } | false {
   const parts = state?.split('.');
-  if (!parts || parts.length !== 3) {
+  if (!parts || parts.length !== 4) {
     return false;
   }
-  const [expiry, stateOrganizationId, signature] = parts as [string, string, string];
+  const [expiry, stateOrganizationId, encodedReturnPath, signature] = parts as [string, string, string, string];
   const provided = Buffer.from(signature, 'utf8');
-  const computed = Buffer.from(signInstallState(secret, `${expiry}.${stateOrganizationId}`), 'utf8');
-  return (
-    provided.length === computed.length &&
-    timingSafeEqual(provided, computed) &&
-    stateOrganizationId === organizationId &&
-    Number(expiry) > nowMs
+  const computed = Buffer.from(
+    signInstallState(secret, `${expiry}.${stateOrganizationId}.${encodedReturnPath}`),
+    'utf8',
   );
+  if (
+    provided.length !== computed.length ||
+    !timingSafeEqual(provided, computed) ||
+    stateOrganizationId !== organizationId ||
+    Number(expiry) <= nowMs
+  ) {
+    return false;
+  }
+  const returnPath = Buffer.from(encodedReturnPath, 'base64url').toString('utf8');
+  return { returnPath: isDashboardReturnPath(returnPath) ? returnPath : null };
 }
 
 // ---------------------------------------------------------------------------
@@ -336,18 +358,34 @@ export async function listInstallationRepositories(
 // connection gone on the next request.
 // ---------------------------------------------------------------------------
 
+// 'disconnected' is the organization's own choice; only an authorized
+// reconnect ends it. 'access_issue' is GitHub's side: the installation was
+// removed or suspended there.
+export type GithubConnectionStatus = 'active' | 'disconnected' | 'access_issue';
+
 export interface GithubInstallationRecord {
   id: string;
   organizationId: string;
   accountLogin: string;
   accountType: 'Organization' | 'User';
+  /** GitHub's immutable account id; null on rows bound before it was recorded. */
+  accountId: string | null;
+  status: GithubConnectionStatus;
 }
 
 export interface GithubInstallationStore {
-  set(installation: GithubInstallationRecord): Promise<void>;
-  delete(installationId: string): Promise<void>;
+  /** Upserts the binding. `replacedInstallationIds` are this organization's
+   *  older installations of the same GitHub account: their applications move
+   *  to this installation and their rows go, in one transaction. */
+  set(installation: GithubInstallationRecord, replacedInstallationIds?: readonly string[]): Promise<void>;
+  /** True when the status changed; a repeated write changes nothing. */
+  setStatus(installationId: string, status: GithubConnectionStatus, disconnectedBy?: string): Promise<boolean>;
   get(installationId: string): Promise<GithubInstallationRecord | null>;
   listByOrganization(organizationId: string): Promise<GithubInstallationRecord[]>;
+}
+
+function toConnectionStatus(status: string): GithubConnectionStatus {
+  return status === 'disconnected' || status === 'access_issue' ? status : 'active';
 }
 
 function toRecord(row: {
@@ -355,36 +393,74 @@ function toRecord(row: {
   organizationId: string;
   accountLogin: string;
   accountType: string;
+  accountId: string | null;
+  status: string;
 }): GithubInstallationRecord {
   return {
     id: row.id,
     organizationId: row.organizationId,
     accountLogin: row.accountLogin,
     accountType: row.accountType === 'User' ? 'User' : 'Organization',
+    accountId: row.accountId,
+    status: toConnectionStatus(row.status),
   };
+}
+
+// The disconnect fields describe a 'disconnected' row only. A write that
+// keeps the row disconnected without a new actor leaves them as they are.
+function disconnectFields(status: GithubConnectionStatus, disconnectedBy?: string) {
+  if (status !== 'disconnected') return { disconnectedAt: null, disconnectedBy: null };
+  return disconnectedBy === undefined ? {} : { disconnectedAt: new Date(), disconnectedBy };
 }
 
 export function createGithubStore(db: RuntimeDb): GithubInstallationStore {
   return {
-    async set(installation) {
-      await db
-        .insert(schema.githubInstallations)
-        .values(installation)
-        .onConflictDoUpdate({
-          target: schema.githubInstallations.id,
-          set: {
-            organizationId: installation.organizationId,
-            accountLogin: installation.accountLogin,
-            accountType: installation.accountType,
-            updatedAt: new Date(),
-          },
-        });
+    async set(installation, replacedInstallationIds = []) {
+      await db.transaction(async (tx) => {
+        if (replacedInstallationIds.length > 0) {
+          await tx
+            .update(schema.applications)
+            .set({ githubInstallationId: installation.id })
+            .where(
+              and(
+                eq(schema.applications.organizationId, installation.organizationId),
+                inArray(schema.applications.githubInstallationId, [...replacedInstallationIds]),
+              ),
+            );
+          await tx
+            .delete(schema.githubInstallations)
+            .where(
+              and(
+                eq(schema.githubInstallations.organizationId, installation.organizationId),
+                inArray(schema.githubInstallations.id, [...replacedInstallationIds]),
+              ),
+            );
+        }
+        await tx
+          .insert(schema.githubInstallations)
+          .values(installation)
+          .onConflictDoUpdate({
+            target: schema.githubInstallations.id,
+            set: {
+              organizationId: installation.organizationId,
+              accountLogin: installation.accountLogin,
+              accountType: installation.accountType,
+              accountId: installation.accountId,
+              status: installation.status,
+              ...disconnectFields(installation.status),
+              updatedAt: new Date(),
+            },
+          });
+      });
     },
 
-    async delete(installationId) {
-      await db
-        .delete(schema.githubInstallations)
-        .where(eq(schema.githubInstallations.id, installationId));
+    async setStatus(installationId, status, disconnectedBy) {
+      const changed = await db
+        .update(schema.githubInstallations)
+        .set({ status, ...disconnectFields(status, disconnectedBy), updatedAt: new Date() })
+        .where(and(eq(schema.githubInstallations.id, installationId), ne(schema.githubInstallations.status, status)))
+        .returning();
+      return changed.length > 0;
     },
 
     async get(installationId) {
@@ -411,12 +487,16 @@ export function createGithubStore(db: RuntimeDb): GithubInstallationStore {
 export class InMemoryGithubInstallationStore implements GithubInstallationStore {
   private byId = new Map<string, GithubInstallationRecord>();
 
-  async set(installation: GithubInstallationRecord): Promise<void> {
+  async set(installation: GithubInstallationRecord, replacedInstallationIds: readonly string[] = []): Promise<void> {
+    for (const id of replacedInstallationIds) this.byId.delete(id);
     this.byId.set(installation.id, installation);
   }
 
-  async delete(installationId: string): Promise<void> {
-    this.byId.delete(installationId);
+  async setStatus(installationId: string, status: GithubConnectionStatus): Promise<boolean> {
+    const record = this.byId.get(installationId);
+    if (!record || record.status === status) return false;
+    this.byId.set(installationId, { ...record, status });
+    return true;
   }
 
   async get(installationId: string): Promise<GithubInstallationRecord | null> {
@@ -426,6 +506,100 @@ export class InMemoryGithubInstallationStore implements GithubInstallationStore 
   async listByOrganization(organizationId: string): Promise<GithubInstallationRecord[]> {
     return [...this.byId.values()].filter((record) => record.organizationId === organizationId);
   }
+}
+
+const NOT_CONNECTED_MESSAGES: Record<Exclude<GithubConnectionStatus, 'active'>, string> = {
+  disconnected: 'GitHub is disconnected for this organization. Reconnect GitHub to continue.',
+  access_issue: 'Deployz cannot access this GitHub installation. Reconnect GitHub to continue.',
+};
+
+// The one check before Deployz mints a GitHub token or accepts work that
+// needs one. A missing row, a row of another organization and a row that is
+// not active all refuse, so a disconnect is a hard cutoff for every path
+// that reaches GitHub.
+export function requireActiveInstallation(
+  record: GithubInstallationRecord | null,
+  organizationId: string,
+): GithubInstallationRecord {
+  if (!record || record.organizationId !== organizationId) {
+    throw new ApiError(409, 'GITHUB_NOT_CONNECTED', 'This application is not connected to a GitHub installation', {
+      connectionStatus: 'not_connected',
+    });
+  }
+  if (record.status !== 'active') {
+    throw new ApiError(409, 'GITHUB_NOT_CONNECTED', NOT_CONNECTED_MESSAGES[record.status], {
+      connectionStatus: record.status,
+    });
+  }
+  return record;
+}
+
+// Where the account's owner changes repository access or uninstalls the App.
+export function githubManageUrl(record: Pick<GithubInstallationRecord, 'id' | 'accountLogin' | 'accountType'>): string {
+  return record.accountType === 'User'
+    ? `https://github.com/settings/installations/${encodeURIComponent(record.id)}`
+    : `https://github.com/organizations/${encodeURIComponent(record.accountLogin)}/settings/installations/${encodeURIComponent(record.id)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Installation state on GitHub
+// ---------------------------------------------------------------------------
+
+export type GithubLiveState =
+  | { state: 'missing' }
+  | {
+      state: 'active' | 'suspended';
+      accountLogin: string;
+      accountType: 'Organization' | 'User';
+      accountId: string | null;
+    };
+
+// Reads the installation as GitHub has it now, with the App JWT. A 404 means
+// GitHub no longer has the installation (the App was uninstalled).
+export async function fetchInstallationLiveState(
+  installationId: string,
+  jwt: string,
+  fetchFn: FetchFn,
+): Promise<GithubLiveState> {
+  const response = await fetchFn(`${GITHUB_API_BASE}/app/installations/${encodeURIComponent(installationId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (response.status === 404) {
+    return { state: 'missing' };
+  }
+  if (response.status < 200 || response.status >= 300) {
+    throw new ApiError(502, 'GITHUB_INSTALLATION_FETCH_FAILED', 'Failed to read the GitHub installation');
+  }
+  const data = (await response.json()) as {
+    account?: { login?: string; type?: string; id?: number | string } | undefined;
+    suspended_at?: string | null | undefined;
+  };
+  const accountLogin = data.account?.login;
+  if (!accountLogin) {
+    throw new ApiError(502, 'GITHUB_INSTALLATION_FETCH_FAILED', 'GitHub installation has no account');
+  }
+  return {
+    state: data.suspended_at ? 'suspended' : 'active',
+    accountLogin,
+    accountType: data.account?.type === 'User' ? 'User' : 'Organization',
+    accountId: data.account?.id === undefined ? null : String(data.account.id),
+  };
+}
+
+// The status a stored connection takes from GitHub's current state. A
+// disconnected connection stays disconnected: GitHub's state never reverses
+// the organization's own choice.
+export function reconciledStatus(
+  current: GithubConnectionStatus,
+  live: GithubLiveState['state'],
+): GithubConnectionStatus {
+  if (current === 'disconnected') return 'disconnected';
+  return live === 'active' ? 'active' : 'access_issue';
 }
 
 // ---------------------------------------------------------------------------
@@ -444,68 +618,58 @@ export interface GithubWebhookEvent {
   sender?: { login: string } | undefined;
 }
 
-export type InstallationWebhookResult = 'removed' | 'ignored';
+export type InstallationWebhookResult = 'updated' | 'unchanged' | 'ignored';
 
-// Handles installation.deleted (drop the installation) — the ONLY installation
-// event that carries enough information to act on.
+// The installation events that can change whether Deployz can use an
+// installation. Repository-level changes (installation_repositories) need no
+// stored state: an application's repository access is read from GitHub each
+// time it is shown, and each token is minted for the request that uses it.
+const RECONCILED_INSTALLATION_ACTIONS = new Set(['deleted', 'suspend', 'unsuspend', 'new_permissions_accepted']);
+
+// Applies an installation event to the stored connection.
+//
+// The status comes from GitHub's CURRENT state of the installation, read
+// with the App JWT, not from the event's action. A replayed or out-of-order
+// delivery (an old `suspend` after an `unsuspend`) therefore cannot set a
+// wrong status, and an unsuspend restores access only after GitHub confirms it.
 //
 // A webhook cannot bind an installation to a Deployz organization: the payload
 // names a GitHub account, and nothing in it identifies the vendor's tenant.
-// Matching the GitHub login against an organization slug cannot work either —
-// `organizationSlug` always appends a random seed, so no slug ever equals a
-// GitHub login. The binding therefore happens where the vendor's session is
-// present: GET /api/github/setup, the App's Setup URL, which GitHub redirects
-// the installing user to with `installation_id` in the query.
+// The binding happens where the vendor's session is present: GET
+// /api/github/setup, the App's Setup URL. A webhook also never ends a
+// disconnect (see `reconciledStatus`).
 export async function handleInstallationWebhook(
   store: GithubInstallationStore,
   event: GithubWebhookEvent,
+  readLiveState: (installationId: string) => Promise<GithubLiveState>,
 ): Promise<InstallationWebhookResult> {
-  if (event.type !== 'installation') {
+  if (event.type !== 'installation' || !event.installation || !RECONCILED_INSTALLATION_ACTIONS.has(event.action ?? '')) {
     return 'ignored';
   }
-  const installation = event.installation;
-  if (!installation) {
+  const record = await store.get(String(event.installation.id));
+  if (!record) {
     return 'ignored';
   }
-
-  if (event.action === 'deleted') {
-    await store.delete(String(installation.id));
-    return 'removed';
+  const next = reconciledStatus(record.status, (await readLiveState(record.id)).state);
+  if (next === record.status) {
+    return 'unchanged';
   }
-
-  return 'ignored';
+  return (await store.setStatus(record.id, next)) ? 'updated' : 'unchanged';
 }
 
-// Reads an installation's own account (login + type) with the App JWT, so the
-// setup route can record who the installation belongs to without trusting
-// anything the browser sent beyond the installation id itself.
+// Reads an installation's own account with the App JWT, so the setup route
+// can record who the installation belongs to without trusting anything the
+// browser sent beyond the installation id itself.
 export async function fetchInstallationAccount(
   installationId: string,
   jwt: string,
   fetchFn: FetchFn,
-): Promise<{ accountLogin: string; accountType: 'Organization' | 'User' }> {
-  const response = await fetchFn(`${GITHUB_API_BASE}/app/installations/${installationId}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
-  if (response.status < 200 || response.status >= 300) {
+): Promise<Exclude<GithubLiveState, { state: 'missing' }>> {
+  const live = await fetchInstallationLiveState(installationId, jwt, fetchFn);
+  if (live.state === 'missing') {
     throw new ApiError(502, 'GITHUB_INSTALLATION_FETCH_FAILED', 'Failed to read the GitHub installation');
   }
-  const data = (await response.json()) as {
-    account?: { login?: string; type?: string } | undefined;
-  };
-  const accountLogin = data.account?.login;
-  if (!accountLogin) {
-    throw new ApiError(502, 'GITHUB_INSTALLATION_FETCH_FAILED', 'GitHub installation has no account');
-  }
-  return {
-    accountLogin,
-    accountType: data.account?.type === 'User' ? 'User' : 'Organization',
-  };
+  return live;
 }
 
 // ---------------------------------------------------------------------------
@@ -584,24 +748,35 @@ export const GITHUB_FIXTURE_INSTALLATIONS: readonly GithubFixtureInstallation[] 
   },
 ];
 
-export async function listInstallations(
-  store: GithubInstallationStore,
-  organizationId: string,
-  opts: { fixtureMode: boolean },
-): Promise<GithubInstallation[]> {
-  if (opts.fixtureMode) {
-    return GITHUB_FIXTURE_INSTALLATIONS.map((installation) => ({
-      id: installation.id,
-      accountLogin: installation.accountLogin,
-      accountType: installation.accountType,
-    }));
+// Fixture mode only. Every organization sees the same fixture installation,
+// so its connection status cannot live on the shared row: it is kept per
+// organization, in this process, which is all a local or test server needs.
+export class FixtureGithubConnections {
+  private statuses = new Map<string, GithubConnectionStatus>();
+
+  get(installationId: string, organizationId: string): GithubInstallationRecord | null {
+    const fixture = GITHUB_FIXTURE_INSTALLATIONS.find((installation) => installation.id === installationId);
+    if (!fixture) return null;
+    return {
+      id: fixture.id,
+      organizationId,
+      accountLogin: fixture.accountLogin,
+      accountType: fixture.accountType === 'User' ? 'User' : 'Organization',
+      accountId: null,
+      status: this.statuses.get(`${organizationId}:${fixture.id}`) ?? 'active',
+    };
   }
-  const records = await store.listByOrganization(organizationId);
-  return records.map((record) => ({
-    id: record.id,
-    accountLogin: record.accountLogin,
-    accountType: record.accountType,
-  }));
+
+  list(organizationId: string): GithubInstallationRecord[] {
+    return GITHUB_FIXTURE_INSTALLATIONS.map((installation) => this.get(installation.id, organizationId)!);
+  }
+
+  setStatus(installationId: string, organizationId: string, status: GithubConnectionStatus): boolean {
+    const key = `${organizationId}:${installationId}`;
+    if ((this.statuses.get(key) ?? 'active') === status) return false;
+    this.statuses.set(key, status);
+    return true;
+  }
 }
 
 export async function listRepositories(
@@ -717,10 +892,11 @@ const ENV_SAMPLE_REGEX = /(?:^|\/)\.env\.(?:example|template|sample)$/i;
 // Framework config files that read env vars under the app's own names: Rails
 // `config/*.yml` (ERB), Laravel `config/*.php`, Spring `application*.properties|yml`,
 // the .NET `appsettings.json` values that an environment variable overrides,
-// and the production JSON config of an nconf or node-config app (its database client).
+// the production JSON config of an nconf or node-config app (its database client),
+// and a root `config.toml` that can name the app's data location (meilisearch `db_path`).
 // Direct children of `config/` only — `config/locales/` would flood the cap.
 const CONFIG_ENV_FILE_REGEX =
-  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.ya?ml$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$|(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/i;
+  /(?:^|\/)config\/[\w.-]+\.(?:ya?ml|php)$|(?:^|\/)config\.(?:ya?ml|toml)$|(?:^|\/)application(?:-[\w.-]+)?\.(?:properties|ya?ml)$|(?:^|\/)appsettings(?:\.Production)?\.json$|(?:^|\/)config(?:\/env)?\/(?:config\.)?production\.json$/i;
 // File-based health routes — the same shape detectHealthEndpoint matches on
 // the path rather than on the file's contents — and a NestJS
 // `health.controller.ts`, whose `@Controller('health')` is the only evidence.
@@ -994,6 +1170,32 @@ export async function fetchHeadSha(
   return data.sha;
 }
 
+// Whether the installation token can read the repository. GitHub answers 404
+// (not 403) for a repository the installation was not given or that no
+// longer exists, so both read as "inaccessible".
+export async function canReadRepository(
+  repoFullName: string,
+  installationToken: string,
+  fetchFn: FetchFn,
+): Promise<boolean> {
+  const { owner, repo } = parseRepoFullName(repoFullName);
+  const response = await fetchFn(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${installationToken}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (response.status === 404 || response.status === 403) {
+    return false;
+  }
+  if (response.status < 200 || response.status >= 300) {
+    throw new ApiError(502, 'GITHUB_REPO_CHECK_FAILED', 'Failed to check the repository on GitHub');
+  }
+  return true;
+}
+
 // Fetches a single blob's content (base64-decoded to a UTF-8 string) by its
 // git object sha — one call per relevant file, capped by ANALYSIS_MAX_FILES /
 // ANALYSIS_MAX_FILE_BYTES in `buildFileTreeForAnalysis` below.
@@ -1057,6 +1259,8 @@ async function fetchEntryContent(
 }
 
 const EMPTY_PROTECTED_PATHS: ReadonlySet<string> = new Set();
+// Bounds the Dockerfile blobs read to choose the image whose start chain survives the file cap.
+const DOCKERFILE_CANDIDATE_MAX = 20;
 
 // DEPLOY-029: resolve the selected Dockerfile's CMD/ENTRYPOINT script chain
 // — the exact paths `detectStartupMigrationEvidence` follows — against the
@@ -1083,12 +1287,16 @@ async function resolveCmdChainProtectedPaths(
     entryByPath.set(entry.path, entry);
   }
 
-  const dockerfilePath = listDockerfileCandidates(knownPaths)[0];
-  const dockerfileEntry = dockerfilePath !== undefined ? entryByPath.get(dockerfilePath) : undefined;
-  if (dockerfilePath === undefined || dockerfileEntry === undefined) return protectedPaths;
-
-  const dockerfileContent = await fetchEntryContent(ref, dockerfileEntry, entryByPath, installationToken, fetchFn);
-  if (dockerfileContent === null) return protectedPaths;
+  // The Dockerfile the analysis selects is ranked by content too (a dev or sidecar image ranks
+  // below the app), so read every candidate before choosing the one whose chain to protect.
+  for (const path of listDockerfileCandidates(knownPaths).slice(0, DOCKERFILE_CANDIDATE_MAX)) {
+    const entry = entryByPath.get(path);
+    if (entry !== undefined) knownPaths[path] = (await fetchEntryContent(ref, entry, entryByPath, installationToken, fetchFn)) ?? '';
+  }
+  const selected = selectedDockerfile(knownPaths);
+  if (selected === null || selected.content === '') return protectedPaths;
+  const dockerfilePath = selected.path;
+  const dockerfileContent = selected.content;
 
   const dockerDir = dockerfilePath.includes('/') ? dockerfilePath.split('/').slice(0, -1).join('/') : '';
   const { cmd, entrypoint } = dockerfileImageCommand(dockerfileContent);

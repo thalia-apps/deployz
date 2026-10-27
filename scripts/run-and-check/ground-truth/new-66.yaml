@@ -1,0 +1,146 @@
+id: new-66
+repository: appsmithorg/appsmith
+commit: 5c05b728a819a9922d07609131015aca9e812d4b
+summary: >
+  Appsmith low-code platform (Java Spring WebFlux server, Node RTS, React client). The root Dockerfile is a thin layer
+  on a prebuilt base image (ARG BASE) and copies CI-built artefacts (server jar, client build, RTS dist, MCP dist); it
+  does not build from source. The runtime image runs supervisord with Caddy (port 80), RTS, the Java backend, MCP,
+  and an embedded MongoDB or Redis. At this commit only MongoDB server artefacts are built; the Postgres server jar was removed.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No Dockerfile builds the app from the repo alone: the root Dockerfile needs a CI-built BASE image plus prebuilt
+    server.jar, client build and RTS bundle. The app needs MongoDB (replica set), which Deployz does not support;
+    the Postgres code path exists but prepare_server_artifacts.sh ships only server/mongo, so run-java.sh would
+    fail on server/pg. Extra: one image runs several processes and keeps state under /appsmith-stacks.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "FROM ${BASE} (no default) and COPY of CI-built app/client/build, rts/dist, mcp/dist; fails if server/mongo/server.jar is missing; no source build"}
+    - {path: deploy/docker/base.dockerfile, reason: "builds only the runtime base (ubuntu, MongoDB 7, Postgres 14, Redis, Caddy, Java, Node); contains no application code"}
+    - {path: app/client/cypress/Dockerfile, reason: "test runner image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "ARG BASE"}
+    - {path: Dockerfile, line: 2, quote: "FROM ${BASE}"}
+    - {path: Dockerfile, line: 24, quote: "if ! [ -f server/mongo/server.jar ]; then"}
+    - {path: Dockerfile, line: 31, quote: "COPY ./app/client/build editor/"}
+    - {path: Dockerfile, line: 34, quote: "COPY ./app/client/packages/rts/dist rts/"}
+    - {path: Dockerfile, line: 68, quote: "CMD [\"/usr/bin/supervisord\", \"-n\"]"}
+    - {path: scripts/prepare_server_artifacts.sh, line: 19, quote: "cp -r \"app/server/dist\" \"$target/mongo\""}
+    - {path: .github/workflows/build-docker-image.yml, line: 128, quote: "args+=(--build-arg \"BASE=$BASE_IMAGE\")"}
+runtime: {accept: [java, node]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 64, quote: "EXPOSE 80"}
+    - {path: deploy/docker/fs/opt/appsmith/caddy-reconfigure.mjs, line: 223, quote: ":${process.env.PORT || 80} {"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deploy/docker/fs/opt/appsmith/caddy-reconfigure.mjs, line: 223, quote: ":${process.env.PORT || 80} {"}
+startCommand:
+  source: image
+  accept: ["/usr/bin/supervisord -n"]
+healthPath:
+  accept: ["/api/v1/health"]
+  # Caddy on port 80 proxies /api/* to the Java server on 8080. The route is permitAll (GET). The image HEALTHCHECK is a
+  # script over supervisorctl, not an HTTP path. "/" serves the SPA but is not a health signal.
+  evidence:
+    - {path: app/server/appsmith-server/src/main/java/com/appsmith/server/constants/ce/UrlCE.java, line: 8, quote: "HEALTH_CHECK = BASE_URL + VERSION + \"/health\";"}
+    - {path: app/server/appsmith-server/src/main/java/com/appsmith/server/configurations/SecurityConfig.java, line: 289, quote: "ServerWebExchangeMatchers.pathMatchers(HttpMethod.GET, Url.HEALTH_CHECK),"}
+    - {path: deploy/docker/fs/opt/appsmith/caddy-reconfigure.mjs, line: 170, quote: "@backend path /api/* /oauth2/* /login/*"}
+    - {path: deploy/docker/fs/opt/appsmith/healthcheck.sh, line: 23, quote: "http://localhost:8080/api/v1/health"}
+database:
+  status: required
+  engines: [mongodb]
+  # postgresql:// is parsed by CommonDBConfig and run-java.sh, but no server/pg artefact is built and the server domains are Mongo @Document classes.
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [APPSMITH_DB_URL, APPSMITH_MONGODB_URI]
+  evidence:
+    - {path: deploy/docker/fs/opt/appsmith/templates/docker.env.sh, line: 61, quote: "APPSMITH_DB_URL=mongodb://$MONGO_USER:$DB_PASSWORD@localhost:27017/appsmith"}
+    - {path: deploy/docker/fs/opt/appsmith/entrypoint.sh, line: 307, quote: "mongosh \"$APPSMITH_DB_URL\" --eval 'rs.initiate()'"}
+    - {path: deploy/docker/fs/opt/appsmith/entrypoint.sh, line: 312, quote: "tlog \"Checking Replica Set of external MongoDB\""}
+    - {path: deploy/docker/fs/opt/appsmith/run-java.sh, line: 12, quote: "if [[ \"$APPSMITH_DB_URL\" = postgresql://* ]]; then"}
+    - {path: deploy/docker/fs/opt/appsmith/run-java.sh, line: 17, quote: "cd \"/opt/appsmith/server/$mode\""}
+    - {path: scripts/prepare_server_artifacts.sh, line: 12, quote: "(PostgreSQL support removed)"}
+    - {path: scripts/prepare_server_artifacts.sh, line: 16, quote: "rm -rf \"$target\"/{pg,mongo}"}
+    - {path: app/server/appsmith-server/src/main/java/com/appsmith/server/domains/Application.java, line: 19, quote: "@Document"}
+    - {path: app/server/appsmith-server/src/main/java/com/appsmith/server/configurations/CommonDBConfig.java, line: 45, quote: "if (!appsmithDbUrl.contains(\"postgresql\")) {"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: app/server/appsmith-server/src/main/java/com/appsmith/server/configurations/MongoConfig.java, line: 95, quote: "\"update-postgres-plugin-preparedStatement-config\","}
+redis:
+  status: required
+  selectBy: {APPSMITH_REDIS_URL: "redis://host:6379"}
+  evidence:
+    - {path: app/server/appsmith-server/src/main/resources/application-ce.properties, line: 69, quote: "appsmith.redis.url=${APPSMITH_REDIS_URL}"}
+    - {path: deploy/docker/fs/opt/appsmith/templates/docker.env.sh, line: 66, quote: "APPSMITH_REDIS_URL=redis://:$REDIS_PASSWORD@127.0.0.1:6379"}
+    - {path: deploy/docker/fs/opt/appsmith/entrypoint.sh, line: 508, quote: "if [[ $APPSMITH_REDIS_URL == *\"localhost\"* || $APPSMITH_REDIS_URL == *\"127.0.0.1\"* ]]; then"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: deploy/docker/fs/opt/appsmith/templates/supervisord/application_process/backend.conf, line: 2, quote: "command=/opt/appsmith/run-with-env.sh /opt/appsmith/run-java.sh"}
+    - {path: deploy/docker/fs/opt/appsmith/templates/supervisord/application_process/rts.conf, line: 2, quote: "command=/opt/appsmith/run-with-env.sh /opt/appsmith/run-rts.sh"}
+scheduledJobs:
+  status: embedded
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/appsmith-stacks]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: deploy/docker/base.dockerfile, line: 158, quote: "VOLUME [ \"/appsmith-stacks\" ]"}
+    - {path: deploy/docker/fs/opt/appsmith/run-with-env.sh, line: 33, quote: "export APPSMITH_GIT_ROOT=/appsmith-stacks/git-storage"}
+    - {path: deploy/docker/fs/opt/appsmith/entrypoint.sh, line: 87, quote: "mkdir -p \"$CONF_PATH\""}
+env:
+  required:
+    - {name: APPSMITH_DB_URL, secret: true, buildTime: false, note: "external MongoDB URI with replica set; image default is embedded MongoDB on localhost, which needs a persistent volume"}
+    - {name: APPSMITH_REDIS_URL, secret: true, buildTime: false, note: "external Redis; default is embedded Redis on 127.0.0.1"}
+    - {name: APPSMITH_ENCRYPTION_PASSWORD, secret: true, buildTime: false, note: "required by EncryptionHelper; generated only into docker.env on the persistent volume"}
+    - {name: APPSMITH_ENCRYPTION_SALT, secret: true, buildTime: false, note: "see APPSMITH_ENCRYPTION_PASSWORD"}
+  optional: [APPSMITH_CUSTOM_DOMAIN, PORT, APPSMITH_DISABLE_TELEMETRY, APPSMITH_MAIL_ENABLED, APPSMITH_SIGNUP_DISABLED, APPSMITH_TRUSTED_PROXIES, APPSMITH_RATE_LIMIT, APPSMITH_ENABLE_EMBEDDED_DB, APPSMITH_GIT_ROOT]
+  buildTime: [APPSMITH_CLOUD_SERVICES_BASE_URL, APPSMITH_SEGMENT_CE_KEY, APPSMITH_BETTERBUGS_API_KEY, APPSMITH_PYLON_APP_ID, BASE]
+  evidence:
+    - {path: app/server/appsmith-interfaces/src/main/java/com/appsmith/external/helpers/EncryptionHelper.java, line: 13, quote: "requireEnv(\"APPSMITH_ENCRYPTION_PASSWORD\")"}
+    - {path: app/server/appsmith-interfaces/src/main/java/com/appsmith/external/helpers/EncryptionHelper.java, line: 11, quote: "requireEnv(\"APPSMITH_ENCRYPTION_SALT\")"}
+    - {path: Dockerfile, line: 4, quote: "ARG APPSMITH_CLOUD_SERVICES_BASE_URL"}
+blockers:
+  expected:
+    - "Needs MongoDB (replica set) as the primary database; Deployz has no MongoDB. The Postgres path is not shipped: prepare_server_artifacts.sh builds only server/mongo"
+    - "No Dockerfile builds from the repo archive: root Dockerfile starts FROM a CI-built ${BASE} image and copies prebuilt server.jar, client build, RTS and MCP bundles"
+    - "Default topology runs MongoDB, Redis, embedded Postgres, Caddy, RTS, Java backend and MCP as supervisord processes in one container with state on /appsmith-stacks (no persistent volume on Deployz)"
+  mustNot:
+    - "Embedded Postgres in base.dockerfile must not be read as the app database: it is a mock/datasource DB, and the main DB is MongoDB"
+    - "supervisord with several processes must not count as several images: the processes share one image (but this is still unsuited for one-process Fargate use)"
+    - "The Postgres support in CommonDBConfig and run-java.sh must not be reported as a working option: the server jar for it is not built"
+    - "Healthcheck path must not be / or the supervisorctl healthcheck.sh"
+vendorQuestions:
+  legitimate:
+    - "Is an external MongoDB (replica set, for example Atlas) available? Deployz has no MongoDB, so the vendor must supply one"
+  unnecessary:
+    - "Which port? (80 via Caddy, PORT can override)"
+    - "Health path? (/api/v1/health)"
+    - "Is Redis needed? (yes, APPSMITH_REDIS_URL; embedded by default)"
+traps:
+  - "APPSMITH_DB_URL accepts postgresql:// and entrypoint.sh/run-java.sh/CommonDBConfig have a Postgres mode -> the pg server jar is no longer built, only server/mongo (scripts/prepare_server_artifacts.sh:12-16, run-java.sh:17)"
+  - "Root Dockerfile looks like the app image -> it is a layer on a CI-built base with CI-built artefacts, not a source build (Dockerfile:2, Dockerfile:24, Dockerfile:31)"
+  - "base.dockerfile installs postgresql-14 -> embedded Postgres is for the built-in mock DB, not the application database (base.dockerfile:82; entrypoint.sh:551)"
+  - "Image HEALTHCHECK runs healthcheck.sh over supervisorctl -> not an HTTP path; use /api/v1/health (Dockerfile:67)"
+  - "Port 8080 (Java) and 8091 (RTS) are internal -> only Caddy on 80 is public (caddy-reconfigure.mjs:172-176)"
+openQuestions:
+  - "Whether any Postgres build of the server is published elsewhere is not shown in the repo at this commit; the build script removes it"
+crossReview:
+  - {field: database.engines, change: "[mongodb, postgresql] -> [mongodb]: Postgres is unsupported at this commit. prepare_server_artifacts.sh removes server/pg and ships only server/mongo, the root Dockerfile fails without server/mongo/server.jar, and the server domain classes are Mongo @Document classes (no JPA @Entity in app/server). The Postgres branches in run-java.sh and CommonDBConfig are dead code. Added the Application.java @Document citation", evidence: "scripts/prepare_server_artifacts.sh:12-26; Dockerfile:24; app/server/appsmith-server/src/main/java/com/appsmith/server/domains/Application.java:19"}
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE alone kept; root Dockerfile is ARG BASE (no default) plus COPY of CI-built app/client/build, rts/dist, mcp/dist and a server.jar that the build script produces; app/client/build, packages/rts/dist and packages/mcp/dist are not in git. The DB is MongoDB with a replica set", evidence: "Dockerfile:1-2,24,31-37; git ls-files has no app/client/build or */dist"}
+  - {field: healthPath, change: "none: /api/v1/health kept; Caddy listens on plain :80 (no https redirect) and proxies /api/* to 8080 for any Host; the route is permitAll", evidence: "deploy/docker/fs/opt/appsmith/caddy-reconfigure.mjs:170-173,223; SecurityConfig.java:289"}
+  - {field: env.required (encryption), change: "none: confirmed; the JVM throws at class load when APPSMITH_ENCRYPTION_SALT or PASSWORD is blank", evidence: "app/server/appsmith-interfaces/src/main/java/com/appsmith/external/helpers/EncryptionHelper.java:11-13,37-41"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

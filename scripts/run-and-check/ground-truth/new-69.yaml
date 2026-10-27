@@ -1,0 +1,164 @@
+id: new-69
+repository: immich-app/immich
+commit: 4c33587fe88c52e50cb63dc8cea347fac6ef01ac
+summary: >
+  Immich self-hosted photo and video library (NestJS server in server/, SvelteKit web app served by the same
+  server, pnpm monorepo). server/Dockerfile builds one image from the repo (server, web, cli and plugins) and runs
+  the API and microservices workers in one process tree. It needs PostgreSQL with pgvector or VectorChord, Redis
+  (BullMQ) and a /data media folder on local disk. There is no S3 or object storage driver in this commit. A second
+  service, machine-learning (its own image and Dockerfile), is optional but is a separate application image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Every uploaded photo and video, thumbnail and encoded video is written to the local /data folder (UPLOAD_LOCATION
+    volume). There is no S3 driver, so the durable library has no alternative to a persistent volume, which Deployz
+    does not provide. On ephemeral Fargate disk the library is lost on each task restart, and the stored mount-check
+    flags make the next start fail unless IMMICH_IGNORE_MOUNT_CHECK_ERRORS is set. The rest fits: Postgres works
+    through pgvector (RDS), Redis is available, and the API and job workers run in one container.
+dockerfile:
+  accept: [server/Dockerfile]
+  reject:
+    - {path: server/Dockerfile.dev, reason: "development image with a hot-reload server; not the production image"}
+    - {path: machine-learning/Dockerfile, reason: "second service (Python ML inference); a second application image, not the web app"}
+  target: null
+  context: .
+  evidence:
+    - {path: server/Dockerfile, line: 90, quote: "FROM ghcr.io/immich-app/base-server-prod:202610211607@sha256:e50a1b36e2638dce42981ddfa84c134246c48fb2ad290fab6acfc1bb9b2bd891"}
+    - {path: server/Dockerfile, line: 126, quote: "CMD [\"start.sh\"]"}
+    - {path: server/Dockerfile, line: 71, quote: "COPY --from=ghcr.io/jdx/mise:2026.10.15@sha256:0593528c637b0dae8a0acca66b5d49266cf262a811f06530d7273d3cc002f3a0 /usr/local/bin/mise /usr/local/bin/mise"}
+    - {path: machine-learning/Dockerfile, line: 3, quote: "FROM python:3.13-slim-trixie@sha256:cf50a4f6ac4f026458b08d5222023d700ac806410dff5e9ca8728fa44f2b850f AS builder-cpu"}
+runtime: {accept: [node]}
+port:
+  accept: [2283]
+  evidence:
+    - {path: server/Dockerfile, line: 124, quote: "EXPOSE 2283"}
+    - {path: server/src/repositories/config.repository.ts, line: 257, quote: "port: dto.IMMICH_PORT || 2283,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/src/repositories/config.repository.ts, line: 256, quote: "host: dto.IMMICH_HOST,"}
+    - {path: server/src/app.common.ts, line: 91, quote: "const server = await (host ? app.listen(port, host) : app.listen(port));"}
+startCommand:
+  source: image
+  accept: ["start.sh"]
+healthPath:
+  accept: ["/api/server/ping"]
+  # The global prefix is "api". The ping route is public and returns {"res":"pong"} with no dependency check.
+  # The image HEALTHCHECK calls the same path. "/" is served by the web app and is not a reliable health check.
+  evidence:
+    - {path: server/src/controllers/server.controller.ts, line: 66, quote: "@Get('ping')"}
+    - {path: server/src/controllers/server.controller.ts, line: 67, quote: "@Authenticated({ public: true })"}
+    - {path: server/src/app.common.ts, line: 65, quote: "app.setGlobalPrefix('api', { exclude: excludePaths });"}
+    - {path: server/src/services/server.service.ts, line: 85, quote: "return { res: 'pong' };"}
+    - {path: server/bin/immich-healthcheck, line: 17, quote: "/api/server/ping"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DB_URL, "DB_HOSTNAME/DB_PORT/DB_USERNAME/DB_PASSWORD/DB_DATABASE_NAME", DB_SSL_MODE]
+  # Needs a vector extension: VectorChord (vchord) or pgvector (vector), auto-detected from pg_available_extensions
+  # (VectorChord is preferred). RDS PostgreSQL has pgvector (accepted range >=0.5 <1) but not VectorChord, so
+  # DB_VECTOR_EXTENSION=pgvector is optional but safe. Migrations also create uuid-ossp, unaccent, cube,
+  # earthdistance and pg_trgm, which RDS supports. Postgres >=14.
+  evidence:
+    - {path: server/src/repositories/config.repository.ts, line: 233, quote: "host: dto.DB_HOSTNAME || 'database',"}
+    - {path: server/src/repositories/config.repository.ts, line: 229, quote: "const databaseConnection: DatabaseConnectionParams = dto.DB_URL"}
+    - {path: server/src/repositories/config.repository.ts, line: 238, quote: "ssl: dto.DB_SSL_MODE || undefined,"}
+    - {path: server/src/constants.ts, line: 37, quote: "export const VECTOR_EXTENSIONS = [DatabaseExtension.VectorChord, DatabaseExtension.Vector] as const;"}
+    - {path: server/src/constants.ts, line: 25, quote: "export const VECTOR_VERSION_RANGE = '>=0.5 <1';"}
+    - {path: server/src/constants.ts, line: 23, quote: "export const POSTGRES_VERSION_RANGE = '>=14.0.0';"}
+    - {path: server/src/repositories/database.repository.ts, line: 44, quote: "SELECT name FROM pg_available_extensions WHERE name IN"}
+    - {path: server/src/services/database.service.ts, line: 87, quote: "await this.createExtension(extension);"}
+    - {path: server/src/repositories/config.repository.ts, line: 242, quote: "if (dto.DB_VECTOR_EXTENSION) {"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/src/services/database.service.ts, line: 117, quote: "const migrationCount = await this.databaseRepository.runMigrations();"}
+    - {path: server/src/services/database.service.ts, line: 116, quote: "if (!database.skipMigrations) {"}
+    - {path: server/src/repositories/config.repository.ts, line: 308, quote: "skipMigrations: dto.DB_SKIP_MIGRATIONS ?? false,"}
+redis:
+  status: required
+  selectBy: {REDIS_HOSTNAME: "redis host", REDIS_PORT: "6379"}
+  evidence:
+    - {path: server/src/repositories/config.repository.ts, line: 199, quote: "host: dto.REDIS_HOSTNAME || 'redis',"}
+    - {path: server/src/app.module.ts, line: 64, quote: "const bullImports = [BullModule.forRoot(bull.config), BullModule.registerQueue(...bull.queues)];"}
+    - {path: server/src/dtos/env.dto.ts, line: 88, quote: "REDIS_URL: z.string().optional(),"}
+workers:
+  status: embedded
+  commands: []
+  # The default worker set is api and microservices. The parent process forks the api worker and runs the
+  # microservices worker as a thread, all from the one start.sh command. IMMICH_WORKERS_INCLUDE can split them but need not.
+  evidence:
+    - {path: server/src/repositories/config.repository.ts, line: 181, quote: "const includedWorkers = asSet(dto.IMMICH_WORKERS_INCLUDE, [ImmichWorker.Api, ImmichWorker.Microservices]);"}
+    - {path: server/src/main.ts, line: 108, quote: "const worker = fork(workerFile, [], {"}
+    - {path: server/src/main.ts, line: 116, quote: "const worker = new Worker(workerFile);"}
+scheduledJobs:
+  status: embedded
+  items: [nightly library and metadata jobs, database backup, version check]
+  evidence:
+    - {path: server/src/repositories/cron.repository.ts, line: 30, quote: "const job = new CronJob<null, null>("}
+    - {path: server/src/app.module.ts, line: 106, quote: "imports: [...bullImports, ...commonImports, ScheduleModule.forRoot()],"}
+storage:
+  local: required
+  paths: [/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: server/Dockerfile, line: 123, quote: "VOLUME /data"}
+    - {path: docker/docker-compose.yml, line: 21, quote: "- ${UPLOAD_LOCATION}:/data"}
+    - {path: server/src/services/storage.service.ts, line: 30, quote: "const candidates = ['/data', '/usr/src/app/upload'];"}
+    - {path: server/src/enum.ts, line: 374, quote: "EncodedVideo = 'encoded-video',"}
+    - {path: server/src/services/storage.service.ts, line: 68, quote: "await this.createMountFile(folder);"}
+    - {path: server/src/services/storage.service.ts, line: 94, quote: "throw error;"}
+    - {path: server/src/repositories/config.repository.ts, line: 356, quote: "ignoreMountCheckErrors: !!dto.IMMICH_IGNORE_MOUNT_CHECK_ERRORS,"}
+env:
+  required:
+    - {name: DB_URL, secret: true, buildTime: false, note: "or DB_HOSTNAME, DB_PORT, DB_USERNAME, DB_PASSWORD (secret), DB_DATABASE_NAME; the defaults point to host 'database' and password 'postgres'"}
+    - {name: DB_SSL_MODE, secret: false, buildTime: false, note: "needed when the database forces TLS, as RDS does through Deployz"}
+    - {name: REDIS_HOSTNAME, secret: false, buildTime: false, note: "default host is 'redis'; also REDIS_PORT, REDIS_PASSWORD and REDIS_URL"}
+  optional: [DB_VECTOR_EXTENSION, IMMICH_PORT, IMMICH_HOST, IMMICH_MEDIA_LOCATION, IMMICH_IGNORE_MOUNT_CHECK_ERRORS, IMMICH_MACHINE_LEARNING_ENABLED, IMMICH_MACHINE_LEARNING_URL, IMMICH_WORKERS_INCLUDE, IMMICH_WORKERS_EXCLUDE, IMMICH_TRUSTED_PROXIES, IMMICH_LOG_LEVEL, IMMICH_CONFIG_FILE, IMMICH_ALLOW_SETUP, DB_SKIP_MIGRATIONS, REDIS_USERNAME, REDIS_DBINDEX]
+  buildTime: []
+  evidence:
+    - {path: server/src/repositories/config.repository.ts, line: 234, quote: "port: dto.DB_PORT || 5432,"}
+    - {path: server/src/repositories/config.repository.ts, line: 237, quote: "database: dto.DB_DATABASE_NAME || 'immich',"}
+    - {path: server/src/repositories/config.repository.ts, line: 323, quote: "trustedProxies: dto.IMMICH_TRUSTED_PROXIES ?? ['linklocal', 'uniquelocal'],"}
+    - {path: server/src/repositories/config.repository.ts, line: 352, quote: "allow: dto.IMMICH_ALLOW_SETUP ?? true,"}
+blockers:
+  expected:
+    - "Media library (originals, thumbnails, encoded video, profile images, backups) is stored only on local disk under /data (UPLOAD_LOCATION). There is no S3 or object storage option in this commit, and Deployz provides no persistent volume or EFS, so the data is lost when the task restarts."
+  mustNot:
+    - "The Postgres vector extension must not block: pgvector is supported and RDS PostgreSQL provides it, so VectorChord is not required"
+    - "Redis must not block: ElastiCache Redis (Valkey) is available, configured by REDIS_HOSTNAME"
+    - "The microservices worker must not be reported as a separate service: it runs in the same process tree with the API"
+    - "The machine-learning service must not be a core blocker: it is optional and can be turned off with IMMICH_MACHINE_LEARNING_ENABLED=false or in the admin settings; it is a feature gap (smart search, face recognition), not the reason for the verdict"
+    - "The mise tool downloads in the Dockerfile must not be reported as a blocker by themselves: they are build-time downloads from public registries"
+vendorQuestions:
+  legitimate:
+    - "Is losing the photo library acceptable? The media folder is local only; a persistent volume would be needed"
+    - "Is smart search and face recognition needed? That needs the separate machine-learning image, which Deployz cannot run as a second service"
+  unnecessary:
+    - "Which port? (2283 in image and defaults)"
+    - "Who runs migrations? (the server runs them at start under an advisory lock)"
+    - "Is a separate worker process needed? (api and microservices run in one process tree)"
+    - "Health path? (/api/server/ping)"
+    - "Which vector extension? (auto-detected; pgvector works)"
+traps:
+  - "docker-compose.yml lists immich-machine-learning, redis (valkey) and a custom postgres image with VectorChord -> the compose database image is not required: the server also accepts pgvector (docker/docker-compose.yml:61, server/src/constants.ts:37)"
+  - "docker-compose database image name mentions vectorchord and pgvectors -> a plain RDS PostgreSQL with pgvector passes the extension check (server/src/services/database.service.ts:82)"
+  - "ENTRYPOINT is tini + bash -c with CMD start.sh -> the image already runs the app, no explicit command needed (server/Dockerfile:125)"
+  - "Dockerfile has many stages (sdk, plugin-sdk, server, web, cli, plugins) -> the last stage is the app, no --target needed (server/Dockerfile:90)"
+  - "/ is the web app and /health does not exist -> use /api/server/ping (server/src/app.common.ts:65)"
+  - ".dockerignore lists **/Dockerfile and docs, e2e, machine-learning -> these only trim the build context; the build still works (.dockerignore:9)"
+  - "Plugins stage runs mise install --locked, which downloads many tools (java, terragrunt, opentofu, ffmpeg) -> a heavy and slow build, with a COPY --from of the ghcr.io/jdx/mise image (server/Dockerfile:71)"
+  - "Server home path is /data by default and compose mounts UPLOAD_LOCATION there -> this is the durable library, not a cache (docker/docker-compose.yml:21)"
+openQuestions:
+  - "Whether a verdict of DEPLOYABLE_WITH_CHANGES (ephemeral storage, with a data-loss warning) is also acceptable for a demo: the data would not survive a restart, so NOT_DEPLOYABLE is the accepted verdict here"
+crossReview:
+  - {field: migrations, change: "none: startup confirmed; the server runs runMigrations itself at boot (the package.json migrations:* scripts are only developer tools)", evidence: "server/src/services/database.service.ts:116-117; server/package.json:33"}
+  - {field: healthPath, change: "none: /api/server/ping is public, under the api prefix, and not in excludePaths", evidence: "server/src/constants.ts:63; server/bin/immich-healthcheck:17"}
+  - {field: storage.s3, change: "none: no S3 or AWS SDK in server/package.json or server/src; local /data is required and the mount check fails the start", evidence: "server/src/services/storage.service.ts:68-94"}
+  - {field: dockerfile, change: "none: all COPY sources exist in git (mise.toml, mise.lock, .mise, packages/plugin-core/mise.toml, i18n, LICENSE); start.sh is server/bin/start.sh; the .dockerignore does not remove any build input", evidence: "server/Dockerfile:14-104; .dockerignore:1-39"}
+  - {field: all, change: verified, evidence: "44 citations checked"}

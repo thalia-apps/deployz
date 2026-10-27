@@ -8,7 +8,10 @@ import { auditFields, createdAt, id, updatedAt } from './common.js';
 // Durable because the control plane runs as a Lambda: an in-memory map is
 // empty on the next cold start, which loses the vendor's repo access. The
 // row is written when the vendor returns from the App's setup redirect
-// (apps/api/src/server.ts), and deleted on the installation.deleted webhook.
+// (apps/api/src/server.ts). The row is kept when the connection stops
+// working, so applications keep their repository association: `status` is
+// 'active', 'disconnected' (the organization disconnected it) or
+// 'access_issue' (GitHub removed or suspended the installation).
 export const githubInstallations = pgTable('github_installations', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id')
@@ -16,6 +19,11 @@ export const githubInstallations = pgTable('github_installations', {
     .references(() => organization.id),
   accountLogin: text('account_login').notNull(),
   accountType: text('account_type').notNull(),
+  // GitHub's immutable account id. Null on rows bound before it was recorded.
+  accountId: text('account_id'),
+  status: text('status').notNull().default('active'),
+  disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
+  disconnectedBy: text('disconnected_by'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

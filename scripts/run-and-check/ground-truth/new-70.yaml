@@ -1,0 +1,174 @@
+id: new-70
+repository: photoprism/photoprism
+commit: 014f1ca99ea6adbac697b0bc458cd2de81013949
+summary: >
+  PhotoPrism photo management app (Go single binary with built-in web server, Vue frontend, TensorFlow/ONNX models).
+  One process serves UI, API, WebDAV and runs the background workers. It stores the photo library (originals,
+  import, sidecar, cache) on a local folder and has no S3 support. The root Dockerfile is a development image
+  (FROM photoprism/develop, DOCKER_ENV=develop). Production images are docker/photoprism/<distro>/Dockerfile and
+  build the app from source with `make all install`. The index database is SQLite by default; PostgreSQL 16+
+  (experimental) or MariaDB 10.5.12+ can be selected. MySQL 8 is refused by the version check.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The product is a photo library whose originals are written only to a local folder (PHOTOPRISM_ORIGINALS_PATH,
+    default /photoprism/originals) and the storage folder (sidecar, cache, thumbnails, backups). There is no S3 or
+    object-store driver, so on Fargate with ephemeral disk every upload and import is lost at the next deploy or
+    task restart, even with an external PostgreSQL. Additional problems: the source build runs
+    scripts/build.sh which calls git describe under set -e (fails in a repo archive without .git), PostgreSQL is
+    experimental and the generated DSN uses sslmode=disable (RDS forces TLS), and MySQL 8 is refused.
+dockerfile:
+  accept: [docker/photoprism/noble/Dockerfile, docker/photoprism/bookworm/Dockerfile]
+  reject:
+    - {path: Dockerfile, reason: "development image: FROM photoprism/develop:261027-resolute, DOCKER_ENV=develop, copies the source and installs yt-dlp, has no CMD/ENTRYPOINT of its own; used only by compose.yaml for development"}
+    - {path: docker/photoprism/resolute/Dockerfile, reason: "same build as noble but the file ends at COPY --from=build, with no ENTRYPOINT or CMD (also questing, plucky, oracular, jammy)"}
+    - {path: docker/develop/noble/Dockerfile, reason: "builds the photoprism/develop base image (toolchain), not the app"}
+    - {path: docker/demo/Dockerfile, reason: "demo image variant, not the production app image"}
+    - {path: docker/dummy/oidc/Dockerfile, reason: "test helper service (dummy OIDC server)"}
+    - {path: docker/dummy/webdav/Dockerfile, reason: "test helper service (dummy WebDAV server)"}
+    - {path: docker/tensorflow/Dockerfile, reason: "builds the TensorFlow library package, not the app"}
+    - {path: docker/ddns/Dockerfile, reason: "dynamic DNS helper, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2, quote: "FROM photoprism/develop:261027-resolute"}
+    - {path: Dockerfile, line: 34, quote: "DOCKER_ENV=develop"}
+    - {path: docker/photoprism/noble/Dockerfile, line: 2, quote: "FROM photoprism/develop:noble AS build"}
+    - {path: docker/photoprism/noble/Dockerfile, line: 19, quote: "RUN make all install DESTDIR=/opt/photoprism"}
+    - {path: docker/photoprism/noble/Dockerfile, line: 23, quote: "FROM photoprism/develop:noble-slim"}
+    - {path: docker/photoprism/noble/Dockerfile, line: 110, quote: 'CMD ["/opt/photoprism/bin/photoprism", "start"]'}
+    - {path: docker/photoprism/resolute/Dockerfile, line: 106, quote: "COPY --from=build --chown=root:root /opt/photoprism/ /opt/photoprism"}
+    - {path: compose.yaml, line: 1, quote: "## FOR TEST AND DEVELOPMENT ONLY, DO NOT USE IN PRODUCTION   ##"}
+runtime: {accept: [go]}
+port:
+  accept: [2342]
+  evidence:
+    - {path: docker/photoprism/noble/Dockerfile, line: 65, quote: 'PHOTOPRISM_HTTP_PORT="2342"'}
+    - {path: docker/photoprism/noble/Dockerfile, line: 101, quote: "EXPOSE 2342 2443"}
+    - {path: internal/config/config_server.go, line: 234, quote: "return 2342"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/photoprism/noble/Dockerfile, line: 64, quote: 'PHOTOPRISM_HTTP_HOST="0.0.0.0"'}
+    - {path: internal/config/config_server.go, line: 225, quote: "return limiter.DefaultIP"}
+startCommand:
+  source: image
+  accept: ["/opt/photoprism/bin/photoprism start", "photoprism start"]
+healthPath:
+  accept: ["/api/v1/status", "/livez", "/health", "/healthz"]
+  # All four are unauthenticated and return 200 JSON without redirect. /readyz returns 503 until Init finished.
+  # "/" serves the web UI and may redirect to /library/login, so it is not a safe health path.
+  evidence:
+    - {path: internal/api/status.go, line: 19, quote: 'c.JSON(http.StatusOK, gin.H{"status": "operational"})'}
+    - {path: internal/server/routes.go, line: 231, quote: "api.GetStatus(APIv1)"}
+    - {path: internal/server/start.go, line: 199, quote: 'router.Any(conf.BaseUri("/livez"), isLive)'}
+    - {path: internal/server/start.go, line: 200, quote: 'router.Any(conf.BaseUri("/health"), isLive)'}
+    - {path: internal/server/start.go, line: 213, quote: 'router.Any(conf.BaseUri("/readyz"), isReady)'}
+database:
+  status: required
+  engines: [sqlite, mysql, mariadb, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {PHOTOPRISM_DATABASE_DRIVER: postgres}
+  connectionVars: [PHOTOPRISM_DATABASE_DSN, PHOTOPRISM_DATABASE_SERVER, PHOTOPRISM_DATABASE_NAME, PHOTOPRISM_DATABASE_USER, PHOTOPRISM_DATABASE_PASSWORD]
+  # PostgreSQL 16+ is accepted but marked experimental. Without a DSN the app builds a URI with sslmode=disable, so
+  # RDS PostgreSQL (TLS forced) needs PHOTOPRISM_DATABASE_DSN as a postgres:// URI with sslmode=require.
+  # MySQL 8 reports v8.x, which is below the v10.0.0 floor of the version check, so it fails at start.
+  evidence:
+    - {path: internal/config/flags.go, line: 1044, quote: 'database `DRIVER` (sqlite, mysql, postgres)'}
+    - {path: internal/config/flags.go, line: 1045, quote: 'Value:   "sqlite",'}
+    - {path: internal/config/flags.go, line: 1052, quote: 'EnvVars: EnvVars("DATABASE_DSN"),'}
+    - {path: internal/config/config_db.go, line: 45, quote: 'log.Infof("config: support for PostgreSQL is experimental")'}
+    - {path: internal/config/config_db.go, line: 727, quote: 'const PostgresMinVersion = "v16"'}
+    - {path: internal/config/config_db.go, line: 679, quote: 'case !c.IsDatabaseVersion("v10.0.0"):'}
+    - {path: internal/config/config_db.go, line: 680, quote: 'MySQL %s is not supported'}
+    - {path: pkg/dsn/driver.go, line: 45, quote: 'DriverPostgres: "sslmode=disable TimeZone=UTC",'}
+    - {path: internal/config/config_db.go, line: 184, quote: "return c.options.DatabaseDSN"}
+    - {path: docker/photoprism/noble/Dockerfile, line: 66, quote: 'PHOTOPRISM_DATABASE_DRIVER="sqlite"'}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/commands/start.go, line: 354, quote: "conf.InitDb()"}
+    - {path: internal/config/config_db.go, line: 539, quote: "_ = c.MigrateDb(false, nil)"}
+    - {path: internal/config/config_db.go, line: 558, quote: "if err = entity.InitDb(opt); err != nil {"}
+redis:
+  status: none
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: internal/commands/start.go, line: 401, quote: "workers.Start(conf)"}
+    - {path: internal/commands/start.go, line: 404, quote: "auto.Start(conf)"}
+scheduledJobs:
+  status: embedded
+  items: [auto-index, auto-import, sync, metadata maintenance, session cleanup]
+  evidence:
+    - {path: internal/commands/start.go, line: 398, quote: "session.Cleanup(conf.SessionCacheDuration() * 4)"}
+    - {path: internal/commands/start.go, line: 400, quote: "// Start sync and metadata maintenance background workers."}
+    - {path: docker/photoprism/noble/Dockerfile, line: 80, quote: 'PHOTOPRISM_AUTO_INDEX="300"'}
+storage:
+  local: required
+  paths: [/photoprism/originals, /photoprism/storage, /photoprism/import]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/photoprism/noble/Dockerfile, line: 51, quote: 'PHOTOPRISM_IMPORT_PATH="/photoprism/import"'}
+    - {path: docker/photoprism/noble/Dockerfile, line: 52, quote: 'PHOTOPRISM_ORIGINALS_PATH="/photoprism/originals"'}
+    - {path: docker/photoprism/noble/Dockerfile, line: 53, quote: 'PHOTOPRISM_STORAGE_PATH="/photoprism/storage"'}
+    - {path: internal/config/flags.go, line: 298, quote: 'storage `PATH` of your original media files (photos and videos)'}
+    - {path: internal/config/flags.go, line: 260, quote: 'writable storage `PATH` for sidecar, cache, and database files'}
+    - {path: internal/config/config.go, line: 216, quote: "if c.OriginalsPath() == c.StoragePath() {"}
+env:
+  required:
+    - {name: PHOTOPRISM_DATABASE_DRIVER, secret: false, buildTime: false, note: "set to postgres; the image default sqlite is ephemeral on Fargate"}
+    - {name: PHOTOPRISM_DATABASE_DSN, secret: true, buildTime: false, note: "postgres:// URI with sslmode=require; the generated DSN from SERVER/NAME/USER/PASSWORD uses sslmode=disable, which RDS refuses"}
+    - {name: PHOTOPRISM_ADMIN_PASSWORD, secret: true, buildTime: false, note: "without it no admin account is created and nobody can log in (warning at config_db.go:578)"}
+    - {name: PHOTOPRISM_SITE_URL, secret: false, buildTime: false, note: "public https URL, default http://localhost:2342/; TLS stays off in the app (no certificate, no PHOTOPRISM_TLS_EMAIL) so the ALB terminates HTTPS"}
+  optional: [PHOTOPRISM_ADMIN_USER, PHOTOPRISM_AUTH_MODE, PHOTOPRISM_DATABASE_SERVER, PHOTOPRISM_DATABASE_NAME, PHOTOPRISM_DATABASE_USER, PHOTOPRISM_DATABASE_PASSWORD, PHOTOPRISM_ORIGINALS_PATH, PHOTOPRISM_STORAGE_PATH, PHOTOPRISM_DISABLE_TLS, PHOTOPRISM_DISABLE_TENSORFLOW, PHOTOPRISM_DISABLE_FACES, PHOTOPRISM_AUTO_INDEX, PHOTOPRISM_DATABASE_SKIP_VERSION_CHECK, PHOTOPRISM_UID, PHOTOPRISM_GID, PHOTOPRISM_INIT]
+  buildTime: []
+  evidence:
+    - {path: internal/config/config_db.go, line: 577, quote: 'if c.AdminPassword() == "" {'}
+    - {path: internal/config/flags.go, line: 66, quote: 'EnvVars: EnvVars("ADMIN_PASSWORD"),'}
+    - {path: internal/config/config_site.go, line: 127, quote: 'return "http://localhost:2342/"'}
+    - {path: internal/config/config_tls.go, line: 119, quote: "case c.options.DisableTLS, !c.SiteHttps():"}
+    - {path: internal/config/config_tls.go, line: 124, quote: 'return c.TLSCert() == "" || c.TLSKey() == ""'}
+blockers:
+  expected:
+    - "Photo originals, import and storage folders are local-disk only; there is no S3 or object-store driver, and Deployz has no persistent volume (EFS), so the library is lost at each task restart or deploy"
+    - "The source build (make all install -> scripts/build.sh) runs git describe under set -e and fails in a repo archive without .git"
+  mustNot:
+    - "SQLite default must not block by itself: PostgreSQL 16 can be selected with PHOTOPRISM_DATABASE_DRIVER=postgres (experimental)"
+    - "Redis, a queue or a separate worker must not be required: workers and the auto-indexer run inside the web process"
+    - "Port 2342 and 0.0.0.0 binding must not be raised as problems: they are the image defaults"
+    - "The root Dockerfile being a development image is not itself the blocker; the production Dockerfiles live under docker/photoprism"
+    - "TensorFlow and ONNX model downloads at build time must not be called a prebuilt app artifact: they are dependencies fetched by the build"
+vendorQuestions:
+  legitimate:
+    - "Is losing uploads and originals at every redeploy acceptable (demo only), or does the user have an external durable storage plan?"
+    - "Which public URL (PHOTOPRISM_SITE_URL) and which admin password should be used?"
+  unnecessary:
+    - "Which port? (2342 in the image and defaults)"
+    - "Who runs migrations? (the app migrates its schema at start)"
+    - "Is a worker process needed? (embedded)"
+    - "Is Redis needed? (no Redis support)"
+    - "Health path? (/api/v1/status, /livez)"
+traps:
+  - "Root Dockerfile -> a development image (FROM photoprism/develop, DOCKER_ENV=develop), not the production build; compose.yaml is marked test and development only (Dockerfile:2, compose.yaml:1)"
+  - "docker/photoprism/resolute, questing, plucky, oracular and jammy Dockerfiles end after COPY --from=build with no ENTRYPOINT or CMD; noble and bookworm have CMD photoprism start (docker/photoprism/resolute/Dockerfile:106, docker/photoprism/noble/Dockerfile:110)"
+  - "compose.mysql.yaml uses mysql:8 for tests, but the app refuses MySQL below 10.0.0 in its version check (internal/config/config_db.go:679)"
+  - "PHOTOPRISM_DATABASE_SERVER/NAME/USER/PASSWORD for postgres build a DSN with sslmode=disable (pkg/dsn/driver.go:45); RDS needs a custom DSN with sslmode=require"
+  - "PHOTOPRISM_INIT=https in the image is a first-start init target, not an HTTPS listener; the listener stays HTTP without certificate files and a https site URL (internal/config/config_tls.go:124)"
+  - "A site URL with https:// plus PHOTOPRISM_TLS_EMAIL turns on Let's Encrypt on 443 inside the container; leave it unset behind the ALB (internal/server/autotls.go:27)"
+  - "/ serves the SPA and may redirect to the login page, so it is not a good health path; use /api/v1/status or /livez (internal/server/routes.go:231)"
+  - "make all install downloads TensorFlow, models and images from dl.photoprism.app, cdn.photoprism.app and Hugging Face during the build (scripts/dist/install-tensorflow.sh:107, Makefile:358)"
+openQuestions:
+  - "Whether a read-only or demo deployment with ephemeral originals should count as DEPLOYABLE_WITH_CHANGES; chosen NOT_DEPLOYABLE because durable storage of photos is the core function"
+  - "Whether a Dockerfile that adds git init (or sets a fake describe) before make install would make the build work; not verified"
+crossReview:
+  - {field: dockerfile, change: "none: noble and bookworm are the production Dockerfiles that build from source (COPY . ., make all install) and have a CMD; the root Dockerfile has no ENTRYPOINT or CMD and is a develop image; the other distro files end without a CMD", evidence: "docker/photoprism/noble/Dockerfile:16,19,110; docker/photoprism/bookworm/Dockerfile:109; Dockerfile:2"}
+  - {field: blockers (.git), change: "none: confirmed; scripts/build.sh runs BUILD_VERSION=$(git describe --always) under set -e, and make install calls it for the prod build", evidence: "scripts/build.sh:8,13; Makefile:356"}
+  - {field: healthPath, change: "none: /livez, /health, /healthz and /api/v1/status return 200 JSON; no redirect middleware runs before them (the Security middleware only sets headers)", evidence: "internal/server/start.go:194-201; internal/server/security.go"}
+  - {field: database, change: "none: MySQL 8 is refused (below v10.0.0); PostgreSQL 16+ is accepted as experimental", evidence: "internal/config/config_db.go:679-680,698"}
+  - {field: all, change: verified, evidence: "47 citations checked"}

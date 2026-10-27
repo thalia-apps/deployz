@@ -47,11 +47,13 @@ import { ApiError } from './errors.js';
 import { recordEvent } from './events.js';
 import { effectiveReadinessReport } from './fix-instructions.js';
 import {
+  createGithubStore,
   fetchFilesForAnalysis,
   fetchHeadSha,
   getFileTreeForAnalysis,
   mintInstallationToken,
   parseRepoFullName,
+  requireActiveInstallation,
   type FetchFn,
 } from './github.js';
 import type { JevShadowRunner } from './jev-shadow.js';
@@ -438,7 +440,16 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // its whole context from a directory with no project file builds from the
 // root. Stored v69 rows can build the docs image or the wrong context, or ask
 // for the database variable.
-export const ANALYSIS_VERSION = 70;
+// Version 71 (2026-10 corpus round 4): a development image that copies nothing
+// and starts a mounted script ranks below the app image; a RUN that bind-mounts
+// `.git` cannot build; a test's route call is not a route; Rust route
+// attributes name a health path; an init-only ENTRYPOINT (`tini --`) with no
+// CMD is no start command; a queue mode turned on only by an equality test is
+// optional; an app config file that names its data path is durable local
+// state; the file cap protects the start chain of the content-selected image.
+// Stored v70 rows can name no health path, build the dev image, or miss the
+// local-state blocker.
+export const ANALYSIS_VERSION = 71;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
@@ -766,6 +777,7 @@ function analysisFailureCode(error: unknown): string {
       case 'GITHUB_DISABLED':
         return 'github_disabled';
       case 'GITHUB_INSTALLATION_MISSING':
+      case 'GITHUB_NOT_CONNECTED':
         return 'github_installation_missing';
       case 'GITHUB_RATE_LIMITED':
         return 'github_rate_limited';
@@ -841,6 +853,12 @@ async function mintRealModeToken(deps: AnalysisRunnerDeps, application: Applicat
       'No GitHub installation is linked to this application',
     );
   }
+  // Checked when the run starts, not when it was requested: a run queued
+  // before a disconnect must not get a token after it.
+  requireActiveInstallation(
+    await createGithubStore(deps.db).get(application.githubInstallationId),
+    application.organizationId,
+  );
   if (!deps.githubAppId || !deps.githubAppPrivateKey) {
     throw new ApiError(503, 'GITHUB_DISABLED', 'GitHub App is not configured');
   }

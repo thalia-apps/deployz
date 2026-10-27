@@ -1,0 +1,158 @@
+id: new-68
+repository: PostHog/posthog
+commit: 891a056a305ecf25498911e57ed57973b87878bc
+summary: >
+  PostHog product analytics platform (Django/Python backend, React frontend, Node.js and Rust services). The root
+  Dockerfile builds the Django web and Celery image (CMD ./bin/docker runs migrations, a worker and granian on 8000).
+  The app cannot run without ClickHouse and Kafka (event storage and ingestion), and event ingestion needs the Rust
+  capture service and the Node plugin server, which are separate images. Postgres, Redis and S3 alone are not enough.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The Django image needs ClickHouse (migrate_clickhouse --check runs before the web and worker start, and ClickHouse
+    holds all events) and Kafka. Ingestion also needs the Rust capture service and the Node plugin/ingestion services,
+    which are built from rust/Dockerfile and Dockerfile.node (second and third application images). ClickHouse, Kafka and
+    extra images are not supported by Deployz. The Postgres, Redis and S3 parts alone would deploy, but the app would
+    start with no way to store or ingest events.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "builds the Django web and Celery image, valid from the repo, but the app is not usable alone: it needs ClickHouse, Kafka and the separate capture and plugin-server images"}
+    - {path: Dockerfile.node, reason: "second application image (Node plugin and ingestion services); Deployz builds one image only"}
+    - {path: rust/Dockerfile, reason: "third application image (capture and other Rust services)"}
+    - {path: Dockerfile.sandbox, reason: "sandbox image for tooling, not the production app"}
+    - {path: Dockerfile.playwright, reason: "test image, not the production app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 18, quote: "# Node.js services are built separately using Dockerfile.node."}
+    - {path: Dockerfile, line: 443, quote: "CMD [\"./bin/docker\"]"}
+    - {path: docker-compose.hobby.yml, line: 231, quote: "image: ${REGISTRY_URL}-node:${POSTHOG_NODE_TAG:-latest}"}
+    - {path: docker-compose.hobby.yml, line: 576, quote: "context: ./posthog/rust"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 436, quote: "EXPOSE 8000"}
+    - {path: bin/docker-server, line: 18, quote: "export GRANIAN_HOST=${GRANIAN_HOST:-0.0.0.0}"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: bin/docker-server, line: 18, quote: "export GRANIAN_HOST=${GRANIAN_HOST:-0.0.0.0}"}
+startCommand:
+  source: image
+  accept: ["./bin/docker"]
+healthPath:
+  accept: ["/_livez"]
+  # healthcheck_middleware answers /_livez and /_readyz before any other middleware (no auth, no redirect, no host check).
+  # /_livez checks no dependency. /_readyz returns 503 when a dependency check fails, so it needs ClickHouse and Kafka.
+  # SecurityMiddleware runs BEFORE the health middleware and SECURE_SSL_REDIRECT is on in production, so a plain-HTTP
+  # ALB check gets a 301 unless DISABLE_SECURE_SSL_REDIRECT=true (or IS_BEHIND_PROXY=true) is set.
+  evidence:
+    - {path: posthog/settings/web.py, line: 197, quote: "\"django.middleware.security.SecurityMiddleware\","}
+    - {path: posthog/settings/access.py, line: 22, quote: "SECURE_SSL_REDIRECT = secure_cookies"}
+    - {path: posthog/settings/access.py, line: 26, quote: "DISABLE_SECURE_SSL_REDIRECT"}
+    - {path: posthog/health.py, line: 328, quote: "elif request.path == \"/_livez\":"}
+    - {path: posthog/health.py, line: 93, quote: "Endpoint to be used to identify if the service is still functioning"}
+    - {path: posthog/settings/web.py, line: 202, quote: "\"posthog.health.healthcheck_middleware\","}
+database:
+  status: required
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, "POSTHOG_DB_NAME/POSTHOG_DB_USER/POSTHOG_DB_PASSWORD/POSTHOG_POSTGRES_HOST"]
+  evidence:
+    - {path: posthog/settings/data_stores.py, line: 84, quote: "DATABASE_URL = os.getenv(\"DATABASE_URL\", \"\")"}
+    - {path: posthog/settings/data_stores.py, line: 118, quote: "The environment vars \"DATABASE_URL\" or \"POSTHOG_DB_NAME\" are absolutely required"}
+    - {path: posthog/settings/data_stores.py, line: 303, quote: "CLICKHOUSE_HOST: str = os.getenv(\"CLICKHOUSE_HOST\", \"clickhouse\")"}
+    - {path: posthog/settings/kafka.py, line: 210, quote: "KAFKA_HOSTS: list[str] = KAFKA_PROFILES"}
+    - {path: bin/migrate-check, line: 6, quote: "python manage.py migrate_clickhouse --check"}
+migrations:
+  mode: startup
+  accept: ["./bin/migrate", "python manage.py migrate"]
+  # The image CMD (bin/docker) runs bin/migrate (Postgres and ClickHouse) before the worker and the server.
+  evidence:
+    - {path: bin/docker, line: 4, quote: "./bin/migrate"}
+    - {path: bin/migrate, line: 86, quote: "if ! python manage.py migrate_clickhouse; then"}
+    - {path: bin/docker-migrate, line: 4, quote: "python manage.py migrate"}
+    - {path: bin/docker-server, line: 4, quote: "./bin/migrate-check"}
+    - {path: bin/migrate-check, line: 5, quote: "python manage.py migrate --check"}
+redis:
+  status: required
+  selectBy: {REDIS_URL: "redis://host:6379/"}
+  evidence:
+    - {path: posthog/settings/data_stores.py, line: 494, quote: "REDIS_URL = os.getenv(\"REDIS_URL\", \"\")"}
+    - {path: posthog/settings/data_stores.py, line: 496, quote: "if not REDIS_URL and get_from_env(\"POSTHOG_REDIS_HOST\", \"\"):"}
+workers:
+  status: independent
+  commands: ["./bin/docker-worker", "./bin/docker-worker-celery --with-scheduler"]
+  evidence:
+    - {path: bin/docker, line: 5, quote: "./bin/docker-worker &"}
+    - {path: bin/docker-worker, line: 9, quote: "./bin/posthog-node &"}
+    - {path: bin/docker-worker, line: 10, quote: "./bin/docker-worker-celery --with-scheduler &"}
+scheduledJobs:
+  status: embedded
+  items: [celery beat scheduler]
+  evidence:
+    - {path: bin/docker-worker, line: 10, quote: "--with-scheduler"}
+storage:
+  local: ephemeral
+  paths: []
+  s3: native
+  s3SelectBy: {OBJECT_STORAGE_ENABLED: "true", OBJECT_STORAGE_BUCKET: "<bucket>", OBJECT_STORAGE_REGION: "<region>"}
+  evidence:
+    - {path: posthog/settings/object_storage.py, line: 17, quote: "# or Fargate task, we default to `None`"}
+    - {path: posthog/settings/object_storage.py, line: 22, quote: "OBJECT_STORAGE_ENABLED = get_from_env(\"OBJECT_STORAGE_ENABLED\""}
+    - {path: posthog/settings/object_storage.py, line: 25, quote: "OBJECT_STORAGE_BUCKET = os.getenv(\"OBJECT_STORAGE_BUCKET\", \"posthog\")"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "Postgres URL; contains the password"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "Redis URL"}
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "the default key is critical-logged in production; set a unique value"}
+    - {name: ENCRYPTION_SALT_KEYS, secret: true, buildTime: false, note: "default is a public constant"}
+    - {name: SITE_URL, secret: false, buildTime: false, note: "public HTTPS URL; default is http://localhost:8010"}
+    - {name: CLICKHOUSE_HOST, secret: false, buildTime: false, note: "default host clickhouse; no ClickHouse is available on Deployz"}
+    - {name: KAFKA_HOSTS, secret: false, buildTime: false, note: "no Kafka is available on Deployz"}
+    - {name: DISABLE_SECURE_SSL_REDIRECT, secret: false, buildTime: false, note: "set to true: otherwise the plain-HTTP ALB health check gets a 301 to https (or set IS_BEHIND_PROXY=true with TRUST_ALL_PROXIES=true)"}
+  optional: [OBJECT_STORAGE_ENABLED, OBJECT_STORAGE_BUCKET, OBJECT_STORAGE_REGION, OBJECT_STORAGE_ENDPOINT, ALLOWED_HOSTS, GRANIAN_WORKERS, POSTHOG_SKIP_MIGRATION_CHECKS, COMMIT_HASH]
+  buildTime: []
+  evidence:
+    - {path: posthog/settings/access.py, line: 74, quote: "SECRET_KEY: str = os.getenv(\"SECRET_KEY\", DEFAULT_SECRET_KEY)"}
+    - {path: posthog/settings/access.py, line: 95, quote: "if not DEBUG and not TEST and not STATIC_COLLECTION and SECRET_KEY == DEFAULT_SECRET_KEY:"}
+    - {path: posthog/settings/access.py, line: 157, quote: "ENCRYPTION_SALT_KEYS = get_list("}
+    - {path: posthog/settings/__init__.py, line: 79, quote: "SITE_URL: str = os.getenv(\"SITE_URL\", \"http://localhost:8010\")"}
+blockers:
+  expected:
+    - "ClickHouse is required (all event data; migrate_clickhouse --check runs before web and worker start) and is not supported by Deployz"
+    - "Kafka is required for event ingestion and is not supported by Deployz"
+    - "Ingestion needs the Rust capture service and the Node plugin and ingestion services, built from rust/Dockerfile and Dockerfile.node: more than one application image, which Deployz does not support"
+  mustNot:
+    - "Postgres must not block: the app uses Postgres through DATABASE_URL (RDS PostgreSQL works)"
+    - "Redis must not block: ElastiCache Redis works through REDIS_URL"
+    - "S3 must not block: the Fargate task role is supported when OBJECT_STORAGE_ACCESS_KEY_ID is empty (the settings default to None)"
+    - "Running the Celery worker from the same image must not block: a worker with a different command is supported"
+    - "The multi-stage Dockerfile with several FROM lines must not be a blocker: the final stage is the app image"
+vendorQuestions:
+  legitimate:
+    - "Is a managed ClickHouse and Kafka available outside Deployz, and should the app use it? The repo cannot answer this"
+  unnecessary:
+    - "Which port? (8000 in the image)"
+    - "Who runs migrations? (bin/docker runs bin/migrate before the server)"
+    - "Which Dockerfile builds the Django app? (the root Dockerfile)"
+traps:
+  - "docker-compose.hobby.yml is the self-host topology, not a single-image app: it lists db, valkey, clickhouse, kafka, zookeeper, objectstorage, capture, plugins and more (docker-compose.hobby.yml:33-460)"
+  - "The root Dockerfile CMD starts only Django and Celery in one container; capture and ingestion run in other images (Dockerfile:18, bin/docker:4-6)"
+  - "OBJECT_STORAGE_ENABLED defaults to false outside DEBUG -> set it to true to use S3 (posthog/settings/object_storage.py:22)"
+  - "bin/docker-server runs migrate-check, so the web does not start if ClickHouse or Postgres migrations are missing (bin/docker-server:4, bin/migrate-check:5-7)"
+  - "/_livez looks like a plain health route -> SecurityMiddleware is listed before the health middleware, so with the production default SECURE_SSL_REDIRECT it answers 301 to an HTTP check (posthog/settings/web.py:197, posthog/settings/access.py:22); the SECURE_REDIRECT_EXEMPT list only has ^_health/? (access.py:23)"
+  - "Dockerfile sourcemap-upload stage uses an optional secret; the build keeps the .map files without it (Dockerfile:116)"
+  - "The root Dockerfile builds the frontend and Django with large dependency sets; the build needs much time and memory (Dockerfile:45-65)"
+openQuestions:
+  - "Whether a reduced PostHog without event ingestion would be useful to the user: the repo does not offer such a mode"
+crossReview:
+  - {field: migrations.mode, change: "command -> startup; the image CMD ./bin/docker runs ./bin/migrate (Postgres and ClickHouse) before the worker and the server, so no separate command is needed. accept now lists ./bin/migrate first. Added evidence for the ClickHouse migrate step", evidence: "bin/docker:4; bin/migrate:86"}
+  - {field: healthPath, change: "kept /_livez but added a warning: SecurityMiddleware is listed before the health middleware and SECURE_SSL_REDIRECT is on in production (exempt list is only ^_health/?), so a plain-HTTP ALB check gets a 301 unless DISABLE_SECURE_SSL_REDIRECT=true (or IS_BEHIND_PROXY=true). Added the env var to env.required and a trap", evidence: "posthog/settings/web.py:197,202; posthog/settings/access.py:22,23,26"}
+  - {field: outcome / blockers, change: "none: NOT_DEPLOYABLE confirmed; ClickHouse is checked by migrate-check before web and worker start, Kafka is used by bin/posthog-node (KAFKA_HOSTS), and Node services come from Dockerfile.node", evidence: "bin/migrate-check:6; bin/posthog-node; Dockerfile:18"}
+  - {field: storage, change: "none: S3 with the task role works because empty keys become None when OBJECT_STORAGE_ENABLED is true", evidence: "posthog/settings/object_storage.py:19-22"}
+  - {field: all, change: verified, evidence: "36 citations checked"}

@@ -1,7 +1,7 @@
 /**
  * Regressions from the 2026-10 analysis corpus (linkding, memos, vikunja,
- * shlink, docmost, cal.com, authentik, metabase, vaultwarden, miniflux;
- * scripts/run-and-check/ground-truth/). Each case is
+ * shlink, docmost, cal.com, authentik, metabase, vaultwarden, miniflux,
+ * listmonk, actual, gitea, meilisearch, qdrant; scripts/run-and-check/ground-truth/). Each case is
  * a small tree with the shape that the real repository has, and a negative
  * case that must keep the old answer.
  */
@@ -13,6 +13,7 @@ import {
   detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
   detectEnvVarModel,
+  detectGitCopyInDockerfile,
   detectHealthEndpoint,
   detectPort,
   detectStartupCommand,
@@ -23,7 +24,7 @@ import {
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { assessRedis } from '../src/redis.js';
-import { checkElasticsearch, checkGpu, checkOtherUnsupportedDatabases } from '../src/rejection.js';
+import { checkElasticsearch, checkExplicitPersistentDataDir, checkGpu, checkOtherUnsupportedDatabases } from '../src/rejection.js';
 
 const envVar = (tree: FileTree, key: string) => detectEnvVarModel(tree).find((variable) => variable.key === key);
 
@@ -525,6 +526,160 @@ describe('a Dockerfile beside no project file that copies its whole context (min
 
   it('keeps the Dockerfile directory when it holds the project', () => {
     expect(detectDockerfileBuildContext(tree(['packaging/docker/alpine/go.mod'])).detected).toBe(false);
+  });
+});
+
+describe('a test that calls the health route (listmonk)', () => {
+  const tree = (callerPath: string): FileTree => ({
+    Dockerfile: 'FROM alpine:3.22\nCOPY listmonk .\nEXPOSE 9000\nCMD ["./listmonk"]\n',
+    'go.mod': 'module github.com/knadh/listmonk\n',
+    'cmd/handlers.go': 'func initHTTPHandlers(e *echo.Echo) {\n\tg := e.Group("")\n\tg.GET("/health", a.HealthCheck)\n}\n',
+    'tests/package.json': '{"name": "listmonk-tests", "devDependencies": {"@playwright/test": "^1.50.0"}}',
+    [callerPath]: "test('up', async ({ page }) => {\n  return (await page.request.get('/health')).ok();\n});\n",
+  });
+
+  it('reads the route the app registers, not the test call', () => {
+    expect(detectHealthEndpoint(tree('tests/specs/subscribers.spec.js')).path).toBe('/health');
+  });
+
+  it('keeps the bare route when the same file also registers it under the API prefix', () => {
+    const handlers = 'func initHTTPHandlers(e *echo.Echo) {\n\tg := e.Group("", a.auth.Middleware)\n\tg.GET("/api/health", a.HealthCheck)\n\tp := e.Group("")\n\tp.GET("/health", a.HealthCheck)\n}\n';
+    expect(detectHealthEndpoint({ ...tree('tests/specs/subscribers.spec.js'), 'cmd/handlers.go': handlers }).path).toBe('/health');
+  });
+
+  it('still prefers the longer path from another file', () => {
+    expect(
+      detectHealthEndpoint({ 'package.json': '{"name": "app"}', 'src/app.js': "app.get('/health', ok);\n", 'src/api.js': "router.get('/api/health', ok);\n" }).path,
+    ).toBe('/api/health');
+  });
+
+  it('still reads a route that app source registers', () => {
+    expect(detectHealthEndpoint({ 'package.json': '{"name": "app"}', 'src/server.js': "app.get('/healthz', (req, res) => res.send('ok'));\n" }).path).toBe('/healthz');
+  });
+});
+
+describe('a development image that runs a mounted checkout (actual)', () => {
+  const tree = (dev: string): FileTree => ({
+    Dockerfile: dev,
+    'sync-server.Dockerfile':
+      'FROM node:24 AS builder\nCOPY packages/ ./packages/\nRUN yarn build:server\nFROM node:24-slim\nCOPY --from=builder /app/build ./build\nEXPOSE 5006\nCMD ["node", "build/app.js"]\n',
+    'package.json': '{"name": "actual"}',
+  });
+
+  it('builds the image that copies the app, not the image that copies nothing', () => {
+    expect(selectedDockerfile(tree('FROM node:24-bookworm AS dev\nRUN apt-get update -y\nWORKDIR /app\nCMD ["sh", "./bin/docker-start"]\n'))?.path).toBe('sync-server.Dockerfile');
+  });
+
+  it('keeps the shallower image when it copies the app in', () => {
+    expect(selectedDockerfile(tree('FROM node:24-bookworm\nWORKDIR /app\nCOPY . .\nCMD ["sh", "./bin/docker-start"]\n'))?.path).toBe('Dockerfile');
+  });
+});
+
+describe('a build step that bind-mounts .git (gitea)', () => {
+  const tree = (mount: string): FileTree => ({
+    Dockerfile: [
+      'FROM golang:1.25 AS build-env',
+      'COPY . /go/src/code.gitea.io/gitea',
+      'RUN --mount=type=cache,target="/root/.cache/go-build" \\',
+      `    ${mount} \\`,
+      '    make backend',
+      'FROM alpine:3.22',
+      'COPY --from=build-env /go/src/code.gitea.io/gitea/gitea /app/gitea/gitea',
+      'CMD ["/usr/bin/s6-svscan", "/etc/s6"]',
+      '',
+    ].join('\n'),
+  });
+
+  it('needs the .git directory the source archive does not have', () => {
+    expect(detectGitCopyInDockerfile(tree('--mount=type=bind,source=".git/",target=".git/"')).detected).toBe(true);
+  });
+
+  it('does not flag a bind mount of another path or of another stage', () => {
+    expect(detectGitCopyInDockerfile(tree('--mount=type=bind,source=go.mod,target=go.mod')).detected).toBe(false);
+    expect(detectGitCopyInDockerfile(tree('--mount=type=bind,from=src,source=.git,target=.git')).detected).toBe(false);
+  });
+});
+
+describe('a configuration file that names the data location (meilisearch, qdrant)', () => {
+  const tree = (path: string, config: string): FileTree => ({
+    Dockerfile:
+      'FROM rust:1.89 AS compiler\nCOPY . .\nRUN cargo build --release\nFROM alpine:3.22\nCOPY --from=compiler /target/release/app /bin/app\nEXPOSE 7700\nCMD ["/bin/app"]\n',
+    'Cargo.toml': '[package]\nname = "app"\n',
+    [path]: config,
+  });
+
+  it('is durable local state', () => {
+    expect(checkExplicitPersistentDataDir(tree('config.toml', '# Where the database lives.\ndb_path = "./data.ms"\n')).detected).toBe(true);
+    expect(checkExplicitPersistentDataDir(tree('config/config.yaml', 'storage:\n  # Where to store all the data\n  storage_path: ./storage\n')).detected).toBe(true);
+  });
+
+  it('is not a commented setting, a cache path or a setting in a test config', () => {
+    expect(checkExplicitPersistentDataDir(tree('config.toml', '# db_path = "./data.ms"\n')).detected).toBe(false);
+    expect(checkExplicitPersistentDataDir(tree('config/config.yaml', 'storage:\n  data_dir: /tmp/cache\n')).detected).toBe(false);
+    expect(checkExplicitPersistentDataDir(tree('tests/config.yaml', 'storage_path: ./storage\n')).detected).toBe(false);
+  });
+});
+
+describe('a Rust health route (qdrant)', () => {
+  const tree = (source: string): FileTree => ({
+    Dockerfile: 'FROM rust:1.89 AS builder\nCOPY . .\nRUN cargo build --release\nFROM debian:13-slim\nCOPY --from=builder /target/release/qdrant /qdrant/qdrant\nEXPOSE 6333\nCMD ["/qdrant/qdrant"]\n',
+    'Cargo.toml': '[package]\nname = "qdrant"\n',
+    'src/actix/api/service_api.rs': source,
+  });
+
+  it('reads an actix route attribute', () => {
+    expect(detectHealthEndpoint(tree('#[get("/healthz")]\nasync fn healthz() -> impl Responder {\n    kubernetes_healthz()\n}\n')).path).toBe('/healthz');
+  });
+
+  it('reads no route from a Rust string that is no route', () => {
+    expect(detectHealthEndpoint(tree('const NAME: &str = "healthz";\n')).detected).toBe(false);
+  });
+});
+
+describe('an init process ENTRYPOINT with no CMD (mastodon)', () => {
+  const tree = (cmd: string): FileTree => ({
+    Dockerfile: `FROM ruby:3.4-slim\nCOPY . /opt/mastodon\nEXPOSE 3000 4000\nENTRYPOINT ["/usr/bin/tini", "--"]\n${cmd}`,
+    Gemfile: "source 'https://rubygems.org'\ngem 'rails'\n",
+  });
+
+  it('has no start command', () => {
+    expect(detectStartupCommand(tree('')).detected).toBe(false);
+  });
+
+  it('runs the CMD the init process is given', () => {
+    expect(detectStartupCommand(tree('CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]\n')).detected).toBe(true);
+  });
+});
+
+describe('a Redis queue that a mode equality test turns on, with no default (Flowise)', () => {
+  const tree = (test: string): FileTree => ({
+    Dockerfile: 'FROM node:20-alpine\nCOPY . .\nRUN pnpm install && pnpm build\nEXPOSE 3000\nCMD [ "pnpm", "start" ]\n',
+    'package.json': JSON.stringify({ name: 'flowise', scripts: { start: 'node bin/run start', 'start-worker': 'node bin/run worker' }, dependencies: { bullmq: '^5.0.0', ioredis: '^5.0.0' } }),
+    'src/CachePool.ts': `export class CachePool {\n    async init() {\n        if (${test}) {\n            this.redis = new Redis(process.env.REDIS_URL)\n        }\n    }\n}\n`,
+    'src/Interface.ts': "export enum MODE {\n    QUEUE = 'queue',\n    MAIN = 'main'\n}\n",
+  });
+
+  it('does not provision Redis when the mode is unset by default', () => {
+    expect(assessRedis(tree('process.env.MODE === MODE.QUEUE')).required).toBe(false);
+  });
+
+  it('provisions Redis when no test turns the queue mode on', () => {
+    expect(assessRedis(tree('process.env.MODE !== MODE.MAIN')).required).toBe(true);
+  });
+});
+
+describe('a development environment image beside the app images (penpot)', () => {
+  const tree = (devDir: string): FileTree => ({
+    [`docker/${devDir}/Dockerfile`]: 'FROM ubuntu:24.04\nRUN apt-get update && apt-get install -y openjdk-21-jdk nodejs\nCOPY files/init.sh /home/init.sh\nCMD ["/home/init.sh"]\n',
+    'docker/images/Dockerfile.backend': 'FROM eclipse-temurin:21-jre\nCOPY bundle-backend/ /opt/penpot/backend/\nEXPOSE 6060\nCMD ["/bin/bash", "run.sh"]\n',
+  });
+
+  it('ranks the devenv image below the app image', () => {
+    expect(selectedDockerfile(tree('devenv'))?.path).toBe('docker/images/Dockerfile.backend');
+  });
+
+  it('keeps a shallower image in an ordinary directory', () => {
+    expect(selectedDockerfile(tree('runtime'))?.path).toBe('docker/runtime/Dockerfile');
   });
 });
 
