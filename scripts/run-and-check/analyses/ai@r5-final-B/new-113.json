@@ -1,0 +1,107 @@
+{
+  "id": "new-113",
+  "commit": "821ca1d87e81751216f1f6fd5ed89935b1677f98",
+  "analyser": "ai@r5-final-B",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".oss-scanner",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": ".oss-scanner/Dockerfile"
+    },
+    "build": {
+      "command": "cd banking && yarn build",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0423918,
+        "promptTokens": 9540,
+        "completionTokens": 233
+      },
+      "latencyMs": 6169
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6170,
+    "questions": 2,
+    "generatedAt": "2026-10-27T14:47:30.464Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
