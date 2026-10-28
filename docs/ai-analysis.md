@@ -213,11 +213,20 @@ Repository (GitHub tree, bounded)
   without `--from`, no bind mount) is not buildable either: its image runs
   code from another image, not from the commit (outline copies its build and
   `node_modules` from the floating `outlinewiki/outline-base` image), unless
-  another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
+  another candidate with a CMD or ENTRYPOINT copies from the repository. A
+  Dockerfile with no build step (no RUN with a compiler, package manager or
+  build tool) that copies a prebuilt artefact is not buildable either: a
+  generated directory that the repository does not contain (shiori's
+  `COPY dist/shiori_…`) or a path of build arguments with no default (flipt's
+  `COPY $TARGETPLATFORM/$BINARY /`). A goreleaser or other CI job makes these
+  files before `docker build`. A candidate that copies nothing from the
+  repository (a Dockerfile for a mounted checkout) is not another buildable
+  Dockerfile. A capped or partial
   file list (GitHub cuts the listing of a very large repository and says
   `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=`, a heredoc
-  source (`COPY <<'EOF' …`) and a generated directory never reject. A
+  source (`COPY <<'EOF' …`) and a generated directory that a build step of
+  the Dockerfile can make never reject. A
   repository whose full path list holds only documents (README, licence,
   Markdown, images, `.github/`) has no application source: it is the
   `no-application-source` rejection (finding `unsupported-no-application-source`,
@@ -279,7 +288,8 @@ Repository (GitHub tree, bounded)
 - **Go PostgreSQL drivers:** a direct `github.com/lib/pq` or `jackc/pgx`
   requirement in `go.mod` counts only when non-test, non-vendored Go source
   imports the module. A requirement that no code imports is not evidence of
-  PostgreSQL.
+  PostgreSQL. A requirement marked `// indirect` is a transitive module, so
+  it is never a PostgreSQL signal (the same rule as the MySQL drivers).
 - **Database engine:** PostgreSQL wins when the app can run on it. A Go
   PostgreSQL driver in `go.mod` counts when runtime Go source imports it,
   when an engine selector the app reads defaults to SQLite or PostgreSQL,
@@ -378,8 +388,10 @@ is final.
     repository (`no-buildable-dockerfile`): an application, or a library,
     framework, SDK or CLI that others install. "Add a Dockerfile" is the
     wrong fix for a repository with no server to run (crewAI, agno,
-    superagent, Strapi). A rule cannot decide it: these repositories have
-    ports, start scripts and Dockerfiles in examples and templates.
+    superagent, Strapi). The rules decide only the clear case (see
+    `library-repository` below). The other cases go to the model: these
+    repositories have ports, start scripts and Dockerfiles in examples and
+    templates.
   - A repository with no open item makes no model call.
 - **Evidence files** (`evidenceFileRequests`): the rules tree fetches at
   most 200 files of some source languages (TypeScript, JavaScript, Python,
@@ -492,8 +504,15 @@ is final.
   repository kind other than `application` replaces the
   `no-buildable-dockerfile` rejection with `library-repository` (finding
   `unsupported-library-repository`, a `CAPABILITY_GAP`): outcome 3, not
-  deployable, and no "add a Dockerfile" finding. The rules engine and a
-  fallback keep outcome 2 for these repositories. (Before
+  deployable, and no "add a Dockerfile" finding. The rules engine gives
+  `library-repository` itself only when every production package manifest
+  publishes its code (a `bin`, `exports`, a build backend, console scripts,
+  a Rust `[lib]`). A workspace root and the manifests in examples, templates
+  and cookbooks do not count. `"main"`, `"module"` or `"types"` alone does
+  not publish, because an application's package.json has them too. One
+  manifest that publishes nothing (an application's package.json or
+  composer.json, a Rust binary crate) keeps outcome 2, and the model then
+  answers the repository kind. (Before
   prompt v15 the open facts were all or nothing, because an unknown
   migration was not a question then: new-23 became READY and did not
   start.) A migration answer that is unknown or fails its own check stays an open
@@ -610,11 +629,19 @@ SQLite, Elasticsearch/OpenSearch (also the Python clients `elasticsearch`,
 `elasticsearch-dsl` and `opensearch-py`), Cassandra, Neo4j, CouchDB (`nano`),
 ClickHouse, embedded
 JVM databases), `unsupported-redis-setup`,
-`unsupported-architecture`, `unsupported-message-queue`,
+`unsupported-architecture`, `unsupported-message-queue` (Kafka or RabbitMQ:
+a broker service in the production Compose file, also a `rabbitmq` service
+that `extends` another file and has no image, or a client such as `pika`,
+`aio-pika`, `amqplib` or an `amqp://` URL in runtime source, with a required
+connection setting),
 `unsupported-multi-service` (Compose application services beyond the web
 service and declared workers; also a multi-process image: s6-overlay or
 supervisord with two or more services in the production stage (a trailing
-dev all-in-one stage does not count), or a start script on the
+dev all-in-one stage does not count), or with one queue worker or
+scheduler next to the web service (Laravel `schedule:work` next to nginx and
+php-fpm that the base image supervises), or a shell-form CMD or ENTRYPOINT
+that puts a server in the background before the foreground one
+(`node worker.js & node server.js`), or a start script on the
 CMD/ENTRYPOINT chain that puts two or more long-running servers in the
 background with `&`, such as Homarr's `redis-server &` and
 `node server.js &`; an nginx, apache, httpd or caddy front end and a
@@ -669,7 +696,12 @@ describe the production deployment:
   `dev`, `test`, `docs`, `examples`, `contrib`, `build` or `demo` directory
   or a test project directory (`BTCPayServer.Tests`),
   not an `override`/`dev`/`ci` variant, and not a file that mounts the
-  repository checkout (`.:/app`). Services on the same build or image are one
+  repository checkout (`.:/app`). A service under a `profiles:` key, or one
+  that a lighter production variant in the same directory leaves out, is
+  optional and blocks nothing. Flagsmith's `docker-compose.flags-only.yml`
+  runs the app and PostgreSQL without the ClickHouse, Kafka and ingestion
+  services of `docker-compose.yml`. The variant must run an application
+  service of the main file and only services of the main file. Services on the same build or image are one
   application: the extra services are workers or replicas. Infrastructure
   images, bare runtime images (`node`), dev servers, database studios and
   services whose command, health probe or data volume is a database server

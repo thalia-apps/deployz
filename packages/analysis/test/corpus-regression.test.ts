@@ -26,7 +26,21 @@ import {
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { assessRedis } from '../src/redis.js';
-import { assessMysql, checkElasticsearch, checkExplicitPersistentDataDir, checkGpu, checkKubernetes, checkNoBuildableDockerfile, checkOtherUnsupportedDatabases, checkSqlite } from '../src/rejection.js';
+import { rejectionFindingId } from '../src/readiness-report.js';
+import {
+  assessMysql,
+  checkDockerComposeMultiService,
+  checkElasticsearch,
+  checkExplicitPersistentDataDir,
+  checkGpu,
+  checkKafka,
+  checkKubernetes,
+  checkMultiProcessImage,
+  checkNoBuildableDockerfile,
+  checkOtherUnsupportedDatabases,
+  checkRabbitMq,
+  checkSqlite,
+} from '../src/rejection.js';
 
 const envVar = (tree: FileTree, key: string) => detectEnvVarModel(tree).find((variable) => variable.key === key);
 
@@ -934,5 +948,125 @@ describe('round 6 corpus (karakeep, beszel, pingvin-share)', () => {
     const chart = 'apiVersion: v2\nname: sqlpad\n';
     expect(checkKubernetes({ 'sqlpad-charts/Chart.yaml': chart }).detected).toBe(false);
     expect(checkKubernetes({ 'Chart.yaml': chart }).detected).toBe(true);
+  });
+});
+
+describe('Round 6 analysis gaps', () => {
+  const withPaths = (files: FileTree, extra: string[] = []): FileTree =>
+    Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+
+  it('rejects a repository whose every package manifest publishes a library or CLI (crewAI, agno, superagent)', () => {
+    const library = (): FileTree => ({
+      'package.json': '{\n  "private": true,\n  "workspaces": ["cli", "sdk"]\n}\n',
+      'cli/package.json': '{\n  "name": "@acme/cli",\n  "bin": {\n    "acme": "dist/index.js"\n  }\n}\n',
+      'sdk/python/pyproject.toml': '[project]\nname = "acme"\n[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n',
+      'cookbook/demo/pyproject.toml': '[project]\nname = "demo"\ndependencies = ["acme"]\n',
+    });
+    const rejection = checkNoBuildableDockerfile(withPaths(library()));
+    expect(rejection.dependency).toBe('library-repository');
+    expect(rejectionFindingId(rejection.dependency)).toBe('unsupported-library-repository');
+    // An application manifest next to the packages (only "main", a start script) keeps "add a Dockerfile".
+    const app = { ...library(), 'web/package.json': '{\n  "name": "web",\n  "main": "server.js",\n  "scripts": { "start": "node server.js" }\n}\n' };
+    expect(checkNoBuildableDockerfile(withPaths(app)).dependency).toBe('no-buildable-dockerfile');
+    // A buildable Dockerfile is never a library rejection.
+    const dockerfile = { ...library(), Dockerfile: 'FROM python:3.12\nCOPY . .\nRUN pip install .\nCMD ["acme", "serve"]\n' };
+    expect(checkNoBuildableDockerfile(withPaths(dockerfile)).detected).toBe(false);
+  });
+
+  it('does not build a Dockerfile that copies a prebuilt binary that no step makes (shiori, flipt)', () => {
+    const shiori = (dockerfile: string): FileTree =>
+      withPaths(
+        {
+          Dockerfile: dockerfile,
+          'Dockerfile.compose': 'FROM golang:1.22-alpine\nWORKDIR /src/shiori\nENTRYPOINT ["go", "run", "main.go"]\nCMD ["server"]\n',
+        },
+        ['main.go', 'go.mod'],
+      );
+    const prebuilt = [
+      'FROM alpine:3.19 AS builder',
+      'ARG TARGETOS',
+      'ARG TARGETARCH',
+      'COPY dist/shiori_${TARGETOS}_${TARGETARCH}/shiori /usr/bin/shiori',
+      'RUN apk add --no-cache ca-certificates',
+      'FROM scratch',
+      'COPY --from=builder /usr/bin/shiori /usr/bin/shiori',
+      'ENTRYPOINT ["/usr/bin/shiori"]',
+      '',
+    ].join('\n');
+    expect(checkNoBuildableDockerfile(shiori(prebuilt)).dependency).toBe('no-buildable-dockerfile');
+    const fromSource = 'FROM golang:1.22-alpine AS builder\nCOPY . .\nRUN go build -o dist/shiori .\nFROM alpine:3.19\nCOPY --from=builder /go/dist/shiori /usr/bin/shiori\nENTRYPOINT ["/usr/bin/shiori"]\n';
+    expect(checkNoBuildableDockerfile(shiori(fromSource)).detected).toBe(false);
+
+    const flipt = (copy: string, extra: string[]): FileTree =>
+      withPaths({ 'build/Dockerfile': `FROM alpine:3.24\nARG BINARY=flipt\nARG TARGETPLATFORM\n${copy}\nEXPOSE 8080\nCMD ["/flipt", "server"]\n` }, extra);
+    expect(checkNoBuildableDockerfile(flipt('COPY $TARGETPLATFORM/$BINARY /', ['go.mod'])).dependency).toBe('no-buildable-dockerfile');
+    // A variable path with a default that the repository holds is a plain copy.
+    expect(checkNoBuildableDockerfile(flipt('COPY ${BINARY} /', ['go.mod', 'build/flipt'])).detected).toBe(false);
+  });
+
+  it('rejects a web image that also supervises a worker (invoiceshelf scheduler, supervisord queue)', () => {
+    const multiProcess = (files: FileTree): boolean => checkMultiProcessImage(withPaths(files)).detected;
+    const s6 = (files: FileTree): FileTree => ({
+      'docker/production/Dockerfile':
+        'FROM serversideup/php:8.5-fpm-nginx-alpine AS base\nFROM base AS production\nCOPY . /var/www/html\nCOPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/\n',
+      ...files,
+    });
+    expect(multiProcess(s6({ 'docker/production/s6-overlay/s6-rc.d/scheduler/run': '#!/bin/sh\nexec php artisan schedule:work\n' }))).toBe(true);
+    expect(multiProcess(s6({ 'docker/production/s6-overlay/s6-rc.d/app/run': '#!/bin/sh\nexec php artisan octane:start\n' }))).toBe(false);
+
+    const supervisord = (programs: string): FileTree => ({
+      Dockerfile: 'FROM php:8.5-fpm-alpine\nRUN apk add supervisor\nCOPY supervisord.ini /etc/supervisord.ini\nCMD ["supervisord", "-c", "/etc/supervisord.ini"]\n',
+      'supervisord.ini': programs,
+    });
+    const web = '[program:php-fpm]\ncommand=php-fpm -F\n[program:caddy]\ncommand=caddy run\n';
+    // php-fpm with its web front end is one web service (the 2026-10-10 decision).
+    expect(multiProcess(supervisord(web))).toBe(false);
+    expect(multiProcess(supervisord(`${web}[program:queue]\ncommand=php artisan queue:work\n`))).toBe(true);
+  });
+
+  it('rejects a shell-form start command that backgrounds a second server', () => {
+    const start = (cmd: string): boolean => checkMultiProcessImage(withPaths({ Dockerfile: `FROM node:22\nCOPY . .\n${cmd}\n` })).detected;
+    expect(start('CMD ["sh", "-c", "node worker.js & node server.js"]')).toBe(true);
+    expect(start('CMD ["sh", "-c", "trap exit TERM; sleep infinity & wait"]')).toBe(false);
+    expect(start('CMD ["sh", "-c", "npm run migrate && node server.js"]')).toBe(false);
+  });
+
+  it('does not block on a datastore that a lighter production Compose variant leaves out (Flagsmith)', () => {
+    const compose = [
+      'services:',
+      '  postgres:',
+      '    image: postgres:15',
+      '  flagsmith:',
+      '    image: flagsmith/flagsmith:latest',
+      '  kafka:',
+      '    image: apache/kafka:3.9.1',
+      '  clickhouse:',
+      '    image: clickhouse/clickhouse-server:25.12',
+      '  ingestion-server:',
+      '    image: flagsmith/events-ingestion-api:latest',
+      '',
+    ].join('\n');
+    const lighter = 'services:\n  postgres:\n    image: postgres:15\n  flagsmith:\n    image: flagsmith/flagsmith:latest\n';
+    const tree = (files: FileTree): FileTree => ({ 'docker-compose.yml': compose, 'api/pyproject.toml': '[project]\ndependencies = ["clickhouse-driver==0.2.11"]\n', ...files });
+    expect(checkOtherUnsupportedDatabases(tree({ 'docker-compose.flags-only.yml': lighter })).detected).toBe(false);
+    expect(checkKafka(tree({ 'docker-compose.flags-only.yml': lighter })).detected).toBe(false);
+    expect(checkDockerComposeMultiService(tree({ 'docker-compose.flags-only.yml': lighter })).detected).toBe(false);
+    // Without the lighter variant the services are part of the default stack.
+    expect(checkOtherUnsupportedDatabases(tree({})).dependency).toBe('clickhouse');
+    expect(checkKafka(tree({})).detected).toBe(true);
+  });
+
+  it('finds RabbitMQ from a Compose service that extends another file, or an AMQP URL (AutoGPT)', () => {
+    const compose = 'services:\n  rabbitmq:\n    extends:\n      file: ./docker-compose.platform.yml\n      service: rabbitmq\n  rest_server:\n    build: .\n';
+    expect(checkRabbitMq({ 'docker-compose.yml': compose }).dependency).toBe('rabbitmq');
+    const settings = 'RABBITMQ_HOST = "127.0.0.1"\n';
+    expect(checkRabbitMq({ 'app/settings.py': settings, 'app/queue.py': 'BROKER = "amqp://guest:guest@localhost:5672/"\n' }).detected).toBe(true);
+    expect(checkRabbitMq({ 'app/settings.py': settings }).detected).toBe(false);
+  });
+
+  it('does not read PostgreSQL from an indirect Go module', () => {
+    const goMod = (line: string): FileTree => ({ 'go.mod': `module example.com/app\n\nrequire (\n\t${line}\n)\n`, 'main.go': 'package main\nfunc main() {}\n' });
+    expect(detectPostgresql(goMod('github.com/lib/pq v1.10.9 // indirect')).detected).toBe(false);
+    expect(detectPostgresql(goMod('github.com/lib/pq v1.10.9')).detected).toBe(true);
   });
 });

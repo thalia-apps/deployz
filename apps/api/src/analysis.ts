@@ -473,7 +473,18 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // asks whether the repository is a library, framework, SDK or CLI; a checked
 // answer is NOT_DEPLOYABLE (`library-repository`), not "add a Dockerfile".
 // Stored v73 AI rows can ask a framework repository for a Dockerfile.
-export const ANALYSIS_VERSION = 74;
+// Version 75: the rules reject a repository whose every package manifest
+// publishes a library or CLI (`library-repository`); a Dockerfile with no
+// build step that copies a prebuilt binary or dist/ is not buildable; a web
+// image that also supervises a worker or scheduler, or a CMD that backgrounds
+// a server with `&`, is a multi-process image; a service that a lighter
+// production Compose variant leaves out is optional (Flagsmith's ClickHouse
+// and Kafka); a `rabbitmq` Compose service that `extends` another file and an
+// `amqp://` URL are RabbitMQ evidence; an `// indirect` Go PostgreSQL module is
+// not PostgreSQL. Stored v74 rows can ask a library for a Dockerfile, call a
+// prebuilt-binary or multi-process image deployable, or block on an optional
+// datastore.
+export const ANALYSIS_VERSION = 75;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
