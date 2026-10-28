@@ -61,6 +61,7 @@ interface SubscriptionEventOptions {
   customerId?: string;
   currentBillingPeriod?: { starts_at: string; ends_at: string } | null;
   scheduledChange?: { action: string; effective_at: string } | null;
+  itemPriceIds?: string[];
 }
 
 /** Paddle's wire shape (snake_case) for a subscription.* notification. */
@@ -86,7 +87,14 @@ function subscriptionEvent(options: SubscriptionEventOptions): Record<string, un
           ? { starts_at: '2026-01-01T00:00:00Z', ends_at: '2026-02-01T00:00:00Z' }
           : options.currentBillingPeriod,
       scheduled_change: options.scheduledChange ?? null,
-      items: [],
+      items: (options.itemPriceIds ?? ['pri_platform_replace_me']).map((priceId) => ({
+        status: 'active',
+        quantity: 1,
+        recurring: true,
+        created_at: options.occurredAt,
+        updated_at: options.occurredAt,
+        price: { id: priceId, product_id: 'pro_test_1', description: 'Test price', tax_mode: 'account_setting' },
+      })),
       custom_data: options.organizationId
         ? { organizationId: options.organizationId, checkoutIntentId: options.checkoutIntentId }
         : null,
@@ -695,6 +703,30 @@ describe('POST /api/billing/webhook (Paddle)', () => {
       expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
     });
 
+    it.each(['subscription.activated', 'subscription.updated'])(
+      "ignores a %s event without the platform price, which carries no transaction id to check",
+      async (eventType) => {
+        const org = await signUpAndGetOrg(auth, db, nextEmail());
+        const intentId = await seedPendingIntent(db, org.organizationId, `txn_bind_${eventType}`);
+
+        const result = await send(
+          subscriptionEvent({
+            eventId: `evt_bind_no_platform_${eventType}`,
+            eventType,
+            occurredAt: new Date().toISOString(),
+            organizationId: org.organizationId,
+            checkoutIntentId: intentId,
+            subscriptionId: `sub_bind_no_platform_${eventType}`,
+            status: 'active',
+            itemPriceIds: ['pri_deployment_replace_me'],
+          }),
+        );
+
+        expect(result.outcome).toBe('IGNORED');
+        expect(await getSubscriptionRow(db, org.organizationId)).toBeNull();
+      },
+    );
+
     it("binds a subscription whose transaction is the PENDING intent's transaction", async () => {
       const org = await signUpAndGetOrg(auth, db, nextEmail());
       const intentId = await seedPendingIntent(db, org.organizationId, 'txn_bind_ok');
@@ -803,6 +835,52 @@ describe('POST /api/billing/webhook (Paddle)', () => {
     expect(rowAfterTransaction!.lastProviderEventAt!.getTime()).toBeGreaterThan(
       rowAfterCreate!.lastProviderEventAt!.getTime(),
     );
+  });
+
+  it('a delayed transaction event never moves the stale-event watermark backwards', async () => {
+    const org = await signUpAndGetOrg(auth, db, nextEmail());
+    const send = async (event: Record<string, unknown>) => {
+      const signed = signedWebhook(WEBHOOK_SECRET, event);
+      const response = await app.inject({ method: 'POST', url: '/api/billing/webhook', headers: signed.headers, payload: signed.body });
+      expect(response.statusCode).toBe(200);
+      return response.json() as { outcome: string };
+    };
+    await send(
+      subscriptionEvent({
+        eventId: 'evt_wm_1',
+        eventType: 'subscription.created',
+        occurredAt: '2026-06-01T00:00:10.000Z',
+        organizationId: org.organizationId,
+        checkoutIntentId: await seedPendingIntent(db, org.organizationId),
+        subscriptionId: 'sub_wm',
+        status: 'past_due',
+      }),
+    );
+
+    await send(
+      transactionEvent({
+        eventId: 'evt_wm_2',
+        eventType: 'transaction.payment_failed',
+        occurredAt: '2026-06-01T00:00:05.000Z',
+        organizationId: org.organizationId,
+        subscriptionId: 'sub_wm',
+      }),
+    );
+    const late = await send(
+      subscriptionEvent({
+        eventId: 'evt_wm_3',
+        eventType: 'subscription.activated',
+        occurredAt: '2026-06-01T00:00:07.000Z',
+        organizationId: org.organizationId,
+        subscriptionId: 'sub_wm',
+        status: 'active',
+      }),
+    );
+
+    expect(late.outcome).toBe('IGNORED');
+    const row = await getSubscriptionRow(db, org.organizationId);
+    expect(row!.status).toBe('PAST_DUE');
+    expect(row!.lastProviderEventAt!.toISOString()).toBe('2026-06-01T00:00:10.000Z');
   });
 
   it('reflects the new subscription status through GET /api/organization', async () => {

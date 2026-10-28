@@ -1,4 +1,4 @@
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, lt, sql } from 'drizzle-orm';
 
 import type { InfrastructureSizeTier, Region } from '@deployz/contracts';
 import type { RuntimeDb } from '@deployz/db';
@@ -146,79 +146,90 @@ export async function createCheckoutIntent(
     if (!(await newestDeployableRelease(db, applicationId))) throw releaseRequiredError();
   }
 
-  const startedAt = now();
-  await expireStalePendingIntents(db, params.organizationId, startedAt);
+  // One checkout at a time per organization: without this lock two
+  // simultaneous calls (a double click) both see no transaction on the intent
+  // and each opens a Paddle transaction, and the vendor can pay for both.
+  const created = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'billing-checkout:' + params.organizationId}))`);
+    const startedAt = now();
+    await expireStalePendingIntents(tx, params.organizationId, startedAt);
 
-  const [existing] = await db
-    .select()
-    .from(schema.billingCheckoutIntents)
-    .where(
-      and(
-        eq(schema.billingCheckoutIntents.organizationId, params.organizationId),
-        eq(schema.billingCheckoutIntents.status, 'PENDING'),
-      ),
-    )
-    .limit(1);
+    const [existing] = await tx
+      .select()
+      .from(schema.billingCheckoutIntents)
+      .where(
+        and(
+          eq(schema.billingCheckoutIntents.organizationId, params.organizationId),
+          eq(schema.billingCheckoutIntents.status, 'PENDING'),
+        ),
+      )
+      .limit(1);
 
-  const request = {
-    applicationId: params.applicationId ?? null,
-    customerId: params.customerId ?? null,
-    region: params.region ?? null,
-    sizeProfile: params.sizeProfile ?? null,
-    createdBy: params.createdBy,
-  };
-  let intent: typeof schema.billingCheckoutIntents.$inferSelect;
-  if (existing) {
-    const [updated] = await db
+    const request = {
+      applicationId: params.applicationId ?? null,
+      customerId: params.customerId ?? null,
+      region: params.region ?? null,
+      sizeProfile: params.sizeProfile ?? null,
+      createdBy: params.createdBy,
+    };
+    let intent: typeof schema.billingCheckoutIntents.$inferSelect;
+    if (existing) {
+      const [updated] = await tx
+        .update(schema.billingCheckoutIntents)
+        .set(request)
+        .where(eq(schema.billingCheckoutIntents.id, existing.id))
+        .returning();
+      intent = updated!;
+    } else {
+      const [inserted] = await tx
+        .insert(schema.billingCheckoutIntents)
+        .values({ organizationId: params.organizationId, ...request })
+        .returning();
+      intent = inserted!;
+    }
+
+    if (intent.providerTransactionId) {
+      return { checkoutIntentId: intent.id, transactionId: intent.providerTransactionId };
+    }
+
+    // The intent id travels in customData so the webhook can attribute the
+    // subscription to this organization — and to this exact parked request —
+    // before any subscription row exists. Hence the row must exist first; a
+    // Paddle failure leaves it PENDING with no transaction, and the next call
+    // reuses the row and retries.
+    let transactionId: string;
+    try {
+      const transaction = await paddle.client.transactions.create({
+        items: [{ priceId: paddle.config.pricePlatform, quantity: 1 }],
+        customData: { organizationId: params.organizationId, checkoutIntentId: intent.id },
+      });
+      transactionId = transaction.id;
+    } catch (error) {
+      // Phase 16 finding: the provider's reason was swallowed entirely, which
+      // turned a malformed API key into an undiagnosable 502. Logged server-side
+      // only — the client never sees provider internals.
+      console.error(
+        JSON.stringify({
+          event: 'billing:checkout-transaction-failed',
+          organizationId: params.organizationId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      // Returned, not thrown: the PENDING intent must commit.
+      return null;
+    }
+
+    await tx
       .update(schema.billingCheckoutIntents)
-      .set(request)
-      .where(eq(schema.billingCheckoutIntents.id, existing.id))
-      .returning();
-    intent = updated!;
-  } else {
-    const [inserted] = await db
-      .insert(schema.billingCheckoutIntents)
-      .values({ organizationId: params.organizationId, ...request })
-      .returning();
-    intent = inserted!;
-  }
+      .set({ providerTransactionId: transactionId })
+      .where(eq(schema.billingCheckoutIntents.id, intent.id));
 
-  if (intent.providerTransactionId) {
-    return { checkoutIntentId: intent.id, transactionId: intent.providerTransactionId };
-  }
-
-  // The intent id travels in customData so the webhook can attribute the
-  // subscription to this organization — and to this exact parked request —
-  // before any subscription row exists. Hence the row must exist first; a
-  // Paddle failure leaves it PENDING with no transaction, and the next call
-  // reuses the row and retries.
-  let transactionId: string;
-  try {
-    const transaction = await paddle.client.transactions.create({
-      items: [{ priceId: paddle.config.pricePlatform, quantity: 1 }],
-      customData: { organizationId: params.organizationId, checkoutIntentId: intent.id },
-    });
-    transactionId = transaction.id;
-  } catch (error) {
-    // Phase 16 finding: the provider's reason was swallowed entirely, which
-    // turned a malformed API key into an undiagnosable 502. Logged server-side
-    // only — the client never sees provider internals.
-    console.error(
-      JSON.stringify({
-        event: 'billing:checkout-transaction-failed',
-        organizationId: params.organizationId,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    );
+    return { checkoutIntentId: intent.id, transactionId };
+  });
+  if (!created) {
     throw new ApiError(502, 'CHECKOUT_UNAVAILABLE', 'Could not start checkout. Try again.');
   }
-
-  await db
-    .update(schema.billingCheckoutIntents)
-    .set({ providerTransactionId: transactionId })
-    .where(eq(schema.billingCheckoutIntents.id, intent.id));
-
-  return { checkoutIntentId: intent.id, transactionId };
+  return created;
 }
 
 export interface CompletedCheckoutIntent {

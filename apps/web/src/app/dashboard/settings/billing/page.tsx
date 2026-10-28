@@ -1,11 +1,30 @@
-import { Receipt } from 'lucide-react';
+import { AlertTriangle, CreditCard, Receipt } from 'lucide-react';
 
 import { DocsLink } from '@/components/docs-link';
+import { InvoiceDownloadButton } from '@/components/invoice-download-button';
 import { ManageBillingButton } from '@/components/manage-billing-button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { fetchBillingSummary, formatDollars, type BillingSummary } from '@/lib/billing';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  fetchBillingAccount,
+  fetchBillingSummary,
+  formatBillingDate,
+  formatDollars,
+  formatMoney,
+  type BillingAccount,
+  type BillingAccountResult,
+  type BillingSummary,
+} from '@/lib/billing';
 import { DOCS } from '@/lib/docs-links';
 import { subscriptionStatusLabel } from '@/lib/organization-vocabulary';
 
@@ -21,9 +40,15 @@ import { subscriptionStatusLabel } from '@/lib/organization-vocabulary';
 // paid — it shows active, paused, included and billed counts, and bills the
 // pool. A paused deployment (failed or disconnected) is not billed.
 //
+// The next payment, the payment method and the invoices are read live from
+// the billing provider, and only for an owner or admin. The provider owns
+// the money, so its numbers (with tax and proration) are the ones shown
+// there; changes still happen on the provider's portal.
+//
 // §65: jargon-free. The provider is never named at the top level.
 export default async function BillingPage() {
   const billing = await fetchBillingSummary();
+  const account = billing.subscription ? await fetchBillingAccount() : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,7 +58,7 @@ export default async function BillingPage() {
       </div>
 
       {billing.subscription ? (
-        <SubscribedCard billing={billing} />
+        <SubscribedCard billing={billing} account={account!} />
       ) : (
         <EvaluationCard billing={billing} />
       )}
@@ -103,15 +128,17 @@ function EvaluationCard({ billing }: { billing: BillingSummary }) {
 }
 
 /** Subscribed: the real rate, the next billing date and the breakdown. */
-function SubscribedCard({ billing }: { billing: BillingSummary }) {
+function SubscribedCard({
+  billing,
+  account,
+}: {
+  billing: BillingSummary;
+  account: BillingAccountResult;
+}) {
   const subscription = billing.subscription!;
   const counts = billing.productionDeployments;
   const nextBillingDate = subscription.currentPeriodEnd
-    ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
+    ? formatBillingDate(subscription.currentPeriodEnd)
     : null;
 
   return (
@@ -170,20 +197,55 @@ function SubscribedCard({ billing }: { billing: BillingSummary }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage billing</CardTitle>
-          <CardDescription>
-            Invoices, payment details and cancellation are on our billing partner’s portal.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <ManageBillingButton target="overview" variant="default">
-            Open billing portal
-          </ManageBillingButton>
-          <ManageBillingButton target="updatePaymentMethod">Update payment details</ManageBillingButton>
-        </CardContent>
-      </Card>
+      {account.status === 'forbidden' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payments and invoices</CardTitle>
+            <CardDescription>
+              Only an owner or admin can see payments and invoices, or manage billing.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
+          {account.status === 'ok' ? <AccountDetails account={account.account} /> : null}
+          {account.status === 'unavailable' ? (
+            <Alert data-testid="billing-account-unavailable">
+              <AlertTriangle aria-hidden className="size-4" />
+              <AlertTitle>Payment details and invoices could not be loaded</AlertTitle>
+              <AlertDescription>
+                Reload the page to try again. You can also open the billing portal below.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage billing</CardTitle>
+              <CardDescription>
+                Change your payment details, billing address or subscription on our billing
+                partner’s portal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <ManageBillingButton target="overview" variant="default">
+                Open billing portal
+              </ManageBillingButton>
+              {account.status === 'ok' ? null : (
+                <ManageBillingButton target="updatePaymentMethod">
+                  Update payment details
+                </ManageBillingButton>
+              )}
+              {account.status === 'ok' &&
+              account.account.scheduledChange?.action === 'cancel' ? null : (
+                <ManageBillingButton target="cancel" variant="ghost">
+                  Cancel subscription
+                </ManageBillingButton>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <p className="text-xs text-muted-foreground">
         A test deployment of your own app is not charged.
@@ -192,6 +254,163 @@ function SubscribedCard({ billing }: { billing: BillingSummary }) {
           : ` ${formatDollars(billing.deploymentPrice)}/month applies to each customer deployment while it runs for your customer, and stops when it is removed.`}
         {' A failed or disconnected deployment is paused and not charged. Charges start again when it is ready.'}
       </p>
+    </>
+  );
+}
+
+const TRANSACTION_STATUS_LABELS: Record<
+  BillingAccount['transactions'][number]['status'],
+  { label: string; variant: 'secondary' | 'outline' | 'destructive' }
+> = {
+  completed: { label: 'Paid', variant: 'secondary' },
+  paid: { label: 'Paid', variant: 'secondary' },
+  billed: { label: 'Due', variant: 'outline' },
+  past_due: { label: 'Past due', variant: 'destructive' },
+};
+
+function capitalize(text: string): string {
+  const words = text.replace(/_/g, ' ');
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+function paymentMethodLabel(method: NonNullable<BillingAccount['paymentMethod']>): string {
+  if (!method.last4) return capitalize(method.type);
+  const label = `${capitalize(method.cardBrand ?? 'card')} ending in ${method.last4}`;
+  return method.expiryMonth && method.expiryYear
+    ? `${label}, expires ${String(method.expiryMonth).padStart(2, '0')}/${method.expiryYear}`
+    : label;
+}
+
+/** What the billing provider holds: next payment, payment method, invoices. */
+function AccountDetails({ account }: { account: BillingAccount }) {
+  const { nextPayment, scheduledChange, paymentMethod, transactions } = account;
+  return (
+    <>
+      {scheduledChange ? (
+        <Alert data-testid="billing-scheduled-change">
+          <AlertTriangle aria-hidden className="size-4" />
+          <AlertTitle>
+            {scheduledChange.action === 'cancel'
+              ? `Your subscription ends on ${formatBillingDate(scheduledChange.effectiveAt)}`
+              : `Your subscription is scheduled to ${scheduledChange.action} on ${formatBillingDate(scheduledChange.effectiveAt)}`}
+          </AlertTitle>
+          <AlertDescription>
+            Existing deployments keep running. To keep your subscription, open the billing portal.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Next payment</CardTitle>
+            <CardDescription>
+              {nextPayment
+                ? `${formatBillingDate(nextPayment.date)} · includes tax and changes made this period`
+                : 'No payment is scheduled.'}
+            </CardDescription>
+          </CardHeader>
+          {nextPayment ? (
+            <CardContent className="flex flex-col gap-2 text-sm" data-testid="billing-next-payment">
+              {nextPayment.lines.map((line, index) => (
+                <div
+                  key={`${line.description}-${index}`}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span>
+                    {line.description}
+                    {line.quantity > 1 ? (
+                      <span className="text-muted-foreground"> × {line.quantity}</span>
+                    ) : null}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{formatMoney(line)}</span>
+                </div>
+              ))}
+              <Separator />
+              <div className="flex items-center justify-between font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">{formatMoney(nextPayment)}</span>
+              </div>
+            </CardContent>
+          ) : null}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CreditCard className="size-5 text-muted-foreground" aria-hidden />
+              <CardTitle>Payment method</CardTitle>
+            </div>
+            <CardDescription data-testid="billing-payment-method">
+              {paymentMethod ? paymentMethodLabel(paymentMethod) : 'No payment method on file yet.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ManageBillingButton target="updatePaymentMethod">
+              Update payment details
+            </ManageBillingButton>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoices</CardTitle>
+          <CardDescription>
+            Payments for your current subscription. Earlier invoices are on the billing portal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {transactions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No invoices yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table data-testid="billing-invoices">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Download</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => {
+                    const status = TRANSACTION_STATUS_LABELS[transaction.status];
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {transaction.billedAt ? formatBillingDate(transaction.billedAt) : '—'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {transaction.invoiceNumber ?? '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatMoney(transaction)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {transaction.invoiceNumber ? (
+                            <InvoiceDownloadButton
+                              transactionId={transaction.id}
+                              invoiceNumber={transaction.invoiceNumber}
+                            />
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

@@ -37,6 +37,7 @@ organization's included allowance (see "Included production deployments").
 | The checkout intent (a parked request, never a deployment) | The checkout overlay and the card form |
 | Subscription status as projected from webhooks | Dunning, past-due, pause/resume, cancel |
 | The customer portal *link* | The customer portal |
+| A read-only view of the next payment, payment method and invoices | The numbers in that view, read live on every request |
 
 ## Data
 
@@ -85,7 +86,9 @@ subscription answers **402 `SUBSCRIPTION_REQUIRED`** with the status in
    `GET /api/billing/config` — nothing Paddle-specific is baked into the
    build).
 
-A second click reuses the intent and its transaction. A PENDING intent older
+A second click reuses the intent and its transaction. Concurrent calls for
+one organization are serialized by a transaction-scoped advisory lock, so a
+double click opens exactly one Paddle transaction. A PENDING intent older
 than 24 h expires.
 
 ### 2. Activation → the deployment appears (Phases 6, 8)
@@ -104,8 +107,14 @@ every subscription event follows the organization already on file for its
 subscription id. For a subscription not yet on file, of any event type, the
 handler trusts `customData.organizationId` only when `customData.checkoutIntentId`
 names that organization's PENDING intent (and, when the event carries a
-transaction id, that intent's transaction). Otherwise the event is IGNORED
+transaction id, that intent's transaction) AND the subscription's items
+include the platform price. A checkout opened in the browser with other
+items is never bound. Otherwise the event is IGNORED
 (`organization not found`).
+
+A transaction event moves `last_provider_event_at` forward only, never
+backward, so a delayed transaction event cannot let an older subscription
+event through the stale-event guard.
 
 ### 3. Going live → billing starts (Phases 2, 9)
 
@@ -170,6 +179,18 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
   shows the rate, next billing date, per-customer breakdown, and "Manage
   billing" into Paddle's hosted portal via a short-lived session for the
   organization's own customer id.
+- For an owner or admin, the subscribed page also shows what Paddle holds,
+  read live and never stored: the next payment (date, amount with tax and
+  proration, and Paddle's line items), a scheduled cancellation, the payment
+  method on file (the newest captured payment), and the invoices of the
+  current subscription with a PDF download
+  (`GET /api/billing/account`, `GET /api/billing/invoices/:transactionId`,
+  `apps/api/src/billing-account.ts`). Both are scoped by the organization's
+  subscription id, never by the Paddle customer id: one customer (one email)
+  can belong to two organizations. An invoice of another subscription answers
+  404. A member sees that only an owner or admin can see payments and
+  invoices. When Paddle fails, the page shows an inline alert and keeps the
+  rest. Invoices of an earlier, canceled subscription are on the portal.
 - Entitlements by status: matrix §4. Existing deployments are never gated.
 - The billing page shows `N active · P paused · M included · K billed`;
   the paused count shows only when it is not zero.
@@ -269,10 +290,12 @@ nothing more.
 ## Configuration
 
 Six values, all supplied by `.github/workflows/deploy-api.yml` (and the CDK
-allowlist): five repository secrets — `PADDLE_API_KEY`,
-`PADDLE_WEBHOOK_SECRET`, `PADDLE_CLIENT_TOKEN`, `PADDLE_PRICE_PLATFORM`,
-`PADDLE_PRICE_DEPLOYMENT` — and the repository variable
-`PADDLE_ENVIRONMENT`. Billing is optional at boot: with no API key every
+allowlist): five secrets — `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`,
+`PADDLE_CLIENT_TOKEN`, `PADDLE_PRICE_PLATFORM`, `PADDLE_PRICE_DEPLOYMENT` —
+and the variable `PADDLE_ENVIRONMENT`. Set all six on the GitHub
+**environment** (`production`, `staging`), never on the repository: the
+deploy job runs in that environment, and a repository value would give
+staging the live keys. Billing is optional at boot: with no API key every
 billing surface reports `BILLING_DISABLED` and nothing else is affected.
 Once the key is set the other five are validated at startup. Price ids are
 configuration, never source — `paddle-catalog.md`.
@@ -280,12 +303,13 @@ configuration, never source — `paddle-catalog.md`.
 The worker Lambda receives the same six values, so the safety job needs no
 separate configuration.
 
-Two operational switches live beside them as repository *variables*:
+Two operational switches:
 
 - `PADDLE_ENVIRONMENT` defaults to `sandbox`; production activation is an
   operator step (create the production catalog per `paddle-catalog.md`, set
-  the five secrets, switch the variable). The repository does not record
-  whether production billing is switched on; check the variable.
+  the five secrets and the variable on the GitHub environment). The
+  repository does not record whether billing is switched on in a stage;
+  check that environment's settings.
 - `BILLING_ENFORCEMENT=off` pauses the PRODUCTION-deployment subscription
   gate platform-wide, for an incident where Paddle state is wrong or
   unreachable and customers must not be blocked. Unset (the normal state)
@@ -302,7 +326,9 @@ TEST deployments are never gated.
 - No trials, discounts, annual prices, tiers, or metering. The one
   commercial override is the included production deployment allowance
   above — an integer per organization, never a price.
-- No billing screens of Deployz's own for cards, invoices or cancellation.
+- No billing forms of Deployz's own: cards, addresses and cancellation are
+  changed only on Paddle's portal. The billing page reads and links; it
+  never writes.
 - No second subscription is ever sold: PAST_DUE and PAUSED cannot check out.
 - No provider abstraction: `provider = PADDLE` says what a row is, nothing
   more.

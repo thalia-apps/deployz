@@ -63,6 +63,15 @@ export async function openBillingPortal(target: BillingPortalTarget): Promise<st
   return links[target];
 }
 
+/** `GET /api/billing/invoices/:id` — a short-lived link to one invoice PDF.
+ *  Minted on every click; the link expires. */
+export async function fetchInvoiceUrl(transactionId: string): Promise<string> {
+  const { url } = await apiRequest<{ url: string }>(
+    `/api/billing/invoices/${encodeURIComponent(transactionId)}`,
+  );
+  return url;
+}
+
 /** 'completed' means Paddle took the payment; 'closed' means the vendor left
  *  the overlay. Neither is the authority on the subscription — the webhook is. */
 export type CheckoutOutcome = 'completed' | 'closed';
