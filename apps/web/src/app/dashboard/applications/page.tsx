@@ -17,7 +17,12 @@ import { fetchApplications, type Application } from '@/lib/applications';
 import { applicationListBadge, STATUS_UNKNOWN_BADGE, type ApplicationPresentation } from '@/lib/application-state';
 import { fetchDeployments } from '@/lib/deployments';
 import { DOCS } from '@/lib/docs-links';
-import { fetchAllReadiness } from '@/lib/readiness';
+import { fetchReadiness } from '@/lib/readiness';
+import { mapWithConcurrency } from '@/lib/map-with-concurrency';
+
+// The API's Lambda account quota is small (10 concurrent executions), so the
+// per-application readiness reads go a few at a time.
+const READINESS_FETCH_CONCURRENCY = 4;
 
 type AppsState =
   | { status: 'loading' }
@@ -134,25 +139,26 @@ function ApplicationList({ applications }: { applications: Application[] }) {
       if (!cancelled) setBadges((current) => new Map(current).set(id, badge));
     };
     void (async () => {
-      const [readiness, deployments] = await Promise.all([
-        fetchAllReadiness().catch(() => null),
-        fetchDeployments({ includeDeleted: true }).catch(() => null),
-      ]);
-      for (const app of analysed) {
-        const appReadiness = readiness?.[app.id];
-        if (appReadiness === undefined || deployments === null) {
+      // Started before the readiness reads, not awaited first: the two are
+      // independent, and waiting serialized the whole list behind it.
+      const deploymentsRead = fetchDeployments({ includeDeleted: true }).catch(() => null);
+      await mapWithConcurrency(analysed, READINESS_FETCH_CONCURRENCY, async (app) => {
+        try {
+          const readiness = await fetchReadiness(app.id);
+          const deployments = await deploymentsRead;
+          if (deployments === null) return show(app.id, STATUS_UNKNOWN_BADGE);
+          show(
+            app.id,
+            applicationListBadge(
+              { id: app.id, name: app.name, defaultBranch: app.defaultBranch },
+              readiness,
+              deployments.filter((d) => d.applicationId === app.id),
+            ),
+          );
+        } catch {
           show(app.id, STATUS_UNKNOWN_BADGE);
-          continue;
         }
-        show(
-          app.id,
-          applicationListBadge(
-            { id: app.id, name: app.name, defaultBranch: app.defaultBranch },
-            appReadiness,
-            deployments.filter((d) => d.applicationId === app.id),
-          ),
-        );
-      }
+      });
     })();
     return () => {
       cancelled = true;

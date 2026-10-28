@@ -44,5 +44,5 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   const app = await getApp();
   const response = await app.inject(toInjectOptions(event));
-  return toLambdaResult(response, event.headers?.['accept-encoding']);
+  return toLambdaResult(response);
 }

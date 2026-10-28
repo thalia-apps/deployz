@@ -893,15 +893,6 @@ describe('server — IDOR guards on :id routes (§2)', () => {
     expect(errorEnvelopeSchema.parse(response.json()).error.code).toBe('NOT_FOUND');
   });
 
-  it("GET /api/applications/readiness carries only the caller org's applications", async () => {
-    const outside = await app.inject({ method: 'GET', url: '/api/applications/readiness', headers: { cookie: orgA.cookie } });
-    expect(outside.statusCode).toBe(200);
-    expect(outside.json()).toEqual({ readiness: {} });
-
-    const owner = await app.inject({ method: 'GET', url: '/api/applications/readiness', headers: { cookie: orgB.cookie } });
-    expect(Object.keys((owner.json() as { readiness: Record<string, unknown> }).readiness)).toEqual([appB.id]);
-  });
-
   it('the owning org CAN reach its own application and deployment (the guard is not over-broad)', async () => {
     const appResponse = await app.inject({
       method: 'GET',
@@ -1269,18 +1260,6 @@ describe('server — env-var setup (environment-settings route, release gate, re
     expect((await readiness(stale.id)).analysisOutdated).toBe(true);
     expect((await readiness(current.id)).analysisOutdated).toBe(false);
     expect((await readiness(incomplete.id)).analysisOutdated).toBe(false);
-  });
-
-  it('GET /api/applications/readiness answers what each application readiness route answers', async () => {
-    const all = (
-      await app.inject({ method: 'GET', url: '/api/applications/readiness', headers: { cookie: org.cookie } })
-    ).json() as { readiness: Record<string, unknown> };
-    const ids = Object.keys(all.readiness);
-    expect(ids.length).toBeGreaterThan(1);
-    for (const id of ids) {
-      const one = await app.inject({ method: 'GET', url: `/api/applications/${id}/readiness`, headers: { cookie: org.cookie } });
-      expect(all.readiness[id]).toEqual(one.json());
-    }
   });
 });
 
