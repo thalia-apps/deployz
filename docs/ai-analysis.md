@@ -472,10 +472,11 @@ is final.
     (`DB_HOST`) or a name without a known format (`BTCPAY_POSTGRES`, a
     driver connection string) fails: Deployz cannot set its value.
   - Repository kind: `application` changes nothing. Any other kind needs
-    high confidence (not medium) and a cited line of a package manifest
+    medium or high confidence and a cited line of a package manifest
     that packages the code for others to install: a build backend
     (`build-backend`, `requires = ["hatchling"]`), `[project.scripts]` or a
-    console script entry, `"bin"`, `"main"`, `"exports"`, `"types"` or
+    console script entry, `"bin"` or a `"bin"` entry (`"codex":
+    "bin/codex.js"`), `"main"`, `"exports"`, `"types"` or
     `"publishConfig"`, a Rust `[lib]` or `[[bin]]`, a Composer `"type":
     "library"`, a gemspec. A project name or a README line fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules

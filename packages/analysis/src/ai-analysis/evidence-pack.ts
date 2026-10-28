@@ -202,7 +202,7 @@ export const PACKAGE_MANIFEST = /(?:^|\/)(?:package\.json|pyproject\.toml|setup\
  * script), a Rust `[lib]` or `[[bin]]`, a Composer library, a gemspec.
  */
 export const PACKAGE_MARKER =
-  /build-backend|^\s*\[(?:build-system|project\.scripts|tool\.poetry\.scripts|lib|\[bin\])\]|^\s*requires\s*=\s*\[[^\]]*(?:hatchling|setuptools|poetry|flit|maturin|pdm|scikit-build)|console_scripts|^\s*[\w.-]+\s*=\s*["'][\w.]+:\w+["']|"(?:bin|main|module|exports|types|typings|publishConfig)"\s*:|"type"\s*:\s*"library"|Gem::Specification/;
+  /build-backend|^\s*\[(?:build-system|project\.scripts|tool\.poetry\.scripts|lib|\[bin\])\]|^\s*requires\s*=\s*\[[^\]]*(?:hatchling|setuptools|poetry|flit|maturin|pdm|scikit-build)|console_scripts|^\s*[\w.-]+\s*=\s*["'][\w.]+:\w+["']|"(?:bin|main|module|exports|types|typings|publishConfig)"\s*:|^\s*"[\w@./-]+"\s*:\s*"(?:\.\/)?bin\/|"type"\s*:\s*"library"|Gem::Specification/;
 
 /** A manifest line that names or packages the project: its packaging marker, its name, or a private flag. */
 const PACKAGING = new RegExp(`${PACKAGE_MARKER.source}|${/^\s*\[(?:project|package|tool\.poetry|workspace)\]|"(?:name|private|workspaces)"\s*:/.source}`);

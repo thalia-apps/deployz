@@ -73,15 +73,21 @@ describe('AI Analysis: repository kind', () => {
     expect(report.findings.find((finding) => finding.id === 'unsupported-library-repository')?.technicalEvidence).toContain('pyproject.toml:10');
   });
 
-  it('a console script entry is packaging evidence too', async () => {
-    const { report } = await outcomeOf(FRAMEWORK(), 'cli', { evidence: cite('pyproject.toml', 6, 'acme = "acme.cli:main"') });
+  it('a console script entry or a "bin" entry is packaging evidence too', async () => {
+    const { report } = await outcomeOf(FRAMEWORK(), 'cli', { evidence: cite('pyproject.toml', 6, 'acme = "acme.cli:main"'), confidence: 'medium' });
     expect(report.outcome).toBe('NOT_DEPLOYABLE');
+    const node = withPaths({
+      'package.json': ['{', '  "name": "@acme/cli",', '  "bin": {', '    "acme": "bin/acme.js"', '  }', '}'].join('\n'),
+      'bin/acme.js': 'console.log("acme");\n',
+    });
+    const { report: nodeReport } = await outcomeOf(node, 'cli', { evidence: cite('package.json', 4, '"acme": "bin/acme.js"') });
+    expect(nodeReport.outcome).toBe('NOT_DEPLOYABLE');
   });
 
-  it('keeps outcome 2 for an application, a medium-confidence answer, or a cited line that does not package the code', async () => {
+  it('keeps outcome 2 for an application, a low-confidence answer, or a cited line that does not package the code', async () => {
     for (const [value, overrides] of [
       ['application', {}],
-      ['framework', { confidence: 'medium' as const }],
+      ['framework', { confidence: 'low' as const }],
       ['library', { evidence: cite('pyproject.toml', 2, 'name = "acme-agents"') }],
       ['sdk', { evidence: cite('README.md', 2, 'A Python framework for agents.') }],
       ['plugin', {}],

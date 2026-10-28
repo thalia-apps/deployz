@@ -440,12 +440,12 @@ export type RepositoryKind = (typeof REPOSITORY_KINDS)[number];
 
 /**
  * A repository that is not an application changes the outcome to "not
- * deployable", the costliest wrong answer: it needs high confidence and a
- * cited packaging line of a manifest. "application" changes nothing.
+ * deployable", the costliest wrong answer: it needs a cited packaging line
+ * of a manifest. "application" changes nothing.
  */
 function checkRepositoryKind(ctx: CheckContext, id: string, kind: RepositoryKind, answer: FactAnswer): AnswerCheck {
   if (kind === 'application') return result(id, []);
-  const reasons = answer.confidence === 'high' ? [] : [`${kind} needs high confidence`];
+  const reasons = confidenceReasons(answer.confidence);
   reasons.push(...checkEvidence(ctx.pack, answer.evidence, (line, path) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line)));
   return result(id, reasons);
 }
