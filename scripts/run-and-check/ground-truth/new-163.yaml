@@ -1,0 +1,90 @@
+id: new-163
+repository: superagent-ai/superagent
+commit: c9e646271bf15cf7ea7b8e2de9de98008ea1099d
+summary: >
+  Superagent is now an open-source SDK for AI agent safety (guard, redact, scan, red team), not the earlier agent
+  platform. The repo has a TypeScript SDK (sdk/typescript, npm package safety-agent), a Python SDK (sdk/python,
+  hatchling wheel safety-agent), a CLI (cli, bin superagent), a stdio MCP server (mcp, bin superagent-mcp) and a
+  Next.js documentation site (docs, private). There is no Dockerfile, no compose file and no server entrypoint for
+  a product. The only web app is the documentation site.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    A library, a CLI and a stdio MCP server that developers install from npm or PyPI. The MCP server uses stdio
+    transport, not HTTP. The docs/ Next.js site is documentation, not the product, and has no Dockerfile.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 32, quote: "An open-source SDK for AI agent safety."}
+    - {path: sdk/typescript/package.json, line: 5, quote: "\"main\": \"./dist/index.js\","}
+    - {path: sdk/python/pyproject.toml, line: 36, quote: "build-backend = \"hatchling.build\""}
+    - {path: cli/package.json, line: 7, quote: "\"bin\": {"}
+    - {path: mcp/src/index.ts, line: 365, quote: "const transport = new StdioServerTransport();"}
+runtime: {accept: [node, python]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [SUPERAGENT_API_KEY]
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is an SDK, a CLI and a stdio MCP server: no deployable web application and no Dockerfile"
+  mustNot:
+    - "The docs/ Next.js site must not be taken as the product to deploy"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which Dockerfile, port, database or health path? (none exist)"
+traps:
+  - "docs/package.json has build and start scripts (next build, next start) -> it is a private documentation site (docs/package.json:2-8)"
+  - "mcp/package.json has a start script -> it runs a stdio MCP server, not an HTTP server (mcp/src/index.ts:365)"
+  - "The name Superagent suggests the old agent platform (API plus UI) -> that code is gone; the repo is the safety SDK"
+crossReview:
+  - {field: outcome, change: "none: SDKs (sdk/typescript, sdk/python), CLI and stdio MCP server only; no Dockerfile or compose file in the tree; the only web app is the private docs site (next build, next start), which is documentation, so NOT_DEPLOYABLE kept. Unsure only if an analyser treats docs/ as the app", evidence: "docs/package.json:2-8; mcp/src/index.ts:365"}
+  - {field: all, change: verified, evidence: "5 citations checked"}

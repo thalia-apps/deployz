@@ -1,0 +1,121 @@
+id: new-161
+repository: enricoros/big-agi
+commit: 8a566a48e278a57a054e17dd2a49d2267e6237af
+summary: >
+  big-AGI is a Next.js 15 (pages router plus tRPC app routes) browser chat UI for many LLM vendors. It is a deployable
+  web application: the root Dockerfile builds it from repo source (npm ci, next build, prune) and runs `next start`
+  on port 3000. The app is stateless by default (chats live in the browser). A PostgreSQL database through Prisma is an
+  optional extra, used only for the chat link sharing feature. There is no Redis, no worker and no S3 use. All
+  environment variables are optional (LLM keys can be typed in the UI). The app has no built-in authentication.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One Dockerfile builds and runs the product on one HTTP port with no required configuration. The only changes a
+    vendor may need are HTTP basic auth (a file rename before the build), LLM keys, and an optional PostgreSQL schema
+    push for link sharing. With server-side LLM keys set and no auth in front, anyone who reaches the URL can spend
+    the LLM quota.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 21, quote: "RUN npm ci"}
+    - {path: Dockerfile, line: 55, quote: "RUN npm run build"}
+    - {path: Dockerfile, line: 88, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 91, quote: "CMD [\"/app/node_modules/.bin/next\", \"start\"]"}
+    - {path: docker-compose.yaml, line: 7, quote: "image: ghcr.io/enricoros/big-agi:latest"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 88, quote: "EXPOSE 3000"}
+    - {path: docker-compose.yaml, line: 9, quote: "- \"3000:3000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: package.json, line: 16, quote: "\"start\": \"next start\""}
+startCommand:
+  source: explicit
+  accept: ["next start", "npm run start", "/app/node_modules/.bin/next start"]
+  evidence:
+    - {path: Dockerfile, line: 91, quote: "CMD [\"/app/node_modules/.bin/next\", \"start\"]"}
+    - {path: package.json, line: 16, quote: "\"start\": \"next start\""}
+healthPath:
+  accept: ["/"]
+  # No dedicated health route exists (no health, ping or healthz handler in src, app or pages). "/" serves the UI shell without auth.
+  evidence: []
+database:
+  status: optional
+  engines: [postgres, mongodb]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRES_PRISMA_URL, POSTGRES_URL_NON_POOLING]
+  # Only the chat link sharing feature (src/modules/trade/server/link.ts) uses prismaDb. MongoDB needs a schema edit and is not supported by Deployz.
+  evidence:
+    - {path: src/server/prisma/schema.prisma, line: 18, quote: "provider  = \"postgresql\""}
+    - {path: src/server/prisma/schema.prisma, line: 19, quote: "url       = env(\"POSTGRES_PRISMA_URL\")"}
+    - {path: src/server/prisma/schema.prisma, line: 20, quote: "directUrl = env(\"POSTGRES_URL_NON_POOLING\")"}
+    - {path: docs/deploy-database.md, line: 1, quote: "Connecting Your Database for Enhanced Features"}
+    - {path: src/modules/trade/server/link.ts, line: 106, quote: "await prismaDb.linkStorage.create({"}
+migrations:
+  mode: command
+  accept: ["prisma db push", "npx prisma db push", "npm run db:push"]
+  # Needed only when the optional database is used. The runtime image prunes dev dependencies, so the prisma CLI is not in it.
+  evidence:
+    - {path: docs/deploy-database.md, line: 58, quote: "**Run `npx prisma db push`:**"}
+    - {path: package.json, line: 22, quote: "\"db:push\": \"prisma db push\""}
+    - {path: Dockerfile, line: 58, quote: "RUN npm prune --omit=dev"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [POSTGRES_PRISMA_URL, POSTGRES_URL_NON_POOLING, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, HTTP_BASIC_AUTH_USERNAME, HTTP_BASIC_AUTH_PASSWORD, PORT]
+  buildTime: [NEXT_PUBLIC_GA4_MEASUREMENT_ID, NEXT_PUBLIC_POSTHOG_KEY, NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID]
+  evidence:
+    - {path: docs/environment-variables.md, line: 5, quote: "**All variables are optional**"}
+    - {path: Dockerfile, line: 38, quote: "ARG NEXT_PUBLIC_GA4_MEASUREMENT_ID"}
+blockers:
+  expected: []
+  mustNot:
+    - "The Prisma/Postgres schema must not be reported as a required database: only chat link sharing uses it"
+    - "LLM API keys must not be reported as required app secrets: they are optional server defaults, users can type their own keys in the UI"
+    - "MongoDB (MDB_URI) must not block: it is an alternative that needs a schema edit; Deployz uses PostgreSQL"
+    - "The missing health route must not block: / answers 200"
+vendorQuestions:
+  legitimate:
+    - "Should the deployment be protected? The app has no login; basic auth needs middleware_BASIC_AUTH.ts renamed to middleware.ts before the build"
+    - "Is chat link sharing needed? If yes, the vendor must run `prisma db push` once against the RDS database"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile? (the only one)"
+    - "Which start command? (next start)"
+traps:
+  - "A prisma schema and POSTGRES_PRISMA_URL look like a required PostgreSQL database -> the database is only for link sharing (src/modules/trade/server/link.ts)"
+  - "middleware_BASIC_AUTH.ts looks like active auth -> it is inactive until renamed to middleware.ts (docs/deploy-authentication.md:3)"
+  - "next.config.ts sets distDir 'dist' only for BIG_AGI_BUILD standalone or static; the Dockerfile builds the default .next (next.config.ts:49-50, Dockerfile:75-79)"
+  - "Dockerfile sets NODE_ENV=development for npm ci then NODE_ENV=production for the build (Dockerfile:20, :54)"
+  - "No /health route; a rule that requires an explicit health route finds none (use /)"
+openQuestions:
+  - "Whether Deployz should warn about an unauthenticated LLM proxy when server-side LLM keys are set"
+crossReview:
+  - {field: outcome, change: "none: accept already has DEPLOYABLE and DEPLOYABLE_WITH_CHANGES; root Dockerfile builds from source", evidence: "Dockerfile:88 EXPOSE 3000; Dockerfile:91 CMD next start"}
+  - {field: "port, startCommand, healthPath, database", change: "none: 3000, next start from node_modules/.bin, no health route so / is right, Prisma database optional (link sharing only)", evidence: "Dockerfile:88; Dockerfile:91"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

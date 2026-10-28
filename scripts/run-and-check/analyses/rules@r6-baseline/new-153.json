@@ -1,0 +1,306 @@
+{
+  "id": "new-153",
+  "commit": "a6748ca1d3eb0027532ff147b9f76c570ffb689a",
+  "analyser": "rules@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "pnpm build:deps && pnpm build:app",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/usr/local/bin/node\", \"scripts/run-apps.js\", \"start\", \"ecosystem.config.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/healthcheck",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BACKEND_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/back-end/src/enterprise/billing/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DD_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/front-end/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROWTHBOOK_OTEL_ENABLE_LOGS_COLLECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/tracing.opentelemetry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/src/util/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/front-end/instrumentation.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/front-end/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts",
+            "read in packages/front-end/instrumentation.ts",
+            "read in packages/back-end/src/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_INIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/tracing.opentelemetry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/config.sample.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PREVIEW_IDLE_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in preview/idle-monitor.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYTHON_SERVER_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYTHON_SERVER_INPUT_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYTHON_SERVER_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ROBOTS_TXT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/back-end/src/app.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/back-end/src/instrumentation.ts",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "charts/growthbook/charts/server/Chart.yaml",
+      "charts/growthbook/Chart.yaml"
+    ],
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported database dependency: mongoose, and a mongo service is defined in docker-compose.yml. Deployz does not support MongoDB. Use PostgreSQL."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database dependency: mongoose, and a mongo service is defined in docker-compose.yml. Deployz does not support MongoDB. Use PostgreSQL."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: API_HOST. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (charts/growthbook/charts/server/Chart.yaml, charts/growthbook/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE"
+}

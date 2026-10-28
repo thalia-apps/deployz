@@ -1,0 +1,105 @@
+id: new-141
+repository: CorentinTh/it-tools
+commit: d505845f918e946ec300af7b36efc107e2f66e9e
+summary: >
+  IT Tools is a Vue 3 single-page app (Vite, pnpm) of developer utilities that run entirely in the browser. It has no
+  backend. The Dockerfile builds the static site with pnpm and serves it with nginx on port 80 (SPA fallback to
+  index.html). There is no database, no Redis, no worker, no storage and no required environment variable.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    A static site built from the repo source and served by nginx is a deployable web app. The multi-stage Dockerfile
+    builds with pnpm, the nginx stage listens on 80, and `/` returns 200 without authentication.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2, quote: "FROM node:lts-alpine AS build-stage"}
+    - {path: Dockerfile, line: 10, quote: "RUN pnpm build"}
+    - {path: Dockerfile, line: 13, quote: "FROM nginx:stable-alpine AS production-stage"}
+    - {path: Dockerfile, line: 14, quote: "COPY --from=build-stage /app/dist /usr/share/nginx/html"}
+runtime: {accept: [static, nginx]}
+port:
+  accept: [80]
+  evidence:
+    - {path: nginx.conf, line: 2, quote: "listen 80;"}
+    - {path: Dockerfile, line: 16, quote: "EXPOSE 80"}
+    - {path: README.md, line: 24, quote: "-p 8080:80 corentinth/it-tools:latest"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: nginx.conf, line: 2, quote: "listen 80;"}
+startCommand:
+  source: image
+  accept: ["nginx -g daemon off;"]
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "CMD [\"nginx\", \"-g\", \"daemon off;\"]"}
+healthPath:
+  accept: ["/"]
+  # try_files serves index.html for every path, so `/` and any route return 200. No dedicated health route.
+  evidence:
+    - {path: nginx.conf, line: 8, quote: "try_files $uri $uri/ /index.html;"}
+    - {path: Dockerfile, line: 14, quote: "COPY --from=build-stage /app/dist /usr/share/nginx/html"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [BASE_URL]
+  buildTime: [BASE_URL]
+  # BASE_URL is read by vite.config.ts at build time (sub-path hosting); the default `/` is right for the ALB root.
+  evidence:
+    - {path: vite.config.ts, line: 19, quote: "const baseUrl = process.env.BASE_URL ?? '/';"}
+blockers:
+  expected: []
+  mustNot:
+    - "A static site must not be rejected as having no server: nginx serves it"
+    - "Missing database, Redis, workers or S3 must not be reported: the app is client-side only"
+    - "netlify.toml and vercel.json must not be read as a Netlify or Vercel dependency: they are optional hosting configs"
+    - "The Playwright and vitest setup must not be reported as runtime needs"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (80)"
+    - "Health path? (/)"
+    - "Database, Redis, worker or storage? (none)"
+    - "Which Dockerfile? (Dockerfile)"
+traps:
+  - "No server code and no start script in package.json (only vite dev and `vite preview --port 5050`), so a rule-based runtime detector may label it Node and pick port 5050 or 5173; the image is nginx on 80 (package.json:27, Dockerfile:17)"
+  - "nginx.conf is copied to conf.d/default.conf in the Dockerfile, so port 80 comes from the repo file, not only from the nginx image default (Dockerfile:15)"
+  - "netlify.toml and vercel.json suggest a serverless host; neither is used by the Dockerfile"
+  - "The build runs `vue-tsc --noEmit && vite build` with a 4 GB Node heap option (package.json:26): the build needs memory, the runtime does not"
+openQuestions: []
+crossReview:
+  - {field: outcome / dockerfile / port / startCommand, change: "none: multi-stage pnpm build then nginx on 80 with CMD nginx -g daemon off; no server code, so DEPLOYABLE holds", evidence: "Dockerfile:2; Dockerfile:10; Dockerfile:13; Dockerfile:16-17; nginx.conf:2"}
+  - {field: healthPath, change: "none: / is served by try_files with SPA fallback and needs no auth; no dedicated health route exists", evidence: "nginx.conf:8; package.json:27 (vite preview --port 5050 is dev only)"}
+  - {field: all, change: verified, evidence: "12 citations checked"}

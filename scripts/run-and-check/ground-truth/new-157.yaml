@@ -1,0 +1,138 @@
+id: new-157
+repository: bytebase/bytebase
+commit: 35c3cc4e96b57dcc8ba9353aa59bf9ff8cb9570c
+summary: >
+  Bytebase is a database DevSecOps tool (schema change review and rollout). Go backend (echo) with the Vue frontend
+  embedded into the one binary, served on a single port 8080. scripts/Dockerfile is a multi-stage build from repo source
+  (pnpm frontend build, `go build` with the `embed_frontend` tag, alpine runtime). Bytebase connects to user databases
+  (PostgreSQL, MySQL, Oracle, MongoDB and many others) as managed targets. Its own metadata store is PostgreSQL: an
+  embedded PostgreSQL 16 started inside the container under /var/opt/bytebase by default, or an external PostgreSQL when
+  PG_URL is set.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    scripts/Dockerfile builds the app from the repo archive (context is the repo root) and the image runs one server on
+    8080 with /healthz. Setting PG_URL to the Deployz RDS PostgreSQL turns the metadata store into a supported managed
+    database and removes the embedded postgres process and its local data. Without PG_URL the image runs an embedded
+    postgres child process on ephemeral disk, which loses all data on restart (a Deployz setting fixes it, so DEPLOYABLE;
+    a stricter read may call it DEPLOYABLE_WITH_CHANGES).
+dockerfile:
+  accept: [scripts/Dockerfile]
+  reject:
+    - {path: scripts/Dockerfile.action, reason: "builds the bytebase-action CLI for CI pipelines, not the server"}
+    - {path: scripts/Dockerfile.action-debian, reason: "same CLI on Debian"}
+  target: monolithic
+  context: .
+  evidence:
+    - {path: scripts/Dockerfile, line: 11, quote: "RUN pnpm --dir ./frontend release-docker"}
+    - {path: scripts/Dockerfile, line: 27, quote: "COPY --from=frontend /frontend-build/frontend/dist ./backend/server/dist"}
+    - {path: scripts/Dockerfile, line: 31, quote: "--tags \"release,embed_frontend,docker\" \\"}
+    - {path: scripts/Dockerfile, line: 35, quote: "FROM alpine:3.24.3 AS monolithic"}
+    - {path: scripts/build_bytebase_docker.sh, line: 15, quote: "docker build -f ./scripts/Dockerfile \\"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: scripts/Dockerfile, line: 62, quote: "CMD [\"--port\", \"8080\", \"--data\", \"/var/opt/bytebase\"]"}
+    - {path: backend/bin/server/cmd/root.go, line: 102, quote: "rootCmd.PersistentFlags().IntVar(&flags.port, \"port\", 8080,"}
+    - {path: scripts/Dockerfile, line: 64, quote: "HEALTHCHECK --interval=5m --timeout=60s CMD curl -f http://localhost:8080/healthz || exit 1"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: scripts/build_bytebase_docker.sh, line: 28, quote: "--publish 8080:8080"}
+startCommand:
+  source: image
+  accept: ["bytebase --port 8080 --data /var/opt/bytebase"]
+  evidence:
+    - {path: scripts/Dockerfile, line: 62, quote: "CMD [\"--port\", \"8080\", \"--data\", \"/var/opt/bytebase\"]"}
+    - {path: scripts/Dockerfile, line: 66, quote: "ENTRYPOINT [\"bytebase\"]"}
+healthPath:
+  accept: ["/healthz"]
+  evidence:
+    - {path: backend/server/echo_routes.go, line: 69, quote: "e.GET(\"/healthz\", func(c *echo.Context) error {"}
+    - {path: backend/server/echo_routes.go, line: 70, quote: "return c.String(http.StatusOK, \"OK\")"}
+    - {path: scripts/Dockerfile, line: 64, quote: "curl -f http://localhost:8080/healthz"}
+database:
+  status: optional
+  engines: [postgres]
+  default: embedded-postgres
+  deployzEngine: postgres
+  selectBy: {PG_URL: "postgres://user:password@host:5432/bytebase"}
+  connectionVars: [PG_URL]
+  # The user databases Bytebase manages (MySQL, Oracle, SQL Server, MongoDB, Snowflake and others) are targets, not requirements.
+  evidence:
+    - {path: backend/bin/server/cmd/profile.go, line: 25, quote: "PgURL:                      os.Getenv(\"PG_URL\"),"}
+    - {path: backend/component/config/profile.go, line: 71, quote: "func (prof *Profile) UseEmbedDB() bool {"}
+    - {path: backend/component/config/profile.go, line: 72, quote: "return len(prof.PgURL) == 0"}
+    - {path: backend/server/server.go, line: 126, quote: "if profile.UseEmbedDB() {"}
+    - {path: scripts/Dockerfile, line: 50, quote: "RUN apk add postgresql16"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/server/server.go, line: 145, quote: "if err := migrator.MigrateSchema(ctx, stores.GetDB()); err != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Task runners, schema syncer, approval runner and sample-instance manager are goroutines in the one server process.
+  evidence:
+    - {path: backend/server/server.go, line: 228, quote: "s.sampleManager = selfhost.NewManager(stores, profile, s.schemaSyncer, sample.ManagerOptions{ReplicaID: profile.ReplicaID})"}
+    - {path: backend/server/server.go, line: 240, quote: "s.taskScheduler = taskrun.NewScheduler(stores, s.bus, s.webhookManager, s.licenseService, profile, productMetrics)"}
+scheduledJobs:
+  status: embedded
+  items: [schema sync, task scheduler, approval runner]
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/var/opt/bytebase]
+  s3: none
+  s3SelectBy: {}
+  # With PG_URL the data dir holds no metadata. Without it, /var/opt/bytebase/pgdata holds the embedded database.
+  evidence:
+    - {path: scripts/Dockerfile, line: 46, quote: "RUN mkdir -p /var/opt/bytebase"}
+    - {path: backend/bin/server/cmd/root.go, line: 107, quote: "\"not recommended for production. Directory where Bytebase stores data if PG_URL is not specified."}
+    - {path: backend/server/server.go, line: 127, quote: "pgDataDir := path.Join(profile.DataDir, \"pgdata\")"}
+env:
+  required:
+    - {name: PG_URL, secret: true, buildTime: false, note: "metadata PostgreSQL URL including the password; without it the image runs embedded postgres on ephemeral disk"}
+  optional: [GOGC, OPENSSL_CONF]
+  buildTime: []
+  evidence:
+    - {path: backend/bin/server/cmd/profile.go, line: 25, quote: "PgURL:                      os.Getenv(\"PG_URL\"),"}
+    - {path: backend/bin/server/cmd/root.go, line: 106, quote: "\"the external URL where user visits Bytebase, must start with http:// or https://\")"}
+blockers:
+  expected: []
+  mustNot:
+    - "The many database engines Bytebase manages (MySQL, Oracle, MongoDB, SQL Server, Snowflake and others) must not be reported as required or unsupported databases"
+    - "The embedded postgres in the image must not be reported as a second supervised application service: it is the metadata store and PG_URL replaces it"
+    - "scripts/Dockerfile.action and Dockerfile.action-debian must not be chosen: they are the CI action CLI"
+    - "Missing Redis, worker or S3 must not be reported: none exist"
+    - "/var/opt/bytebase local data must not block by itself: PG_URL moves the metadata to PostgreSQL"
+vendorQuestions:
+  legitimate:
+    - "Should metadata use the Deployz RDS PostgreSQL via PG_URL (needed so data survives restarts)?"
+    - "What is the external URL (--external-url) for the deployment? It is used in links and webhooks."
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/healthz)"
+    - "Which Dockerfile? (scripts/Dockerfile)"
+    - "Who runs migrations? (the server at start)"
+traps:
+  - "The Dockerfile is in scripts/, not at the repo root, and needs `-f scripts/Dockerfile` with the repo root as context (build_bytebase_docker.sh:13)"
+  - "Two other Dockerfiles in scripts/ build the bytebase-action CLI, not the server (scripts/Dockerfile.action)"
+  - "Final stage is named monolithic, an image with `apk add postgresql16`: looks like a multi-process image but the server starts and stops the embedded postgres itself (Dockerfile:50, server.go:126-133)"
+  - "ENTRYPOINT is `bytebase` and the flags are in CMD, so the start command is split between ENTRYPOINT and CMD (Dockerfile:62,66)"
+  - "The self-host sample-project manager starts extra embedded postgres sample instances inside the container (server.go:228-236)"
+  - "Frontend build needs a lot of RAM (NODE_OPTIONS max_old_space_size=8000, frontend/package.json:9); a small CodeBuild host may fail"
+  - "PG_URL looks like an optional variable but production use needs it; the default embedded database is flagged `not recommended for production` (root.go:107)"
+  - "Many other dirs (action/, helm-charts/, scripts/azure-marketplace) are tooling, not the server"
+openQuestions:
+  - "Whether the build host has enough memory for the pnpm vite release build (8 GB node heap)"
+crossReview:
+  - {field: outcome, change: "none: accept already has DEPLOYABLE and DEPLOYABLE_WITH_CHANGES (embedded postgres in the image can be read as a multi-process image, a CODE_CHANGE)", evidence: "scripts/Dockerfile:50 RUN apk add postgresql16"}
+  - {field: "dockerfile, port, startCommand, healthPath, database", change: "none: scripts/Dockerfile (repo root context), port 8080 and CMD flags, ENTRYPOINT bytebase, /healthz echo route, PG_URL selects external PostgreSQL; user databases not counted", evidence: "scripts/Dockerfile:62; scripts/Dockerfile:66; backend/server/echo_routes.go:69"}
+  - {field: all, change: verified, evidence: "27 citations checked"}

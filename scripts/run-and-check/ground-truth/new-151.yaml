@@ -1,0 +1,114 @@
+id: new-151
+repository: Unleash/unleash
+commit: 09f7e52c6d20b12408b9985e0cd6baa1597d26ae
+summary: >
+  Unleash is a Node.js (TypeScript) feature-flag server with an embedded React admin UI. The root Dockerfile builds
+  the backend and frontend from repo source with pnpm (multi-stage) and runs `node dist/server.js` on port 4242.
+  PostgreSQL is required (DATABASE_URL). The server runs its migrations at start and its scheduler jobs in the same
+  process. No Redis, no separate worker.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process, root Dockerfile builds from source, PostgreSQL through DATABASE_URL, port 4242, /health, startup
+    migrations, no local disk state. Only configuration is needed: the database URL, TLS for RDS and an admin password.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker/local-postgres/Dockerfile, reason: "development PostgreSQL image for docker-compose, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 13, quote: "RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm prepare:backend && pnpm local:package"}
+    - {path: Dockerfile, line: 38, quote: "EXPOSE 4242"}
+    - {path: Dockerfile, line: 42, quote: "CMD [\"node\", \"dist/server.js\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [4242]
+  evidence:
+    - {path: Dockerfile, line: 38, quote: "EXPOSE 4242"}
+    - {path: src/lib/create-config.ts, line: 688, quote: "listen = { host: server.host || undefined, port: server.port ?? 4242 };"}
+bindAllInterfaces:
+  value: true
+  # HTTP_HOST is unset by default, so Node listens on all interfaces.
+  evidence:
+    - {path: src/lib/create-config.ts, line: 339, quote: "host: process.env.HTTP_HOST,"}
+    - {path: src/lib/create-config.ts, line: 688, quote: "listen = { host: server.host || undefined, port: server.port ?? 4242 };"}
+startCommand:
+  source: image
+  accept: ["node dist/server.js"]
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "CMD [\"node\", \"dist/server.js\"]"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: docker-compose.yml, line: 36, quote: "test: wget --no-verbose --tries=1 --spider http://localhost:4242/health || exit 1"}
+    - {path: src/lib/routes/health-check.test.ts, line: 32, quote: "await request.get('/health').expect(200);"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_SSL, DATABASE_HOST, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_NAME]
+  evidence:
+    - {path: src/lib/create-config.ts, line: 587, quote: "} else if (process.env.DATABASE_URL) {"}
+    - {path: docker-compose.yml, line: 24, quote: "DATABASE_URL: \"postgres://postgres:unleash@db/db\""}
+    - {path: src/lib/create-config.ts, line: 237, quote: "if (process.env.DATABASE_SSL != null) {"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/lib/server-impl.ts, line: 434, quote: "await migrateDb(config);"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: src/lib/server-impl.ts, line: 314, quote: "scheduleServices(services, config);"}
+scheduledJobs:
+  status: embedded
+  items: [in-process scheduler jobs]
+  evidence:
+    - {path: src/lib/server-impl.ts, line: 314, quote: "scheduleServices(services, config);"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, note: "postgres connection URL; RDS needs TLS, so set DATABASE_SSL to a JSON object such as {\"rejectUnauthorized\":false}"}
+  optional: [DATABASE_SSL, UNLEASH_URL, UNLEASH_DEFAULT_ADMIN_USERNAME, UNLEASH_DEFAULT_ADMIN_PASSWORD, INIT_BACKEND_API_TOKENS, INIT_FRONTEND_API_TOKENS, INIT_ADMIN_API_TOKENS, HTTP_HOST, LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: src/lib/create-config.ts, line: 389, quote: "const username = process.env.UNLEASH_DEFAULT_ADMIN_USERNAME;"}
+    - {path: src/lib/services/user-service.ts, line: 197, quote: "const password = usernameAdminUser?.password || 'unleash4all';"}
+blockers:
+  expected: []
+  mustNot:
+    - "Redis must not be reported as required"
+    - "A separate worker process must not be required: scheduler jobs run in the API process"
+    - "PostgreSQL must not block: it is the supported database"
+    - "docker/local-postgres/Dockerfile must not be accepted as the app image"
+vendorQuestions:
+  legitimate:
+    - "Which admin password and API tokens should be set? Without UNLEASH_DEFAULT_ADMIN_PASSWORD the first admin has the public default password"
+  unnecessary:
+    - "Which port? (4242)"
+    - "Health path? (/health)"
+    - "Who runs migrations? (the server at start)"
+traps:
+  - "docker-compose.yml, docker-compose.postgres.yml and docker-compose-enterprise.yml use the published unleashorg image and a demo database; they are not deployment config (docker-compose.yml:1-14)"
+  - "Default admin login is admin with password unleash4all unless UNLEASH_DEFAULT_ADMIN_USERNAME and PASSWORD are set (user-service.ts:197)"
+  - "pnpm workspace: the frontend/ package is built through build:frontend:if-needed inside the Dockerfile"
+  - "RDS PostgreSQL 15 and later reject non-TLS connections; the default DATABASE_SSL is off"
+  - "UNLEASH_URL defaults to http://localhost:4242 (create-config.ts:344) and must be set to the public URL for links"
+crossReview:
+  - {field: outcome / dockerfile, change: "none: root Dockerfile builds from source in two node stages, one process, no volume; DEPLOYABLE holds", evidence: "Dockerfile:3; Dockerfile:22; Dockerfile:38; Dockerfile:42"}
+  - {field: healthPath, change: "none: /health is mounted by HealthCheckController at the root of the router, no auth wrapper", evidence: "src/lib/routes/index.ts:31; src/lib/routes/health-check.ts"}
+  - {field: database / migrations / redis / workers / port, change: "none: Postgres only via DATABASE_URL, migrateDb at start, in-process scheduler, 4242", evidence: "src/lib/create-config.ts:587; src/lib/server-impl.ts:434; src/lib/server-impl.ts:314; src/lib/create-config.ts:688"}
+  - {field: all, change: verified, evidence: "18 citations checked"}

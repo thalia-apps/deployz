@@ -1,0 +1,146 @@
+id: new-132
+repository: mealie-recipes/mealie
+commit: 279fe65c0499a7d5c92ff98c0937414e4be6c229
+summary: >
+  Mealie is a Python (FastAPI, uvicorn) recipe manager with a Nuxt frontend that is built to static files and packaged inside the
+  wheel. docker/Dockerfile builds everything from source into a single production image (target `production`). The server
+  `mealie` listens on 9000 on 0.0.0.0, runs Alembic migrations and starts an in-process scheduler at startup. SQLite is the
+  default database and PostgreSQL is selected with DB_ENGINE=postgres. There is no Redis, no S3 and no separate worker.
+  Recipe images, backups and generated secrets are written to the data directory (/app/data).
+outcome:
+  # Policy (docs/ai-analysis.md, fix classes): recipe images stay in the local data directory also with PostgreSQL; durable local state is CODE_CHANGE.
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One Dockerfile (target production) builds the app from source and starts one process. PostgreSQL works through DB_ENGINE and
+    POSTGRES_* variables, migrations and the scheduler run in the same process, and /api/app/about is an unauthenticated health
+    route. Local files in /app/data (recipe images, backups, generated secrets) are ephemeral on Fargate but optional for the
+    app to start, so this is a settings-only deployment.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "development container image (devcontainers/python base)"}
+  target: production
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 126, quote: "FROM python-base AS production"}
+    - {path: docker/Dockerfile, line: 71, quote: "RUN uv build --out-dir dist"}
+    - {path: docker/Dockerfile, line: 20, quote: "RUN pnpm generate"}
+    - {path: docker/Dockerfile, line: 170, quote: "ENTRYPOINT [\"/app/run.sh\"]"}
+    - {path: docker/docker-compose.yml, line: 7, quote: "target: production"}
+runtime: {accept: [python]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: docker/Dockerfile, line: 156, quote: "ENV APP_PORT=9000"}
+    - {path: mealie/core/settings/settings.py, line: 160, quote: "API_PORT: int = 9000"}
+    - {path: docker/healthcheck.sh, line: 3, quote: "PORT=\"${API_PORT:-9000}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: mealie/core/settings/settings.py, line: 159, quote: "API_HOST: str = \"0.0.0.0\""}
+    - {path: docker/Dockerfile, line: 164, quote: "ENV HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["/app/run.sh", "mealie"]
+  evidence:
+    - {path: docker/Dockerfile, line: 170, quote: "ENTRYPOINT [\"/app/run.sh\"]"}
+    - {path: docker/entry.sh, line: 95, quote: "exec mealie"}
+    - {path: pyproject.toml, line: 52, quote: "mealie = \"mealie.main:main\""}
+healthPath:
+  accept: ["/api/app/about"]
+  evidence:
+    - {path: docker/healthcheck.sh, line: 12, quote: "curl -fsk \"${PROTO}://127.0.0.1:${PORT}/api/app/about\" > /dev/null"}
+    - {path: mealie/routes/app/app_about.py, line: 18, quote: "@router.get(\"\", response_model=AppInfo)"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_ENGINE: postgres, POSTGRES_SERVER: "<host>", POSTGRES_PORT: "5432", POSTGRES_DB: "<db>", POSTGRES_USER: "<user>", POSTGRES_PASSWORD: "<password>"}
+  connectionVars: [POSTGRES_SERVER, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_URL_OVERRIDE]
+  # The image installs the pgsql extra. POSTGRES_URL_OVERRIDE (scheme postgresql) replaces the five variables.
+  evidence:
+    - {path: mealie/core/settings/settings.py, line: 269, quote: "DB_ENGINE: str = \"sqlite\"  # Options: 'sqlite', 'postgres'"}
+    - {path: mealie/core/settings/db_providers.py, line: 29, quote: "return f\"sqlite:///{self.db_path.absolute()!s}\""}
+    - {path: mealie/core/settings/db_providers.py, line: 40, quote: "POSTGRES_PORT: str = \"5432\""}
+    - {path: mealie/core/settings/db_providers.py, line: 62, quote: "if self.POSTGRES_URL_OVERRIDE:"}
+    - {path: docker/Dockerfile, line: 76, quote: "uv export --no-dev --no-editable --no-emit-project --extra pgsql"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: mealie/app.py, line: 67, quote: "init_db.main()"}
+    - {path: mealie/db/init_db.py, line: 108, quote: "alembic_cfg_path = os.getenv(\"ALEMBIC_CONFIG_FILE\", default=str(ALEMBIC_DIR / \"alembic.ini\"))"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: pyproject.toml, line: 54, quote: "[project.optional-dependencies]"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: mealie/app.py, line: 70, quote: "await start_scheduler()"}
+    - {path: mealie/app.py, line: 151, quote: "await SchedulerService.start()"}
+scheduledJobs:
+  status: embedded
+  items: [in-process scheduler tasks (webhooks, group data purge, meal plan and notification jobs)]
+  evidence:
+    - {path: mealie/app.py, line: 28, quote: "from mealie.services.scheduler import SchedulerRegistry, SchedulerService, tasks"}
+storage:
+  local: conditional
+  paths: [/app/data, /app/data/recipes, /app/data/backups, /app/data/groups]
+  s3: none
+  s3SelectBy: {}
+  # With SQLite the database file is /app/data/mealie.db (required). With PostgreSQL the folder holds recipe images,
+  # backups and the generated .secret and .session_secret files; sessions and uploaded images are lost on restart.
+  evidence:
+    - {path: docker/Dockerfile, line: 155, quote: "VOLUME [ \"$MEALIE_HOME/data/\" ]"}
+    - {path: mealie/core/settings/db_providers.py, line: 25, quote: "return self.data_dir / f\"{self.prefix}mealie.db\""}
+    - {path: mealie/core/settings/directories.py, line: 9, quote: "self.RECIPE_DATA_DIR = data_dir.joinpath(\"recipes\")"}
+    - {path: mealie/core/settings/settings.py, line: 565, quote: "\"SECRET\": determine_secrets(data_dir, \".secret\", production),"}
+env:
+  required:
+    - {name: DB_ENGINE, secret: false, buildTime: false, note: "set to postgres; the default is sqlite on ephemeral disk"}
+    - {name: POSTGRES_SERVER, secret: false, buildTime: false, note: "RDS host"}
+    - {name: POSTGRES_PORT, secret: false, buildTime: false, note: "5432"}
+    - {name: POSTGRES_DB, secret: false, buildTime: false, note: "database name"}
+    - {name: POSTGRES_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public HTTPS URL; the default is http://localhost:8080 and is used in links and e-mails"}
+  optional: [ALLOW_SIGNUP, API_PORT, LOG_LEVEL, PUID, PGID, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL, OPENAI_API_KEY, OIDC_CONFIGURATION_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, LDAP_SERVER_URL, POSTGRES_URL_OVERRIDE, TOKEN_TIME, TZ]
+  buildTime: []
+  evidence:
+    - {path: mealie/core/settings/settings.py, line: 144, quote: "BASE_URL: str = \"http://localhost:8080\""}
+    - {path: mealie/core/settings/settings.py, line: 178, quote: "ALLOW_SIGNUP: bool = False"}
+    - {path: docker/docker-compose.yml, line: 18, quote: "DB_ENGINE: sqlite # Optional: 'sqlite', 'postgres'"}
+    - {path: docker/entry.sh, line: 45, quote: "\"POSTGRES_SERVER\""}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL is selected with DB_ENGINE=postgres"
+    - "The VOLUME /app/data must not block by itself: with PostgreSQL the folder holds only optional images, backups and generated secrets"
+    - "Redis, a worker or a queue must not be required: the scheduler is in the app process"
+    - "Missing S3 support must not block: there is none and none is needed"
+    - "Migrations must not be raised as a vendor question: Alembic runs at app startup"
+    - "The Node frontend build must not be a blocker: it is a build stage in the same Dockerfile"
+vendorQuestions:
+  legitimate:
+    - "Recipe images and backups are stored in the local data folder and lost when the task restarts: is that acceptable for the customer?"
+  unnecessary:
+    - "Which port? (9000)"
+    - "Which Dockerfile? (docker/Dockerfile, target production)"
+    - "Health path? (/api/app/about)"
+    - "Who runs migrations? (the app, at start)"
+    - "Is a worker needed? (no: scheduler is embedded)"
+traps:
+  - "docker/Dockerfile has several stages (frontend-builder, backend-builder, packages FROM scratch, venv-builder, production); the last stage is the app, `packages` is a build helper (docker/Dockerfile:88, :126)"
+  - "The first login uses a documented default account (changeme@example.com / MyPassword); the vendor must change it (mealie/core/settings/settings.py:285-290)"
+  - "SECRET and SESSION_SECRET are generated into the data dir, not read from environment variables, so sessions reset after each restart on ephemeral disk (mealie/core/settings/settings.py:565-566)"
+  - "mealie/app.py has a second `main()` with reload=True; the console script uses mealie/main.py without reload (mealie/app.py:172-177, pyproject.toml:52)"
+  - "BASE_URL default uses port 8080, not the listening port 9000 (mealie/core/settings/settings.py:144)"
+  - "An unknown DB_ENGINE value raises an error instead of falling back to SQLite (mealie/core/settings/db_providers.py:91)"
+openQuestions: []
+crossReview:
+  - {field: outcome / port / healthPath / migrations, change: "none: one production target, port 9000, /api/app/about is router prefix /app plus /about with no auth, Alembic at start; outcomes 1 and 2 already accepted", evidence: "mealie/routes/app/__init__.py:5 mealie/routes/app/app_about.py:15 docker/Dockerfile:158 docker/Dockerfile:170"}
+  - {field: all, change: "verified", evidence: "34 citations checked"}

@@ -1,0 +1,111 @@
+id: new-168
+repository: RasaHQ/rasa
+commit: 60a3cff9c08183760355b07bd60f5223d8916d6b
+summary: >
+  Rasa Open Source 3.6.x (maintenance mode) is a Python framework for building conversational assistants. The
+  package `rasa` (poetry, CLI `rasa`) has a Sanic HTTP server (`rasa run`, default port 5005) but the server needs a
+  trained model and the developer's own project (config, domain, data). The root Dockerfile is a release image: it
+  needs registry base images selected by build arguments (IMAGE_BASE_NAME, BASE_IMAGE_HASH), installs the built
+  wheel, uses ENTRYPOINT rasa and CMD --help, and contains no assistant project.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    A framework and CLI, not an application: there is no assistant, model or project in the repo to serve. The
+    Dockerfile cannot build from the repo alone (the base image tags come from build arguments that CI sets) and
+    its default command is `rasa --help`. Serving needs `rasa train` output and often a separate action server
+    and a tracker store; the training step needs a vendor project.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "framework release image: FROM ${IMAGE_BASE_NAME}:base-builder-${BASE_BUILDER_IMAGE_HASH} (CI-built base images), ENTRYPOINT rasa, CMD --help; holds no assistant project or model"}
+    - {path: docker/Dockerfile.full, reason: "variant with MITIE data, same base-image arguments"}
+    - {path: docker/Dockerfile.base, reason: "ubuntu base image for CI"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 6, quote: "FROM ${IMAGE_BASE_NAME}:base-builder-${BASE_BUILDER_IMAGE_HASH} as builder"}
+    - {path: Dockerfile, line: 46, quote: "EXPOSE 5005"}
+    - {path: Dockerfile, line: 47, quote: "ENTRYPOINT [\"rasa\"]"}
+    - {path: Dockerfile, line: 48, quote: "CMD [\"--help\"]"}
+    - {path: pyproject.toml, line: 231, quote: "rasa = \"rasa.__main__:main\""}
+    - {path: README.md, line: 17, quote: "Note: Maintenance Mode"}
+runtime: {accept: [python]}
+port:
+  accept: [5005]
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "EXPOSE 5005"}
+    - {path: rasa/core/constants.py, line: 1, quote: "DEFAULT_SERVER_PORT = 5005"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "EXPOSE 5005"}
+startCommand:
+  source: explicit
+  accept: ["rasa run"]
+  evidence:
+    - {path: Dockerfile, line: 48, quote: "CMD [\"--help\"]"}
+healthPath:
+  accept: ["/"]
+  # Sanic root route returns "Hello from Rasa: <version>" with no auth; /status needs a loaded model.
+  evidence:
+    - {path: rasa/server.py, line: 523, quote: "@app.get(\"/\")"}
+    - {path: rasa/server.py, line: 702, quote: "@app.get(\"/status\")"}
+database:
+  status: optional
+  engines: [postgres, redis, mongodb, dynamodb]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # Tracker store and lock store are configured in the developer's endpoints.yml; default is in-memory.
+  evidence:
+    - {path: rasa/core/constants.py, line: 1, quote: "DEFAULT_SERVER_PORT = 5005"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  evidence: []
+workers:
+  status: optional-independent
+  commands: ["rasa run actions"]
+  # Custom actions run in a separate action server when the assistant has them.
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [models]
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [RASA_TELEMETRY_ENABLED, RASA_PRO_LICENSE]
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repo is the Rasa framework and CLI: no assistant project, no trained model, and the Dockerfile default command is `rasa --help`"
+    - "The Dockerfile needs CI-built base images (IMAGE_BASE_NAME and hash build arguments)"
+  mustNot:
+    - "Port 5005 and the Sanic server must not make it a deployable app: the server needs a trained model that the repo does not provide"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (5005)"
+traps:
+  - "Dockerfile has EXPOSE 5005 and a real Python server behind it -> it is the framework image with CMD --help (Dockerfile:46-48)"
+  - "FROM uses build arguments with no defaults -> a plain docker build fails (Dockerfile:2-6)"
+  - "docker/ holds ten Dockerfile variants (spacy, mitie, base) -> CI image layers"
+  - "examples/ and data/ hold sample assistants and test data, not a product (examples, data/)"
+  - "Branch 3.6.x is a maintenance-mode release branch; the README points to Hello Rasa and CALM (README.md:17-19)"
+crossReview:
+  - {field: outcome, change: "accept [NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: rasa run is a real Sanic server on 5005, and the root Dockerfile cannot build because its FROM arguments have no defaults (an unbuildable Dockerfile is CODE_CHANGE); NOT_DEPLOYABLE stays because the repo holds a framework with no assistant project or model", evidence: "Dockerfile:2-6; Dockerfile:48 CMD --help; rasa/server.py:523"}
+  - {field: "port, healthPath, startCommand", change: "none: EXPOSE 5005, / route returns a hello without auth", evidence: "Dockerfile:46; rasa/server.py:523"}
+  - {field: all, change: verified, evidence: "13 citations checked"}

@@ -1,0 +1,142 @@
+id: new-129
+repository: karakeep-app/karakeep
+commit: fb25e42702806d361e8fbc9a502f15d073a79372
+summary: >
+  Karakeep (formerly Hoarder) is a pnpm/Turbo monorepo with a Next.js web app (apps/web), a Node workers app (apps/workers),
+  a CLI and an MCP server. Its only database is SQLite through better-sqlite3 and Drizzle, stored as $DATA_DIR/db.db, and
+  the default job queue (liteque) and asset store are also on local disk under DATA_DIR. docker/Dockerfile builds the app from
+  source with several targets; the `aio` target runs web, workers and a migration under s6-overlay in one container. The
+  compose file adds a Chrome sidecar (BROWSER_WEB_URL) and Meilisearch (MEILI_ADDR) as optional services.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The database is SQLite only (no PostgreSQL or MySQL dialect in Drizzle or the schema), and the data directory
+    (db.db, queue, assets) must persist on a local volume. Deployz supports only RDS PostgreSQL and MySQL and has no persistent
+    volume (no EFS), so the deployment would lose all data on every task restart. The `aio` image also runs web, workers and a
+    migration under s6-overlay (several supervised processes), which is a second unsupported pattern.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/Dockerfile.dev, reason: "development image"}
+    - {path: docker/chrome/Dockerfile, reason: "builds the separate headless Chrome sidecar image (karakeep-chrome), not the app"}
+  target: aio
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 71, quote: "RUN (cd apps/web && pnpm exec next build --experimental-build-mode compile)"}
+    - {path: docker/Dockerfile, line: 76, quote: "RUN (cd apps/workers && pnpm --config.verify-deps-before-run=false build)"}
+    - {path: docker/Dockerfile, line: 193, quote: "FROM aio_builder AS aio"}
+    - {path: docker/Dockerfile, line: 189, quote: "ENTRYPOINT [\"/init\"]"}
+    - {path: docker/docker-compose.build.yml, line: 6, quote: "target: aio"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: docker/Dockerfile, line: 97, quote: "ENV PORT 3000"}
+    - {path: docker/Dockerfile, line: 99, quote: "EXPOSE 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/Dockerfile, line: 98, quote: "ENV HOSTNAME \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["/init"]
+  # s6-overlay starts init-db-migration (node index.js), svc-web (node server.js) and svc-workers (node dist/index.js).
+  evidence:
+    - {path: docker/Dockerfile, line: 189, quote: "ENTRYPOINT [\"/init\"]"}
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/svc-web/run, line: 5, quote: "exec node server.js;"}
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/svc-workers/run, line: 5, quote: "exec node dist/index.js"}
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/init-db-migration/run, line: 6, quote: "exec node index.js;"}
+healthPath:
+  accept: ["/api/health"]
+  evidence:
+    - {path: packages/api/routes/health.ts, line: 9, quote: "}>().get(\"/\", (c) => {"}
+    - {path: packages/api/index.ts, line: 86, quote: ".route(\"/health\", health)"}
+    - {path: docker/Dockerfile, line: 199, quote: "HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider \"http://127.0.0.1:${PORT:-3000}/api/health\" || exit 1"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: packages/db/drizzle.config.ts, line: 12, quote: "dialect: \"sqlite\","}
+    - {path: packages/db/drizzle.config.ts, line: 8, quote: "? `${serverConfig.dataDir}/db.db`"}
+    - {path: packages/db/drizzle.ts, line: 4, quote: "import Database from \"better-sqlite3\";"}
+    - {path: packages/db/package.json, line: 22, quote: "\"better-sqlite3\": \"^13.0.3\","}
+migrations:
+  mode: startup
+  accept: ["node /db_migrations/index.js"]
+  evidence:
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/init-db-migration/run, line: 5, quote: "cd /db_migrations;"}
+    - {path: docker/Dockerfile, line: 64, quote: "RUN cd packages/db && \\"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://host:6379"}
+  # Redis only backs the optional rate limiter plugin; the queue defaults to the SQLite-based liteque plugin.
+  evidence:
+    - {path: packages/shared/config.ts, line: 227, quote: "REDIS_URL: z.string().url().optional(),"}
+    - {path: packages/shared/config.ts, line: 552, quote: "url: val.REDIS_URL,"}
+workers:
+  status: independent
+  commands: ["cd /app/apps/workers && node dist/index.js"]
+  evidence:
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/svc-workers/run, line: 5, quote: "exec node dist/index.js"}
+    - {path: docker/Dockerfile, line: 195, quote: "RUN touch /etc/s6-overlay/s6-rc.d/user/contents.d/init-db-migration \\"}
+scheduledJobs:
+  status: embedded
+  items: [feed fetching, crawling and indexing jobs in the workers process]
+  evidence:
+    - {path: docker/root/etc/s6-overlay/s6-rc.d/svc-workers/run, line: 5, quote: "exec node dist/index.js"}
+storage:
+  local: required
+  paths: [/data, /data/db.db, /data/assets]
+  s3: native
+  s3SelectBy: {ASSET_STORE_S3_BUCKET: "<bucket>"}
+  # S3 can hold assets only (explicit endpoint and access keys). The SQLite database and the liteque queue stay on local disk.
+  evidence:
+    - {path: docker/docker-compose.yml, line: 9, quote: "- data:/data"}
+    - {path: docker/docker-compose.yml, line: 21, quote: "DATA_DIR: /data # DON'T CHANGE THIS"}
+    - {path: packages/shared/config.ts, line: 498, quote: "assetsDir: val.ASSETS_DIR ?? path.join(val.DATA_DIR, \"assets\"),"}
+    - {path: packages/shared/config.ts, line: 218, quote: "ASSET_STORE_S3_BUCKET: z.string().optional(),"}
+env:
+  required:
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "the config throws \"NEXTAUTH_SECRET is not set\" in production"}
+    - {name: DATA_DIR, secret: false, buildTime: false, note: "directory for db.db, queue and assets; must be a persistent volume"}
+    - {name: NEXTAUTH_URL, secret: false, buildTime: false, note: "public URL of the app (documented in the Docker install guide)"}
+  optional: [BROWSER_WEB_URL, MEILI_ADDR, MEILI_MASTER_KEY, REDIS_URL, OPENAI_API_KEY, ASSET_STORE_S3_ENDPOINT, ASSET_STORE_S3_REGION, ASSET_STORE_S3_BUCKET, ASSET_STORE_S3_ACCESS_KEY_ID, ASSET_STORE_S3_SECRET_ACCESS_KEY, ASSETS_DIR]
+  buildTime: []
+  evidence:
+    - {path: .env.sample, line: 3, quote: "NEXTAUTH_SECRET=<secret>"}
+    - {path: .env.sample, line: 2, quote: "DATA_DIR=<path>"}
+    - {path: packages/shared/config.ts, line: 332, quote: "throw new Error(\"NEXTAUTH_SECRET is not set\");"}
+blockers:
+  expected:
+    - "SQLite is the only database (better-sqlite3, Drizzle dialect sqlite); Deployz supports PostgreSQL and MySQL only"
+    - "db.db, the job queue and assets live in DATA_DIR on a local volume; Fargate disk is ephemeral and there is no EFS"
+    - "The aio image runs web, workers and a migration under s6-overlay (several supervised processes in one image)"
+  mustNot:
+    - "Meilisearch and the Chrome sidecar must not be the main blocker: both are optional (MEILI_ADDR and BROWSER_WEB_URL are unset by default); the SQLite database is the hard blocker"
+    - "Missing PostgreSQL must not be reported as a configuration gap that a Deployz setting can fix: no PostgreSQL code path exists"
+    - "Redis must not be required: it only backs an optional rate limiter"
+    - "Missing health path must not be raised: /api/health exists and the image HEALTHCHECK uses it"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which database? (SQLite only)"
+    - "Health path? (/api/health)"
+    - "Who runs migrations? (the init-db-migration s6 service)"
+traps:
+  - "docker/Dockerfile has many targets (web, workers, aio, cli, mcp); `aio` is the single-container build, `web` and `workers` are the legacy split images that share the same SQLite file (docker/Dockerfile:193, :203, :213)"
+  - "Every runtime target uses ENTRYPOINT /init (s6-overlay); the `web` target runs only the web and migration services (docker/Dockerfile:189, :207)"
+  - "Chrome and Meilisearch appear in the compose file as services but are optional integrations (docker/docker-compose.yml:22, :32)"
+  - "A `pnpm-workspace` monorepo with a Rust `monolith` build stage and yt-dlp download at build time (docker/Dockerfile:2-9, :146)"
+  - "The kubernetes/ manifests run the same SQLite image with a data PVC (kubernetes/data-pvc.yaml); charts/ holds only a README"
+  - "Env sample is minimal (DATA_DIR and NEXTAUTH_SECRET); NEXTAUTH_URL is not in it (.env.sample)"
+openQuestions:
+  - "Whether a future Karakeep version adds PostgreSQL; the pinned commit has only SQLite"
+crossReview:
+  - {field: outcome / database, change: "none: SQLite is the only engine (drizzle dialect sqlite, no pg or mysql dependency), a capability gap, so NOT_DEPLOYABLE only", evidence: "packages/db/drizzle.config.ts:12 docker/Dockerfile:199"}
+  - {field: port / healthPath / dockerfile, change: "none: /api/health is used by the image HEALTHCHECK on port 3000; aio target and /init entrypoint confirmed", evidence: "docker/Dockerfile:199 docker/Dockerfile:209"}
+  - {field: all, change: "verified", evidence: "33 citations checked"}

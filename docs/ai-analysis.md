@@ -117,7 +117,10 @@ Repository (GitHub tree, bounded)
   script by a relative path (actual `CMD ["sh", "./bin/docker-start"]`: it
   runs a bind-mounted checkout) are never selected. A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
-  one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. A
+  one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. An
+  image in another hidden tool directory (`.oss-scanner/`) ranks with the dev
+  images. A production stage `FROM scratch` with no CMD or ENTRYPOINT only
+  exports files (focalboard `Dockerfile.build`) and is never selected. A
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
   mdBook, Antora, Docsify) ranks with the dev images, below the app image. So
   does an image in a datastore or proxy directory (`hosting/couchdb/`,
@@ -151,7 +154,9 @@ Repository (GitHub tree, bounded)
   runtime source, then the mapping of an application service (one that
   waits on a database or cache service with `depends_on` first: khoj
   `server` before its VNC `computer` sidecar). An
-  image with a front web server (nginx, caddy) publishes port 80. The health
+  image with a front web server (nginx, caddy) publishes port 80; an
+  unprivileged nginx base (`nginxinc/nginx-unprivileged`, `bitnami/nginx`)
+  with no EXPOSE serves on 8080. The health
   path, in order: the URL that the HEALTHCHECK of the production stage or a
   production Compose app service probes (also in the script it runs, with the
   host, port, scheme and a base path from variables:
@@ -211,8 +216,13 @@ Repository (GitHub tree, bounded)
   another candidate with a CMD or ENTRYPOINT copies from the repository. A capped or partial
   file list (GitHub cuts the listing of a very large repository and says
   `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
-  copies only repository content, a git submodule, `COPY --from=` and a generated
-  directory never reject. A Dockerfile that copies `.git`, a RUN step that
+  copies only repository content, a git submodule, `COPY --from=`, a heredoc
+  source (`COPY <<'EOF' …`) and a generated directory never reject. A
+  repository whose full path list holds only documents (README, licence,
+  Markdown, images, `.github/`) has no application source: it is the
+  `no-application-source` rejection (finding `unsupported-no-application-source`,
+  a `CAPABILITY_GAP`), never a request to add a Dockerfile (a project that moved
+  to Codeberg or GitLab). A Dockerfile that copies `.git`, a RUN step that
   bind-mounts `.git` from the context (gitea
   `--mount=type=bind,source=".git/"`), or a RUN step
   that reads git history (`git rev-parse`, `git describe`) with no `||`
@@ -229,7 +239,11 @@ Repository (GitHub tree, bounded)
   the container command only when it belongs to a package that the image
   runs (the root, the Dockerfile directory or the runtime WORKDIR), the
   package is not a workspace root, and the script does not build first
-  (`tsc && node …`). Otherwise the vendor is asked for the start command.
+  (`tsc && node …`), and the production stage lineage runs Node (a Node build
+  stage whose output an nginx stage serves runs no package script). A
+  production stage on the official nginx or httpd image with no CMD or
+  ENTRYPOINT runs that image's command (`nginx -g daemon off;`,
+  `httpd-foreground`). Otherwise the vendor is asked for the start command.
 - **Migrations at boot:** a migration that the app runs from its own code at
   boot (knex `migrate.latest()`, Umzug, Drizzle `migrate()`, TypeORM
   `runMigrations()`, golang-migrate, Flask-Migrate `upgrade()`, Django
@@ -360,6 +374,12 @@ is final.
     app reads its required database connection from (the
     `database-connection-unverified` case: no binding name is read with
     evidence).
+  - The repository kind, when the rules found no Dockerfile that builds the
+    repository (`no-buildable-dockerfile`): an application, or a library,
+    framework, SDK or CLI that others install. "Add a Dockerfile" is the
+    wrong fix for a repository with no server to run (crewAI, agno,
+    superagent, Strapi). A rule cannot decide it: these repositories have
+    ports, start scripts and Dockerfiles in examples and templates.
   - A repository with no open item makes no model call.
 - **Evidence files** (`evidenceFileRequests`): the rules tree fetches at
   most 200 files of some source languages (TypeScript, JavaScript, Python,
@@ -389,7 +409,11 @@ is final.
   migrations (`MigrateMaster(install)`, `databaseManager.Install()`, a boot
   `ensureSchema()`), and an import, a comment or a namespace line ranks
   last. For the database variable, a line that reads the environment ranks
-  first. Start and
+  first. The repository kind shows the packaging lines of the six
+  shallowest package manifests (`package.json`, `pyproject.toml`,
+  `setup.py`, `setup.cfg`, `Cargo.toml`, `composer.json`, a gemspec), then
+  the server entrypoints of the code (`.listen(`, uvicorn, `FastAPI(`, a
+  `start` script). Start and
   migration questions also get the `scripts` block of `package.json`.
   Limits: 8,000 characters for the start path, 8,000 for each question,
   40,000 for the pack. The pack starts with the Deployz binding contract
@@ -397,12 +421,15 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 16): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 17): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
     `not_used`;
-  - a fact: a value, or `unknown`.
+  - a fact: a value, or `unknown`. The repository kind is `application`,
+    `library`, `framework`, `sdk` or `cli`; when the repository also holds
+    an app that serves HTTP, or when the model is not sure, it is
+    `application`.
   Each answer has a confidence and `{path, line, quote}` evidence. When a
   window does not let the model decide, it answers `required` or `unknown`.
   The provider is held to a flat list of plain strings; the strict schemas
@@ -444,6 +471,14 @@ is final.
     connection: a URL (`DB_URL`, `*_DSN`, `*_DB_URI`) or a JDBC URL. A part
     (`DB_HOST`) or a name without a known format (`BTCPAY_POSTGRES`, a
     driver connection string) fails: Deployz cannot set its value.
+  - Repository kind: `application` changes nothing. Any other kind needs
+    medium or high confidence and a cited line of a package manifest
+    that packages the code for others to install: a build backend
+    (`build-backend`, `requires = ["hatchling"]`), `[project.scripts]` or a
+    console script entry, `"bin"` or a `"bin"` entry (`"codex":
+    "bin/codex.js"`), `"main"`, `"exports"`, `"types"` or
+    `"publishConfig"`, a Rust `[lib]` or `[[bin]]`, a Composer `"type":
+    "library"`, a gemspec. A project name or a README line fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the
@@ -453,7 +488,12 @@ is final.
   set it: it becomes a required variable, and its source names the value
   (outcome 2, deployable with changes). Each open fact that passes its
   check fills its value on its own. An open fact that stays unresolved
-  keeps its rules finding, so a resolved fact cannot hide it. (Before
+  keeps its rules finding, so a resolved fact cannot hide it. A passing
+  repository kind other than `application` replaces the
+  `no-buildable-dockerfile` rejection with `library-repository` (finding
+  `unsupported-library-repository`, a `CAPABILITY_GAP`): outcome 3, not
+  deployable, and no "add a Dockerfile" finding. The rules engine and a
+  fallback keep outcome 2 for these repositories. (Before
   prompt v15 the open facts were all or nothing, because an unknown
   migration was not a question then: new-23 became READY and did not
   start.) A migration answer that is unknown or fails its own check stays an open
@@ -537,7 +577,12 @@ change it. A finding is a `CAPABILITY_GAP` only when the app clearly needs the
 capability. When that is not clear, the finding is a `CODE_CHANGE`, and the
 fix instructions tell the coding agent to verify it first. SQLite is a gap
 only when it is the only database driver: an app with a PostgreSQL or MySQL
-driver too can select that engine. Local disk writes, a persistent volume
+driver too can select that engine. `drizzle-orm` or `knex` beside a SQLite or
+libSQL driver (`better-sqlite3`, `sqlite3`, `@libsql/client`) is not a
+PostgreSQL driver. A PHP app that opens its own SQLite file (`new SQLite3(…)`,
+`new PDO('sqlite:…')`; not `sqlite::memory:`) and has no MySQL or PostgreSQL
+connection in code or a manifest is SQLite. A Go MySQL driver counts only on
+a direct `go.mod` line (or through `gorm.io/driver/mysql`). Local disk writes, a persistent volume
 (also a `*_CONFIG_DIR`), several Compose application services, an unbuildable
 Dockerfile (`no-buildable-dockerfile`), a `.git` copy
 (`build-context-git-metadata`) and a MariaDB driver are `CODE_CHANGE`. A
@@ -658,7 +703,8 @@ describe the production deployment:
 - Deployment files: Helm charts, Kubernetes manifests, Kustomize, Terraform
   and Pulumi files in `charts`, `helm`, `k8s`, `kubernetes`, `deploy`,
   `deployments`, `infra`, `terraform`, `install`, `contrib`, `dogfood`,
-  `scaletest` or `*-docker` directories do not block. They give the `deployment-files-ignored`
+  `scaletest` or `*-docker` directories, also with a prefix (`sqlpad-charts`,
+  `app_helm`), do not block. They give the `deployment-files-ignored`
   warning and the manifest field `ignoredDeploymentFiles`. Root-level files,
   files elsewhere, and the manifests of a Go module that imports
   `client-go` or `controller-runtime` still block. Azure files still block.

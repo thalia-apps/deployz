@@ -8,6 +8,9 @@
  *   health path, no Dockerfile or a tied choice, an unknown migration for a
  *   required database, or no variable that the app reads its required database
  *   connection from.
+ * - What the repository is (an application, or a library, framework, SDK or
+ *   CLI) when the rules found no Dockerfile that builds it: "add a
+ *   Dockerfile" is the wrong fix for a repository with no server to run.
  *
  * Every other rules value is final for the AI engine. A repository with no
  * open item makes no model call.
@@ -17,7 +20,7 @@ import { listDockerfileCandidates, type FileTree } from '../detectors.js';
 import { databaseConnectionUnverified } from '../manifest.js';
 
 export type BlockerCategory = 'datastore' | 'local_state' | 'compose_service';
-export const OPEN_FACTS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'migration', 'databaseVariable'] as const;
+export const OPEN_FACTS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'migration', 'databaseVariable', 'repositoryKind'] as const;
 export type OpenFact = (typeof OPEN_FACTS)[number];
 
 /** The dependency of the local-state finding that the manifest reads from `usesLocalFilesystem`. */
@@ -111,6 +114,7 @@ export function collectOpenItems(tree: FileTree, rules: AnalysisResult): OpenIte
     healthPath: meta['healthMode'] === 'vendor_required',
     migration: database && meta['migrationMode'] === 'unknown',
     databaseVariable: database && databaseConnectionUnverified(meta),
+    repositoryKind: rules.rejections.some((rejection) => rejection.detected && rejection.dependency === 'no-buildable-dockerfile'),
   };
   for (const fact of OPEN_FACTS) if (open[fact]) items.push({ kind: 'fact', fact });
   return items;

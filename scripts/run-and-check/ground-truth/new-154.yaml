@@ -1,0 +1,147 @@
+id: new-154
+repository: dbgate/dbgate
+commit: 7aa44d13e44a715fb7235db47e047e1ac0c981fb
+summary: >
+  DbGate is a multi-database web and desktop client (Node.js Express API in packages/api, Svelte web UI in
+  packages/web, Electron app in app/). The Docker web edition serves UI and API from one Node process on port 3000.
+  The repo Dockerfiles do not build from source: docker/Dockerfile does `COPY . .` inside the docker/ directory, which
+  CI fills with a built bundle.js, web public files and plugins (yarn prepare:docker). DbGate connects to user
+  databases (Postgres, MySQL, MongoDB, Oracle and others); those are managed targets, not its own database. Its own
+  state (saved connections, settings, files) lives on local disk in ~/.dbgate; STORAGE_DATABASE (its metadata DB) is
+  Premium-only and is mapped to a deny-all auth provider in the community code.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one Node process, port 3000, /health without auth, no own database). The repo has no
+    Dockerfile that builds the app from the repo archive: both Dockerfiles copy a CI-built context (bundle.js, public,
+    plugins). A new multi-stage Dockerfile that runs the yarn build is needed (DEPLOYABLE_WITH_CHANGES). A strict
+    read of "no prebuilt artefacts" gives NOT_DEPLOYABLE. The app has no authentication unless LOGIN and PASSWORD are set,
+    and saved connections in ~/.dbgate are lost on restart unless the CONNECTIONS env variable defines them.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/Dockerfile-alpine, reason: "same pattern on node:24-alpine: copies a CI-prepared docker/ directory"}
+    - {path: e2e-tests/containers/dex/Dockerfile, reason: "test container for OIDC e2e tests"}
+    - {path: e2e-tests/containers/mysql-ssh-keyfile/Dockerfile, reason: "test container"}
+    - {path: e2e-tests/containers/mysql-ssh-login/Dockerfile, reason: "test container"}
+    - {path: test/nginx/Dockerfile, reason: "test container"}
+  target: null
+  context: docker
+  evidence:
+    - {path: docker/Dockerfile, line: 14, quote: "COPY . ."}
+    - {path: docker/Dockerfile, line: 22, quote: "CMD [\"/home/dbgate-docker/entrypoint.sh\"]"}
+    - {path: docker/entrypoint.sh, line: 11, quote: "exec node bundle.js --listen-api"}
+    - {path: package.json, line: 66, quote: "\"prepare:docker\": \"yarn plugins:copydist && yarn build:web && yarn build:api && yarn copy:docker:build && yarn install:drivers:docker\""}
+    - {path: .github/workflows/build-docker.yaml, line: 71, quote: "yarn run prepare:docker"}
+    - {path: .github/workflows/build-docker.yaml, line: 85, quote: "context: ./docker"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: docker/Dockerfile, line: 19, quote: "EXPOSE 3000"}
+    - {path: packages/api/src/main.js, line: 259, quote: "const port = process.env.PORT || 3000;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/api/src/main.js, line: 261, quote: "server.listen(port);"}
+startCommand:
+  source: image
+  accept: ["node bundle.js --listen-api", "/home/dbgate-docker/entrypoint.sh"]
+  evidence:
+    - {path: docker/Dockerfile, line: 22, quote: "CMD [\"/home/dbgate-docker/entrypoint.sh\"]"}
+    - {path: docker/entrypoint.sh, line: 11, quote: "exec node bundle.js --listen-api"}
+healthPath:
+  accept: ["/health", "/__health"]
+  evidence:
+    - {path: packages/api/src/main.js, line: 191, quote: "app.get(getExpressPath('/health'), async function (req, res) {"}
+    - {path: packages/api/src/main.js, line: 197, quote: "app.get(getExpressPath('/__health'), async function (req, res) {"}
+    - {path: packages/api/src/controllers/auth.js, line: 138, quote: "'/health',"}
+    - {path: packages/api/src/utility/healthStatus.js, line: 14, quote: "status: 'ok',"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # DbGate connects to user-supplied PostgreSQL, MySQL, MongoDB, SQL Server, Oracle, SQLite, Redis and more (plugins/).
+  # Those are managed databases, not the app's own. STORAGE_DATABASE would be its own metadata DB but the community
+  # build maps it to a deny-all auth provider (Premium feature).
+  evidence:
+    - {path: packages/api/src/auth/authProvider.js, line: 309, quote: "if (process.env.STORAGE_DATABASE) {"}
+    - {path: packages/api/src/auth/authProvider.js, line: 310, quote: "return 'denyall';"}
+    - {path: packages/api/src/controllers/connections.js, line: 71, quote: "if (process.env.CONNECTIONS) {"}
+    - {path: packages/api/src/utility/directories.js, line: 35, quote: "return path.join(os.homedir(), '.dbgate');"}
+migrations:
+  mode: none
+  accept: []
+  evidence:
+    - {path: docker/entrypoint.sh, line: 11, quote: "exec node bundle.js --listen-api"}
+redis:
+  status: none
+  selectBy: {}
+  # A Redis plugin exists only as a database client driver (plugins/dbgate-plugin-redis).
+  evidence: []
+workers:
+  status: none
+  commands: []
+  # Query sessions, runners and plugin processes are child processes of the one Node server.
+  evidence:
+    - {path: docker/entrypoint.sh, line: 11, quote: "exec node bundle.js --listen-api"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/root/.dbgate]
+  s3: none
+  s3SelectBy: {}
+  # ~/.dbgate holds saved connections, settings, query history and uploaded files. Without a volume it resets on
+  # restart; CONNECTIONS env defines connections that need no stored state. WORKSPACE_DIR moves the directory.
+  evidence:
+    - {path: docker/Dockerfile, line: 20, quote: "VOLUME /root/.dbgate"}
+    - {path: packages/api/src/utility/directories.js, line: 29, quote: "if (process.env.WORKSPACE_DIR) {"}
+    - {path: packages/api/src/utility/directories.js, line: 35, quote: "return path.join(os.homedir(), '.dbgate');"}
+env:
+  required:
+    - {name: LOGIN, secret: false, buildTime: false, note: "without LOGIN and PASSWORD (or BASIC_AUTH, OAUTH_AUTH, AD_URL) the web UI is open to anyone, who can then use the saved and new connections"}
+    - {name: PASSWORD, secret: true, buildTime: false, note: "pairs with LOGIN; compared in authProvider.js"}
+  optional: [CONNECTIONS, WORKSPACE_DIR, BASIC_AUTH, SKIP_ALL_AUTH, PORT, SINGLE_CONNECTION, SINGLE_DATABASE]
+  buildTime: []
+  evidence:
+    - {path: packages/api/src/auth/authProvider.js, line: 239, quote: "if (login && password && process.env['LOGIN'] == login && process.env['PASSWORD'] == password) {"}
+    - {path: packages/api/src/auth/authProvider.js, line: 294, quote: "if (process.env.LOGIN && process.env.PASSWORD) {"}
+    - {path: packages/api/src/controllers/connections.js, line: 71, quote: "if (process.env.CONNECTIONS) {"}
+blockers:
+  expected:
+    - "No Dockerfile builds DbGate from the repo archive: docker/Dockerfile copies a CI-prepared context (bundle.js, public, plugins) that is not in git"
+  mustNot:
+    - "Missing database must not be a blocker: DbGate has no own database; the databases it manages are user targets"
+    - "PostgreSQL, MySQL, MongoDB, Redis, Oracle and SQL Server in the plugins must not be reported as required services"
+    - "Redis must not be required: dbgate-plugin-redis is only a client driver"
+    - "Local data in /root/.dbgate must not block by itself: ephemeral, and CONNECTIONS env can define connections"
+    - "The Electron app in app/ must not be chosen as the deployable unit"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source (vendor must supply a build stage for web, api and plugins)"
+    - "Should saved connections persist? Local disk is ephemeral on Fargate; predefine connections with the CONNECTIONS env variable"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which database? (none needed)"
+    - "Health path? (/health)"
+    - "Who runs migrations? (none)"
+traps:
+  - "Two docker/ Dockerfiles look production-ready but COPY a context filled by CI (docker/Dockerfile:14, build-docker.yaml:71-85)"
+  - "node:22-slim base and `COPY . .` look like a source build, but the repo root is not the context and docker/ has no source (docker/Dockerfile:1,14)"
+  - "The many database plugins (postgres, mysql, mongo, redis, oracle, mssql, clickhouse) are client drivers, not dependencies (plugins/)"
+  - "STORAGE_DATABASE reads like an app database requirement but is Premium-only; community maps it to denyall (authProvider.js:309-310)"
+  - "Open by default: no auth unless LOGIN and PASSWORD are set (authProvider.js:294)"
+  - "e2e-tests and test/ Dockerfiles are test containers"
+openQuestions:
+  - "Whether the yarn workspaces build (build:web, build:api, plugins, install:drivers:docker) works in one multi-stage Dockerfile from the archive; not tested"
+crossReview:
+  - {field: dockerfile.accept / dockerfile.reject, change: "[] -> [docker/Dockerfile]; removed it from reject: it is the existing web-edition image and the missing build stage is a CODE_CHANGE (outcome 2 is already accepted), so selecting it is defensible; Dockerfile-alpine and the test containers stay rejected", evidence: "docker/Dockerfile:14 COPY . .; docker/Dockerfile:19 EXPOSE 3000; docker/Dockerfile:22; .github/workflows/build-docker.yaml:71"}
+  - {field: outcome, change: "none: both DEPLOYABLE_WITH_CHANGES and NOT_DEPLOYABLE already accepted; DbGate has no own database, so no capability gap besides the strict no-build-artefact reading", evidence: "packages/api/src/auth/authProvider.js:309-310; docker/Dockerfile:14"}
+  - {field: healthPath / port / startCommand / storage, change: "none: /health and /__health are plain routes (and listed in the auth bypass), 3000, entrypoint exec node bundle.js, ~/.dbgate local state", evidence: "packages/api/src/main.js:191; packages/api/src/main.js:197; packages/api/src/controllers/auth.js:138; packages/api/src/main.js:259; docker/entrypoint.sh:11; packages/api/src/utility/directories.js:35"}
+  - {field: all, change: verified, evidence: "27 citations checked"}

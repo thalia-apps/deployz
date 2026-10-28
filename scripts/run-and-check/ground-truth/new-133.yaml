@@ -1,0 +1,159 @@
+id: new-133
+repository: TandoorRecipes/recipes
+commit: cbb96e151fe0c57c16a4456fe1bd04230b1c1e5c
+summary: >
+  Tandoor Recipes is a Django (Python 3.14) recipe manager with a Vue 3 frontend in vue3/ that Vite builds into
+  cookbook/static/vue3 (the output is not in git). The root Dockerfile installs Python dependencies and copies the repo, but it
+  never builds the Vue frontend; the GitHub workflow runs `yarn build` before `docker build`. boot.sh starts nginx in the
+  background (port TANDOOR_PORT, default 80) and then runs gunicorn on a unix socket in the foreground, after `migrate` and
+  `collectstatic`. The database is PostgreSQL (the documented choice) or SQLite by default in code. Redis is an optional cache.
+  Media (recipe images) are on local disk unless S3_* variables are set.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one app, PostgreSQL through DB_ENGINE and POSTGRES_*, migrations in boot.sh, optional S3 and
+    Redis, no worker). But the Dockerfile does not build the frontend: it depends on a CI step that fills cookbook/static/vue3
+    (the only repo-side alternative is PLUGINS_BUILD=1, which runs `yarn install` and `yarn build` at every container start and
+    needs about 2 GB of memory). The start script also backgrounds nginx next to gunicorn (two long-running servers). A deploy
+    needs a Dockerfile change (frontend build stage, and one web process or a gunicorn-only start). A strict read of the
+    "no prebuilt artefacts" and "two servers" rules gives NOT_DEPLOYABLE; a read that allows a vendor change gives DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "development container (python 3.13, installs yarn, EXPOSE 8000 for the dev server)"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 27, quote: "venv/bin/pip install -r requirements.txt --no-cache-dir &&\\"}
+    - {path: Dockerfile, line: 31, quote: "COPY . ./"}
+    - {path: Dockerfile, line: 57, quote: "ENTRYPOINT [\"/sbin/tini\", \"--\", \"/opt/recipes/boot.sh\"]"}
+    - {path: .github/workflows/build-docker.yml, line: 48, quote: "run: yarn build"}
+    - {path: vue3/vite.config.ts, line: 45, quote: "outDir: '../cookbook/static/vue3/',"}
+    - {path: plugin.py, line: 21, quote: "subprocess.run(['yarn', 'build'], shell=(os.name == 'nt'), cwd=os.path.join(BASE_DIR, 'vue3'))"}
+runtime: {accept: [python]}
+port:
+  accept: [80]
+  # nginx listens on TANDOOR_PORT (default 80) and proxies to gunicorn on /tmp/tandoor.sock. EXPOSE 8080 and the commented health check mention 8080, but nothing listens there by default.
+  evidence:
+    - {path: boot.sh, line: 5, quote: "export TANDOOR_PORT=\"${TANDOOR_PORT:-80}\""}
+    - {path: http.d/Recipes.conf.template, line: 9, quote: "listen ${TANDOOR_PORT};"}
+    - {path: Dockerfile, line: 11, quote: "EXPOSE 80 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: http.d/Recipes.conf.template, line: 9, quote: "listen ${TANDOOR_PORT};"}
+    - {path: http.d/Recipes.conf.template, line: 10, quote: "listen [::]:${TANDOOR_PORT} ipv6only=on;"}
+startCommand:
+  source: image
+  accept: ["/sbin/tini -- /opt/recipes/boot.sh", "/opt/recipes/boot.sh"]
+  evidence:
+    - {path: Dockerfile, line: 57, quote: "ENTRYPOINT [\"/sbin/tini\", \"--\", \"/opt/recipes/boot.sh\"]"}
+    - {path: boot.sh, line: 25, quote: "nginx -g 'pid /tmp/nginx.pid;'"}
+    - {path: boot.sh, line: 110, quote: "umask 0 && exec gunicorn --bind unix:/tmp/tandoor.sock"}
+healthPath:
+  accept: ["/openapi/", "/accounts/login/"]
+  # /openapi/ is the public OpenAPI schema (the commented HEALTHCHECK in the Dockerfile uses /openapi). Django answers 400 for a Host
+  # header that is not in ALLOWED_HOSTS (default empty), so the ALB probe works only when ALLOWED_HOSTS allows the target IP or "*".
+  evidence:
+    - {path: cookbook/urls.py, line: 125, quote: "path('openapi/', SpectacularAPIView.as_view(api_version=TANDOOR_VERSION), name='openapi-schema'),"}
+    - {path: Dockerfile, line: 49, quote: "CMD [ \"/usr/bin/wget\", \"--no-verbose\", \"--tries=1\", \"--spider\", \"http://127.0.0.1:8080/openapi\" ]"}
+    - {path: recipes/urls.py, line: 27, quote: "path('accounts/', include('allauth.urls')),"}
+    - {path: recipes/settings.py, line: 159, quote: "ALLOWED_HOSTS = extract_comma_list('ALLOWED_HOSTS', '')"}
+database:
+  status: optional
+  engines: [postgres, sqlite]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_ENGINE: django.db.backends.postgresql, POSTGRES_HOST: "<host>", POSTGRES_PORT: "5432", POSTGRES_DB: "<db>", POSTGRES_USER: "<user>", POSTGRES_PASSWORD: "<password>"}
+  connectionVars: [DB_ENGINE, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, DATABASE_URL]
+  # Code default is SQLite (db.sqlite3). .env.template and the docs use PostgreSQL. DATABASE_URL (postgres:// or sqlite://) is also parsed.
+  evidence:
+    - {path: recipes/settings.py, line: 582, quote: "'ENGINE': DB_ENGINE if DB_ENGINE else 'django.db.backends.sqlite3',"}
+    - {path: recipes/settings.py, line: 588, quote: "'NAME': POSTGRES_DB if POSTGRES_DB else 'db.sqlite3',"}
+    - {path: .env.template, line: 16, quote: "DB_ENGINE=django.db.backends.postgresql"}
+    - {path: Dockerfile, line: 4, quote: "RUN apk add --no-cache postgresql-libs postgresql-client"}
+migrations:
+  mode: startup
+  accept: ["python manage.py migrate"]
+  evidence:
+    - {path: boot.sh, line: 89, quote: "python manage.py migrate"}
+redis:
+  status: optional
+  selectBy: {REDIS_HOST: "<host>"}
+  # Redis is only a cache backend when REDIS_HOST is set; the default is an in-process LocMem cache.
+  evidence:
+    - {path: recipes/settings.py, line: 190, quote: "REDIS_HOST = os.getenv('REDIS_HOST', None)"}
+    - {path: recipes/settings.py, line: 604, quote: "if REDIS_HOST:"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: boot.sh, line: 110, quote: "umask 0 && exec gunicorn --bind unix:/tmp/tandoor.sock"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: boot.sh, line: 110, quote: "umask 0 && exec gunicorn --bind unix:/tmp/tandoor.sock"}
+storage:
+  local: conditional
+  paths: [/opt/recipes/mediafiles, /opt/recipes/staticfiles, /opt/recipes/db.sqlite3]
+  s3: native
+  s3SelectBy: {S3_ACCESS_KEY: "<key>", S3_SECRET_ACCESS_KEY: "<secret>", S3_BUCKET_NAME: "<bucket>"}
+  # Uploaded recipe images and files go to MEDIA_ROOT unless S3_ACCESS_KEY is set; the S3 backend takes explicit keys, not the task role.
+  # staticfiles are regenerated by collectstatic at each start, so they need no persistence.
+  evidence:
+    - {path: boot.sh, line: 6, quote: "export MEDIA_ROOT=${MEDIA_ROOT:-/opt/recipes/mediafiles};"}
+    - {path: recipes/settings.py, line: 703, quote: "AWS_ENABLED = True if os.getenv('S3_ACCESS_KEY', False) else False"}
+    - {path: recipes/settings.py, line: 720, quote: "AWS_STORAGE_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', '')"}
+    - {path: boot.sh, line: 98, quote: "python manage.py collectstatic --noinput --clear"}
+env:
+  required:
+    - {name: SECRET_KEY, secret: true, buildTime: false, note: "Django secret key; boot.sh warns that it is REQUIRED, and the code default is INSECURE_STANDARD_KEY_SET_IN_ENV"}
+    - {name: ALLOWED_HOSTS, secret: false, buildTime: false, note: "comma list of host names; the default is empty, which makes Django reject every request (HTTP 400)"}
+    - {name: DB_ENGINE, secret: false, buildTime: false, note: "django.db.backends.postgresql; the code default is SQLite"}
+    - {name: POSTGRES_HOST, secret: false, buildTime: false, note: "RDS host"}
+    - {name: POSTGRES_PORT, secret: false, buildTime: false, note: "5432"}
+    - {name: POSTGRES_DB, secret: false, buildTime: false, note: "database name"}
+    - {name: POSTGRES_USER, secret: false, buildTime: false, note: "database user"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: CSRF_TRUSTED_ORIGINS, secret: false, buildTime: false, note: "public HTTPS origin, for login and form posts behind the HTTPS proxy"}
+  optional: [TZ, TANDOOR_PORT, MEDIA_ROOT, STATIC_ROOT, GUNICORN_WORKERS, GUNICORN_THREADS, GUNICORN_TIMEOUT, PLUGINS_BUILD, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, S3_ACCESS_KEY, S3_SECRET_ACCESS_KEY, S3_BUCKET_NAME, S3_REGION_NAME, S3_ENDPOINT_URL, DEBUG, EMAIL_HOST, EMAIL_HOST_PASSWORD, DB_OPTIONS]
+  buildTime: []
+  evidence:
+    - {path: .env.template, line: 7, quote: "SECRET_KEY="}
+    - {path: .env.template, line: 13, quote: "ALLOWED_HOSTS=recipes.mydomain.com"}
+    - {path: recipes/settings.py, line: 94, quote: "SECRET_KEY = os.getenv('SECRET_KEY', 'INSECURE_STANDARD_KEY_SET_IN_ENV')"}
+    - {path: boot.sh, line: 36, quote: "The environment variable 'SECRET_KEY'"}
+blockers:
+  expected:
+    - "The Dockerfile does not build the Vue 3 frontend (cookbook/static/vue3 is a CI build output, not in git); the image has no working UI unless PLUGINS_BUILD=1 builds it at each start"
+    - "boot.sh starts nginx in the background and then gunicorn in the foreground (two long-running servers in one container)"
+  mustNot:
+    - "SQLite default must not block: PostgreSQL works through DB_ENGINE and POSTGRES_*"
+    - "Redis must not be required: it is an optional cache"
+    - "Missing worker or queue must not be raised: there is none"
+    - "Local media files must not block by themselves: S3 storage is native (with explicit keys)"
+    - "EXPOSE 8080 must not be taken as the app port: nginx listens on 80 by default"
+    - "A migration command must not be raised as a vendor question: boot.sh runs `manage.py migrate` at every start"
+vendorQuestions:
+  legitimate:
+    - "How is the Vue 3 frontend built for the image? (the Dockerfile has no frontend stage; PLUGINS_BUILD=1 builds at start and needs more memory)"
+    - "Is S3 wanted for media? It needs static access keys (S3_ACCESS_KEY), not the task role"
+  unnecessary:
+    - "Which port? (80)"
+    - "Which database? (PostgreSQL through DB_ENGINE)"
+    - "Who runs migrations? (boot.sh)"
+    - "Is a worker needed? (no)"
+traps:
+  - "The Dockerfile looks like a complete source build, but the Vue 3 build runs only in the GitHub workflow before docker build (.github/workflows/build-docker.yml:37-48, vue3/vite.config.ts:45)"
+  - "EXPOSE 80 8080 and the commented HEALTHCHECK on port 8080 suggest port 8080; the nginx template listens on TANDOOR_PORT, default 80 (Dockerfile:11, :49, boot.sh:5)"
+  - "gunicorn listens on a unix socket (/tmp/tandoor.sock), not a TCP port, so the app cannot be reached without nginx (boot.sh:110)"
+  - "ALLOWED_HOSTS defaults to empty, so the ALB health check (Host = target IP) gets HTTP 400 unless ALLOWED_HOSTS includes the IP or * (recipes/settings.py:159)"
+  - "boot.sh test `[ \"${DATABASE_URL}\" == 'postgres'* ]` is a quoted glob that never matches, so the pg_isready wait runs only when DB_ENGINE is set (boot.sh:60)"
+  - "The docs and .env.template show PostgreSQL, but the code default is SQLite when DB_ENGINE is unset (recipes/settings.py:582)"
+  - "Collectstatic with --clear runs on every start and can take minutes; the container serves nothing until it ends (boot.sh:98)"
+openQuestions:
+  - "Whether PLUGINS_BUILD=1 (yarn build at start) is acceptable as the supported way to get the frontend, given the memory need (docs/install/manual.md notes at least 2048 MB)"
+crossReview:
+  - {field: outcome / dockerfile, change: "none: the Dockerfile has no frontend build and boot.sh runs nginx beside gunicorn, so a repository change; outcome 2 and NOT_DEPLOYABLE already accepted", evidence: "Dockerfile boot.sh:98 boot.sh:110"}
+  - {field: all, change: "verified", evidence: "35 citations checked"}

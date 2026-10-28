@@ -1,0 +1,142 @@
+id: new-138
+repository: stonith404/pingvin-share
+commit: d5906ad783d280cfae6cf557b2ff349fe60106bb
+summary: >
+  Pingvin Share is a self-hosted file-sharing service made of a Next.js frontend (frontend/) and a NestJS backend
+  (backend/, Prisma ORM). The single Dockerfile builds both from the repo source, but the image runs THREE long-running
+  processes from one start script: Caddy on :3000, the Next.js server on :3333 and the NestJS API on :8080. The
+  database is SQLite only (Prisma provider "sqlite"), and uploaded files go to local disk (data/uploads) unless S3 is
+  configured.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The image is a supervised multi-process image: entrypoint.sh puts Caddy and the Next.js server in the background
+    (`&`) and runs the NestJS API in the foreground. The MVP rejects an image that starts two or more long-running
+    servers from a start script. Setting CADDY_DISABLED=true still leaves two servers (Next.js :3333 and Nest :8080)
+    on two ports, and the ALB needs one port that routes /api to the backend. The Prisma datasource is hard-coded to
+    SQLite, which Deployz does not host (no PostgreSQL or MySQL option), so the user database and the share
+    metadata sit on ephemeral local disk. Splitting the services needs a repository rewrite, not a safe fix.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2, quote: "FROM node:22-alpine AS frontend-dependencies"}
+    - {path: Dockerfile, line: 22, quote: "FROM node:22-alpine AS backend-builder"}
+    - {path: Dockerfile, line: 44, quote: "COPY --from=frontend-builder /opt/app/.next/standalone ./"}
+    - {path: Dockerfile, line: 50, quote: "COPY --from=backend-builder /opt/app/dist ./dist"}
+    - {path: Dockerfile, line: 60, quote: "EXPOSE 3000"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # 3000 is the Caddy front proxy. Without Caddy (CADDY_DISABLED=true) the public ports are 3333 (frontend) and 8080 (backend API).
+  evidence:
+    - {path: Dockerfile, line: 60, quote: "EXPOSE 3000"}
+    - {path: reverse-proxy/Caddyfile, line: 1, quote: ":3000 {"}
+    - {path: scripts/docker/entrypoint.sh, line: 19, quote: "PORT=3333 HOSTNAME=0.0.0.0 node frontend/server.js &"}
+    - {path: backend/src/main.ts, line: 78, quote: "parseInt(process.env.BACKEND_PORT || process.env.PORT || \"8080\"),"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: reverse-proxy/Caddyfile, line: 1, quote: ":3000 {"}
+    - {path: scripts/docker/entrypoint.sh, line: 19, quote: "HOSTNAME=0.0.0.0 node frontend/server.js &"}
+startCommand:
+  source: image
+  accept: ["sh ./scripts/docker/entrypoint.sh"]
+  evidence:
+    - {path: Dockerfile, line: 64, quote: "ENTRYPOINT [\"sh\", \"./scripts/docker/create-user.sh\"]"}
+    - {path: Dockerfile, line: 65, quote: "CMD [\"sh\", \"./scripts/docker/entrypoint.sh\"]"}
+    - {path: scripts/docker/entrypoint.sh, line: 22, quote: "cd backend && npm run prod"}
+healthPath:
+  accept: ["/api/health"]
+  # The backend sets the global prefix "api"; GET /api/health returns "OK" or 500 "ERROR". Through Caddy on :3000 it reaches the backend.
+  evidence:
+    - {path: backend/src/app.controller.ts, line: 9, quote: "@Get(\"health\")"}
+    - {path: backend/src/main.ts, line: 65, quote: "app.setGlobalPrefix(\"api\");"}
+    - {path: Dockerfile, line: 62, quote: "curl -fs http://localhost:3000/api/health"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: backend/prisma/schema.prisma, line: 6, quote: "provider = \"sqlite\""}
+    - {path: backend/src/constants.ts, line: 7, quote: "export const DATABASE_URL ="}
+    - {path: backend/src/constants.ts, line: 9, quote: "\"file:../data/pingvin-share.db?connection_limit=1\";"}
+migrations:
+  mode: command
+  accept: ["prisma migrate deploy && prisma db seed"]
+  evidence:
+    - {path: backend/package.json, line: 7, quote: "\"prod\": \"prisma migrate deploy && prisma db seed && node dist/src/main\","}
+redis:
+  status: optional
+  selectBy: {}
+  # Redis is only a shared cache for several instances (cache.redis-enabled, default false).
+  evidence:
+    - {path: config.example.yaml, line: 33, quote: "Normally Pingvin Share caches information in memory."}
+    - {path: config.example.yaml, line: 34, quote: "redis-enabled: \"false\""}
+workers:
+  status: embedded
+  commands: []
+  # Frontend, backend and Caddy are three processes in one image; they are not independent workers.
+  evidence:
+    - {path: scripts/docker/entrypoint.sh, line: 10, quote: "caddy start --adapter caddyfile --config /opt/app/reverse-proxy/Caddyfile.trust-proxy &"}
+    - {path: scripts/docker/entrypoint.sh, line: 19, quote: "PORT=3333 HOSTNAME=0.0.0.0 node frontend/server.js &"}
+    - {path: scripts/docker/entrypoint.sh, line: 22, quote: "cd backend && npm run prod"}
+scheduledJobs:
+  status: embedded
+  items: [expired share cleanup]
+  evidence:
+    - {path: backend/src/jobs/jobs.service.ts, line: 20, quote: "@Cron(\"0 * * * *\")"}
+storage:
+  local: required
+  paths: [/opt/app/backend/data, /opt/app/backend/data/uploads/shares]
+  s3: native
+  s3SelectBy: {config.yaml s3.enabled: "true"}
+  # Share files use the local disk by default; the s3 settings (config.example.yaml `s3:`) move uploads to a bucket,
+  # but the SQLite database file stays on local disk either way.
+  evidence:
+    - {path: backend/src/constants.ts, line: 5, quote: "export const DATA_DIRECTORY = process.env.DATA_DIRECTORY || \"./data\";"}
+    - {path: backend/src/constants.ts, line: 6, quote: "export const SHARE_DIRECTORY = `${DATA_DIRECTORY}/uploads/shares`;"}
+    - {path: backend/src/file/s3.service.ts, line: 31, quote: "export class S3FileService {"}
+    - {path: config.example.yaml, line: 201, quote: "s3:"}
+env:
+  required: []
+  optional: [APP_URL, TRUST_PROXY, CADDY_DISABLED, BACKEND_PORT, DATA_DIRECTORY, DATABASE_URL, CONFIG_FILE, PORT]
+  buildTime: []
+  evidence:
+    - {path: scripts/docker/entrypoint.sh, line: 6, quote: "if [ \"$CADDY_DISABLED\" != \"true\" ]; then"}
+    - {path: scripts/docker/entrypoint.sh, line: 9, quote: "if [ \"$TRUST_PROXY\" = \"true\" ]; then"}
+blockers:
+  expected:
+    - "The image runs three long-running servers (Caddy, Next.js, NestJS) started from one script with `&` (entrypoint.sh:10,19,22): an unsupported supervised multi-process image"
+    - "The database is SQLite only (schema.prisma:6): no PostgreSQL or MySQL option, so the data sits on ephemeral local disk"
+  mustNot:
+    - "S3 must not be reported as required: it is an optional file backend and local disk is the default"
+    - "Redis must not be reported as required: it is an optional shared cache for multi-instance setups"
+    - "The Dockerfile must not be reported as missing or prebuilt: it builds frontend and backend from the repo source"
+    - "Port 3333 or 8080 must not be reported as the only app port without the Caddy front on 3000"
+vendorQuestions:
+  legitimate:
+    - "Can the app run as one process? Frontend (3333) and backend (8080) are two servers behind Caddy (3000)"
+    - "Can the database move from SQLite to PostgreSQL? The Prisma provider is fixed to sqlite"
+  unnecessary:
+    - "Which port? (3000, the Caddy proxy)"
+    - "Health path? (/api/health)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The Dockerfile builds correctly from source and has a HEALTHCHECK, so it looks like a clean DEPLOYABLE (Dockerfile:62)"
+  - "The multi-process start is not in the Dockerfile but in scripts/docker/entrypoint.sh (lines 10, 19, 22)"
+  - "ENTRYPOINT is create-user.sh and CMD is entrypoint.sh (Dockerfile:64-65); create-user.sh only drops root, it does not start a server"
+  - "CADDY_DISABLED=true removes only Caddy; the frontend (3333) and backend (8080) still run as two servers"
+  - "Redis and S3 appear in config.example.yaml but both are optional and off by default"
+  - "Prisma migrations and seed run in the start command (backend/package.json:7), not in a separate migration step"
+openQuestions:
+  - "Whether Caddy-less operation with a path-routing ALB could be argued as supportable; Deployz has one target group and one port, so it is not"
+crossReview:
+  - {field: outcome / database, change: "none: the Prisma provider is fixed to sqlite (the only engine, a capability gap), so NOT_DEPLOYABLE only; the entrypoint also starts Caddy and Next.js in the background", evidence: "backend/prisma/schema.prisma:6 scripts/docker/entrypoint.sh:10 scripts/docker/entrypoint.sh:12 scripts/docker/entrypoint.sh:19 scripts/docker/entrypoint.sh:22"}
+  - {field: healthPath, change: "none: global prefix api and a health controller exist", evidence: "backend/src/main.ts:65 backend/src/app.controller.ts"}
+  - {field: all, change: "verified", evidence: "33 citations checked"}

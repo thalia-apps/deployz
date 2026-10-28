@@ -628,6 +628,7 @@ const EXACT_DOCKERFILE_NAME_REGEX = /(?:^|\/)dockerfile$/i;
  * auxiliary services (e.g. a dev-only PDF service); picking the first one
  * `Object.keys` happens to return risks building the wrong image.
  */
+// A Dockerfile in a hidden tool directory (`.oss-scanner/`) is tooling too.
 // A Dockerfile that builds a dev container, a test image, an example, an OS
 // package (Debian/RPM), an operator, a tool image, a sidecar image named
 // after the infrastructure it runs (`twenty-postgres-spilo/`, `chrome/`),
@@ -635,7 +636,7 @@ const EXACT_DOCKERFILE_NAME_REGEX = /(?:^|\/)dockerfile$/i;
 // is never the image Deployz should build — it ranks below every other
 // candidate regardless of depth (Stage A COMP-007, COMP-027).
 const DEV_DOCKERFILE_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|devenv|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|opensearch|meilisearch|mysql|mariadb|minio|gotenberg|couchdb|mongo|clickhouse|rabbitmq|kafka)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|dev|devenv|development|[\w-]*tests?|e2e|ci|cypress|examples?|samples?|debian|rpm|operator|hack|tools?|scaletest|dogfood|docs?|benchmarks?|playwright|engine|runners?|sidecars?|base|[\w-]+-base)(?:\/|$)|(?:^|\/)[\w.-]*(?:postgres|spilo|redis|nginx|caddy|proxy|chrome|chromium|keycloak|elasticsearch|opensearch|meilisearch|mysql|mariadb|minio|gotenberg|couchdb|mongo|clickhouse|rabbitmq|kafka)[\w.-]*\/|(?:^|\/)[\w-]*(?:gitpod|dev|test|ci|preview|staging)[\w-]*\.dockerfile$|(?:^|\/)dockerfile(?:[.-]\w+)*[.-](?:dev|development|test|e2e|ci|compose|fips|coverage|integration|tilt|gitpod|alpine|debian|ubuntu|cpu|gpu|cuda|rocm|arm|arm64|ppc64le|rock|rock_base|deb|rpm)(?:[.-]\w+)*$|(?:^|\/)\.[\w.-]+\//i;
 
 // A variant of the same image for other hardware or a bundled-process layout
 // ranks below the plain one (`dev/build-arm`, `docker/multi-process`).
@@ -785,6 +786,10 @@ function isUnusableDockerfile(path: string, content: string): boolean {
   if (lines.some((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line) && DEV_RUNTIME_REGEX.test(line.replace(/["',[\]\s]+/g, ' ')))) return true;
   const startsSomething = lines.some((line) => /^\s*(?:CMD|ENTRYPOINT|EXPOSE)\b/i.test(line));
   if (DEV_DOCKERFILE_DIR_REGEX.test(path) && !startsSomething) return true;
+  // A `FROM scratch` image with no command only exports files (focalboard `Dockerfile.build`, built with `--output`).
+  const stages = parseDockerfileStages(normalizeDockerfile(content));
+  const runtimeStage = stages[productionStageIndex(stages)];
+  if (runtimeStage?.image.toLowerCase() === 'scratch' && !lines.some((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line))) return true;
   const copiesApp = lines.some((line) => /^\s*(?:COPY|ADD)\b/i.test(line));
   const installsSystemPackages = lines.some((line) => /^\s*RUN\b.*\b(?:apt-get|apt|apk|yum|dnf|microdnf)\b/i.test(line));
   // A dev container installs tools, copies nothing in and starts a script by a relative path:
@@ -1078,6 +1083,8 @@ function exposedPort(dockerfile: string): string | null {
 // base images that serve on port 80 without an EXPOSE.
 const FRONT_SERVER_REGEX = /\b(?:caddy|nginx|httpd|apache2|haproxy|traefik)\b/i;
 const FRONT_SERVER_BASE_IMAGE_REGEX = /^\s*FROM\s+(?:--\S+\s+)*\S*(?:nginx|httpd|caddy|apache)\S*/im;
+// A non-root nginx image cannot bind port 80 and serves on 8080 (CyberChef on `nginxinc/nginx-unprivileged`).
+const UNPRIVILEGED_NGINX_BASE_IMAGE_REGEX = /^\s*FROM\s+(?:--\S+\s+)*\S*(?:nginx-unprivileged|bitnami\/nginx)\S*/im;
 
 /**
  * The port the production stage of a Dockerfile serves on: its own `ENV PORT`
@@ -1097,6 +1104,7 @@ function runtimeDockerfilePort(content: string): { value: string; source: 'env' 
   // (`HEALTHCHECK CMD wget http://localhost:${LIVEBOOK_PORT-8080}/health`).
   const checked = /^\s*HEALTHCHECK\b[^\n]*\b(?:localhost|127\.0\.0\.1):\$\{\w+:?-(\d{2,5})\}/m.exec(runtime);
   if (checked) return { value: checked[1]!, source: 'dockerfile-expose', via: 'HEALTHCHECK' };
+  if (UNPRIVILEGED_NGINX_BASE_IMAGE_REGEX.test(runtime)) return { value: '8080', source: 'dockerfile-expose', via: 'base image default' };
   return FRONT_SERVER_BASE_IMAGE_REGEX.test(runtime) ? { value: '80', source: 'dockerfile-expose', via: 'base image default' } : null;
 }
 
@@ -1868,11 +1876,12 @@ export function detectHealthEndpoint(tree: FileTree): DetectorFinding {
     if (!/\.ts$/.test(path) || !content || !isRuntimeSourcePath(path)) continue;
     const controller = /@Controller\(\s*(?:\{\s*path:\s*)?['"]([^'"]+)['"]/.exec(content)?.[1];
     if (!controller) continue;
-    const controllerPath = `/${controller.replace(/^\/+/, '')}`;
-    // `@Get()` serves the controller path; `@Get('ping')` serves a sub-path of it.
+    const controllerPath = `/${controller.replace(/^\/+|\/+$/g, '')}`;
+    // `@Get()` serves the controller path; `@Get('ping')` serves a sub-path of it
+    // (under `@Controller('/')` that is `/ping`, never `//ping`).
     const getPaths = [...content.matchAll(/@Get\(\s*(?:['"]([\w/-]*)['"])?\s*\)/g)].map((m) => {
       const sub = (m[1] ?? '').replace(/^\/+/, '');
-      return sub ? `${controllerPath}/${sub}` : controllerPath;
+      return sub ? `${controllerPath.replace(/\/$/, '')}/${sub}` : controllerPath;
     });
     const routePath = getPaths.find((candidate) => HEALTH_PATH_SEGMENT_REGEX.test(candidate));
     if (routePath === undefined) continue;
@@ -2064,6 +2073,9 @@ export const DIALECT_AGNOSTIC_DRIVERS = new Set(['knex', 'drizzle-orm']);
 // Mirrors rejection.ts's `MYSQL_DEPS` — a dialect-agnostic ORM alongside a
 // MySQL driver is MySQL evidence, not PostgreSQL evidence.
 const MYSQL_DRIVER_DEPS = ['mysql2', 'mysql'] as const;
+// SQLite and libSQL drivers — next to one, the ORM is SQLite evidence
+// (karakeep: drizzle-orm with better-sqlite3; openstatus: with @libsql/client).
+const SQLITE_DRIVER_DEPS = ['better-sqlite3', 'sqlite3', '@libsql/client'] as const;
 
 /** §11.5 — per-language PostgreSQL driver tokens matched against dependency manifests and imports. */
 const LANGUAGE_PG_SIGNALS: { token: string; name: string }[] = [
@@ -2230,14 +2242,14 @@ export function installsPhpExtension(tree: FileTree, extensions: readonly string
 export function detectPostgresql(tree: FileTree): DetectorFinding {
   const detected: string[] = [];
   const deps = collectDependencyNames(tree);
-  const hasMysqlDriver = MYSQL_DRIVER_DEPS.some((dep) => deps.includes(dep));
+  const hasOtherSqlDriver = [...MYSQL_DRIVER_DEPS, ...SQLITE_DRIVER_DEPS].some((dep) => deps.includes(dep));
 
   // Check for postgres-specific drivers
   for (const driver of PG_DRIVERS) {
     if (deps.includes(driver)) {
-      // A dialect-agnostic ORM proves nothing when a MySQL driver is also
-      // present — the app is wired to MySQL, not PostgreSQL.
-      if (DIALECT_AGNOSTIC_DRIVERS.has(driver) && hasMysqlDriver) continue;
+      // A dialect-agnostic ORM proves nothing when a MySQL or SQLite driver is
+      // also present — the app is wired to that engine, not PostgreSQL.
+      if (DIALECT_AGNOSTIC_DRIVERS.has(driver) && hasOtherSqlDriver) continue;
       detected.push(driver);
     }
   }
@@ -2302,16 +2314,16 @@ const COMPOSE_IMAGE_REGEX = /^\s*image:\s*['"]?([^\s'"]+)['"]?/gim;
 export function assessPostgres(tree: FileTree): PostgresRequirement {
   const evidence: string[] = [];
   const deps = collectDependencyNames(tree);
-  const hasMysqlDriver = MYSQL_DRIVER_DEPS.some((dep) => deps.includes(dep));
+  const hasOtherSqlDriver = [...MYSQL_DRIVER_DEPS, ...SQLITE_DRIVER_DEPS].some((dep) => deps.includes(dep));
 
   let hasDependency = false;
   let hasIndependentEvidence = false;
 
   for (const driver of PG_DRIVERS) {
     if (deps.includes(driver)) {
-      // A dialect-agnostic ORM proves nothing when a MySQL driver is also
-      // present — the app is wired to MySQL, not PostgreSQL.
-      if (DIALECT_AGNOSTIC_DRIVERS.has(driver) && hasMysqlDriver) continue;
+      // A dialect-agnostic ORM proves nothing when a MySQL or SQLite driver is
+      // also present — the app is wired to that engine, not PostgreSQL.
+      if (DIALECT_AGNOSTIC_DRIVERS.has(driver) && hasOtherSqlDriver) continue;
       hasDependency = true;
       evidence.push(`${driver} dependency in package.json`);
     }
@@ -3509,6 +3521,13 @@ function isWorkspaceRoot(tree: FileTree, dir: string): boolean {
   }
 }
 
+// The default command of the official web server images (a third-party image such as
+// `serversideup/php:*-fpm-nginx` has its own init, so it never matches).
+const WEB_SERVER_BASE_COMMANDS: [RegExp, string][] = [
+  [/^\s*FROM\s+(?:--\S+\s+)*(?:docker\.io\/)?(?:(?:library\/)?nginx|nginxinc\/nginx-unprivileged)(?:[:@\s]|$)/im, '["nginx", "-g", "daemon off;"]'],
+  [/^\s*FROM\s+(?:--\S+\s+)*(?:docker\.io\/)?(?:library\/)?httpd(?:[:@\s]|$)/im, '["httpd-foreground"]'],
+];
+
 export function detectStartupCommand(tree: FileTree): DetectorFinding {
   const sources: string[] = [];
   let source: DetectorSource | undefined;
@@ -3525,6 +3544,9 @@ export function detectStartupCommand(tree: FileTree): DetectorFinding {
     const { cmd, entrypoint } = dockerfileImageCommand(dockerfile.content);
     if (cmd) sources.push(`CMD: ${cmd}`);
     if (entrypoint) sources.push(`ENTRYPOINT: ${entrypoint}`);
+    // A web server base image with no command of its own runs the server (CyberChef on nginx-unprivileged).
+    const baseCommand = cmd || entrypoint ? undefined : WEB_SERVER_BASE_COMMANDS.find(([image]) => image.test(productionStageText(dockerfile.content)))?.[1];
+    if (baseCommand) sources.push(`CMD: ${baseCommand}`);
     if (sources.length > 0) source = 'dockerfile';
   }
 
@@ -3533,7 +3555,7 @@ export function detectStartupCommand(tree: FileTree): DetectorFinding {
   //    (`tsc && node dist/app.js`) needs build tools the runtime image may not
   //    have — neither is the container's command, so the vendor is asked.
   const appDirs = deployedPackageDirs(tree);
-  for (const [name, command, dir] of nodeManifestsApplyToImage(tree) ? collectScriptsWithDir(tree) : []) {
+  for (const [name, command, dir] of nodeRunsInImage(tree) ? collectScriptsWithDir(tree) : []) {
     if (name === 'start' && appDirs.has(dir) && !isWorkspaceRoot(tree, dir) && !START_BUILD_STEP_REGEX.test(command)) {
       sources.push(`start: ${command}`);
       source ??= 'package-manifest';
@@ -5532,6 +5554,22 @@ function nodeManifestsApplyToImage(tree: FileTree): boolean {
 }
 
 /**
+ * Whether the image Deployz builds runs Node: the production stage lineage is
+ * a Node image or installs with a Node package manager. A Node build stage
+ * whose output an nginx stage serves (CyberChef) runs no package script.
+ */
+function nodeRunsInImage(tree: FileTree): boolean {
+  const dockerfile = selectedDockerfile(tree);
+  if (!dockerfile) return true;
+  const stages = parseDockerfileStages(normalizeDockerfile(dockerfile.content));
+  if (stages.length === 0) return nodeManifestsApplyToImage(tree);
+  return (
+    stageLineage(stages, productionStageIndex(stages)).some((index) => runtimeFromImage(stages[index]!.image) === 'node') ||
+    NODE_PACKAGE_MANAGER_RUN_REGEX.test(productionStageText(dockerfile.content))
+  );
+}
+
+/**
  * Detect the application build command from package.json "build" scripts,
  * repository root first, same ordering as `parsePackageJsons` — only when
  * those scripts belong to the image Deployz builds.
@@ -6113,7 +6151,8 @@ function copyAddSources(args: string): string[] {
     return [];
   }
   const tokens = trimmed.split(/\s+/).filter((token) => !token.startsWith('--'));
-  return tokens.length > 1 ? tokens.slice(0, -1) : [];
+  // A heredoc source (`COPY <<'EOF' /etc/app.conf`) is written inline, never read from the build context.
+  return tokens.length > 1 ? tokens.slice(0, -1).filter((token) => !token.startsWith('<<')) : [];
 }
 
 /**

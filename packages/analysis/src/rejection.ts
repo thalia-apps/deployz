@@ -113,6 +113,8 @@ const MYSQL_LANGUAGE_TOKENS = [
   'mysql-connector-python',
   'aiomysql',
   'github.com/go-sql-driver/mysql',
+  // GORM's MySQL driver; it pulls go-sql-driver/mysql in as an `// indirect` module.
+  'gorm.io/driver/mysql',
   'mysql-connector-j',
   'mysql-connector-java',
   'r2dbc-mysql',
@@ -200,7 +202,8 @@ export function assessMysql(tree: FileTree): MySqlRequirement {
   // the supported MySQL engine.
   if (!hasDependency) {
     for (const token of MYSQL_LANGUAGE_TOKENS) {
-      if (findDependencyEvidence(tree, token).some(isRuntimeSourcePath)) {
+      // A `// indirect` go.mod line is a transitive module (beszel: PocketBase's dbx), not the app's engine.
+      if (findDependencyEvidence(tree, token, true).some(isRuntimeSourcePath)) {
         hasDependency = true;
         evidence.push(`${token} declared`);
         break;
@@ -563,9 +566,9 @@ function runtimeTree(tree: FileTree): FileTree {
 // Helm charts, Kubernetes manifests, Terraform and the like in a deployment
 // or sample directory are options for self-hosters. They do not run beside
 // the app, so they warn and never block (docs and example directories are
-// already outside `isRuntimeSourcePath`).
+// already outside `isRuntimeSourcePath`). A prefixed name is one too (sqlpad `sqlpad-charts/`).
 const DEPLOYMENT_SAMPLE_DIR_REGEX =
-  /(?:^|\/)(?:charts?|helm|k8s|kube|kubernetes|deploy|deployments?|infra|infrastructure|terraform|contrib|install|dogfood|scaletest|[\w.-]+-docker)(?:\/|$)/i;
+  /(?:^|\/)(?:(?:[\w.]+[-_])?(?:charts?|helm|k8s|kube|kubernetes|deploy|deployments?|infra|infrastructure|terraform|contrib|install|dogfood|scaletest)|[\w.-]+-docker)(?:\/|$)/i;
 
 function outsideDeploymentSamples(paths: string[]): string[] {
   return paths.filter((path) => !DEPLOYMENT_SAMPLE_DIR_REGEX.test(path));
@@ -603,7 +606,11 @@ export function listIgnoredDeploymentFiles(tree: FileTree): string[] {
   return [...new Set(ignored)];
 }
 
-/** Production SQLite (embedded file DB): Node drivers, Prisma provider, Go driver, sqlite:// URLs. */
+const PHP_SQLITE_OPEN_REGEX = /\bnew\s+\\?SQLite3\s*\(|\bnew\s+\\?PDO(?:\\Sqlite)?\s*\(\s*['"]sqlite:(?!:memory:)/;
+// PHP code that also connects to MySQL or PostgreSQL: SQLite is one engine of several (Adminer's drivers).
+const PHP_OTHER_SQL_REGEX = /\bnew\s+\\?mysqli\s*\(|\bmysqli_connect\s*\(|\bpg_connect\s*\(|['"](?:mysql|pgsql):/;
+
+/** Production SQLite (embedded file DB): Node drivers, Prisma provider, Go driver, PHP SQLite files, sqlite:// URLs. */
 export function checkSqlite(tree: FileTree): RejectionFinding {
   const deps = collectDependencyNames(tree);
   const configurable = engineIsConfigurable(tree);
@@ -629,6 +636,20 @@ export function checkSqlite(tree: FileTree): RejectionFinding {
       detected: true,
       dependency: 'sqlite',
       reason: 'Unsupported database: a Go SQLite driver is declared in go.mod. Deployz hosts PostgreSQL and MySQL only.',
+    };
+  }
+  // PHP code that opens a SQLite file itself (Wallos `new SQLite3($file)`, grocy
+  // `new \PDO\Sqlite('sqlite:' . $path)`); an in-memory `sqlite::memory:` probe is no database.
+  const phpSources = Object.entries(tree).filter(([path, content]) => /\.php$/.test(path) && isRuntimeSourcePath(path) && content);
+  const phpSqlite =
+    configurable || assessMysql(tree).detected || phpSources.some(([, content]) => PHP_OTHER_SQL_REGEX.test(content ?? ''))
+      ? undefined
+      : phpSources.find(([, content]) => PHP_SQLITE_OPEN_REGEX.test(content ?? ''))?.[0];
+  if (phpSqlite) {
+    return {
+      detected: true,
+      dependency: 'sqlite',
+      reason: `Unsupported database: ${phpSqlite} opens a SQLite database file. Deployz hosts PostgreSQL and MySQL only.`,
     };
   }
   // A Rails `config/database.yml` whose only adapter is sqlite3 keeps the whole
@@ -1062,6 +1083,10 @@ export function checkGpu(tree: FileTree): RejectionFinding {
   return { detected: false, dependency: 'none', reason: 'No GPU requirement detected' };
 }
 
+// Documentation, licence and repository metadata files: none of them is application source.
+const DOCUMENT_ONLY_PATH_REGEX =
+  /^\.(?:github|gitignore|gitattributes|editorconfig)(?:\/|$)|(?:^|\/)(?:readme|licen[cs]e|copying|notice|changelog|contributing|code_of_conduct|security|authors|funding)(?:\.[\w.-]+)?$|\.(?:md|rst|png|jpe?g|gif|svg|webp)$/i;
+
 /**
  * A repository with no Dockerfile that builds a production image cannot be
  * deployed: no Deployz setting adds one. Rejects only on complete evidence
@@ -1069,6 +1094,15 @@ export function checkGpu(tree: FileTree): RejectionFinding {
  * (COMP-021).
  */
 export function checkNoBuildableDockerfile(tree: FileTree): RejectionFinding {
+  // A repository of only documents has no app to build: a moved project or a mirror (readeck, glitchtip on GitHub).
+  const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
+  if (paths && paths.length > 0 && paths.every((path) => DOCUMENT_ONLY_PATH_REGEX.test(path))) {
+    return {
+      detected: true,
+      dependency: 'no-application-source',
+      reason: `Unsupported repository: it holds no application source (${paths.slice(0, 3).join(', ')}), so there is no app to build.`,
+    };
+  }
   const reason = detectUnbuildableDockerfile(tree);
   if (reason === null) {
     return { detected: false, dependency: 'none', reason: 'A Dockerfile that can build the app exists, or the file list is incomplete' };

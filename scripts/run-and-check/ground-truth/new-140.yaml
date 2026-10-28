@@ -1,0 +1,152 @@
+id: new-140
+repository: Stirling-Tools/Stirling-PDF
+commit: f1b20292ae219cb5d98a05a6bf6acf5cfe1cf883
+summary: >
+  Stirling-PDF is a self-hosted PDF toolbox: a Spring Boot (Java 25, Gradle multi-module) server with a React/Vite
+  frontend that Gradle bundles into the jar (-PbuildWithFrontend=true). The repo now has a split Docker layout. The
+  `embedded` Dockerfiles build the jar and the UI from the repo source into ONE image on port 8080. The `backend` and
+  `frontend` Dockerfiles are the split services (API without UI, and nginx for the UI). The full embedded image
+  starts a background LibreOffice `unoserver` process (and an optional Python AI engine) from its init script next to
+  Java; the ultra-lite embedded image has none of those and is a single Java process.
+outcome:
+  # Policy (docs/ai-analysis.md, fix classes): the full image start script runs unoserver beside the app; a multi-process image is CODE_CHANGE.
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    docker/embedded/Dockerfile.ultra-lite builds from the repo source and runs one Java process on port 8080 with no
+    database (DISABLE_ADDITIONAL_FEATURES=true leaves out login and the database), so it is DEPLOYABLE. The default
+    docker/embedded/Dockerfile (full) installs LibreOffice and its init script starts unoserver instances in the
+    background beside Java (`&` at init-without-ocr.sh:498, with a restart watchdog), which is an unsupported
+    supervised multi-process image, so NOT_DEPLOYABLE is correct for that Dockerfile. The answer depends on which
+    Dockerfile is chosen. Both need at least Medium size (2 GiB heap limit in the compose files).
+dockerfile:
+  accept: [docker/embedded/Dockerfile.ultra-lite, docker/embedded/Dockerfile, docker/embedded/Dockerfile.fat]
+  reject:
+    - {path: docker/backend/Dockerfile, reason: "split backend: API only, no bundled UI; the frontend is a second service in docker/frontend (two services, two images)"}
+    - {path: docker/frontend/Dockerfile, reason: "nginx for the React UI only; needs the backend as a second service"}
+    - {path: docker/engine/Dockerfile, reason: "the separate Python AI engine service"}
+    - {path: docker/engine/Dockerfile.dev, reason: "development image of the engine"}
+    - {path: docker/base/Dockerfile, reason: "builds the shared base image (LibreOffice, Tesseract, Calibre); contains no application code"}
+    - {path: docker/unoserver/Dockerfile, reason: "separate LibreOffice conversion service for the remote-uno compose setup"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 7, quote: "FROM gradle:9.7.1-jdk25"}
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 46, quote: "COPY . ."}
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 56, quote: "DISABLE_ADDITIONAL_FEATURES=true"}
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 58, quote: "-PbuildWithFrontend=true"}
+    - {path: docker/embedded/Dockerfile, line: 56, quote: "COPY . ."}
+    - {path: docker/embedded/Dockerfile, line: 108, quote: "FROM ${BASE_IMAGE}"}
+    - {path: docker/README.md, line: 3, quote: "split frontend/backend architecture"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 136, quote: "EXPOSE 8080/tcp"}
+    - {path: docker/embedded/Dockerfile, line: 178, quote: "EXPOSE 8080/tcp"}
+    - {path: docker/compose/docker-compose.yml, line: 14, quote: "- \"8080:8080\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/embedded/Dockerfile, line: 182, quote: "http://localhost:8080${SYSTEM_ROOTURIPATH:-''}/api/v1/info/status"}
+startCommand:
+  source: image
+  accept: ["/scripts/init-without-ocr.sh", "/scripts/init.sh"]
+  evidence:
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 139, quote: "ENTRYPOINT [\"tini\", \"--\", \"/scripts/init-without-ocr.sh\"]"}
+    - {path: docker/embedded/Dockerfile, line: 184, quote: "ENTRYPOINT [\"tini\", \"--\", \"/scripts/init.sh\"]"}
+healthPath:
+  accept: ["/api/v1/info/status"]
+  # Unauthenticated (RequestUriUtils treats it as a public resource, so login does not block it); returns {"status":"UP"}.
+  evidence:
+    - {path: docker/embedded/Dockerfile, line: 182, quote: "curl -fs --max-time 10 http://localhost:8080${SYSTEM_ROOTURIPATH:-''}/api/v1/info/status"}
+    - {path: app/common/src/main/java/stirling/software/common/util/RequestUriUtils.java, line: 35, quote: "return normalizedUri.startsWith(\"/api/v1/info/status\");"}
+    - {path: app/core/src/main/java/stirling/software/SPDF/controller/web/MetricsController.java, line: 61, quote: "Mirrors /api/v1/info/status."}
+database:
+  status: optional
+  engines: [h2, postgres, mysql, oracle]
+  default: h2
+  deployzEngine: postgres
+  selectBy: {SYSTEM_DATASOURCE_ENABLECUSTOMDATABASE: "true"}
+  connectionVars: [SYSTEM_DATASOURCE_ENABLECUSTOMDATABASE, SYSTEM_DATASOURCE_CUSTOMDATABASEURL, SYSTEM_DATASOURCE_USERNAME, SYSTEM_DATASOURCE_PASSWORD]
+  # The ultra-lite build has no login and no database use. The full (proprietary) build stores users in an embedded H2 file
+  # (./configs); PostgreSQL is an "Enterprise users ONLY" option set through system.datasource.
+  evidence:
+    - {path: app/core/src/main/resources/application.properties, line: 69, quote: "spring.datasource.url=jdbc:h2:file:./configs/stirling-pdf-DB-2.3.232"}
+    - {path: app/core/src/main/resources/settings.yml.template, line: 219, quote: "enableCustomDatabase: false # Enterprise users ONLY"}
+    - {path: app/core/src/main/resources/settings.yml.template, line: 220, quote: "customDatabaseUrl: \"\" # eg jdbc:postgresql://localhost:5432/postgres"}
+    - {path: app/proprietary/src/main/java/stirling/software/proprietary/security/configuration/DatabaseConfig.java, line: 117, quote: "if (datasource.getCustomDatabaseUrl().contains(\"postgresql\")) {"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: app/core/src/main/resources/application.properties, line: 80, quote: "spring.jpa.defer-datasource-initialization=true"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Full image: init-without-ocr.sh starts unoserver instances (2003+) and an optional AI engine (:5001) in the background
+  # and waits on the Java PID. These are in-container helpers, not a separately declared worker command.
+  evidence:
+    - {path: scripts/init-without-ocr.sh, line: 498, quote: "&"}
+    - {path: scripts/init-without-ocr.sh, line: 1414, quote: "log \"Starting bundled AI engine on port ${STIRLING_ENGINE_PORT:-5001}...\""}
+    - {path: scripts/init-without-ocr.sh, line: 1546, quote: "wait \"$JAVA_PID\" || true"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/configs, /logs, /customFiles, /pipeline, /storage, /tmp/stirling-pdf]
+  s3: none
+  s3SelectBy: {}
+  # All paths hold config, logs and temporary PDF work files; losing them on restart is harmless for the ultra-lite build.
+  # In the full build /configs also holds the H2 user database and the AI engine data.
+  evidence:
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 105, quote: "RUN mkdir -p $HOME /configs /logs /customFiles /pipeline/watchedFolders"}
+    - {path: docker/embedded/Dockerfile, line: 158, quote: "STIRLING_TEMPFILES_DIRECTORY=/tmp/stirling-pdf"}
+env:
+  required: []
+  optional: [SECURITY_ENABLELOGIN, SECURITY_INITIALLOGIN_USERNAME, SECURITY_INITIALLOGIN_PASSWORD, SYSTEM_ROOTURIPATH, SYSTEM_DEFAULTLOCALE, DISABLE_ADDITIONAL_FEATURES, JAVA_CUSTOM_OPTS, UNO_SERVER_COUNT, STIRLING_ENGINE_PORT]
+  buildTime: [DISABLE_ADDITIONAL_FEATURES, STIRLING_FLAVOR]
+  # In the full (proprietary) build login is on: set SECURITY_INITIALLOGIN_USERNAME and SECURITY_INITIALLOGIN_PASSWORD (secret).
+  evidence:
+    - {path: app/core/src/main/resources/settings.yml.template, line: 10, quote: "follow parameter naming SECURITY_INITIALLOGIN_USERNAME"}
+    - {path: app/core/src/main/resources/settings.yml.template, line: 15, quote: "enableLogin: true"}
+    - {path: docker/embedded/Dockerfile.ultra-lite, line: 56, quote: "DISABLE_ADDITIONAL_FEATURES=true"}
+blockers:
+  expected:
+    - "docker/embedded/Dockerfile (full): the init script starts unoserver (LibreOffice) instances in the background beside Java and waits on the Java PID, an unsupported supervised multi-process image"
+    - "docker/backend and docker/frontend are split services (two images and two ports); only docker/embedded builds one image"
+  mustNot:
+    - "PostgreSQL must not be reported as required: H2 is the default and the ultra-lite build has no database"
+    - "Redis, S3 and a queue must not be reported: none exist"
+    - "Port 5001 (AI engine) and port 2003+ (unoserver) must not be reported as app ports: they are loopback helper ports"
+    - "The pre-built base image stirlingtools/stirling-pdf-base must not mean a prebuilt app: the app is compiled in the Gradle stage"
+    - "Local /configs and /tmp/stirling-pdf must not block: they are ephemeral working directories"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile? The repo has nine Dockerfiles; only docker/embedded/* build the app plus UI in one image (ultra-lite is the single-process one)"
+    - "Are Office-to-PDF conversions needed? They need LibreOffice unoserver in the full image, which is a second process"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/api/v1/info/status)"
+    - "Who runs migrations? (Hibernate at start)"
+traps:
+  - "Nine Dockerfiles: docker/backend, docker/frontend, docker/engine, docker/base, docker/unoserver and docker/embedded/{Dockerfile,Dockerfile.fat,Dockerfile.ultra-lite}; docker/README.md still names files (Dockerfile.ultra-lite, Dockerfile.fat) that exist only under docker/embedded"
+  - "docker/embedded/Dockerfile starts FROM a registry base image (stirlingtools/stirling-pdf-base) but still compiles the app in its own Gradle stage, so it is not a prebuilt-artefact Dockerfile"
+  - "The multi-process behaviour is in scripts/init-without-ocr.sh (background unoserver at line 498), not in the Dockerfile"
+  - "CMD is [] and ENTRYPOINT is an init script, so there is no explicit start command in the Dockerfile"
+  - "DISABLE_ADDITIONAL_FEATURES=true at build time removes login, the database and admin features (ultra-lite), which changes the answer for database and env"
+  - "A /health or /actuator/health path does not exist; /api/v1/info/status is the unauthenticated one"
+  - "The jar bundles the React app only with -PbuildWithFrontend=true; the plain Gradle build serves no UI"
+openQuestions:
+  - "Whether a tool should pick ultra-lite (single process, DEPLOYABLE) or the full Dockerfile (multi-process, NOT_DEPLOYABLE); both outcomes are accepted"
+  - "The Dockerfile.fat file was not read in detail; it is assumed to share the init script with the full image"
+crossReview:
+  - {field: dockerfile.accept / dockerfile.reject, change: "moved docker/embedded/Dockerfile.fat from reject to accept: it builds the jar from the repo source (COPY . . in a gradle stage) into one image on 8080 with the same init.sh entrypoint as docker/embedded/Dockerfile, so it is as defensible as the full Dockerfile", evidence: "docker/embedded/Dockerfile.fat:60 COPY . .; docker/embedded/Dockerfile.fat:199 EXPOSE 8080/tcp; docker/embedded/Dockerfile.fat:205 ENTRYPOINT"}
+  - {field: outcome, change: "none: all three outcomes already accepted (policy: multi-process image is CODE_CHANGE); ultra-lite is a single process", evidence: "scripts/init-without-ocr.sh:498 &; docker/embedded/Dockerfile.ultra-lite:139"}
+  - {field: port / startCommand / healthPath / database / storage, change: "none: 8080, init scripts, /api/v1/info/status public route and H2 default hold", evidence: "docker/embedded/Dockerfile.ultra-lite:136; app/common/src/main/java/stirling/software/common/util/RequestUriUtils.java:35; app/core/src/main/resources/application.properties:69"}
+  - {field: all, change: verified, evidence: "29 citations checked"}

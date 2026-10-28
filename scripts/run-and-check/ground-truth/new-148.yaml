@@ -1,0 +1,81 @@
+id: new-148
+repository: glitchtip/glitchtip
+commit: 54ce24eb3575a8097eaabe54eb451aec971b7a07
+summary: >
+  The repository glitchtip/glitchtip at the pinned commit contains one file, README.md, which is the default GitHub
+  profile README template ("Hi there", all commented hints). It has no source code, no Dockerfile, no server and no
+  configuration. The real GlitchTip backend is in a different repository (glitchtip-backend). Git history has one
+  commit named "Initial commit".
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    There is nothing to deploy: no application code, no Dockerfile, no start command. The repo is a profile README.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 1, quote: "### Hi there"}
+runtime: {accept: []}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository holds only a profile README.md: no application source, no Dockerfile, no web server"
+  mustNot:
+    - "The analysis must not describe GlitchTip product features (Django, PostgreSQL, Valkey, workers) from the project name: none of it is in this repo"
+    - "The analysis must not invent a port, database or health path"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port, database or health path? (the repo has no application)"
+traps:
+  - "The repository name matches a well-known product (GlitchTip); an AI analyser may answer from memory about the product instead of the repo content"
+  - "The README only has an HTML comment with template ideas; its words (collaborate, working on) are not setup instructions"
+  - "A rule-based analyser sees no runtime marker at all and must still return NOT_DEPLOYABLE with a clear reason"
+crossReview:
+  - {field: outcome / all fields, change: "none: the checkout holds only .git and README.md (default profile README); no source, no Dockerfile, so NOT_DEPLOYABLE (no application source) holds", evidence: "README.md:1 ### Hi there; directory listing of C:/dzr6/new-148"}
+  - {field: all, change: verified, evidence: "1 citations checked"}

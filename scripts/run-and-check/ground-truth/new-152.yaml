@@ -1,0 +1,155 @@
+id: new-152
+repository: Flagsmith/flagsmith
+commit: f4735b64807f742f81ece1f18e715d3044e2e222
+summary: >
+  Flagsmith feature-flag platform. A Django (Python 3.13, gunicorn) API in api/ with a React frontend in frontend/.
+  The root Dockerfile is a multi-target file that builds from repo source. The last (default) stage `oss-unified`
+  bundles the built frontend into the Django app and serves both on port 8000. The image entrypoint is `flagsmith`
+  with CMD `migrate-and-serve` (migrate, bootstrap, serve). PostgreSQL only (DATABASE_URL, psycopg2). Redis is an
+  optional cache backend (django-redis) and the task processor is an optional separate process
+  (TASK_RUN_METHOD defaults to SEPARATE_THREAD). No S3 storage for app data. Kafka, ClickHouse and the warehouse
+  services in docker-compose.yml belong to the optional experimentation add-on.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The default Dockerfile target `oss-unified` builds the app from the repo archive, listens on 8000, needs only
+    PostgreSQL and runs migrations at start. The task processor, Redis and the experimentation services are optional.
+    DJANGO_ALLOWED_HOSTS and DJANGO_SECRET_KEY must be set.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: frontend/Dockerfile.e2e, reason: "end-to-end test image for the frontend"}
+    - {path: mcp/Dockerfile, reason: "separate MCP server image, not the Flagsmith app"}
+  target: oss-unified
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 261, quote: "FROM api-runtime AS oss-unified"}
+    - {path: Dockerfile, line: 264, quote: "COPY --from=build-node-django /build/api/ /app/"}
+    - {path: Dockerfile, line: 230, quote: "FROM api-runtime AS oss-api"}
+    - {path: Dockerfile, line: 16, quote: "# (`oss-unified` stage is the default one, so there's no need to specify a target stage)"}
+    - {path: Dockerfile, line: 192, quote: "FROM api-runtime-private AS private-cloud-api"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 148, quote: "EXPOSE 8000"}
+    - {path: api/Procfile, line: 2, quote: "web: gunicorn --bind 0.0.0.0:${PORT:-8000}"}
+    - {path: docker-compose.yml, line: 79, quote: "- 8000:8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: api/Procfile, line: 2, quote: "--bind 0.0.0.0:${PORT:-8000}"}
+startCommand:
+  source: image
+  accept: ["flagsmith migrate-and-serve", "migrate-and-serve"]
+  evidence:
+    - {path: Dockerfile, line: 150, quote: "ENTRYPOINT [\"flagsmith\"]"}
+    - {path: Dockerfile, line: 152, quote: "CMD [\"migrate-and-serve\"]"}
+healthPath:
+  accept: ["/health", "/health/liveness", "/health/readiness"]
+  # The health routes come from the flagsmith-common package (api/pyproject.toml:78), not from api/ code. The repo docs
+  # name /health; the env docs name /health/liveness and /health/readiness. The image HEALTHCHECK is a TCP check only.
+  evidence:
+    - {path: docs/docs/deployment-self-hosting/administration-and-maintenance/troubleshooting.md, line: 11, quote: "make sure to use `/health` as the health-check endpoint for both the API and the frontend"}
+    - {path: docs/docs/deployment-self-hosting/core-configuration/environment-variables.md, line: 68, quote: "`health/liveness,health/readiness`"}
+    - {path: Dockerfile, line: 155, quote: "CMD flagsmith healthcheck tcp"}
+database:
+  status: required
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DJANGO_DB_NAME, DJANGO_DB_HOST]
+  evidence:
+    - {path: api/app/settings/common.py, line: 201, quote: "if \"DATABASE_URL\" in os.environ:"}
+    - {path: api/app/settings/common.py, line: 209, quote: "if DATABASES[\"default\"][\"ENGINE\"] == \"django.db.backends.postgresql\":"}
+    - {path: api/app/settings/common.py, line: 278, quote: "\"ENGINE\": \"django.db.backends.postgresql\","}
+    - {path: api/pyproject.toml, line: 29, quote: "\"psycopg2-binary>=2.9.5,<2.10.0\","}
+    - {path: docker-compose.yml, line: 9, quote: "DATABASE_URL: postgresql://postgres:password@postgres:5432/flagsmith"}
+migrations:
+  mode: startup
+  accept: ["python manage.py migrate", "flagsmith migrate"]
+  evidence:
+    - {path: Dockerfile, line: 152, quote: "CMD [\"migrate-and-serve\"]"}
+    - {path: api/Procfile, line: 1, quote: "release: python manage.py migrate"}
+    - {path: docker-compose.yml, line: 60, quote: "migrate-db:"}
+redis:
+  status: optional
+  selectBy: {}
+  # Cache backends default to LocMemCache. django-redis is installed; REDIS_URL / *_CACHE_BACKEND settings switch to it.
+  evidence:
+    - {path: api/app/settings/common.py, line: 707, quote: "ENVIRONMENT_CACHE_BACKEND = env.str("}
+    - {path: api/app/settings/common.py, line: 709, quote: "default=\"django.core.cache.backends.locmem.LocMemCache\","}
+    - {path: api/pyproject.toml, line: 73, quote: "\"django-redis>=5.4.0,<6.0.0\","}
+    - {path: docs/docs/deployment-self-hosting/core-configuration/environment-variables.md, line: 23, quote: "`REDIS_URL`: The URL of your Redis instance."}
+workers:
+  status: optional-independent
+  commands: ["run-task-processor"]
+  # TASK_RUN_METHOD defaults to SEPARATE_THREAD (in-process). The task processor is a separate container only when
+  # TASK_RUN_METHOD=TASK_PROCESSOR, which docker-compose.yml sets.
+  evidence:
+    - {path: api/app/settings/common.py, line: 1208, quote: "TASK_RUN_METHOD = env.enum("}
+    - {path: api/app/settings/common.py, line: 1214, quote: "else TaskRunMethod.SEPARATE_THREAD"}
+    - {path: docker-compose.yml, line: 84, quote: "# The flagsmith_processor service is only needed if TASK_RUN_METHOD set to TASK_PROCESSOR"}
+    - {path: docker-compose.yml, line: 95, quote: "command: run-task-processor"}
+scheduledJobs:
+  status: embedded
+  items: [task processor recurring tasks]
+  evidence:
+    - {path: api/app/settings/common.py, line: 1224, quote: "ENABLE_CLEAN_UP_OLD_TASKS = env.bool(\"ENABLE_CLEAN_UP_OLD_TASKS\", default=True)"}
+storage:
+  local: ephemeral
+  paths: [/tmp/prometheus]
+  s3: none
+  s3SelectBy: {}
+  # boto3 is used for DynamoDB (Edge API), SES, S3 export/import commands and SSE logs; none is required. Static files
+  # are served by WhiteNoise from the image.
+  evidence:
+    - {path: Dockerfile, line: 134, quote: "ARG PROMETHEUS_MULTIPROC_DIR=\"/tmp/prometheus\""}
+    - {path: api/app/settings/common.py, line: 402, quote: "\"whitenoise.middleware.WhiteNoiseMiddleware\","}
+    - {path: api/app/settings/common.py, line: 529, quote: "MEDIA_URL = \"/media/\"  # unused but needs to be different from STATIC_URL in django 3"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql://... connection string; Deployz manages it"}
+    - {name: DJANGO_SECRET_KEY, secret: true, buildTime: false, note: "default is get_random_secret_key() per process; with more than one task or a restart, sessions and JWT break, so set a fixed value"}
+    - {name: DJANGO_ALLOWED_HOSTS, secret: false, buildTime: false, note: "default is an empty list; every request is rejected with 400 until a host or * is set"}
+  optional: [FLAGSMITH_DOMAIN, ENVIRONMENT, TASK_RUN_METHOD, REDIS_URL, ALLOW_REGISTRATION_WITHOUT_INVITE, PREVENT_SIGNUP, GUNICORN_WORKERS, GUNICORN_THREADS, USE_POSTGRES_FOR_ANALYTICS, DJANGO_SECURE_CROSS_ORIGIN_OPENER_POLICY, WAREHOUSE_CREDENTIALS_SECRET]
+  buildTime: []
+  evidence:
+    - {path: api/app/settings/common.py, line: 60, quote: "SECRET_KEY = env(\"DJANGO_SECRET_KEY\", default=get_random_secret_key())"}
+    - {path: api/app/settings/common.py, line: 72, quote: "ALLOWED_HOSTS: list[str] = env.list(\"DJANGO_ALLOWED_HOSTS\", default=[])"}
+    - {path: docker-compose.yml, line: 13, quote: "FLAGSMITH_DOMAIN: localhost:8000 # Change this in production"}
+blockers:
+  expected: []
+  mustNot:
+    - "Kafka, ClickHouse and the warehouse/events-ingestion containers in docker-compose.yml must not block: they are the optional experimentation add-on"
+    - "The task processor must not be a required worker: TASK_RUN_METHOD defaults to SEPARATE_THREAD (in-process)"
+    - "Redis must not be required: all caches default to LocMemCache"
+    - "frontend/ Node server on 8080 (oss-frontend target) must not be a second port: the unified image serves the UI from Django on 8000"
+    - "DynamoDB, SES, S3 and SSE-logs AWS integrations must not block: they are optional features"
+    - "The Dockerfile private-cloud-* and saas-api targets (GitHub token and PGP secrets) must not be chosen or reported as blockers"
+vendorQuestions:
+  legitimate:
+    - "Is the task processor (separate worker) wanted for production load, or is the in-process thread enough?"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Which database? (PostgreSQL only)"
+    - "Who runs migrations? (migrate-and-serve does)"
+    - "Health path? (/health)"
+traps:
+  - "Dockerfile has seven targets; the default last stage oss-unified is the right one, oss-frontend exposes 8080 and private-cloud-*/saas-api need private secrets (Dockerfile:17, :229, :238, :254)"
+  - "HEALTHCHECK in the image is a TCP check (flagsmith healthcheck tcp), not an HTTP path (Dockerfile:155)"
+  - "docker-compose.yml shows kafka, clickhouse, events-ingestion and warehouse services: optional experimentation add-on, not required (docker-compose.yml:99-183)"
+  - "docker-compose.yml runs a separate flagsmith-task-processor on 8001; only needed with TASK_RUN_METHOD=TASK_PROCESSOR (docker-compose.yml:84-95)"
+  - "api/Procfile has a `release: python manage.py migrate` line: Heroku-style, not a worker"
+  - "Health routes are not defined in api/ source; they come from the flagsmith-common dependency (pyproject.toml:78)"
+  - "DJANGO_SECRET_KEY has a random default per process, so it looks optional but must be fixed (common.py:60)"
+  - "DJANGO_ALLOWED_HOSTS default is empty, so the app answers 400 behind the ALB until set (common.py:72)"
+  - "dj_database_url accepts mysql URLs but only psycopg2 is installed; PostgreSQL only (pyproject.toml:29)"
+openQuestions:
+  - "Exact route names of /health, /health/liveness and /health/readiness cannot be proved from this repo (defined in flagsmith-common)"
+crossReview:
+  - {field: outcome / dockerfile.target, change: "none: oss-unified is the last (default) stage of the root Dockerfile and bundles the frontend; DEPLOYABLE holds with Postgres only, optional Redis and task processor", evidence: "Dockerfile:261; Dockerfile:148; Dockerfile:150-152"}
+  - {field: healthPath, change: "none: route names live in the flagsmith-common dependency (not in the checkout); the three accepted paths match the repo docs; the image HEALTHCHECK is TCP only", evidence: "api/pyproject.toml:78; Dockerfile:155; docs/docs/deployment-self-hosting/administration-and-maintenance/troubleshooting.md:11"}
+  - {field: database / redis / workers / env, change: "none: Postgres only, LocMemCache default, task thread default, DJANGO_SECRET_KEY and DJANGO_ALLOWED_HOSTS settings", evidence: "api/app/settings/common.py:201; api/app/settings/common.py:709; api/app/settings/common.py:1214; api/app/settings/common.py:60; api/app/settings/common.py:72"}
+  - {field: all, change: verified, evidence: "37 citations checked"}

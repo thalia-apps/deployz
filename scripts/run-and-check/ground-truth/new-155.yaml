@@ -1,0 +1,143 @@
+id: new-155
+repository: dbeaver/cloudbeaver
+commit: adb67767ec70685b99bb74af0c6d84eead8e1170
+summary: >
+  CloudBeaver Community is a Java (OSGi/Eclipse Equinox, Jetty) web database manager with a React front end in
+  webapp/. It serves UI and API on port 8978 from one JVM. The repo has no Dockerfile that builds it from source:
+  deploy/docker/cloudbeaver-ce/Dockerfile copies a pre-built `cloudbeaver` directory that deploy/build.sh produces from
+  Maven (Tycho) and Node builds. The build also clones three sibling repositories (dbeaver, dbeaver-common, datadam-api)
+  that are not in the repo archive, and the base image dbeaver/base-java is a published image. CloudBeaver connects to
+  user databases (the managed targets). Its own metadata (users, teams, saved connections) is an embedded H2 file
+  database in workspace/.data by default; an external PostgreSQL or MySQL can be set through CLOUDBEAVER_DB_* variables.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The runtime shape fits Deployz (one JVM, port 8978, /status, own metadata in H2 or PostgreSQL), but no Dockerfile
+    builds from the repo archive. The product Dockerfile copies a CI artefact and the build needs sibling repositories
+    cloned from GitHub. A vendor-written multi-stage Dockerfile (git clone of the three repos, Maven build, Node build)
+    gives DEPLOYABLE_WITH_CHANGES; a strict read gives NOT_DEPLOYABLE. State is on ephemeral disk unless
+    CLOUDBEAVER_DB_* points to RDS PostgreSQL; saved user connections and the admin account then survive restarts.
+dockerfile:
+  accept: []
+  reject:
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, reason: "COPY cloudbeaver /opt/cloudbeaver copies the output of deploy/build.sh (not in git); FROM dbeaver/base-java published image"}
+    - {path: deploy/docker/base-java/Dockerfile, reason: "builds only the Ubuntu and Temurin JDK base image; contains no CloudBeaver code"}
+  target: null
+  context: .
+  evidence:
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, line: 3, quote: "FROM $BASE_JAVA_REPO:$BASE_JAVA_TAG"}
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, line: 13, quote: "COPY cloudbeaver /opt/cloudbeaver"}
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, line: 22, quote: "ENTRYPOINT [\"./launch-product.sh\"]"}
+    - {path: deploy/build-backend.sh, line: 19, quote: "[ ! -d dbeaver ] && git clone --depth 1 https://github.com/dbeaver/dbeaver.git"}
+    - {path: deploy/build-backend.sh, line: 20, quote: "[ ! -d dbeaver-common ] && git clone --depth 1 https://github.com/dbeaver/dbeaver-common.git"}
+    - {path: deploy/docker/make-docker-container.sh, line: 7, quote: "docker build -t dbeaver/cloudbeaver:dev . --file ./docker/cloudbeaver-ce/Dockerfile"}
+runtime: {accept: [java]}
+port:
+  accept: [8978]
+  evidence:
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, line: 16, quote: "EXPOSE 8978"}
+    - {path: config/template/cloudbeaver-base.conf, line: 5, quote: "value: 8978"}
+    - {path: deploy/docker/cloudbeaver-ce/docker-compose.yml, line: 7, quote: "- \"8978:8978\""}
+bindAllInterfaces:
+  value: true
+  # serverHost defaults to null and the product config does not set it, so Jetty binds all interfaces; the compose file publishes 8978.
+  evidence:
+    - {path: server/bundles/io.cloudbeaver.server.ce/src/io/cloudbeaver/model/config/CBServerConfig.java, line: 38, quote: "private String serverHost = null;"}
+    - {path: deploy/docker/cloudbeaver-ce/docker-compose.yml, line: 7, quote: "- \"8978:8978\""}
+startCommand:
+  source: image
+  accept: ["./launch-product.sh", "./run-cloudbeaver-server.sh"]
+  evidence:
+    - {path: deploy/docker/cloudbeaver-ce/Dockerfile, line: 22, quote: "ENTRYPOINT [\"./launch-product.sh\"]"}
+    - {path: deploy/scripts/launch-product.sh, line: 18, quote: "exec ./run-cloudbeaver-server.sh \"$@\""}
+    - {path: deploy/scripts/run-cloudbeaver-server.sh, line: 12, quote: "exec java ${JAVA_OPTS} \\"}
+healthPath:
+  accept: ["/status"]
+  evidence:
+    - {path: server/bundles/io.cloudbeaver.server/src/io/cloudbeaver/server/servlets/WebStatusServlet.java, line: 35, quote: "@WebServlet(urlPatterns = \"/status\")"}
+    - {path: server/bundles/io.cloudbeaver.server/src/io/cloudbeaver/server/servlets/WebStatusServlet.java, line: 45, quote: "infoMap.put(\"health\", \"ok\");"}
+    - {path: server/bundles/io.cloudbeaver.server.ce/src/io/cloudbeaver/server/jetty/CBJettyServer.java, line: 126, quote: "new WebStatusServlet()), \"/status\");"}
+database:
+  status: optional
+  engines: [h2, postgres, mysql]
+  default: h2
+  deployzEngine: postgres
+  selectBy: {CLOUDBEAVER_DB_DRIVER: "postgresql:postgres-jdbc", CLOUDBEAVER_DB_URL: "jdbc:postgresql://host:5432/cloudbeaver", CLOUDBEAVER_DB_USER: "user", CLOUDBEAVER_DB_PASSWORD: "password"}
+  connectionVars: [CLOUDBEAVER_DB_DRIVER, CLOUDBEAVER_DB_URL, CLOUDBEAVER_DB_SCHEMA, CLOUDBEAVER_DB_USER, CLOUDBEAVER_DB_PASSWORD]
+  # The databases CloudBeaver connects to for users (PostgreSQL, MySQL, Oracle, SQL Server and others) are managed
+  # targets, not requirements. Only the metadata store above is the app's own database.
+  evidence:
+    - {path: config/template/cloudbeaver-base.conf, line: 138, quote: "env: \"CLOUDBEAVER_DB_DRIVER\","}
+    - {path: config/template/cloudbeaver-base.conf, line: 139, quote: "value: \"h2_embedded_v2\""}
+    - {path: config/template/cloudbeaver-base.conf, line: 143, quote: "value: \"jdbc:h2:${workspace}/.data/cb.h2v2.dat\""}
+    - {path: server/bundles/io.cloudbeaver.service.security/src/io/cloudbeaver/service/security/db/CBDatabase.java, line: 96, quote: "V2_DB_NAME = \"cb.h2v2.dat\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/bundles/io.cloudbeaver.service.security/src/io/cloudbeaver/service/security/db/CBDatabase.java, line: 155, quote: "driver = migrateDatabaseIfNeeded(monitor, dataSourceProviderRegistry);"}
+    - {path: config/template/cloudbeaver-base.conf, line: 158, quote: "env: \"CLOUDBEAVER_DB_INITIAL_DATA\","}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: deploy/scripts/run-cloudbeaver-server.sh, line: 12, quote: "exec java ${JAVA_OPTS} \\"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/opt/cloudbeaver/workspace, /opt/cloudbeaver/logs]
+  s3: none
+  s3SelectBy: {}
+  # workspace/ holds the H2 metadata DB, data-sources.json (saved connections), user scripts and the resource manager.
+  # With CLOUDBEAVER_DB_* on PostgreSQL most metadata moves off disk, but workspace/ still holds project files
+  # (scripts, data-sources.json); these are lost on restart.
+  evidence:
+    - {path: deploy/docker/cloudbeaver-ce/docker-compose.yml, line: 10, quote: "- \"./workspace:/opt/cloudbeaver/workspace\""}
+    - {path: deploy/docker/cloudbeaver-ce/docker-compose.yml, line: 9, quote: "- \"./logs:/opt/cloudbeaver/logs\""}
+    - {path: deploy/scripts/run-cloudbeaver-server.sh, line: 7, quote: "[ ! -d \"workspace/.metadata\" ] && mkdir -p workspace/.metadata \\"}
+    - {path: config/template/cloudbeaver-base.conf, line: 25, quote: "value: \"workspace/.data/ssl-config.xml\""}
+env:
+  required: []
+  optional: [CLOUDBEAVER_DB_DRIVER, CLOUDBEAVER_DB_URL, CLOUDBEAVER_DB_USER, CLOUDBEAVER_DB_PASSWORD, CLOUDBEAVER_WEB_SERVER_PORT, CLOUDBEAVER_ROOT_URI, CLOUDBEAVER_FORCE_HTTPS, CLOUDBEAVER_APP_ANONYMOUS_ACCESS_ENABLED, CLOUDBEAVER_APP_SUPPORTS_CUSTOM_CONNECTIONS, JAVA_OPTS]
+  buildTime: []
+  evidence:
+    - {path: config/template/cloudbeaver-base.conf, line: 4, quote: "env: \"CLOUDBEAVER_WEB_SERVER_PORT\","}
+    - {path: config/template/cloudbeaver-base.conf, line: 190, quote: "env: \"CLOUDBEAVER_APP_ANONYMOUS_ACCESS_ENABLED\","}
+blockers:
+  expected:
+    - "No Dockerfile builds CloudBeaver from the repo archive: the product Dockerfile copies the output of deploy/build.sh, and the build clones sibling repositories (dbeaver, dbeaver-common, datadam-api) that are not in the archive"
+  mustNot:
+    - "The databases CloudBeaver manages (PostgreSQL, MySQL, Oracle, SQL Server and others) must not be reported as required databases of the app"
+    - "Embedded H2 must not be reported as an unsupported-database blocker: it is only the default; CLOUDBEAVER_DB_* can select PostgreSQL"
+    - "Redis, workers and a queue must not be reported: none exist"
+    - "workspace/ on local disk must not block by itself"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source (vendor must supply a multi-stage build that clones dbeaver, dbeaver-common and datadam-api and runs Maven and the web build)"
+    - "Should CloudBeaver metadata use the Deployz RDS PostgreSQL (CLOUDBEAVER_DB_DRIVER and URL) instead of embedded H2 on ephemeral disk?"
+  unnecessary:
+    - "Which port? (8978)"
+    - "Health path? (/status)"
+    - "Who runs migrations? (the app at start)"
+    - "Which database do the users connect to? (user-supplied targets)"
+traps:
+  - "The only product Dockerfile looks complete but COPYs a build output directory and starts from a published base image (deploy/docker/cloudbeaver-ce/Dockerfile:3,13)"
+  - "deploy/docker/base-java/Dockerfile looks like a Java app image but is only the JDK base (base-java/Dockerfile:1-30)"
+  - "The build needs ../dbeaver, ../dbeaver-common and ../datadam-api next to the repo, cloned at build time (deploy/build-backend.sh:16-19)"
+  - "Embedded H2 is the metadata default: H2 looks like an unsupported database but is replaceable, and it is not the managed-database list (cloudbeaver-base.conf:136-143)"
+  - "Many database drivers in the repo are client drivers for user targets, not dependencies (drivers dir, server/bundles)"
+  - "Health is /status, not /health, and it returns JSON with health ok (WebStatusServlet.java:47)"
+  - "First visit runs a setup wizard where the first visitor sets the admin password, unless an admin is preconfigured"
+openQuestions:
+  - "Exact form of the CLOUDBEAVER_DB_DRIVER value for PostgreSQL in the CE image (the test code uses driver id postgresql:postgres-jdbc)"
+crossReview:
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES already in accept (no Dockerfile builds from the archive is CODE_CHANGE); NOT_DEPLOYABLE kept", evidence: "deploy/docker/cloudbeaver-ce/Dockerfile:13 COPY cloudbeaver /opt/cloudbeaver; deploy/build-backend.sh:19"}
+  - {field: "port, startCommand, healthPath, database, storage", change: "none: 8978, launch-product.sh entrypoint, /status servlet, H2 default with CLOUDBEAVER_DB_* override, workspace on disk all match source; user-target databases correctly not counted as app database", evidence: "deploy/docker/cloudbeaver-ce/Dockerfile:16; server/bundles/io.cloudbeaver.server/src/io/cloudbeaver/server/servlets/WebStatusServlet.java:35; config/template/cloudbeaver-base.conf:138"}
+  - {field: all, change: verified, evidence: "30 citations checked"}

@@ -1,0 +1,100 @@
+id: new-144
+repository: grocy/grocy
+commit: 41206cb90154e0d17d3e108cc1f182b94fdb465d
+summary: >
+  Grocy is a PHP 8.5 (Slim 4) household ERP web app. It has no Dockerfile and no container start command in the
+  repo (the official image is built elsewhere). It stores everything in a SQLite file under the data directory
+  (GROCY_DATAPATH, default data/grocy.db) and has no other database driver. Config, view cache, backups and uploads
+  also live in the data directory.
+outcome:
+  # The worst required item sets the outcome (docs/ai-analysis.md): the capability gap makes it NOT_DEPLOYABLE.
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only database is SQLite on local disk. Deployz does not support SQLite and Fargate disk is ephemeral
+    (no EFS), so all data is lost on restart. There is also no Dockerfile, and the repo needs a web server
+    (nginx or Apache with PHP-FPM) configured by the vendor.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: composer.json, line: 3, quote: "\"php\": \"8.5.*\""}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  # No container config in the repo; a PHP web server on the default HTTP port is the usual choice. Any answer is a guess.
+  evidence:
+    - {path: public/index.php, line: 17, quote: "if (getenv('GROCY_DATAPATH') !== false)"}
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: ["/login"]
+  evidence:
+    - {path: routes.php, line: 42, quote: "$group->get('/login', [LoginController::class, 'LoginPage'])->setName('login');"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: services/DatabaseService.php, line: 95, quote: "new \\PDO\\Sqlite('sqlite:' . $this->GetDbFilePath());"}
+    - {path: services/DatabaseService.php, line: 153, quote: "return GROCY_DATAPATH . '/grocy.db';"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: services/DatabaseService.php, line: 95, quote: "new \\PDO\\Sqlite('sqlite:' . $this->GetDbFilePath());"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+storage:
+  local: required
+  paths: [data, data/storage, data/viewcache, data/backups]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: app.php, line: 54, quote: "$viewcachePath = GROCY_DATAPATH . '/viewcache';"}
+    - {path: services/DatabaseService.php, line: 153, quote: "return GROCY_DATAPATH . '/grocy.db';"}
+env:
+  required: []
+  optional: [GROCY_DATAPATH]
+  buildTime: []
+  evidence:
+    - {path: public/index.php, line: 17, quote: "if (getenv('GROCY_DATAPATH') !== false)"}
+blockers:
+  expected:
+    - "SQLite is the only database and is not supported by Deployz; data lives in the local data directory (ephemeral on Fargate, no EFS)"
+    - "No Dockerfile or web-server config in the repo: the PHP 8.5 image, nginx or Apache, and the data/config.php file would all need to be written by the vendor"
+  mustNot:
+    - "Missing PostgreSQL or Redis must not be reported as a separate blocker: the app needs neither"
+    - "Missing health route must not be a blocker: /login answers without a session"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (not defined in the repo; web server choice)"
+    - "Who runs migrations? (the app, on first request)"
+traps:
+  - "No Dockerfile: a rule-based detector may invent a PHP image or a port from public/index.php or update.sh"
+  - "config-dist.php must be copied to data/config.php (README.md:40)"
+  - "composer.json pins php 8.5.* and VCS forks (berrnd/lessql, berrnd/php-gettext) instead of Packagist"
+  - "yarn.lock and package.json hold frontend vendor libraries, not a Node server"
+crossReview:
+  - {field: outcome, change: "added DEPLOYABLE_WITH_CHANGES to accept (policy: a missing Dockerfile is CODE_CHANGE; NOT_DEPLOYABLE stays for SQLite as the only engine)", evidence: "services/DatabaseService.php:95; README.md:57 (image built elsewhere, no Dockerfile in repo)"}
+  - {field: healthPath.accept, change: "[/login, /api/system/time, /api/system/info] -> [/login]: only the routes named root and login skip authentication; the /api routes answer 401 without a session or API key", evidence: "middleware/Auth/BaseAuthMiddleware.php:16-17 (routeName root or login skip); middleware/Auth/BaseAuthMiddleware.php:45-48 (API route 401); routes.php:42; routes.php:159"}
+  - {field: blockers.mustNot, change: "removed the claim that /api/system/time answers without a session", evidence: "middleware/Auth/BaseAuthMiddleware.php:45-48"}
+  - {field: database / storage / port / startCommand, change: "none: SQLite only (no other PDO driver), data under GROCY_DATAPATH, no container config in the repo", evidence: "services/DatabaseService.php:95; services/DatabaseService.php:153; app.php:54"}
+  - {field: all, change: verified, evidence: "9 citations checked"}
+  - {field: outcome, change: "integrator: back to [NOT_DEPLOYABLE]; the CODE_CHANGE items do not lower the capability gap, the worst required item sets the outcome", evidence: "docs/ai-analysis.md Compatibility findings"}

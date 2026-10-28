@@ -1,0 +1,129 @@
+id: new-139
+repository: filebrowser/filebrowser
+commit: 833d908884d5c801f30f5c098d7977177eb3a36b
+summary: >
+  File Browser is a Go web file manager: a Vue frontend (frontend/, pnpm + vite) embedded in one Go binary that lists,
+  uploads, edits and shares the files of ONE directory on the local disk (default root /srv). Users, settings and
+  shares live in an embedded BoltDB file (/database/filebrowser.db). It listens on one HTTP port (80 in the image).
+  Neither Dockerfile builds the app: both COPY a pre-built `filebrowser` binary made by the release pipeline.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The product is a manager for files on a local directory, and its only database is an embedded BoltDB file. Both
+    the files (/srv) and the database (/database, /config) are declared VOLUMEs, and Fargate has only ephemeral disk
+    (no EFS), so every upload, user and share is lost on a task restart. That makes it a persistent-volume app, which
+    the MVP does not support (NOT_DEPLOYABLE). Neither Dockerfile builds from the repo source (COPY filebrowser), so a
+    deploy would also need a new multi-stage Dockerfile (pnpm frontend build, then go build). A read that treats the
+    directory as a scratch area gives DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "COPY filebrowser /bin/filebrowser: the Go binary comes from the build context (goreleaser artefact), it is never compiled in the Dockerfile; the frontend is not built either"}
+    - {path: Dockerfile.s6, reason: "same pattern: COPY filebrowser /bin/filebrowser on a linuxserver base image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 21, quote: "COPY --chown=user:user filebrowser /bin/filebrowser"}
+    - {path: Dockerfile.s6, line: 11, quote: "COPY filebrowser /bin/filebrowser"}
+    - {path: Dockerfile, line: 10, quote: "FROM busybox:1.37.0-musl"}
+    - {path: Taskfile.yml, line: 14, quote: "go build -ldflags='-s -w -X \"github.com/filebrowser/filebrowser/v2/version.Version={{.VERSION}}\""}
+runtime: {accept: [go]}
+port:
+  accept: [80]
+  evidence:
+    - {path: docker/common/defaults/settings.json, line: 2, quote: "\"port\": 80,"}
+    - {path: Dockerfile, line: 44, quote: "EXPOSE 80"}
+bindAllInterfaces:
+  value: true
+  # settings.json has "address": "" which means all interfaces; the healthcheck falls back to localhost for its own probe only.
+  evidence:
+    - {path: docker/common/defaults/settings.json, line: 4, quote: "\"address\": \"\","}
+startCommand:
+  source: image
+  accept: ["/init.sh", "filebrowser --config=/config/settings.json"]
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "ENTRYPOINT [ \"tini\", \"--\", \"/init.sh\" ]"}
+    - {path: docker/alpine/init.sh, line: 35, quote: "exec filebrowser \"$@\""}
+healthPath:
+  accept: ["/health"]
+  # Unauthenticated, returns 200 {"status":"OK"}. The image HEALTHCHECK script uses it.
+  evidence:
+    - {path: http/http.go, line: 45, quote: "r.HandleFunc(\"/health\", healthHandler)"}
+    - {path: http/public.go, line: 167, quote: "func healthHandler(w http.ResponseWriter, _ *http.Request) {"}
+    - {path: docker/common/healthcheck.sh, line: 9, quote: "wget -q --spider http://$ADDRESS:$PORT/health"}
+database:
+  status: required
+  engines: [boltdb]
+  default: boltdb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [FB_DATABASE]
+  evidence:
+    - {path: go.mod, line: 28, quote: "go.etcd.io/bbolt v1.5.0"}
+    - {path: docker/common/defaults/settings.json, line: 6, quote: "\"database\": \"/database/filebrowser.db\","}
+    - {path: cmd/utils.go, line: 23, quote: "\"github.com/filebrowser/filebrowser/v2/storage/bolt\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: cmd/root.go, line: 510, quote: "User '%s' initialized with randomly generated password: %s"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: docker/alpine/init.sh, line: 35, quote: "exec filebrowser \"$@\""}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/srv, /database, /config]
+  s3: none
+  s3SelectBy: {}
+  # The file tree under /srv is the product: users browse and upload to the local disk. There is no S3 backend.
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "VOLUME /srv /config /database"}
+    - {path: docker/common/defaults/settings.json, line: 7, quote: "\"root\": \"/srv\""}
+env:
+  required: []
+  optional: [FB_PORT, FB_ADDRESS, FB_ROOT, FB_DATABASE, FB_BASEURL, FB_CONFIG, FB_USERNAME, FB_PASSWORD, FB_NOAUTH]
+  buildTime: []
+  # Every flag maps to an FB_<FLAG> environment variable. With no password the first start creates `admin` with a random password printed to the log.
+  evidence:
+    - {path: cmd/utils.go, line: 109, quote: "v.SetEnvPrefix(\"FB\")"}
+    - {path: cmd/utils.go, line: 110, quote: "v.AutomaticEnv()"}
+blockers:
+  expected:
+    - "The product manages files on a local directory (/srv) and keeps users in an embedded BoltDB file; Fargate disk is ephemeral and there is no EFS, so all files, users and shares are lost on restart"
+    - "No Dockerfile builds File Browser from the repo source: both COPY a pre-built `filebrowser` binary (Dockerfile:21, Dockerfile.s6:11)"
+  mustNot:
+    - "A missing PostgreSQL or MySQL must not be reported as a blocker by itself: the unsupported part is the embedded BoltDB plus local file storage"
+    - "S3 must not be reported as supported: there is no S3 backend"
+    - "A missing health path must not be reported: /health exists and is unauthenticated"
+    - "Redis, workers and a queue must not be reported: none exist"
+vendorQuestions:
+  legitimate:
+    - "Is losing all uploaded files and users on every restart acceptable? There is no persistent volume"
+    - "Which Dockerfile should Deployz use? None builds from source (a vendor must add a Go plus pnpm build stage)"
+  unnecessary:
+    - "Which port? (80)"
+    - "Health path? (/health)"
+    - "Who runs migrations? (the app initialises its own database at start)"
+traps:
+  - "Dockerfile looks like a production image but COPYs a pre-built binary (Dockerfile:21); the Taskfile and goreleaser build the binary outside Docker"
+  - "frontend/dist holds only .gitkeep: the embedded frontend must be built with pnpm before `go build`"
+  - "Two volumes plus /config: /srv (user files), /database (BoltDB) and /config (settings.json) all look like mounts the image expects (Dockerfile:42)"
+  - "The image runs as non-root user 1000 (Dockerfile:40) and listens on port 80, so a vendor build must keep the unprivileged-port or setcap setup"
+  - "First start prints a random admin password only to the container log (cmd/root.go:510)"
+  - "Dockerfile.s6 is a second runtime flavour on a linuxserver base image, not a different app"
+openQuestions:
+  - "Whether the app is still useful with an ephemeral /srv (for example behind a bucket sync); judged not supportable because users and shares are in the same ephemeral disk"
+crossReview:
+  - {field: outcome / database, change: "none: BoltDB is the only store (capability gap) plus local /srv state and no source-building Dockerfile; NOT_DEPLOYABLE and DEPLOYABLE_WITH_CHANGES both accepted", evidence: "Dockerfile:21 Dockerfile.s6:11"}
+  - {field: port / healthPath, change: "none: settings.json port 80 and empty address; /health handler is registered", evidence: "docker/common/defaults/settings.json:2 http/http.go:45"}
+  - {field: all, change: "verified", evidence: "21 citations checked"}

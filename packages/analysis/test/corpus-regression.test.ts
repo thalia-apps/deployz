@@ -12,10 +12,12 @@ import { isDerivedUrlEnvVariable } from '../src/derived-url.js';
 import {
   detectDockerfileBuildContext,
   detectDockerfileBuildTarget,
+  detectDockerfileMissingCopySources,
   detectEnvVarModel,
   detectGitCopyInDockerfile,
   detectHealthEndpoint,
   detectPort,
+  detectPostgresql,
   detectStartupCommand,
   detectWorker,
   selectedDockerfile,
@@ -24,7 +26,7 @@ import {
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { assessRedis } from '../src/redis.js';
-import { checkElasticsearch, checkExplicitPersistentDataDir, checkGpu, checkOtherUnsupportedDatabases } from '../src/rejection.js';
+import { assessMysql, checkElasticsearch, checkExplicitPersistentDataDir, checkGpu, checkKubernetes, checkNoBuildableDockerfile, checkOtherUnsupportedDatabases, checkSqlite } from '../src/rejection.js';
 
 const envVar = (tree: FileTree, key: string) => detectEnvVarModel(tree).find((variable) => variable.key === key);
 
@@ -839,5 +841,98 @@ describe('round 5 corpus (langflow, litellm, activepieces, budibase, onyx, monic
     const tree = (cmd: string): FileTree => ({ Dockerfile: `FROM eclipse-temurin:21-jre\nCOPY app /app/kestra\nENTRYPOINT ["docker-entrypoint.sh"]\nCMD ${cmd}\n` });
     expect(detectStartupCommand(tree('["--help"]')).detected).toBe(false);
     expect(detectStartupCommand(tree('["server", "standalone"]')).detected).toBe(true);
+  });
+});
+
+describe('round 6 corpus (karakeep, beszel, pingvin-share)', () => {
+  it('takes a dialect-neutral ORM next to a SQLite driver for SQLite, not PostgreSQL (karakeep)', () => {
+    const tree = (deps: Record<string, string>): FileTree => ({ 'package.json': JSON.stringify({ dependencies: deps }) });
+    expect(detectPostgresql(tree({ 'drizzle-orm': '0.44.0', 'better-sqlite3': '11.0.0' })).detected).toBe(false);
+    expect(detectPostgresql(tree({ 'drizzle-orm': '0.44.0' })).detected).toBe(true);
+    expect(detectPostgresql(tree({ 'drizzle-orm': '0.44.0', 'better-sqlite3': '11.0.0', pg: '8.0.0' })).value).toEqual(['pg']);
+  });
+
+  it('takes no MySQL engine from an indirect Go module (beszel on PocketBase)', () => {
+    const goMod = (requires: string[]): FileTree => ({
+      'go.mod': ['module example.com/app', '', 'go 1.24', '', 'require (', ...requires.map((line) => `\t${line}`), ')', ''].join('\n'),
+      'main.go': 'package main\n',
+    });
+    expect(assessMysql(goMod(['github.com/pocketbase/pocketbase v0.40.5', 'github.com/go-sql-driver/mysql v1.9.1 // indirect'])).detected).toBe(false);
+    expect(assessMysql(goMod(['github.com/go-sql-driver/mysql v1.9.1'])).detected).toBe(true);
+    expect(assessMysql(goMod(['gorm.io/driver/mysql v1.5.7', 'github.com/go-sql-driver/mysql v1.9.1 // indirect'])).detected).toBe(true);
+  });
+
+  it('joins a sub-path to a root NestJS controller with one slash (pingvin-share)', () => {
+    const tree: FileTree = {
+      'backend/src/main.ts': 'app.setGlobalPrefix("api");\n',
+      'backend/src/app.controller.ts': '@Controller("/")\nexport class AppController {\n  @Get("health")\n  async health() {}\n}\n',
+    };
+    expect(detectHealthEndpoint(tree).path).toBe('/api/health');
+  });
+
+  it('serves an unprivileged nginx image on 8080 with the nginx command, not a package script (CyberChef)', () => {
+    const tree = (image: string): FileTree => ({
+      Dockerfile: `FROM node:24-alpine AS builder\nCOPY . .\nRUN npm run build\nFROM ${image} AS cyberchef\nCOPY --from=builder /app/build/prod /usr/share/nginx/html/\n`,
+      'package.json': JSON.stringify({ scripts: { start: 'npx grunt dev', build: 'npx grunt prod' } }),
+    });
+    expect(detectPort(tree('nginxinc/nginx-unprivileged:stable-alpine')).value).toBe('8080');
+    expect(detectPort(tree('nginx:stable-alpine')).value).toBe('80');
+    expect(detectStartupCommand(tree('nginxinc/nginx-unprivileged:stable-alpine')).value).toEqual(['CMD: ["nginx", "-g", "daemon off;"]']);
+    expect(detectStartupCommand({ ...tree('node:24-alpine'), Dockerfile: 'FROM node:24-alpine\nCOPY . .\n' }).value).toEqual(['start: npx grunt dev']);
+    // A third-party image with nginx in its name has its own init (InvoiceShelf on serversideup/php).
+    expect(detectStartupCommand(tree('serversideup/php:8.5-fpm-nginx-alpine')).detected).toBe(false);
+  });
+
+  it('never selects a FROM scratch image that only exports files (focalboard Dockerfile.build)', () => {
+    const tree: FileTree = {
+      'Dockerfile.build': 'FROM golang:1.18 AS backend\nCOPY . .\nRUN make server-linux-package\nFROM scratch AS dist\nCOPY --from=backend /dist/focalboard-server-linux-amd64.tar.gz /\n',
+      'docker/Dockerfile': 'FROM golang:1.18 AS gobuild\nCOPY . .\nRUN make server\nFROM debian:buster-slim\nCOPY --from=gobuild /go/bin/focalboard-server /opt/focalboard/bin/\nEXPOSE 8000/tcp\nCMD ["/opt/focalboard/bin/focalboard-server"]\n',
+    };
+    expect(selectedDockerfile(tree)?.path).toBe('docker/Dockerfile');
+    expect(selectedDockerfile({ Dockerfile: 'FROM golang:1.22 AS build\nCOPY . .\nRUN go build -o /app\nFROM scratch\nCOPY --from=build /app /app\nENTRYPOINT ["/app"]\n' })?.path).toBe('Dockerfile');
+  });
+
+  it('rejects a PHP app that opens its own SQLite file (Wallos, grocy)', () => {
+    expect(checkSqlite({ 'endpoints/db.php': "<?php\n$db = new SQLite3('../../db/wallos.db');\n" }).detected).toBe(true);
+    expect(checkSqlite({ 'services/DatabaseService.php': "<?php\n$pdo = new \\PDO\\Sqlite('sqlite:' . $this->GetDbFilePath());\n" }).detected).toBe(true);
+    expect(checkSqlite({ 'helpers/PrerequisiteChecker.php': "<?php\n$dbh = new \\PDO('sqlite::memory:');\n" }).detected).toBe(false);
+    expect(checkSqlite({ 'composer.json': '{"require": {"ext-pdo_mysql": "*"}}', 'src/db.php': "<?php\n$db = new SQLite3($file);\n" }).detected).toBe(false);
+    // A database client with drivers for several engines (Adminer).
+    expect(
+      checkSqlite({
+        'adminer/drivers/sqlite.inc.php': "<?php\n$this->link = new SQLite3($filename);\n",
+        'adminer/drivers/pgsql.inc.php': "<?php\n$this->link = @pg_connect($connection_string);\n",
+      }).detected,
+    ).toBe(false);
+  });
+
+  it('finds no app to build in a repository of only documents (readeck, glitchtip on GitHub)', () => {
+    const tree = (paths: string[]): FileTree => Object.assign(Object.fromEntries(paths.map((path) => [path, 'text\n'])), { [TREE_PATHS]: paths });
+    expect(checkNoBuildableDockerfile(tree(['README.md', 'LICENSE', '.github/FUNDING.yml'])).dependency).toBe('no-application-source');
+    expect(checkNoBuildableDockerfile(tree(['README.md', 'requirements.txt', 'app.py'])).dependency).toBe('no-buildable-dockerfile');
+    const analysis = analyseRepo(tree(['README.md']));
+    expect(analysis.rejections.find((r) => r.detected)?.dependency).toBe('no-application-source');
+  });
+
+  it('takes drizzle-orm with a libSQL client for SQLite, not PostgreSQL (openstatus)', () => {
+    expect(detectPostgresql({ 'package.json': JSON.stringify({ dependencies: { 'drizzle-orm': '0.44.0', '@libsql/client': '0.15.0' } }) }).detected).toBe(false);
+  });
+
+  it('reads no build-context file from a heredoc COPY (AutoGPT)', () => {
+    const dockerfile = "FROM python:3.12\nCOPY <<'EOF' /etc/app.conf\nkey=value\nEOF\nCOPY app.py /app/\nCMD [\"python\", \"/app/app.py\"]\n";
+    const tree = (paths: string[]): FileTree => Object.assign({ Dockerfile: dockerfile }, { [TREE_PATHS]: ['Dockerfile', ...paths] });
+    expect(detectDockerfileMissingCopySources(tree(['app.py']))).toEqual([]);
+    expect(detectDockerfileMissingCopySources(tree([]))).toEqual(['app.py']);
+  });
+
+  it('ranks a Dockerfile in a hidden tool directory below the app image (AutoGPT, erpnext .oss-scanner)', () => {
+    const app = 'FROM python:3.12\nCOPY . .\nEXPOSE 8006\nCMD ["python", "-m", "backend.rest"]\n';
+    expect(selectedDockerfile({ '.oss-scanner/Dockerfile': app, 'autogpt_platform/backend/Dockerfile': app })?.path).toBe('autogpt_platform/backend/Dockerfile');
+  });
+
+  it('takes a Helm chart in a prefixed charts directory for a self-hosting sample (sqlpad)', () => {
+    const chart = 'apiVersion: v2\nname: sqlpad\n';
+    expect(checkKubernetes({ 'sqlpad-charts/Chart.yaml': chart }).detected).toBe(false);
+    expect(checkKubernetes({ 'Chart.yaml': chart }).detected).toBe(true);
   });
 });

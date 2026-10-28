@@ -703,6 +703,10 @@ describe('buildReadinessReport — deployability outcome', () => {
     expect(buildReadinessReport(withRejection('docker-compose-multi-service')).outcome).toBe('DEPLOYABLE_WITH_CHANGES');
   });
 
+  it('NOT_DEPLOYABLE: a repository with no application source has nothing to deploy', () => {
+    expect(buildReadinessReport(withRejection('no-application-source')).outcome).toBe('NOT_DEPLOYABLE');
+  });
+
   it('keeps the outcome when the vendor resolves a setting', () => {
     const report = buildReadinessReport(
       analyseRepo({ ...dockerfileNoPortNoCmdTree, Dockerfile: 'FROM node:20-alpine\nWORKDIR /app\nCOPY . .\nCOPY .git/ .\n' }),

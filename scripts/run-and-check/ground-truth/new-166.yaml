@@ -1,0 +1,87 @@
+id: new-166
+repository: crewAIInc/crewAI
+commit: b95aa8bbdea6bc02b465a35fa8da54fecf82f528
+summary: >
+  CrewAI is a Python framework for multi-agent orchestration, published as wheels from a uv workspace (lib/crewai,
+  lib/cli, lib/crewai-core, lib/crewai-files, lib/crewai-tools, lib/devtools). The only entrypoint is the `crewai`
+  CLI (project scaffolding, run, deploy to the vendor cloud). There is no Dockerfile, no compose file and no server
+  entrypoint in the repo. The developer imports the library into their own project.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    A framework and library with a CLI, packaged with hatchling for PyPI. The repo contains no application, no
+    Dockerfile and no web server to run.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 58, quote: "CrewAI is an open-source Python framework"}
+    - {path: lib/crewai/pyproject.toml, line: 156, quote: "crewai = \"crewai_cli.cli:crewai\""}
+    - {path: lib/crewai/pyproject.toml, line: 159, quote: "requires = [\"hatchling\"]"}
+    - {path: lib/crewai/pyproject.toml, line: 2, quote: "name = \"crewai\""}
+runtime: {accept: [python]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [OPENAI_API_KEY]
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is a Python framework and CLI (PyPI packages), not a deployable application: no Dockerfile, no server entrypoint"
+  mustNot:
+    - "The chromadb and lancedb dependencies must not be reported as a database the app needs: they are embedded stores for developer use"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which Dockerfile, port, database or health path? (none exist)"
+traps:
+  - "pyproject [project.scripts] defines a `crewai` command -> a CLI, not a server (lib/crewai/pyproject.toml:155-156)"
+  - "Many sub-packages under lib/ -> a uv workspace of libraries, not services"
+crossReview:
+  - {field: outcome, change: "none: framework and CLI; no Dockerfile, no compose file, and a search for FastAPI( or uvicorn.run outside tests, templates and docs found no server entrypoint", evidence: "lib/crewai/pyproject.toml:155-156"}
+  - {field: all, change: verified, evidence: "4 citations checked"}

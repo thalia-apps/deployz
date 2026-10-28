@@ -1,0 +1,150 @@
+id: new-130
+repository: wallabag/wallabag
+commit: 599a05360f59b4538cbbe7b721834c5f6a82ccbe
+summary: >
+  wallabag is a Symfony 5.4 (PHP 8.2+) read-it-later app with the document root in web/. The only Dockerfile in the repo
+  (docker/php/Dockerfile) is a development image: it adds xdebug, blackfire, composer, yarn and node, copies no application
+  code (compose bind-mounts the source) and starts `bin/console --env=dev server:run 0.0.0.0:8000`. The database is chosen
+  by DATABASE_URL (SQLite by default; MySQL/MariaDB and PostgreSQL supported). Schema and first admin come from
+  `wallabag:install`. Redis and RabbitMQ are optional (asynchronous import only).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz (one PHP web process, PostgreSQL through DATABASE_URL, optional Redis, no required worker).
+    But no Dockerfile builds a production image: the only one is a development image that runs the development server
+    with the source mounted as a volume. A deploy needs a new production Dockerfile (PHP with a web server, composer install,
+    yarn build) and a migration command. This is the "only development Dockerfiles" case, so DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/php/Dockerfile, reason: "development image: installs xdebug and blackfire, has no COPY of the application (compose mounts `.:/var/www/html`), and its CMD runs `--env=dev server:run`; there is no web server and no composer install or asset build"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/php/Dockerfile, line: 63, quote: "&& pecl install xdebug-3.5.1 \\"}
+    - {path: docker/php/Dockerfile, line: 101, quote: "CMD [\"php\", \"bin/console\", \"--env=dev\", \"server:run\", \"0.0.0.0:8000\"]"}
+    - {path: compose.yaml, line: 14, quote: "- .:/var/www/html"}
+    - {path: compose.yaml, line: 5, quote: "context: docker/php"}
+runtime: {accept: [php]}
+port:
+  accept: [8000]
+  # 8000 is the only port in the repo (dev server); a vendor-written production image may use another port.
+  evidence:
+    - {path: docker/php/Dockerfile, line: 101, quote: "CMD [\"php\", \"bin/console\", \"--env=dev\", \"server:run\", \"0.0.0.0:8000\"]"}
+    - {path: compose.yaml, line: 42, quote: "- \"${PORT:-8000}:8000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/php/Dockerfile, line: 101, quote: "\"server:run\", \"0.0.0.0:8000\""}
+startCommand:
+  source: image
+  accept: ["php bin/console --env=dev server:run 0.0.0.0:8000"]
+  # A production start command does not exist in the repo; this is the dev command of the only Dockerfile.
+  evidence:
+    - {path: docker/php/Dockerfile, line: 101, quote: "CMD [\"php\", \"bin/console\", \"--env=dev\", \"server:run\", \"0.0.0.0:8000\"]"}
+healthPath:
+  accept: ["/api/version", "/api/info", "/login"]
+  # Both API routes return JSON and are allowed for anonymous users by the firewall.
+  evidence:
+    - {path: src/Controller/Api/WallabagRestController.php, line: 58, quote: "#[Route(path: '/api/version.{_format}', name: 'api_get_version', methods: ['GET'], defaults: ['_format' => 'json'])]"}
+    - {path: src/Controller/Api/WallabagRestController.php, line: 79, quote: "#[Route(path: '/api/info.{_format}', name: 'api_get_info', methods: ['GET'], defaults: ['_format' => 'json'])]"}
+    - {path: app/config/security.yml, line: 63, quote: "- { path: ^/api/(doc|version|info|user), roles: IS_AUTHENTICATED_ANONYMOUSLY }"}
+    - {path: app/config/security.yml, line: 64, quote: "- { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }"}
+database:
+  status: optional
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgresql://<user>:<password>@<host>:5432/<db>?charset=utf8"}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: .env, line: 22, quote: "DATABASE_URL=sqlite:///%kernel.project_dir%/data/db/wallabag.sqlite"}
+    - {path: .env, line: 24, quote: "#DATABASE_URL=mysql://root:root@127.0.0.1:3306/wallabag?charset=utf8mb4"}
+    - {path: .env, line: 28, quote: "#DATABASE_URL=postgresql://wallabag:wallapass@127.0.0.1:5432/wallabag?charset=utf8"}
+    - {path: app/config/config.yml, line: 80, quote: "url: '%env(resolve:DATABASE_URL)%'"}
+    - {path: docker/php/Dockerfile, line: 55, quote: "pdo_pgsql \\"}
+migrations:
+  mode: command
+  accept: ["php bin/console doctrine:migrations:migrate --no-interaction --env=prod", "php bin/console wallabag:install --env=prod --no-interaction"]
+  # wallabag:install creates the schema through doctrine:migrations:migrate, loads fixtures and asks to create an admin user
+  # (default wallabag / wallabag). It is interactive without --no-interaction. For updates, doctrine:migrations:migrate alone is enough.
+  evidence:
+    - {path: src/Command/InstallCommand.php, line: 30, quote: "protected static $defaultName = 'wallabag:install';"}
+    - {path: src/Command/InstallCommand.php, line: 262, quote: "->runCommand('doctrine:migrations:migrate', ['--no-interaction' => true])"}
+    - {path: src/Command/InstallCommand.php, line: 321, quote: "$user->setUsername($this->io->ask('Username', 'wallabag'));"}
+    - {path: Makefile, line: 57, quote: "@$(PHP) bin/console wallabag:install --env=dev"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379"}
+  # Redis (or RabbitMQ) is used only for asynchronous import and is off by default (import_with_redis value 0).
+  evidence:
+    - {path: app/config/wallabag.yml, line: 124, quote: "name: import_with_redis"}
+    - {path: app/config/wallabag.yml, line: 125, quote: "value: 0"}
+    - {path: .env, line: 13, quote: "REDIS_URL=redis://127.0.0.1:6379"}
+    - {path: docker/php/env.example, line: 4, quote: "PHP_SESSION_HANDLER=redis"}
+workers:
+  status: optional-independent
+  commands: ["php bin/console wallabag:import:redis-worker"]
+  # The import consumers run only when the vendor enables asynchronous import; the web app does not need them.
+  evidence:
+    - {path: src/Command/Import/RedisWorkerCommand.php, line: 1, quote: "<?php"}
+    - {path: app/config/wallabag.yml, line: 125, quote: "value: 0"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: docker/php/Dockerfile, line: 101, quote: "\"server:run\", \"0.0.0.0:8000\"]"}
+storage:
+  local: conditional
+  paths: [/var/www/html/data, /var/www/html/web/assets/images, /var/www/html/var/sessions, /var/www/html/var/cache, /var/www/html/var/logs]
+  s3: none
+  s3SelectBy: {}
+  # SQLite file (data/db), downloaded article images (web/assets/images, optional) and file-based PHP sessions are on local disk.
+  # With PostgreSQL the durable data is in the database; images and sessions are lost on restart.
+  evidence:
+    - {path: .env, line: 22, quote: "DATABASE_URL=sqlite:///%kernel.project_dir%/data/db/wallabag.sqlite"}
+    - {path: app/config/services.yml, line: 268, quote: "$baseFolder: \"%kernel.project_dir%/web/assets/images\""}
+    - {path: app/config/config.yml, line: 28, quote: "handler_id: session.handler.native_file"}
+    - {path: .gitignore, line: 58, quote: "/data/site-credentials-secret-key.txt"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql://user:pass@host:5432/db; the committed .env points to SQLite. Contains the DB password"}
+    - {name: APP_SECRET, secret: true, buildTime: false, note: "Symfony secret; the committed .env holds the placeholder ch4n63m31fy0uc4n, which must be replaced"}
+    - {name: WALLABAG_BASE_URL, secret: false, buildTime: false, note: "public HTTPS URL of the app; the default is http://127.0.0.1:8000"}
+  optional: [MAILER_DSN, WALLABAG_REGISTRATION_ENABLED, WALLABAG_CONFIRMATION_ENABLED, WALLABAG_FROM_EMAIL, WALLABAG_SERVER_NAME, REDIS_URL, RABBITMQ_URL, SENTRY_DSN, TRUSTED_PROXIES, PHP_SESSION_HANDLER, PHP_SESSION_SAVE_PATH, WALLABAG_TABLE_PREFIX, DEFAULT_LOCALE]
+  buildTime: []
+  evidence:
+    - {path: .env, line: 1, quote: "APP_SECRET=ch4n63m31fy0uc4n"}
+    - {path: .env, line: 3, quote: "WALLABAG_BASE_URL=http://127.0.0.1:${PORT:-8000}"}
+    - {path: .env, line: 22, quote: "DATABASE_URL=sqlite:///%kernel.project_dir%/data/db/wallabag.sqlite"}
+    - {path: docker/php/env.example, line: 5, quote: "TRUSTED_PROXIES=0.0.0.0/0"}
+blockers:
+  expected:
+    - "No production Dockerfile: the only Dockerfile (docker/php/Dockerfile) is a development image that copies no app code and starts the dev server"
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are supported through DATABASE_URL"
+    - "Redis and RabbitMQ must not be required: they serve only the optional asynchronous import"
+    - "Missing health path must not be raised: /api/version and /api/info are anonymous routes"
+    - "Local images and sessions must not block by themselves: they are conditional ephemeral paths"
+vendorQuestions:
+  legitimate:
+    - "Which production image should Deployz use? The repo has only a development Dockerfile (a vendor-written image needs PHP, a web server, composer install and the yarn build)"
+    - "How are the schema and first admin created? (wallabag:install is interactive and creates wallabag / wallabag; use doctrine:migrations:migrate plus a created admin)"
+    - "Article images and file sessions are on local disk: is losing them on restart acceptable?"
+  unnecessary:
+    - "Which database? (DATABASE_URL: PostgreSQL works)"
+    - "Is a worker needed? (only for the optional asynchronous import)"
+    - "Health path? (/api/version)"
+traps:
+  - "docker/php/Dockerfile looks like the app image but is a development image: xdebug, blackfire, dev server, source mounted by compose (docker/php/Dockerfile:63, :101, compose.yaml:14)"
+  - "The committed .env has a working default (SQLite, APP_SECRET placeholder, REDIS_URL, RABBITMQ_URL) that points to local services; the defaults are not production values (.env:1, :13, :14, :22)"
+  - "compose.yaml starts a Redis service that the app does not need (compose.yaml:74, app/config/wallabag.yml:125)"
+  - "wallabag:install creates the default admin wallabag / wallabag; leaving it makes the instance open to anyone who knows the default (src/Command/InstallCommand.php:321)"
+  - "A hugo documentation site (doc/go.mod, doc/hugo.yaml) is in the repo and is not the app"
+  - "Document root is web/ (composer.json public-dir), not public/; an image that serves public/ fails (composer.json:247)"
+openQuestions:
+  - "Which PHP web server a vendor image should use (php-fpm with nginx would be two processes; one process is needed)"
+crossReview:
+  - {field: outcome / dockerfile, change: "none: only a development Dockerfile exists, so a repository change is needed (outcome 2 only, correct by policy)", evidence: "docker/php/Dockerfile:63 docker/php/Dockerfile:101 compose.yaml:14"}
+  - {field: healthPath, change: "none: /api/version and /api/info are anonymous in the firewall", evidence: "app/config/security.yml:63 src/Controller/Api/WallabagRestController.php:58 src/Controller/Api/WallabagRestController.php:79"}
+  - {field: all, change: "verified", evidence: "36 citations checked"}

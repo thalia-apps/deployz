@@ -1,0 +1,97 @@
+id: new-167
+repository: agno-agi/agno
+commit: e8d7de8b300b62f109e3e272bf8011ad1268cd37
+summary: >
+  Agno is a Python agent framework and SDK (setuptools package `agno` in libs/agno, with a CLI `agno` from
+  agnoctl, and agno-infra helpers). AgentOS is a FastAPI runtime that the developer builds from their own agent
+  code with the library; the repo has no ready application to run. The only Dockerfiles are a sandbox runtime image
+  in a cookbook folder and four system-test images in libs/agno/tests/system. The repo is a library monorepo.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    A framework and SDK published to PyPI (libs/agno, libs/agnoctl, libs/agno_infra). No Dockerfile at the repo root
+    or in libs builds a product. The cookbook sandbox Dockerfile is a code-execution sandbox image for AgentCore or
+    Docker, and the tests/system Dockerfiles wrap test scripts (gateway_server.py).
+dockerfile:
+  accept: []
+  reject:
+    - {path: cookbook/frameworks/sandbox/Dockerfile, reason: "sandbox runtime image for agent code execution (AgentCore server, port 8080, ARM64); an example, not an app"}
+    - {path: libs/agno/tests/system/Dockerfile.gateway, reason: "test fixture: copies tests/system/gateway_server.py; build context is libs/"}
+    - {path: libs/agno/tests/system/Dockerfile.remote, reason: "test fixture"}
+    - {path: libs/agno/tests/system/Dockerfile.agno_a2a, reason: "test fixture"}
+    - {path: libs/agno/tests/system/Dockerfile.adk, reason: "test fixture"}
+  target: null
+  context: .
+  evidence:
+    - {path: libs/agno/pyproject.toml, line: 2, quote: "name = \"agno\""}
+    - {path: libs/agno/pyproject.toml, line: 519, quote: "build-backend = \"setuptools.build_meta\""}
+    - {path: libs/agno/pyproject.toml, line: 509, quote: "[project.scripts]"}
+    - {path: cookbook/frameworks/sandbox/Dockerfile, line: 21, quote: "ENTRYPOINT [\"python\", \"-I\", \"-m\", \"agno.sandbox.agentcore.server\", \"serve\"]"}
+    - {path: libs/agno/tests/system/Dockerfile.gateway, line: 1, quote: "# Dockerfile for Gateway AgentOS Server"}
+runtime: {accept: [python]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is a Python framework and SDK (libs/agno), not a deployable application; the AgentOS server is built from the developer's own agent code"
+  mustNot:
+    - "The tests/system Dockerfiles must not be accepted as the product build: they are test fixtures"
+    - "The sandbox Dockerfile must not be accepted: it is an agent code-execution sandbox image"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port, database or health path? (no application exists)"
+traps:
+  - "Dockerfile.gateway says AgentOS Server and installs fastapi and uvicorn -> it runs tests/system/gateway_server.py, a test fixture needing build context libs/ (Dockerfile.gateway:1)"
+  - "cookbook/frameworks/sandbox/Dockerfile exposes 8080 and has a server entrypoint -> it is the sandbox runtime for agent code execution (needs Docker or AgentCore), not an app"
+  - "libs/agno/agno/os is the AgentOS server code -> library code the developer instantiates"
+  - "The cookbook/ directory holds many runnable examples with compose files (cookbook/91_tools/mcp/mcp_toolbox_demo/docker-compose.yml) -> demos"
+crossReview:
+  - {field: outcome, change: "none: framework and SDK; only Dockerfiles are the cookbook sandbox image and four tests/system fixtures; the AgentOS server is library code built from the developer own agents, so NOT_DEPLOYABLE holds", evidence: "cookbook/frameworks/sandbox/Dockerfile:21; libs/agno/tests/system/Dockerfile.gateway:1"}
+  - {field: all, change: verified, evidence: "5 citations checked"}

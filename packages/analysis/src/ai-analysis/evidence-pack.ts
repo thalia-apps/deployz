@@ -161,6 +161,8 @@ const FACT_SEARCH: Record<string, RegExp> = {
   healthPath: /health|ready|alive|\bping\b|\/status\b|Map(?:Get|HealthChecks)|@(?:Get|RequestMapping)\(|\.get\(\s*["']\/["']|urlpatterns|\broutes?\b/i,
   migration: /migrat|db:prepare|db\s+push|alembic|flyway|liquibase|ecto\.migrate|syncdb|schema:update|ensure\w*(?:schema|tables?)\b|CREATE TABLE|\.Install\w*\(/i,
   databaseVariable: /(?<![a-z0-9])(?:db|database|postgres|pg|sql|dsn|datasource|connection)/i,
+  // A server entrypoint: what an application of this repository would start.
+  repositoryKind: /\.listen\(|uvicorn|gunicorn|FastAPI\(|Flask\(|createServer|ListenAndServe|HttpServer::new|axum::serve|runserver|"start"\s*:|^\s*web:/,
 };
 
 /** A line that reads the environment: the switches a blocker or a fact most often turns on. */
@@ -187,10 +189,24 @@ const RANKS: Record<string, Rank> = {
   // A call that runs the migrations is decisive; an import, a comment or a declaration only names them.
   migration: last((path, line) => (NAMES_ONLY.test(line) ? 3 : START_FILE.test(path) ? 0 : MIGRATION_CALL.test(line) ? 1 : 2)),
   databaseVariable: last((_path, line) => (READS_ENV.test(line) ? 0 : 2)),
+  repositoryKind: last((path) => (START_FILE.test(path) ? 0 : 1)),
 };
 /** A call that runs migrations, or a quoted command or flag name that starts them (`"migrate"`, `'db:migrate'`). */
 const MIGRATION_CALL = /(?:\w*migrat\w*|\w*upgrade\w*|ensure\w*(?:schema|tables?)|\w*install\w*)(?:\.\w+)?\s*\(|CREATE TABLE|["'`]-{0,2}[\w:]*migrat\w*["'`]/i;
 const NAMES_ONLY = /^\s*(?:using|import|from|require|alias|use|package|namespace|\/\/|#|\*|\/\*|<!--)/;
+/** The manifests that publish a package: a library, framework, SDK or CLI is installed from one. */
+export const PACKAGE_MANIFEST = /(?:^|\/)(?:package\.json|pyproject\.toml|setup\.(?:py|cfg)|Cargo\.toml|composer\.json|[^/]+\.gemspec)$/i;
+/**
+ * A manifest line that packages the code for others to install: a build
+ * backend, a published entry point (`bin`, `main`, `exports`, a console
+ * script), a Rust `[lib]` or `[[bin]]`, a Composer library, a gemspec.
+ */
+export const PACKAGE_MARKER =
+  /build-backend|^\s*\[(?:build-system|project\.scripts|tool\.poetry\.scripts|lib|\[bin\])\]|^\s*requires\s*=\s*\[[^\]]*(?:hatchling|setuptools|poetry|flit|maturin|pdm|scikit-build)|console_scripts|^\s*[\w.-]+\s*=\s*["'][\w.]+:\w+["']|"(?:bin|main|module|exports|types|typings|publishConfig)"\s*:|^\s*"[\w@./-]+"\s*:\s*"(?:\.\/)?bin\/|"type"\s*:\s*"library"|Gem::Specification/;
+
+/** A manifest line that names or packages the project: its packaging marker, its name, or a private flag. */
+const PACKAGING = new RegExp(`${PACKAGE_MARKER.source}|${/^\s*\[(?:project|package|tool\.poetry|workspace)\]|"(?:name|private|workspaces)"\s*:/.source}`);
+
 /** Windows of one file in one question, so one long file does not use the whole budget. */
 const MAX_WINDOWS_PER_FILE = 3;
 
@@ -268,6 +284,16 @@ function questionWindows(tree: FileTree, item: OpenItem, startPath: ReadonlySet<
     return listDockerfileCandidates(tree)
       .slice(0, 4)
       .flatMap((path) => window(path, tree[path] ?? '', 1, 60, MAX_QUESTION_CHARS / 4) ?? []);
+  }
+  if (item.fact === 'repositoryKind') {
+    // The packaging lines of the shallowest manifests, then the server entrypoints the code has.
+    const manifests = Object.keys(tree)
+      .filter((path) => PACKAGE_MANIFEST.test(path) && isProductionFile(path))
+      .sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b))
+      .slice(0, 6);
+    const packaging = hitWindows(Object.fromEntries(manifests.map((path) => [path, tree[path] ?? ''])), PACKAGING, (_path, line) => (PACKAGE_MARKER.test(line) ? 0 : 1), manifests, startPath, MAX_QUESTION_CHARS / 2);
+    const skip = new Set([...startPath, ...manifests]);
+    return [...packaging, ...hitWindows(tree, FACT_SEARCH['repositoryKind']!, RANKS['repositoryKind']!, [], skip, MAX_QUESTION_CHARS - packaging.reduce((sum, file) => sum + size(file), 0))];
   }
   const scripts = item.fact === 'startCommand' || item.fact === 'migration' ? packageScripts(tree, dockerfile) : [];
   const procfiles = Object.keys(tree).filter((path) => /(?:^|\/)Procfile$/.test(path) && path.split('/').length <= 2);
@@ -358,6 +384,9 @@ function renderFile(file: PackFile): string[] {
 }
 
 function questionText(question: Question): string {
+  if (question.kind === 'fact' && question.fact === 'repositoryKind') {
+    return `${question.id} (kind "fact", fact "repositoryKind"): the scanner found no Dockerfile that builds this repository. Is it an application that serves HTTP, or a library, framework, SDK or CLI that others install?`;
+  }
   if (question.kind === 'fact') return `${question.id} (kind "fact", fact "${question.fact}"): what is the ${question.fact}?`;
   const subject =
     question.category === 'datastore'

@@ -1,0 +1,114 @@
+id: new-149
+repository: henrygd/beszel
+commit: 07e42d63f19cedccac258b8f741eca4b9122f211
+summary: >
+  Beszel is a lightweight server monitoring platform: a hub (Go, built on PocketBase, embedded SQLite, web UI) and an
+  agent that runs on each monitored host and connects to the hub (HUB_URL, TOKEN). The hub image
+  (internal/dockerfile_hub) builds the Go binary but not the web UI; internal/site/dist is embedded with
+  go:embed and is not in the repo, so the Dockerfile does not build from the repo alone. The hub stores data
+  in /beszel_data (SQLite).
+outcome:
+  # The worst required item sets the outcome (docs/ai-analysis.md): the capability gap makes it NOT_DEPLOYABLE.
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The hub database is PocketBase's embedded SQLite in /beszel_data on local disk. Deployz does not support SQLite
+    and Fargate disk is ephemeral, so all data would be lost. The product is also useful only with agents on other
+    hosts, and the hub Dockerfile does not build the web UI that go:embed needs.
+dockerfile:
+  accept: [internal/dockerfile_hub]
+  reject:
+    - {path: internal/dockerfile_agent, reason: "monitoring agent that runs on the monitored host and dials the hub, not the web product"}
+    - {path: internal/dockerfile_agent_alpine, reason: "agent variant"}
+    - {path: internal/dockerfile_agent_intel, reason: "agent variant for Intel GPU hosts"}
+    - {path: internal/dockerfile_agent_nvidia, reason: "agent variant for NVIDIA GPU hosts"}
+    - {path: internal/dockerfile_agent_nvidia_slim, reason: "agent variant for NVIDIA GPU hosts"}
+  target: null
+  context: .
+  evidence:
+    - {path: internal/dockerfile_hub, line: 23, quote: "CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags \"-w -s\" -o /beszel ./internal/cmd/hub"}
+    - {path: internal/site/embed.go, line: 9, quote: "//go:embed all:dist"}
+    - {path: Makefile, line: 62, quote: "bun install --cwd ./internal/site && \\"}
+runtime: {accept: [go]}
+port:
+  accept: [8090]
+  evidence:
+    - {path: internal/dockerfile_hub, line: 34, quote: "EXPOSE 8090"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: internal/dockerfile_hub, line: 37, quote: "CMD [\"serve\", \"--http=0.0.0.0:8090\"]"}
+startCommand:
+  source: image
+  accept: ["/beszel serve --http=0.0.0.0:8090"]
+  evidence:
+    - {path: internal/dockerfile_hub, line: 37, quote: "CMD [\"serve\", \"--http=0.0.0.0:8090\"]"}
+    - {path: internal/dockerfile_hub, line: 36, quote: "ENTRYPOINT [ \"/beszel\" ]"}
+healthPath:
+  accept: ["/api/health"]
+  # PocketBase built-in health route; the hub's own `health` command calls it.
+  evidence:
+    - {path: internal/cmd/hub/hub.go, line: 91, quote: "healthURL := baseURL + \"/api/health\""}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: go.mod, line: 19, quote: "github.com/pocketbase/pocketbase v0.40.5"}
+    - {path: internal/cmd/hub/hub.go, line: 42, quote: "DefaultDataDir: beszel.AppName + \"_data\","}
+    - {path: internal/dockerfile_hub, line: 32, quote: "VOLUME [\"/beszel_data\"]"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/cmd/hub/hub.go, line: 12, quote: "_ \"github.com/henrygd/beszel/internal/migrations\""}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+storage:
+  local: required
+  paths: [/beszel_data]
+  s3: none
+  s3SelectBy: {}
+  # PocketBase can store uploads and backups on S3 through its settings UI, but the database stays on local SQLite.
+  evidence:
+    - {path: internal/dockerfile_hub, line: 32, quote: "VOLUME [\"/beszel_data\"]"}
+env:
+  required: []
+  optional: [APP_URL, USER_EMAIL, USER_PASSWORD]
+  buildTime: []
+  evidence:
+    - {path: internal/hub/hub.go, line: 130, quote: "// set URL if APP_URL env is set"}
+blockers:
+  expected:
+    - "The hub uses PocketBase's embedded SQLite in /beszel_data (local disk, ephemeral on Fargate, no EFS); SQLite is not supported by Deployz"
+    - "internal/dockerfile_hub does not build the web UI that go:embed needs (internal/site/dist is not in the repo), so it does not build the hub from repo source alone"
+    - "The monitored hosts run a separate agent that must reach the hub (SSH or WebSocket with a token); the agents run outside the platform"
+  mustNot:
+    - "Missing PostgreSQL or Redis must not be reported as a separate blocker: the hub needs neither"
+    - "The agent Dockerfiles must not be accepted as the product image"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8090)"
+    - "Health path? (/api/health)"
+traps:
+  - "Six Dockerfiles without a Dockerfile name (internal/dockerfile_*): a detector that looks only for a file named Dockerfile finds none"
+  - "internal/dockerfile_hub looks like a source build but go:embed all:dist needs the web UI built first (Makefile build-web-ui)"
+  - "The hub image is FROM scratch with ENTRYPOINT /beszel: no shell and no package manager"
+  - "go.mod is at the repo root, but the Go main packages are in internal/cmd/hub and internal/cmd/agent"
+  - "COPY ../go.mod in the Dockerfile points outside the context unless the context is the repo root"
+crossReview:
+  - {field: outcome, change: "added DEPLOYABLE_WITH_CHANGES to accept (policy: an unbuildable Dockerfile and durable local state are CODE_CHANGE; NOT_DEPLOYABLE stays for SQLite as the only engine)", evidence: "internal/dockerfile_hub:23; internal/site/embed.go:9; internal/dockerfile_hub:32"}
+  - {field: dockerfile.accept / dockerfile.reject, change: "[] -> [internal/dockerfile_hub]; removed it from reject: it is the only hub image and the missing web UI build is a CODE_CHANGE, so picking it is defensible", evidence: "internal/dockerfile_hub:23; internal/dockerfile_hub:34; internal/site/embed.go:9 (internal/site/dist absent in checkout)"}
+  - {field: migrations.evidence, change: "replaced the unmatched quote (no such text in the file) with the blank import that registers the migrations package; migrations run at hub start", evidence: "internal/cmd/hub/hub.go:12; internal/cmd/hub/hub.go:60"}
+  - {field: port / startCommand / healthPath / database, change: "none: 8090, ENTRYPOINT /beszel with CMD serve, PocketBase /api/health, embedded SQLite in beszel_data", evidence: "internal/dockerfile_hub:34; internal/dockerfile_hub:36-37; internal/cmd/hub/hub.go:91; internal/cmd/hub/hub.go:42"}
+  - {field: all, change: verified, evidence: "14 citations checked"}
+  - {field: outcome, change: "integrator: back to [NOT_DEPLOYABLE]; the CODE_CHANGE items do not lower the capability gap, the worst required item sets the outcome", evidence: "docs/ai-analysis.md Compatibility findings"}

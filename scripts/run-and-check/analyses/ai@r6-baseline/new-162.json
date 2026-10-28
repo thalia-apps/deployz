@@ -1,0 +1,1165 @@
+{
+  "id": "new-162",
+  "commit": "18b073ab05b2902e1d052c3d2799786d8623b5e5",
+  "analyser": "ai@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "platform",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "platform/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/usr/local/bin/python\", \"-m\", \"reworkd_platform\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_PASS",
+          "kind": "password"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REWORKD_PLATFORM_DATABASE_USER",
+          "kind": "username"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOWED_ORIGINS_REGEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_DEPLOYMENT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DATABASE_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in next/prisma/schema.prisma",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CA_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_ECHO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DISCORD_CLIENT_ID",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DISCORD_CLIENT_SECRET",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FF_MOCK_MODE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_ID",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GITHUB_CLIENT_SECRET",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_ID",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares GOOGLE_CLIENT_SECRET",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_BOOTSTRAP_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_SSAL_MECHANISM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KAFKA_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_LOOPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXTAUTH_SECRET",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXTAUTH_URL",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "NEXT_PUBLIC_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_BACKEND_URL",
+            "read in next/src/env/schema.mjs",
+            "read in next/src/services/api-utils.ts",
+            "read in next/src/services/fetch-utils.ts",
+            "read in next/src/services/stream-utils.ts",
+            "read in next/src/components/console/SourceLink.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_CDN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_EXPERIMENTAL_FF_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_FF_MOCK_MODE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_FF_SID_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_LOOPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_MAX_LOOPS",
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_PUSHER_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_VERCEL_ENV",
+            "read in next/src/env/schema.mjs",
+            "read in next/src/server/auth/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs",
+            "read in next/src/pages/agent/index.tsx",
+            "read in next/src/services/workflow/oauthApi.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NODE_ENV",
+            "read in next/src/env/schema.mjs",
+            "read in next/src/server/db.ts",
+            "read in next/src/utils/api.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in next/src/env/schema.mjs",
+            "read in platform/reworkd_platform/settings.py",
+            "read in next/src/server/api/routers/agentRouter.ts",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PINECONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PINECONE_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PINECONE_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py",
+            "read in next/src/utils/api.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PUSHER_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "RELOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPLICATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_DATABASE_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REWORKD_PLATFORM_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_ENVIRONMENT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_FF_MOCK_MODE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_FF_MOCK_MODE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_FRONTEND_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_MAX_LOOPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_MAX_LOOPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_OPENAI_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_OPENAI_API_BASE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_RELOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_RELOAD"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_REPLICATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_REPLICATE_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_SERP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_SERP_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_SID_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_SID_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_SID_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_SID_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REWORKD_PLATFORM_SID_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REWORKD_PLATFORM_SID_REDIRECT_URI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SECRET_SIGNING_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SERP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SID_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SID_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SID_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in next/src/env/schema.mjs",
+            "read in next/src/utils/api.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKERS_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in platform/reworkd_platform/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 2 application services (frontend, platform). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (frontend, platform). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "buildTarget": "prod",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04804272,
+        "promptTokens": 9002,
+        "completionTokens": 626
+      },
+      "latencyMs": 9547
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9548,
+    "questions": 2,
+    "generatedAt": "2026-10-28T13:57:49.229Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

@@ -151,7 +151,7 @@ describe('evidenceFileRequests', () => {
 
   it('asks for nothing without an open item or without the repository path list', () => {
     const resolved: FileTree = {
-      Dockerfile: 'FROM node:20\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
+      Dockerfile: 'FROM node:20\nCOPY . .\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
       'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4' } }),
       'src/index.js': "app.get('/health', r);\napp.listen(process.env.PORT || 3000);",
     };
