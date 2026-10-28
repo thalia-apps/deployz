@@ -1,0 +1,130 @@
+id: new-131
+repository: shaarli/Shaarli
+commit: 56fdb8e846ab9ba4256086e7d2fb0d5bd439c01a
+summary: >
+  Shaarli is a PHP bookmark manager with no SQL database: the bookmarks live in a flat PHP datastore file
+  (data/datastore.php) and the settings and the hashed admin password in data/config.json.php, next to ban, log and
+  thumbnail-cache files. The root Dockerfile builds from source (docs, Composer, Yarn build) and runs nginx and php-fpm as
+  two supervised services under s6 (port 80). The data and cache directories are declared as VOLUMEs. The first request is
+  redirected to /install, where the first visitor creates the admin account.
+outcome:
+  # Policy (docs/ai-analysis.md, fix classes): durable local state and an s6 multi-process image are CODE_CHANGE, so outcome 2 is also correct.
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The application stores all durable data in files under data/ and cache/ (no PostgreSQL or MySQL support), so every
+    task restart on Fargate (ephemeral disk, no EFS) would delete the bookmarks, the admin account and the settings.
+    The image also runs nginx and php-fpm as two long-running processes under s6, and the open /install page lets the
+    first visitor claim the instance.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .github/act/Dockerfile, reason: "image for running GitHub Actions locally with act (CI helper), not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 4, quote: "FROM docker.io/python:3-alpine as docs"}
+    - {path: Dockerfile, line: 15, quote: "&& composer --prefer-dist --no-dev install"}
+    - {path: Dockerfile, line: 25, quote: "&& yarnpkg run build \\"}
+    - {path: Dockerfile, line: 66, quote: "COPY --from=node /shaarli shaarli"}
+    - {path: Dockerfile, line: 77, quote: "ENTRYPOINT [\"/usr/bin/s6-svscan\", \"/etc/services.d\"]"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 75, quote: "EXPOSE 80"}
+    - {path: .docker/nginx.conf, line: 20, quote: "listen      80;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: .docker/nginx.conf, line: 20, quote: "listen      80;"}
+    - {path: .docker/nginx.conf, line: 21, quote: "listen      [::]:80;"}
+startCommand:
+  source: image
+  accept: ["/usr/bin/s6-svscan /etc/services.d"]
+  evidence:
+    - {path: Dockerfile, line: 77, quote: "ENTRYPOINT [\"/usr/bin/s6-svscan\", \"/etc/services.d\"]"}
+    - {path: .docker/services.d/nginx/run, line: 2, quote: "nginx"}
+    - {path: .docker/services.d/php-fpm/run, line: 2, quote: "php-fpm84 -F"}
+healthPath:
+  accept: ["/login", "/install", "/"]
+  # There is no dedicated health route. /login is a public page (Slim route). Until setup is done, "/" and /login redirect (302) to /install, which answers 200.
+  evidence:
+    - {path: index.php, line: 119, quote: "$this->get('/login', '\\Shaarli\\Front\\Controller\\Visitor\\LoginController:index')->setName('login');"}
+    - {path: application/front/ShaarliMiddleware.php, line: 49, quote: "return $response->withRedirect($this->container->basePath . '/install');"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: application/config/ConfigManager.php, line: 348, quote: "$this->setEmpty('resource.datastore', 'data/datastore.php');"}
+    - {path: application/config/ConfigManager.php, line: 346, quote: "$this->setEmpty('resource.data_dir', 'data');"}
+    - {path: Dockerfile, line: 73, quote: "VOLUME /var/www/shaarli/data"}
+migrations:
+  mode: none
+  accept: []
+  # Data format updates run inside the request path (ShaarliMiddleware::runUpdates), not as a separate step.
+  evidence:
+    - {path: application/front/ShaarliMiddleware.php, line: 52, quote: "$this->runUpdates();"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: composer.json, line: 1, quote: "{"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: .docker/services.d/php-fpm/run, line: 2, quote: "php-fpm84 -F"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: .docker/services.d/nginx/run, line: 2, quote: "nginx"}
+storage:
+  local: required
+  paths: [/var/www/shaarli/data, /var/www/shaarli/cache, /var/www/shaarli/pagecache, /var/www/shaarli/tmp]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 72, quote: "VOLUME /var/www/shaarli/cache"}
+    - {path: Dockerfile, line: 73, quote: "VOLUME /var/www/shaarli/data"}
+    - {path: docker-compose.yml, line: 30, quote: "- shaarli-data:/var/www/shaarli/data"}
+    - {path: application/config/ConfigManager.php, line: 348, quote: "$this->setEmpty('resource.datastore', 'data/datastore.php');"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  # No application environment variables. Settings are written to data/config.json.php by the /install page.
+  evidence:
+    - {path: application/front/ShaarliMiddleware.php, line: 46, quote: "!is_file($this->container->conf->getConfigFileExt())"}
+blockers:
+  expected:
+    - "No database: bookmarks, users and settings are flat files in data/ (a persistent volume); Fargate disk is ephemeral and there is no EFS, so all data is lost on restart"
+    - "The image runs nginx and php-fpm as two long-running services under s6 (several supervised processes)"
+    - "The setup wizard at /install is open until the first admin is created, so the first visitor claims the instance"
+  mustNot:
+    - "Missing PostgreSQL or MySQL must not be a configuration gap that a setting can fix: the app has no SQL backend"
+    - "Missing health path must not be a blocker by itself: /login is a public page"
+    - "Missing environment variables must not be raised: the app has none"
+    - "Redis, workers or queues must not be reported as needed"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (80)"
+    - "Which database? (none: flat files)"
+    - "Who runs migrations? (none)"
+    - "Is a worker needed? (no)"
+traps:
+  - "Dockerfile builds the documentation, composer and yarn stages, so it looks like a clean source build, but the final image is nginx + php-fpm under s6 (Dockerfile:30-77)"
+  - "VOLUME lines mark data and cache as volumes: that is the sign of required local state (Dockerfile:72-73)"
+  - "docker-compose.yml adds a traefik reverse proxy with Let's Encrypt; Deployz does not need it (docker-compose.yml:36)"
+  - "The repository contains empty data/, cache/, pagecache/ and tmp/ directories that look like placeholders but are runtime write targets"
+  - "/ redirects to /install before setup, so a naive health check on / fails or follows the redirect (application/front/ShaarliMiddleware.php:46-49)"
+openQuestions: []
+crossReview:
+  - {field: healthPath.accept, change: "[/login] -> [/login, /install, /]: before setup ShaarliMiddleware redirects every route except displayInstall and saveInstall to /install, so /login is a 302 then; /install answers 200 and / is the app root after setup", evidence: "application/front/ShaarliMiddleware.php:44-49 index.php:119"}
+  - {field: outcome, change: "none: NOT_DEPLOYABLE (flat-file state, no SQL) and DEPLOYABLE_WITH_CHANGES (s6, nginx and php-fpm) are both already accepted", evidence: "Dockerfile:75 Dockerfile:77"}
+  - {field: all, change: "verified", evidence: "26 citations checked"}

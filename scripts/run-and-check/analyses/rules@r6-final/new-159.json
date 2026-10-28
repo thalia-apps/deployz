@@ -1,0 +1,2384 @@
+{
+  "id": "new-159",
+  "commit": "c8d10f76891c4efdecb71c04b49109e8f67f8e7c",
+  "analyser": "rules@r6-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": "docker/production/Dockerfile"
+    },
+    "build": {
+      "command": "vite build",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 80
+    },
+    "health": {
+      "path": "/up",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DB_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "AWS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "DO_SPACES_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_COMPAT_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scramble.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DEBUG",
+            ".env.testing declares APP_DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_ENV",
+            ".env.testing declares APP_ENV"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APP_KEY",
+            ".env.testing declares APP_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_LOCALE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_LOCALE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_NAME",
+            "read in config/backup.php",
+            "read in config/database.php",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_TIMEZONE",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_URL",
+            "read in config/filesystems.php",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AUTH_GUARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/auth.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_PASSWORD_BROKER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/auth.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_ARCHIVE_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/backup.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_STORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTAINERIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cors.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRON_JOB_AUTH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "CUSTOMER_PORTAL_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CUSTOMER_PORTAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_BUSY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CHARSET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_COLLATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "engine selector: default \"mysql\" is not the managed PostgreSQL engine — set \"pgsql\" to use the managed PostgreSQL database",
+            ".env.example declares DB_CONNECTION",
+            ".env.testing declares DB_CONNECTION",
+            "read in config/backup.php",
+            "read in config/database.php",
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DATABASE",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_ENCRYPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_FOREIGN_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_HOST",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_JOURNAL_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DB_PASSWORD",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_PORT",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_TABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SYNCHRONOUS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_TRUST_SERVER_CERTIFICATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_USERNAME",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEMO_MODULES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_RESET_CRON",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOMPDF_ENABLE_REMOTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DOMPDF_ENABLE_REMOTE",
+            "read in config/dompdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DO_SPACES_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DROPBOX_APP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMIC_DISK_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Platform/Storage/Http/DiskController.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_MEDIA_LIBRARY_VAPOR_UPLOADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FFMPEG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FFPROBE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILESYSTEM_DISK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FORCE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOTENBERG_ALLOWED_PRIVATE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/network.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOTENBERG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOTENBERG_PDFA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_ADMIN_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_ADMIN_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_ADMIN_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "INSTALL_ADMIN_PASSWORD_FILE",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "INSTALL_COMPANY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_CURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_DATE_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_FISCAL_YEAR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INSTALL_WIZARD_TOKEN_TTL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/installer.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_ANNOUNCEMENTS_FEED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_CLIENT_HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cors.php",
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_CLIENT_MIN_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_MANAGED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/managed.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_POWERED_BY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_POWERED_BY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_POWERED_BY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_SOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INVOICESHELF_SUPPORT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/managed.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/mail.php",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_ALLOWED_PRIVATE_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/network.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_EHLO_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_ENCRYPTION",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_FROM_ADDRESS",
+            "read in config/backup.php",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_FROM_NAME",
+            "read in config/backup.php",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_HOST",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_LOG_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_MAILER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_MAILER",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.testing declares MAIL_PASSWORD",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_PORT",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SENDMAIL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.testing declares MAIL_USERNAME",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_LEASE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_MAX_ZIP_COMPRESSED_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_MAX_ZIP_COMPRESSION_RATIO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_MAX_ZIP_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_MAX_ZIP_UNCOMPRESSED_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_MODULE_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MARKETPLACE_PUBLIC_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/invoiceshelf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_DISK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODULE_AUTHOR_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/modules.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODULE_AUTHOR_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/modules.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MODULE_VENDOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/modules.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MYSQL_ATTR_SSL_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_ACCESS_TOKEN_MINUTES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_REFRESH_TOKEN_DAYS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_CONNECTION",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSPORT_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/passport.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_FONTS_DOWNLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_FONTS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_MARGIN_BOTTOM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_MARGIN_LEFT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_MARGIN_RIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_MARGIN_TOP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_ORIENTATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_PAGE_NUMBERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_PAPER_HEIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_PAPER_WIDTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_REPORT_MARGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pdf.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTMARK_MESSAGE_STREAM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTMARK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php",
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_CONVERSIONS_BY_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/media-library.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_FAILED_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_BACKOFF_ALGORITHM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_BACKOFF_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_BACKOFF_CAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PERSISTENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_COMPAT_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_COMPAT_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_COMPAT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_COMPAT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_COMPAT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SANCTUM_STATEFUL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SANCTUM_STATEFUL_DOMAIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SENDGRID_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_DOMAIN",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_ENCRYPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_EXPIRE_ON_CLOSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_HTTP_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_PARTITIONED_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_SAME_SITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_SECURE_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_STORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_TABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SPARKPOST_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SQS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_TOLERANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUSTED_PROXIES",
+            "read in app/Http/Middleware/TrustProxies.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VAPOR_MAINTENANCE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/modules.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BACKUP_ARCHIVE_PASSWORD, CRON_JOB_AUTH_TOKEN, INSTALL_ADMIN_PASSWORD, INSTALL_ADMIN_PASSWORD_FILE, STRIPE_KEY, and 2 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "DEPLOYABLE"
+}

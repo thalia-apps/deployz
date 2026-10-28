@@ -1,0 +1,133 @@
+id: new-162
+repository: reworkd/AgentGPT
+commit: 18b073ab05b2902e1d052c3d2799786d8623b5e5
+summary: >
+  AgentGPT is two services plus a database: a Next.js 13 frontend (next/, NextAuth, Prisma, MySQL) and a separate
+  FastAPI backend (platform/, port 8000, MySQL through aiomysql). The browser calls the backend directly at
+  NEXT_PUBLIC_BACKEND_URL (a build-time public URL), so a deploy needs two public HTTP endpoints. The only frontend
+  Dockerfile runs `npm run dev` with a wait-for-db entrypoint and a hard-coded MySQL host. The repo ships no
+  single-image build of the product.
+outcome:
+  # Policy (docs/ai-analysis.md, fix classes): a second service and a development Dockerfile are CODE_CHANGE, so outcome 2 is also correct.
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Two separate services (frontend on 3000, backend on 8000) that the browser must both reach. Deployz serves one
+    container with one ALB port. next/Dockerfile is a development runner (CMD npm run dev, an entrypoint that runs
+    prisma migrate and db push and waits for host agentgpt_db:3307). MySQL is a supported Deployz engine, but the
+    two-service topology and the browser-to-backend call are not supported.
+dockerfile:
+  accept: []
+  reject:
+    - {path: next/Dockerfile, reason: "development image: CMD npm run dev, entrypoint waits for agentgpt_db:3307 and runs prisma migrate and db push; frontend only"}
+    - {path: platform/Dockerfile, reason: "FastAPI backend only (python -m reworkd_platform, reload default true); a second service"}
+    - {path: db/Dockerfile, reason: "mysql:8.0 image with setup.sql; a database container, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: next/Dockerfile, line: 39, quote: "CMD [\"npm\", \"run\", \"dev\"]"}
+    - {path: next/Dockerfile, line: 36, quote: "ENTRYPOINT [\"sh\", \"/entrypoint.sh\"]"}
+    - {path: next/entrypoint.sh, line: 16, quote: "./wait-for-db.sh agentgpt_db 3307"}
+    - {path: platform/Dockerfile, line: 33, quote: "CMD [\"/usr/local/bin/python\", \"-m\", \"reworkd_platform\"]"}
+    - {path: docker-compose.yml, line: 4, quote: "frontend:"}
+    - {path: docker-compose.yml, line: 17, quote: "platform:"}
+runtime: {accept: [node, python]}
+port:
+  accept: [3000, 8000]
+  evidence:
+    - {path: docker-compose.yml, line: 10, quote: "- \"3000:3000\""}
+    - {path: docker-compose.yml, line: 23, quote: "- \"8000:8000\""}
+    - {path: platform/reworkd_platform/settings.py, line: 44, quote: "port: int = 8000"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: platform/reworkd_platform/settings.py, line: 43, quote: "host: str = \"127.0.0.1\""}
+startCommand:
+  source: explicit
+  accept: ["npm run dev", "next start", "python -m reworkd_platform"]
+  evidence:
+    - {path: next/Dockerfile, line: 39, quote: "CMD [\"npm\", \"run\", \"dev\"]"}
+    - {path: platform/Dockerfile, line: 33, quote: "CMD [\"/usr/local/bin/python\", \"-m\", \"reworkd_platform\"]"}
+healthPath:
+  accept: ["/api/monitoring/health", "/"]
+  # Backend only: GET /api/monitoring/health returns 200. The frontend has no health route.
+  evidence:
+    - {path: platform/reworkd_platform/web/api/monitoring/views.py, line: 6, quote: "@router.get(\"/health\")"}
+    - {path: platform/reworkd_platform/web/api/router.py, line: 6, quote: "prefix=\"/monitoring\""}
+    - {path: platform/reworkd_platform/web/application.py, line: 51, quote: "prefix=\"/api\""}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DATABASE_URL, REWORKD_PLATFORM_DB_HOST, REWORKD_PLATFORM_DB_PORT, REWORKD_PLATFORM_DB_USER, REWORKD_PLATFORM_DB_PASS, REWORKD_PLATFORM_DB_BASE]
+  evidence:
+    - {path: next/prisma/schema.prisma, line: 6, quote: "provider     = \"mysql\""}
+    - {path: next/src/env/schema.mjs, line: 18, quote: "DATABASE_URL: z.string().url(),"}
+    - {path: platform/reworkd_platform/settings.py, line: 124, quote: "scheme=\"mysql+aiomysql\","}
+    - {path: docker-compose.yml, line: 40, quote: "image: mysql:8.0"}
+migrations:
+  mode: command
+  accept: ["prisma migrate deploy", "prisma db push"]
+  evidence:
+    - {path: next/entrypoint.sh, line: 20, quote: "npx prisma migrate deploy --name init"}
+    - {path: next/entrypoint.sh, line: 21, quote: "npx prisma db push"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: []
+  # The FastAPI backend is a second long-running service next to the Next.js frontend.
+  evidence:
+    - {path: docker-compose.yml, line: 17, quote: "platform:"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "MySQL URL for Prisma (frontend)"}
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "required when NODE_ENV=production"}
+    - {name: NEXTAUTH_URL, secret: false, buildTime: false, note: "public frontend URL"}
+    - {name: NEXT_PUBLIC_BACKEND_URL, secret: false, buildTime: true, note: "public URL of the second service (backend); the browser calls it directly"}
+    - {name: REWORKD_PLATFORM_OPENAI_API_KEY, secret: true, buildTime: false, note: "LLM key; a vendor or customer input"}
+  optional: [REWORKD_PLATFORM_DB_CA_PATH, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, DISCORD_CLIENT_ID, REWORKD_PLATFORM_SERP_API_KEY]
+  buildTime: [NEXT_PUBLIC_BACKEND_URL]
+  evidence:
+    - {path: next/src/env/schema.mjs, line: 18, quote: "DATABASE_URL: z.string().url(),"}
+    - {path: next/src/env/schema.mjs, line: 20, quote: "NEXTAUTH_SECRET: requiredForProduction(),"}
+    - {path: next/src/env/schema.mjs, line: 70, quote: "NEXT_PUBLIC_BACKEND_URL: z.string().url().default(\"http://localhost:8000\"),"}
+    - {path: platform/reworkd_platform/settings.py, line: 56, quote: "openai_api_key: str = \"<Should be updated via env>\""}
+blockers:
+  expected:
+    - "Two services: the Next.js frontend and the FastAPI backend; the browser calls the backend directly at NEXT_PUBLIC_BACKEND_URL, so two public endpoints are needed"
+    - "The only frontend Dockerfile is a dev runner (npm run dev) with a compose-specific entrypoint (host agentgpt_db, port 3307)"
+  mustNot:
+    - "MySQL must not block: it is a supported Deployz engine"
+    - "Kafka, Pusher and Pinecone must not be reported as required: all are optional settings"
+vendorQuestions:
+  legitimate:
+    - "Can the backend be served on the frontend host (one origin)? The code uses an absolute NEXT_PUBLIC_BACKEND_URL"
+  unnecessary:
+    - "Which database? (MySQL)"
+    - "Health path of the backend? (/api/monitoring/health)"
+traps:
+  - "Three Dockerfiles (next, platform, db): none builds the whole product, each is one piece (docker-compose.yml)"
+  - "docker-compose.yml bind-mounts source and runs dev servers: not a production topology (docker-compose.yml:11-14, :26)"
+  - "Backend default host is 127.0.0.1 and reload is true: it needs REWORKD_PLATFORM_HOST=0.0.0.0 and reload off (settings.py:43-46)"
+  - "next/prisma has useMysql.sh and useSqlite.sh: the default schema.prisma is already mysql (schema.prisma:6)"
+  - "Backend settings need the REWORKD_PLATFORM_ prefix (constants.py:1); frontend settings do not"
+openQuestions:
+  - "Whether the repository is archived: not provable from the source archive"
+crossReview:
+  - {field: outcome, change: "none: accept already has NOT_DEPLOYABLE and DEPLOYABLE_WITH_CHANGES (two services, dev-runner Dockerfile are CODE_CHANGE)", evidence: "next/Dockerfile; platform/Dockerfile; db/Dockerfile"}
+  - {field: "port, healthPath, database", change: "none: backend /api/monitoring/health route exists (health_check), backend port 8000, MySQL for both services", evidence: "platform/reworkd_platform/web/api/monitoring/views.py:6"}
+  - {field: all, change: verified, evidence: "26 citations checked"}

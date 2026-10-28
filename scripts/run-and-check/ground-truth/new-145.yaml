@@ -1,0 +1,115 @@
+id: new-145
+repository: ellite/Wallos
+commit: d799b8faac0c81d0993f52a6a8b5cfed2902086c
+summary: >
+  Wallos is a PHP subscription tracker. The root Dockerfile builds from the repo source (php:8.3-fpm-alpine, copies the
+  code) and runs php-fpm, crond and nginx from one start script on port 80. The only database is SQLite
+  (db/wallos.db) and uploaded logos go to local disk.
+outcome:
+  # The worst required item sets the outcome (docs/ai-analysis.md): the capability gap makes it NOT_DEPLOYABLE.
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    SQLite is the only database (SQLite3 class, no other driver) and Deployz does not support SQLite; data and uploads
+    sit on local disk and Fargate disk is ephemeral. The image also runs php-fpm, nginx and cron as three background
+    processes from startup.sh, which is a multi-process image that Deployz rejects.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 10, quote: "docker-php-ext-install pdo pdo_sqlite calendar"}
+    - {path: Dockerfile, line: 50, quote: "CMD [\"/var/www/html/startup.sh\"]"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: Dockerfile, line: 41, quote: "EXPOSE 80"}
+    - {path: docker-compose.yaml, line: 6, quote: "- \"8282:80/tcp\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: nginx.default.conf, line: 2, quote: "listen [::]:80 ipv6only=off;"}
+startCommand:
+  source: image
+  accept: ["/var/www/html/startup.sh"]
+  evidence:
+    - {path: Dockerfile, line: 50, quote: "CMD [\"/var/www/html/startup.sh\"]"}
+healthPath:
+  accept: ["/health.php"]
+  evidence:
+    - {path: health.php, line: 6, quote: "echo 'OK';"}
+    - {path: Dockerfile, line: 47, quote: "CMD [\"curl\", \"-fsS\", \"http://127.0.0.1/health.php\"]"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: includes/connect.php, line: 5, quote: "$db = new SQLite3($databaseFile);"}
+    - {path: Dockerfile, line: 10, quote: "docker-php-ext-install pdo pdo_sqlite calendar"}
+    - {path: docker-compose.yaml, line: 30, quote: "- './db:/var/www/html/db'"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: startup.sh, line: 74, quote: "/usr/local/bin/php /var/www/html/endpoints/db/migrate.php"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # cron entries in /etc/cron.d/cronjobs run PHP scripts (notifications, exchange rates) inside the same container
+  evidence:
+    - {path: startup.sh, line: 58, quote: "crond -f &"}
+    - {path: cronjobs, line: 3, quote: "0 2 * * * /usr/local/bin/php /var/www/html/endpoints/cronjobs/updateexchange.php"}
+scheduledJobs:
+  status: embedded
+  items: [updateexchange, sendnotifications, updatenextpayment]
+  evidence:
+    - {path: cronjobs, line: 3, quote: "0 2 * * * /usr/local/bin/php /var/www/html/endpoints/cronjobs/updateexchange.php"}
+storage:
+  local: required
+  paths: [/var/www/html/db, /var/www/html/images/uploads/logos]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker-compose.yaml, line: 30, quote: "- './db:/var/www/html/db'"}
+    - {path: docker-compose.yaml, line: 31, quote: "- './logos:/var/www/html/images/uploads/logos'"}
+env:
+  required: []
+  optional: [TZ, PUID, PGID, OIDC_ENABLED, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER, SSRF_ALLOWLIST]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yaml, line: 8, quote: "TZ: 'America/Toronto'"}
+    - {path: startup.sh, line: 9, quote: "PUID=${PUID:-82}"}
+blockers:
+  expected:
+    - "SQLite is the only database and is not supported by Deployz; the database file db/wallos.db and uploaded logos are on local disk (ephemeral on Fargate, no EFS)"
+    - "The container runs php-fpm, crond and nginx as three background processes from startup.sh (multi-process image)"
+  mustNot:
+    - "Missing PostgreSQL or Redis must not be reported as a separate blocker: the app needs neither"
+    - "Health path must not be reported as missing: /health.php returns 200 OK"
+    - "Binding must not be a blocker: nginx listens on all interfaces"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (80)"
+    - "Health path? (/health.php)"
+    - "Who runs migrations? (startup.sh runs endpoints/db/migrate.php)"
+traps:
+  - "Dockerfile looks fully deployable and has a health check, but the database is SQLite only (includes/connect.php:5)"
+  - "startup.sh backgrounds php-fpm, crond and nginx and then waits: three long-running processes, not one (startup.sh:54-66)"
+  - "startup.sh runs updateexchange.php and checkforupdates.php at boot and needs outbound internet"
+  - "nginx.conf and nginx.default.conf are removed from the web root by the Dockerfile and copied to /etc/nginx"
+crossReview:
+  - {field: outcome, change: "added DEPLOYABLE_WITH_CHANGES to accept (policy: multi-process image and local disk state are CODE_CHANGE; NOT_DEPLOYABLE stays for SQLite as the only engine)", evidence: "includes/connect.php:5 new SQLite3; startup.sh:58 crond -f &; docker-compose.yaml:30"}
+  - {field: workers.evidence / scheduledJobs.evidence, change: "fixed line number of the updateexchange cron entry 2 -> 3 (two uses)", evidence: "cronjobs:3"}
+  - {field: scheduledJobs.items, change: "none: the cron file also has other jobs (sendcancellationnotifications, checkforupdates, ...); the listed three are a subset and stay valid", evidence: "cronjobs:2-12"}
+  - {field: port / startCommand / healthPath / migrations, change: "none: 80, startup.sh, /health.php (static 200 OK, no auth), migrate.php in startup.sh", evidence: "Dockerfile:41; Dockerfile:50; health.php:6; startup.sh:74"}
+  - {field: all, change: verified, evidence: "19 citations checked"}
+  - {field: outcome, change: "integrator: back to [NOT_DEPLOYABLE]; the CODE_CHANGE items do not lower the capability gap, the worst required item sets the outcome", evidence: "docs/ai-analysis.md Compatibility findings"}

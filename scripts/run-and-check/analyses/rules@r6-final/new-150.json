@@ -1,0 +1,98 @@
+{
+  "id": "new-150",
+  "commit": "33ddb30f98f779a0215428d7291d455aead6ee9f",
+  "analyser": "rules@r6-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "build/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/flipt\", \"server\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build/testing/integration.go",
+            "read in build/testing/ui.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GOFLAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build/testing/test.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_LOGS_EXPORTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/flipt/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE"
+}

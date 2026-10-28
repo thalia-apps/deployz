@@ -1,0 +1,123 @@
+id: new-146
+repository: openstatusHQ/openstatus
+commit: f8057fbe1f17e8eef6b0fc7c28b73cbccdaa0a62
+summary: >
+  OpenStatus is a pnpm/turbo monorepo of several services: dashboard (Next.js, product UI), status-page (Next.js),
+  server (Hono API), workflows (cron and background jobs), checker (Go), private-location (Go agent for other hosts),
+  screenshot-service, ssh-server and more, each with its own Dockerfile. The self-host compose file runs a libSQL
+  server (Turso), Tinybird local (ClickHouse and Redis) and a db-migrate job next to them. The database layer is
+  libSQL over HTTP and analytics need Tinybird.
+outcome:
+  # Policy (docs/ai-analysis.md, fix classes): several application services are CODE_CHANGE, so outcome 2 stays accepted beside the libSQL and Tinybird gap.
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The product needs several long-running application services (dashboard, server, workflows, status-page, checker),
+    a libSQL/Turso database and Tinybird (ClickHouse) analytics. Deployz supports one web service, PostgreSQL or MySQL,
+    Redis and S3 only; libSQL, Tinybird/ClickHouse and extra application services are unsupported. The
+    private-location agent is designed to run on other hosts.
+dockerfile:
+  accept: [apps/dashboard/Dockerfile]
+  reject:
+    - {path: apps/server/Dockerfile, reason: "API service, one of several required services"}
+    - {path: apps/workflows/Dockerfile, reason: "background and cron service, a required second application service"}
+    - {path: apps/status-page/Dockerfile, reason: "public status page, a separate Next.js service"}
+    - {path: apps/checker/Dockerfile, reason: "Go checker service from scratch image, separate service"}
+    - {path: apps/private-location/Dockerfile, reason: "agent that runs on the customer network, not the product server"}
+    - {path: packages/db/Dockerfile, reason: "one-shot db-migrate job against libSQL"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker-compose.yaml, line: 215, quote: "dockerfile: apps/dashboard/Dockerfile"}
+    - {path: docker-compose.yaml, line: 135, quote: "dockerfile: apps/server/Dockerfile"}
+    - {path: docker-compose.yaml, line: 98, quote: "dockerfile: apps/workflows/Dockerfile"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # Every Node service listens on 3000 inside its own container; the compose file maps them to 3000-3003 on the host.
+  evidence:
+    - {path: apps/dashboard/Dockerfile, line: 122, quote: "EXPOSE 3000"}
+    - {path: docker-compose.yaml, line: 103, quote: "- \"3000:3000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/dashboard/Dockerfile, line: 129, quote: "CMD [\"node\", \"server.js\"]"}
+startCommand:
+  source: image
+  accept: ["node server.js"]
+  evidence:
+    - {path: apps/dashboard/Dockerfile, line: 129, quote: "CMD [\"node\", \"server.js\"]"}
+healthPath:
+  accept: ["/api/health", "/"]
+  # Dashboard /api/health probes Turso, Tinybird and Upstash; server and workflows use /ping.
+  evidence:
+    - {path: apps/dashboard/src/app/api/health/route.ts, line: 4, quote: "import { tursoProbe } from \"@openstatus/health-turso\";"}
+    - {path: apps/dashboard/Dockerfile, line: 128, quote: "CMD curl -f http://localhost:3000/ || exit 1"}
+database:
+  status: required
+  engines: [libsql]
+  default: libsql
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_AUTH_TOKEN]
+  evidence:
+    - {path: packages/db/src/db.ts, line: 1, quote: "import { drizzle } from \"drizzle-orm/libsql/http\";"}
+    - {path: docker-compose.yaml, line: 18, quote: "libsql:"}
+    - {path: docker-compose.yaml, line: 52, quote: "tinybird-local:"}
+migrations:
+  mode: command
+  accept: ["pnpm --filter @openstatus/db migrate"]
+  evidence:
+    - {path: packages/db/package.json, line: 26, quote: "\"migrate\": \"node --env-file-if-exists=.env src/migrate.mts\""}
+    - {path: docker-compose.yaml, line: 74, quote: "db-migrate:"}
+redis:
+  status: conditional
+  selectBy: {UPSTASH_REDIS_REST_URL: "https://<host>.upstash.io"}
+  evidence:
+    - {path: apps/dashboard/src/app/api/health/route.ts, line: 5, quote: "import { upstashProbe } from \"@openstatus/health-upstash\";"}
+workers:
+  status: independent
+  commands: ["apps/workflows: node /app/apps/workflows/dist/serve.mjs", "apps/server: node /app/dist/serve.mjs", "apps/checker: /opt/bin/checker"]
+  evidence:
+    - {path: apps/workflows/Dockerfile, line: 123, quote: "ENTRYPOINT [\"node\", \"/app/apps/workflows/dist/serve.mjs\"]"}
+    - {path: apps/server/Dockerfile, line: 110, quote: "ENTRYPOINT [\"node\", \"/app/dist/serve.mjs\"]"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker-compose.yaml, line: 9, quote: "workflows-data:"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: false, note: "libSQL HTTP URL"}
+    - {name: DATABASE_AUTH_TOKEN, secret: true}
+    - {name: TINY_BIRD_API_KEY, secret: true}
+    - {name: AUTH_SECRET, secret: true}
+  optional: [TINYBIRD_URL, TINYBIRD_NOOP, UPSTASH_REDIS_REST_URL, RESEND_API_KEY, NEXT_PUBLIC_URL, SELF_HOST]
+  buildTime: [NEXT_PUBLIC_URL, SELF_HOST]
+  evidence:
+    - {path: apps/server/src/env.ts, line: 9, quote: "TINY_BIRD_API_KEY: z.string().min(1),"}
+blockers:
+  expected:
+    - "The product is several application services (dashboard, server, workflows, status-page, checker), not one web service"
+    - "libSQL (Turso) is the database and Tinybird (ClickHouse) is required for analytics; neither is supported by Deployz"
+    - "private-location is an agent meant to run on other hosts and the checker probes from several regions"
+  mustNot:
+    - "Several Dockerfiles must not be resolved by picking one and declaring DEPLOYABLE: the dashboard needs the other services"
+    - "Missing PostgreSQL must not be reported as the blocker: the database is libSQL"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (3000 in each Node container)"
+traps:
+  - "Ten Dockerfiles in apps/ and packages/: the first or the dashboard looks like the product image, but the app is a multi-service system"
+  - "Dockerfiles carry build-time placeholder values (AUTH_SECRET, STRIPE_SECRET_KEY, TINY_BIRD_API_KEY=test) that are not runtime config (apps/dashboard/Dockerfile)"
+  - "The checker image is FROM scratch with a Go binary; private-location is an agent that runs outside the platform"
+  - "Dockerfiles are generated by Dofigen (dofigen.yml); edits belong in those files"
+  - "The Next.js output is standalone only when SELF_HOST=true (apps/dashboard/next.config.ts:8)"
+crossReview:
+  - {field: outcome, change: "added DEPLOYABLE_WITH_CHANGES to accept (policy: several application services are CODE_CHANGE; NOT_DEPLOYABLE stays for libSQL as the only engine and required Tinybird)", evidence: "packages/db/src/db.ts:1; docker-compose.yaml:18; docker-compose.yaml:52"}
+  - {field: dockerfile.accept / dockerfile.reject, change: "[] -> [apps/dashboard/Dockerfile]; removed the dashboard entry from reject: it builds the product UI from source on port 3000 and is the defensible single pick, even though the other services are still needed", evidence: "apps/dashboard/Dockerfile:122 EXPOSE 3000; apps/dashboard/Dockerfile:129 CMD node server.js; docker-compose.yaml:215"}
+  - {field: redis.evidence, change: "fixed line number of the upstash import 7 -> 5", evidence: "apps/dashboard/src/app/api/health/route.ts:5"}
+  - {field: database / port / startCommand / healthPath, change: "none: libSQL over HTTP, 3000, node server.js, /api/health and / hold", evidence: "packages/db/src/db.ts:1; apps/dashboard/Dockerfile:122; apps/dashboard/Dockerfile:128-129"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

@@ -1,0 +1,87 @@
+id: new-126
+repository: readeck/readeck
+commit: 290729db4240d3f2ab926d7a1d55aaa2bcf33955
+summary: >
+  The GitHub repository readeck/readeck contains only a README.md that points to the official repository on Codeberg.
+  The pinned commit ("Initial commit") has no source code, no Dockerfile, no manifest and no configuration. Nothing in the
+  archive can be built or deployed.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The archive has one file, README.md, with a pointer to codeberg.org/readeck/readeck. There is no application source,
+    no Dockerfile and no runtime to analyse. An analyser must not guess the port, health path or database from the
+    product's public documentation.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 3, quote: "Official repository is on Codeberg:"}
+runtime: {accept: []}
+port:
+  accept: []
+  evidence:
+    - {path: README.md, line: 5, quote: "https://codeberg.org/readeck/readeck"}
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: image
+  accept: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository has no source code: only README.md, which points to the official Codeberg repository"
+    - "No Dockerfile or other build definition exists in the archive"
+  mustNot:
+    - "Port, database, health path or storage must not be invented from outside knowledge of Readeck: nothing in the repo supports them"
+    - "The outcome must not be DEPLOYABLE or DEPLOYABLE_WITH_CHANGES: there is nothing to build"
+vendorQuestions:
+  legitimate:
+    - "Is there another repository (the Codeberg mirror cannot be connected through GitHub) that holds the real source?"
+  unnecessary:
+    - "Which port, database, health path or migration? (no code to ask about)"
+traps:
+  - "The repository name suggests a real application, but the GitHub repository is an empty pointer to Codeberg (README.md:1-5)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: "none: the archive holds only README.md (no application source), the NOT_DEPLOYABLE case by policy; all other fields are empty and correct", evidence: "README.md:3 README.md:5"}
+  - {field: all, change: "verified", evidence: "2 citations checked"}

@@ -1,0 +1,168 @@
+id: new-127
+repository: Kovah/LinkAce
+commit: 02e267c960edc7dbb934a08acaed25e9d972f145
+summary: >
+  LinkAce is a Laravel (PHP 8.2+) bookmark manager. The release image (resources/docker/dockerfiles/release-multiplatform.Dockerfile)
+  is built from repo source on the published linkace/base-image (PHP-FPM, Caddy, supervisor, built from release-base.Dockerfile).
+  supervisord runs two processes, php-fpm and Caddy, and Caddy serves HTTP on $PORT (80). The shipped .env is SQLite; MySQL,
+  MariaDB and PostgreSQL work through DB_* variables. The schema and the admin account are created by a first-run web setup
+  wizard (migrate:fresh). The queue worker and link checks run only through `schedule:run`, which needs an external cron call.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The only production Dockerfile starts supervisord with php-fpm and Caddy in one image, which Deployz does not support
+    (several supervised processes). A deploy needs a single-process PHP image (for example one web server with PHP) and a
+    schema step (`php artisan migrate --force`) instead of the open web setup wizard. A strict read of the supervisord rule
+    gives NOT_DEPLOYABLE; a read that allows a vendor change gives DEPLOYABLE_WITH_CHANGES. The queue and scheduler need
+    an external `schedule:run` trigger (a worker or a scheduled job), which is also a change.
+dockerfile:
+  accept: [resources/docker/dockerfiles/release-multiplatform.Dockerfile]
+  reject:
+    - {path: resources/docker/dockerfiles/development.Dockerfile, reason: "development image: php-fpm with xdebug and pcov, no app copy (docker-compose mounts the source), no web server"}
+    - {path: resources/docker/dockerfiles/release-base.Dockerfile, reason: "builds only the shared PHP base image (php-fpm, extensions, supervisor, Caddy binary); no application code"}
+  target: null
+  context: .
+  evidence:
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 52, quote: "FROM docker.io/linkace/base-image:2.x-php-8.5"}
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 25, quote: "RUN composer install -n --prefer-dist --no-dev"}
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 48, quote: "RUN npm run build"}
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 101, quote: "CMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor.d/supervisord.ini\"]"}
+    - {path: resources/docker/dockerfiles/development.Dockerfile, line: 1, quote: "# DOCKERFILE DEVELOPMENT"}
+    - {path: resources/docker/dockerfiles/release-base.Dockerfile, line: 1, quote: "FROM docker.io/library/php:8.5.12-fpm-alpine"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 94, quote: "ENV PORT=80"}
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 100, quote: "EXPOSE 80 443"}
+    - {path: resources/docker/Caddyfile, line: 7, quote: ":{$PORT:80} {"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: resources/docker/Caddyfile, line: 7, quote: ":{$PORT:80} {"}
+startCommand:
+  source: image
+  accept: ["/usr/bin/supervisord -c /etc/supervisor.d/supervisord.ini"]
+  evidence:
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 101, quote: "CMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor.d/supervisord.ini\"]"}
+    - {path: resources/docker/supervisord.ini, line: 11, quote: "command=/usr/local/sbin/php-fpm -F"}
+    - {path: resources/docker/supervisord.ini, line: 20, quote: "command=/usr/bin/caddy run --config /etc/caddy/Caddyfile"}
+healthPath:
+  accept: ["/_health"]
+  # Returns the text "Ok" without auth and without the settings middleware; the setup check lets it through before setup is done.
+  evidence:
+    - {path: routes/web.php, line: 44, quote: "Route::get('/_health', fn() => 'Ok')->withoutMiddleware(SettingsMiddleware::class);"}
+    - {path: app/Http/Middleware/SetupCheckMiddleware.php, line: 34, quote: "if ($request->is('_health')) {"}
+database:
+  status: optional
+  engines: [sqlite, mysql, mariadb, pgsql, sqlsrv]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION: pgsql, DB_HOST: "<host>", DB_PORT: "5432", DB_DATABASE: "<db>", DB_USERNAME: "<user>", DB_PASSWORD: "<password>"}
+  connectionVars: [DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  # The image .env is SQLite (/app/database/database.sqlite). Laravel gives real environment variables priority over .env,
+  # so the DB_* variables switch the engine. MySQL (DB_CONNECTION=mysql) is the code default and also works.
+  evidence:
+    - {path: .env.sqlite.production, line: 20, quote: "DB_CONNECTION=sqlite"}
+    - {path: .env.sqlite.production, line: 22, quote: "DB_DATABASE=/app/database/database.sqlite"}
+    - {path: config/database.php, line: 18, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: config/database.php, line: 94, quote: "'pgsql' => ["}
+    - {path: resources/docker/dockerfiles/release-base.Dockerfile, line: 8, quote: "&& docker-php-ext-install bcmath pdo_mysql pdo_pgsql zip ftp \\"}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force"]
+  # No startup migration. The first visit is redirected to /setup, whose database step runs `migrate:fresh` and then the
+  # account step creates the admin. Until setup is done, anyone who reaches the URL can create the admin account.
+  evidence:
+    - {path: app/Http/Controllers/Setup/DatabaseController.php, line: 80, quote: "Artisan::call('migrate:fresh', ["}
+    - {path: app/Http/Middleware/SetupCheckMiddleware.php, line: 52, quote: "return redirect()->route('setup.welcome');"}
+    - {path: app/Helper/functions.php, line: 22, quote: "return systemsettings('setup_completed');"}
+redis:
+  status: optional
+  selectBy: {CACHE_DRIVER: redis, REDIS_HOST: "<host>", REDIS_PORT: "6379"}
+  # Defaults are file cache, file sessions and database queue; Redis is an opt-in for cache, session and queue.
+  evidence:
+    - {path: config/cache.php, line: 18, quote: "'default' => env('CACHE_DRIVER', 'file'),"}
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'database'),"}
+    - {path: config/session.php, line: 21, quote: "'driver' => env('SESSION_DRIVER', 'file'),"}
+    - {path: .env.docker.production, line: 33, quote: "REDIS_HOST=redis"}
+workers:
+  status: optional-independent
+  commands: ["php artisan schedule:run"]
+  # queue:work runs inside the Laravel scheduler (--stop-when-empty, 30 jobs), and the scheduler needs `schedule:run` every
+  # minute from a system cron or a call to the /cron/{token} route. No process in the image does this. Imports, link checks and
+  # backups do not run without it; browsing and saving links work without it.
+  evidence:
+    - {path: app/Console/Kernel.php, line: 12, quote: "$schedule->command('queue:work', ["}
+    - {path: app/Console/Kernel.php, line: 18, quote: "$schedule->command('links:check')->everyTwoHours()->withoutOverlapping();"}
+    - {path: app/Http/Controllers/CronController.php, line: 26, quote: "Artisan::call('schedule:run');"}
+    - {path: routes/web.php, line: 73, quote: "Route::get('cron/{token}', CronController::class)->name('cron');"}
+scheduledJobs:
+  status: independent
+  items: [links:check every 2 hours, queue:work, backup:run daily]
+  evidence:
+    - {path: app/Console/Kernel.php, line: 18, quote: "$schedule->command('links:check')->everyTwoHours()->withoutOverlapping();"}
+    - {path: app/Console/Kernel.php, line: 31, quote: "$schedule->command('backup:run', $backupArgs)"}
+storage:
+  local: conditional
+  paths: [/app/database/database.sqlite, /app/storage, /app/storage/app/backups, /app/storage/logs]
+  s3: none
+  s3SelectBy: {}
+  # Local disk holds the SQLite file by default, sessions and cache (file drivers), logs and the daily backup zip
+  # (BACKUP_ENABLED defaults to true, disk local_backups). An s3 disk exists in filesystems.php but app code does not use it for data.
+  evidence:
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DISK', 'local'),"}
+    - {path: config/backup.php, line: 7, quote: "'enabled' => env('BACKUP_ENABLED', true),"}
+    - {path: docker-compose.production.yml, line: 16, quote: "#- ./backups:/app/storage/app/backups"}
+    - {path: resources/docker/dockerfiles/release-multiplatform.Dockerfile, line: 71, quote: "COPY --chown=www-data:www-data --chmod=0777 ./storage /app/storage"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "Laravel encryption key (base64:...). If it still has the placeholder value, the app rewrites the .env file in the container with a random key, which is lost on restart"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "pgsql or mysql; the baked .env says sqlite"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "RDS host"}
+    - {name: DB_PORT, secret: false, buildTime: false, note: "5432 for PostgreSQL"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "database name"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for generated links"}
+  optional: [TRUSTED_PROXIES, SESSION_SECURE_COOKIE, BACKUP_ENABLED, CACHE_DRIVER, QUEUE_CONNECTION, SESSION_DRIVER, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT, APP_SEARCH_DRIVER, MEILISEARCH_HOST, MEILISEARCH_KEY, DB_SSL_MODE, PORT]
+  buildTime: []
+  evidence:
+    - {path: .env.sqlite.production, line: 6, quote: "APP_KEY=someRandomStringWith32Characters"}
+    - {path: app/Http/Middleware/SetupCheckMiddleware.php, line: 25, quote: "if (config('app.key') === self::GENERIC_APP_KEY) {"}
+    - {path: .env.docker.production, line: 15, quote: "TRUSTED_PROXIES=*"}
+    - {path: config/database.php, line: 106, quote: "'sslmode' => env('DB_SSL_MODE', 'prefer'),"}
+blockers:
+  expected:
+    - "The only production Dockerfile runs supervisord with two long-running processes (php-fpm and Caddy) in one image, which Deployz does not support"
+    - "No migration step in the image: the schema and the admin account come from an open first-run web setup wizard, so the first visitor to the public URL can claim the instance"
+    - "The queue worker and scheduler (queue:work, links:check, backups) run only when schedule:run is called from outside (system cron or the /cron/{token} route)"
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are supported through DB_CONNECTION"
+    - "Meilisearch must not be required: the search driver defaults to database (config/scout.php:19); docker-compose.production.yml adds it as an option"
+    - "Redis must not be required: cache, session and queue defaults are file and database"
+    - "The Docker volume ./.env mount must not become a blocker by itself: Laravel reads real environment variables first"
+    - "Missing S3 support must not block"
+vendorQuestions:
+  legitimate:
+    - "Which image shape to use? The release image needs php-fpm and Caddy together; a single-process PHP image is a change"
+    - "How do the schema and the first admin get created without the open setup wizard? (a migrate command and a closed setup)"
+    - "How are queue jobs and scheduled tasks run? (schedule:run needs a trigger; the cron route needs a token)"
+    - "Backups and sessions go to local disk and are lost on restart: set BACKUP_ENABLED=false?"
+  unnecessary:
+    - "Which port? (80, from ENV PORT and the Caddyfile)"
+    - "Health path? (/_health)"
+    - "Which database? (MySQL, PostgreSQL and SQLite all work; SQLite is the shipped default)"
+traps:
+  - "docker-compose.yml is the development stack (MariaDB, Postgres, Meilisearch, php-fpm, Caddy) with development.Dockerfile that has no app copy (docker-compose.yml:42-49)"
+  - "docker-compose.production.yml mounts ./.env and uses the published linkace/linkace image, plus MariaDB, Meilisearch and Redis as sidecars; none is required (docker-compose.production.yml:5-48)"
+  - "Three env templates (.env.docker.production, .env.local.production, .env.sqlite.production) show different engines; the image copies the SQLite one as /app/.env (release-multiplatform.Dockerfile:91)"
+  - "release-multiplatform.Dockerfile builds on docker.io/linkace/base-image, which comes from release-base.Dockerfile (a published image, not built in the same Dockerfile)"
+  - "Port 443 is exposed and a ssl.Caddyfile exists, but the default Caddyfile serves HTTP only on $PORT (resources/docker/Caddyfile:7)"
+  - "Default queue is the database driver, but no worker process is started in the container (config/queue.php:16, supervisord.ini)"
+openQuestions:
+  - "Whether Deployz may treat php-fpm plus Caddy under supervisord as one web service (it is documented as unsupported)"
+crossReview:
+  - {field: outcome, change: "none: supervisord with php-fpm and Caddy is a multi-process image (CODE_CHANGE), outcome 2 already accepted", evidence: "resources/docker/supervisord.ini:11 resources/docker/supervisord.ini:20 resources/docker/dockerfiles/release-multiplatform.Dockerfile:101"}
+  - {field: port / healthPath / migrations / database, change: "none: PORT=80, /_health returns Ok without the settings middleware, migrate:fresh runs only in the setup wizard, DB_* variables switch the engine", evidence: "resources/docker/dockerfiles/release-multiplatform.Dockerfile:94 routes/web.php:44 app/Http/Controllers/Setup/DatabaseController.php:80"}
+  - {field: all, change: "verified", evidence: "41 citations checked"}

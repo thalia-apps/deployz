@@ -1,0 +1,110 @@
+id: new-142
+repository: gchq/CyberChef
+commit: 11b86fecdb5d8f6244cf931e1f87cec887ec1f1f
+summary: >
+  CyberChef is a browser-only "cyber Swiss army knife" web app (webpack, grunt, Node 24). All data processing runs in
+  the browser. There is no backend. The Dockerfile builds the static site with `npm run build` (grunt prod) and serves
+  build/prod with the unprivileged nginx image, which listens on 8080 by default. There is no database, Redis, worker,
+  storage or required environment variable.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    A static site built from the repo source and served by nginx is a deployable web app. The multi-stage Dockerfile
+    builds with npm and copies build/prod into nginx-unprivileged. `/` returns the generated index.html with HTTP 200.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: cyberchef
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "FROM --platform=$BUILDPLATFORM node:24-alpine"}
+    - {path: Dockerfile, line: 22, quote: "RUN npm run postinstall"}
+    - {path: Dockerfile, line: 25, quote: "RUN npm run build"}
+    - {path: Dockerfile, line: 30, quote: "FROM nginxinc/nginx-unprivileged:stable-alpine"}
+    - {path: Dockerfile, line: 34, quote: "COPY --from=builder /app/build/prod /usr/share/nginx/html/"}
+runtime: {accept: [static, nginx]}
+port:
+  accept: [8080]
+  # The repo has no nginx.conf and no EXPOSE. nginx-unprivileged listens on 8080 by default, and the README maps -p 8080:8080.
+  evidence:
+    - {path: README.md, line: 54, quote: "docker run -it -p 8080:8080 cyberchef"}
+    - {path: README.md, line: 63, quote: "docker run -it -p 8080:8080 ghcr.io/gchq/cyberchef:latest"}
+    - {path: Dockerfile, line: 30, quote: "FROM nginxinc/nginx-unprivileged:stable-alpine"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: README.md, line: 54, quote: "docker run -it -p 8080:8080 cyberchef"}
+startCommand:
+  source: image
+  accept: ["nginx -g daemon off;"]
+  evidence:
+    - {path: Dockerfile, line: 30, quote: "FROM nginxinc/nginx-unprivileged:stable-alpine"}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: Gruntfile.js, line: 152, quote: "filename: \"index.html\","}
+    - {path: Dockerfile, line: 34, quote: "COPY --from=builder /app/build/prod /usr/share/nginx/html/"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected: []
+  mustNot:
+    - "A static site must not be rejected as having no server: nginx serves it"
+    - "The Node API and repl (src/node, `npm run node`, `npm run repl`) must not be treated as a service: they are a library and a REPL"
+    - "Missing database, Redis, workers or S3 must not be reported: the app is client-side only"
+    - "The unprivileged nginx image must not be reported as running as root or as needing port 80"
+    - "The nightwatch UI tests and chromedriver must not be reported as runtime needs"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/)"
+    - "Database, Redis, worker or storage? (none)"
+    - "Which Dockerfile? (Dockerfile)"
+traps:
+  - "package.json start is `npx grunt dev` (webpack dev server on 8080) and the project also ships a Node library, so a rule-based runtime detector may pick a Node server and a start command; the image runs nginx (package.json:208, Dockerfile:30)"
+  - "No EXPOSE, no nginx.conf and no CMD in the Dockerfile: the port 8080 comes from the nginx-unprivileged base image and the README, not from a repo file"
+  - "The build stage uses `npm ci --ignore-scripts` and then `npm run postinstall` (Dockerfile:16,22): the grunt postinstall needs the full source, so a changed order breaks the build"
+  - "The final stage is named `cyberchef` (Dockerfile:30): the stage name is the build target"
+  - "Node >=24 is required (package.json engines): an older default Node base image fails the build"
+  - "The webpack build is large and needs a big Node heap; package.json has a setheapsize script for 2048 MB (package.json:223)"
+openQuestions:
+  - "Port 8080 is not stated in any repo file except the README; the nginx-unprivileged default is image knowledge"
+crossReview:
+  - {field: outcome / dockerfile.target, change: "none: final stage is named cyberchef (Dockerfile:30), static build copied into nginx-unprivileged; DEPLOYABLE holds", evidence: "Dockerfile:25; Dockerfile:30; Dockerfile:34"}
+  - {field: port, change: "none: no EXPOSE, nginx.conf or CMD in the Dockerfile; 8080 comes from the nginx-unprivileged base image and the README port mapping (also stated in openQuestions)", evidence: "README.md:54; README.md:63; Dockerfile:30"}
+  - {field: healthPath, change: "none: index.html at / is a static file", evidence: "Gruntfile.js:152; Dockerfile:34"}
+  - {field: all, change: verified, evidence: "12 citations checked"}

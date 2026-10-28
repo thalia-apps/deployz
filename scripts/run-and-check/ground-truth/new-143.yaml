@@ -1,0 +1,122 @@
+id: new-143
+repository: mattermost-community/focalboard
+commit: a84bbb65e32edf972856b329417096ac413518e9
+summary: >
+  Focalboard (archived Mattermost Boards standalone), Go server plus React webapp. docker/Dockerfile builds both from
+  repo source (node webapp pack, then Go `make server-docker`) and runs one process on port 8000. The default
+  database is SQLite in /opt/focalboard/data; PostgreSQL and MySQL are optional and chosen by dbtype/dbconfig
+  (config file, FOCALBOARD_* env or flags). Uploaded files go to local disk (./files) by default. The Dockerfile pins
+  golang:1.18.3 but server/go.mod needs go 1.21, so the image build fails until the Go base image is raised.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One web process, optional PostgreSQL, port 8000, /ping health, startup migrations. Two changes are needed:
+    raise the Go build image to 1.21 or newer (go.mod says go 1.21), and run with PostgreSQL (FOCALBOARD_DBTYPE=postgres,
+    FOCALBOARD_DBCONFIG=postgres://...) because SQLite on ephemeral Fargate disk loses data. A read that treats the
+    SQLite default plus optional PostgreSQL as already deployable also accepts DEPLOYABLE.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: Dockerfile.build, reason: "packaging build for Linux tarballs (output stage only), not a runtime image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 13, quote: "FROM golang:1.18.3@sha256:b203dc573d81da7b3176264bfa447bd7c10c9347689be40540381838d75eebef AS gobuild"}
+    - {path: docker/Dockerfile, line: 22, quote: "RUN EXCLUDE_PLUGIN=true EXCLUDE_SERVER=true EXCLUDE_ENTERPRISE=true make server-docker"}
+    - {path: server/go.mod, line: 3, quote: "go 1.21"}
+    - {path: docker/docker-compose.yml, line: 6, quote: "dockerfile: docker/Dockerfile"}
+runtime: {accept: [go]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: docker/Dockerfile, line: 39, quote: "EXPOSE 8000/tcp"}
+    - {path: docker/server_config.json, line: 3, quote: "\"port\": 8000"}
+    - {path: server/web/webserver.go, line: 51, quote: "addr = fmt.Sprintf(`:%d`, port)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/web/webserver.go, line: 51, quote: "addr = fmt.Sprintf(`:%d`, port)"}
+    - {path: docker/server_config.json, line: 13, quote: "\"localOnly\": false"}
+startCommand:
+  source: image
+  accept: ["/opt/focalboard/bin/focalboard-server"]
+  evidence:
+    - {path: docker/Dockerfile, line: 45, quote: "CMD [\"/opt/focalboard/bin/focalboard-server\"]"}
+healthPath:
+  accept: ["/ping", "/hello"]
+  # /ping and /hello are registered on the root router without the CSRF middleware that guards /api/v2.
+  evidence:
+    - {path: server/api/system.go, line: 12, quote: "r.HandleFunc(\"/hello\", a.handleHello).Methods(\"GET\")"}
+    - {path: server/api/system.go, line: 13, quote: "r.HandleFunc(\"/ping\", a.handlePing).Methods(\"GET\")"}
+    - {path: server/api/api.go, line: 101, quote: "a.registerSystemRoutes(r)"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {FOCALBOARD_DBTYPE: postgres, FOCALBOARD_DBCONFIG: "postgres://user:pass@host:5432/focalboard?sslmode=require"}
+  connectionVars: [FOCALBOARD_DBCONFIG]
+  # The flags -dbtype and -dbconfig also override the config file (server/main/main.go).
+  evidence:
+    - {path: server/services/config/config.go, line: 87, quote: "viper.SetDefault(\"DBType\", \"sqlite3\")"}
+    - {path: server/services/config/config.go, line: 82, quote: "viper.SetEnvPrefix(\"focalboard\")"}
+    - {path: server/services/store/sqlstore/sqlstore.go, line: 187, quote: "case model.PostgresDBType:"}
+    - {path: server/main/main.go, line: 62, quote: "pDBConfig := flag.String(\"dbconfig\", \"\", \"Database config\")"}
+    - {path: docker/server_config.json, line: 4, quote: "\"dbtype\": \"sqlite3\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/services/store/sqlstore/sqlstore.go, line: 70, quote: "if mErr := store.Migrate(); mErr != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/opt/focalboard/data, /opt/focalboard/data/files]
+  s3: none
+  s3SelectBy: {}
+  # filesdriver can be amazons3 through the nested filess3config block, which needs access keys in the config file; there is no simple env switch.
+  evidence:
+    - {path: docker/Dockerfile, line: 43, quote: "VOLUME /opt/focalboard/data"}
+    - {path: docker/server_config.json, line: 9, quote: "\"filespath\": \"./data/files\""}
+    - {path: server/services/config/config.go, line: 41, quote: "FilesS3Config            AmazonS3Config"}
+env:
+  required: []
+  optional: [FOCALBOARD_DBTYPE, FOCALBOARD_DBCONFIG, FOCALBOARD_SERVERROOT, FOCALBOARD_PORT, FOCALBOARD_SINGLE_USER_TOKEN]
+  buildTime: []
+  evidence:
+    - {path: server/services/config/config.go, line: 82, quote: "viper.SetEnvPrefix(\"focalboard\")"}
+    - {path: server/main/main.go, line: 103, quote: "singleUserToken = os.Getenv(\"FOCALBOARD_SINGLE_USER_TOKEN\")"}
+blockers:
+  expected:
+    - "docker/Dockerfile pins golang:1.18.3 but server/go.mod requires go 1.21, so the image build fails (raise the Go build image)"
+    - "Default SQLite database and file uploads sit on ephemeral local disk; use PostgreSQL through FOCALBOARD_DBTYPE and FOCALBOARD_DBCONFIG"
+  mustNot:
+    - "SQLite as the default must not make the repo NOT_DEPLOYABLE: PostgreSQL and MySQL are supported by config"
+    - "Prometheus port 9092 must not count as the app port: it is metrics only (config.json prometheusaddress)"
+    - "The Unix socket at /var/tmp/focalboard_local.socket (local mode) must not block"
+    - "Redis must not be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Which database to use in production: PostgreSQL via FOCALBOARD_DBTYPE and FOCALBOARD_DBCONFIG (RDS needs sslmode=require)?"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Health path? (/ping)"
+    - "Who runs migrations? (the server at start)"
+traps:
+  - "docker/Dockerfile looks ready but its Go image (1.18.3) is older than go.mod (go 1.21); the build fails (docker/Dockerfile:13, server/go.mod:3)"
+  - "Root config.json is for development (relative paths, sqlite3, webpath ./webapp/pack); the image copies docker/server_config.json instead (docker/Dockerfile)"
+  - "Dockerfile.build only packages Linux tarballs; docker/docker-compose-db-nginx.yml starts a separate postgres and nginx-proxy, which are not part of the app"
+  - "Telemetry is on by default (telemetry: true); not a requirement"
+  - "The Dockerfile uses build args TARGETOS and TARGETARCH, which only BuildKit sets"
+crossReview:
+  - {field: dockerfile.evidence / bindAllInterfaces.evidence / storage.evidence, change: "fixed three wrong line numbers: docker-compose.yml dockerfile line 7 -> 6, server_config.json localOnly 10 -> 13, filespath 11 -> 9", evidence: "docker/docker-compose.yml:6; docker/server_config.json:13; docker/server_config.json:9"}
+  - {field: outcome, change: "none: PostgreSQL and MySQL are config-selectable, so SQLite default is not a gap; DEPLOYABLE_WITH_CHANGES (Go 1.18.3 image vs go 1.21, local files) and DEPLOYABLE both accepted", evidence: "docker/Dockerfile:13 golang:1.18.3; server/go.mod:3 go 1.21; docker/server_config.json:4"}
+  - {field: port / startCommand / healthPath / migrations, change: "none: 8000, CMD focalboard-server, /ping and /hello registered on the root router, startup migrate hold", evidence: "docker/Dockerfile:39 EXPOSE 8000/tcp; docker/Dockerfile:45; server/api/system.go:12-13; server/services/store/sqlstore/sqlstore.go:70"}
+  - {field: all, change: verified, evidence: "24 citations checked"}

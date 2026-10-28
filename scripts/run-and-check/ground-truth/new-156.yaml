@@ -1,0 +1,128 @@
+id: new-156
+repository: vrana/adminer
+commit: 6f72c777f189290caf45521b2260190fd8f4ff2f
+summary: >
+  Adminer is a PHP database client (a single compiled adminer.php, or the modular source in adminer/ that runs on any PHP
+  7.4+ web server). It connects to user databases (MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle; plugin drivers for
+  others) and has no database of its own. The repository has no Dockerfile, no web server config and no listening
+  port: the documented way to run the source is `php -S 127.0.0.1:8000` from a PHP CLI. A deploy needs a new Dockerfile
+  (php image, copy adminer/, run `php -S 0.0.0.0:<port> -t adminer`). The compile step (`php compile.php`) needs three
+  git submodules (jush, JsShrink, PhpShrink) that are empty in the archive, but the source tree runs without them
+  (no syntax highlight CSS).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The app is a small stateless PHP web app that needs no database, Redis or disk (PHP sessions in /tmp only). The repo
+    has no Dockerfile of any kind, so a repository change (a new Dockerfile with a start command and a listen address)
+    is needed. The full file list proves that there is none. A database client that connects to user databases is a
+    supported app shape, so NOT_DEPLOYABLE is wrong. Exposing a database admin tool is a security concern (it needs
+    network reach to the user databases), not a Deployz capability blocker.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  # No Dockerfile or compose file exists anywhere in the repository.
+  evidence:
+    - {path: CLAUDE.md, line: 15, quote: "php -S 127.0.0.1:8000"}
+    - {path: CLAUDE.md, line: 17, quote: "Browse to `http://127.0.0.1:8000/adminer/` for the dev version."}
+    - {path: composer.json, line: 33, quote: "\"php\": \">=7.4\","}
+runtime: {accept: [php]}
+port:
+  accept: [8000, 8080, 80]
+  # The repo sets no port. The documented dev server uses 8000; the vendor chooses the port in the new Dockerfile.
+  evidence:
+    - {path: CLAUDE.md, line: 15, quote: "php -S 127.0.0.1:8000"}
+    - {path: tests/README.md, line: 34, quote: "served from the repository root by `php -S localhost:8000`"}
+bindAllInterfaces:
+  value: false
+  # The documented command binds 127.0.0.1; the Dockerfile must use 0.0.0.0 (or Apache/nginx with php-fpm).
+  evidence:
+    - {path: CLAUDE.md, line: 15, quote: "php -S 127.0.0.1:8000"}
+startCommand:
+  source: explicit
+  accept: ["php -S 0.0.0.0:8000 -t adminer", "php -S 0.0.0.0:8000"]
+  evidence:
+    - {path: CLAUDE.md, line: 15, quote: "php -S 127.0.0.1:8000"}
+    - {path: README.md, line: 18, quote: "- `adminer/index.php` - Run development version of Adminer"}
+healthPath:
+  accept: ["/", "/adminer/"]
+  # There is no health route. The login page answers 200 without authentication. With `-t adminer` the page is at /;
+  # with the repository root as the document root it is at /adminer/ and / is 404.
+  evidence:
+    - {path: CLAUDE.md, line: 17, quote: "Browse to `http://127.0.0.1:8000/adminer/` for the dev version."}
+    - {path: adminer/index.php, line: 22, quote: "include DIR . \"include/bootstrap.inc.php\";"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Adminer connects to a user-supplied MySQL, PostgreSQL, SQLite, MS SQL or Oracle server chosen on the login form.
+  evidence:
+    - {path: README.md, line: 8, quote: "- **Supports:** MySQL, MariaDB, PostgreSQL, CockroachDB, SQLite, MS SQL, Oracle"}
+    - {path: composer.json, line: 33, quote: "\"php\": \">=7.4\","}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: README.md, line: 9, quote: "- **Plugins for:** Elasticsearch, OpenSearch, SimpleDB, MongoDB, Redis, Firebird, ClickHouse, IGDB, IMAP"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/tmp]
+  s3: none
+  s3SelectBy: {}
+  # PHP sessions (login state) and the upload temp files use the system temp dir; losing them logs the user out.
+  evidence:
+    - {path: adminer/include/bootstrap.inc.php, line: 59, quote: "session_start();"}
+    - {path: adminer/include/tmpfile.inc.php, line: 1, quote: "<?php"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile exists in the repository; the vendor must add one (PHP image, copy adminer/, php -S 0.0.0.0:<port> -t adminer)"
+  mustNot:
+    - "Missing database must not be a blocker: Adminer is a client; the MySQL, PostgreSQL, Oracle and MS SQL servers it connects to are user targets"
+    - "Support for SQLite, MS SQL, Oracle, MongoDB, Elasticsearch must not be reported as unsupported architecture: they are optional client drivers"
+    - "Redis, workers, queue and S3 must not be reported: none exist"
+    - "The empty git submodules (jush, JsShrink, PhpShrink) must not block: they are only needed to compile adminer.php and for highlight CSS"
+    - "PHP sessions in /tmp must not be reported as required local storage"
+    - "Missing health path must not be a blocker: the login page answers 200"
+vendorQuestions:
+  legitimate:
+    - "Which web server setup should the Dockerfile use? (php -S for the simple case, Apache or nginx with php-fpm for production)"
+    - "Should the compiled single-file adminer.php be built (needs the submodules), or should the source tree adminer/ be served?"
+  unnecessary:
+    - "Which database? (none; the user picks a server on the login form)"
+    - "Who runs migrations? (none)"
+    - "Is a worker needed? (no)"
+traps:
+  - "Repository has no Dockerfile at all and no .env or config: a rule-based analyser must answer DEPLOYABLE_WITH_CHANGES, not DEPLOYABLE or NOT_DEPLOYABLE"
+  - "composer.json looks like a PHP library (name vrana/adminer, autoload classmap), but its require-dev is only code-quality tools and it is an application (composer.json:1-40)"
+  - "The database drivers (adminer/drivers/mysql.inc.php, pgsql.inc.php, oracle.inc.php, mssql.inc.php, sqlite.inc.php) are client drivers and must not become database requirements"
+  - "Port 8000 and the 127.0.0.1 bind come only from developer docs (CLAUDE.md:15), so they are a documented default, not a container setting"
+  - "tests/ and the Playwright config need MySQL, PostgreSQL, Oracle and MS SQL servers: test setup, not app dependencies"
+  - "The entry path is /adminer/ (dev) or /adminer.php (compiled), so / returns 404 when the document root is the repository root"
+  - ".github/workflows/ci.yml is CI, not a deployment"
+openQuestions:
+  - "Whether /adminer/ or / is the intended public path depends on the Dockerfile the vendor writes"
+crossReview:
+  - {field: outcome, change: "none: repository has no Dockerfile or compose file anywhere (find over the tree); missing Dockerfile is CODE_CHANGE so DEPLOYABLE_WITH_CHANGES holds; Adminer is a database client with no own database", evidence: "CLAUDE.md:15 php -S; compile.php"}
+  - {field: "port, startCommand, healthPath, database, storage", change: "none: no port or bind in repo (documented php -S 127.0.0.1:8000), no database of its own, login page as health path", evidence: "CLAUDE.md:15; adminer/index.php"}
+  - {field: all, change: verified, evidence: "15 citations checked"}

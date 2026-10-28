@@ -1,0 +1,131 @@
+id: new-160
+repository: mckaywrigley/chatbot-ui
+commit: 81328b61d2a4ab597a7a057be70e785cf756d9f8
+summary: >
+  Chatbot UI is a Next.js 14 (App Router) multi-provider AI chat front end. All user data (profiles, workspaces, chats,
+  messages, files, embeddings) and the sign-in flow live in Supabase, used through the supabase-js client in the browser
+  and in server routes. The database schema relies on Supabase-only objects: auth.users, storage.buckets and
+  storage.objects, row level security policies and the pgvector extension. The repo has no Dockerfile. Local setup runs
+  the Supabase stack through `supabase start` (Docker) and `npm run chat`. The app has no database connection string of
+  its own, so a plain RDS PostgreSQL cannot replace Supabase.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The app needs the Supabase platform (GoTrue auth, PostgREST API, Storage service with buckets, Postgres with the
+    vector extension and RLS policies). Deployz provides only RDS PostgreSQL or MySQL, Redis and an S3 bucket, not the
+    Supabase services, so the required capability is outside the MVP. A hosted Supabase project would be an external
+    dependency, which the MVP does not support as a vendor-hosted engine. There is also no Dockerfile.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  # No Dockerfile exists anywhere in the repository.
+  evidence:
+    - {path: package.json, line: 12, quote: "\"build\": \"next build\","}
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # The repo sets no port; `next start` and `next dev` listen on 3000 unless PORT is set.
+  evidence:
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+    - {path: .env.local.example, line: 9, quote: "NEXT_PUBLIC_OLLAMA_URL=http://localhost:11434"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+startCommand:
+  source: explicit
+  accept: ["npm run start", "next start"]
+  evidence:
+    - {path: package.json, line: 12, quote: "\"build\": \"next build\","}
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+healthPath:
+  accept: ["/login", "/"]
+  # There is no health route. / redirects to /login (no session) and /login renders the sign-in page without auth.
+  evidence:
+    - {path: middleware.ts, line: 45, quote: "matcher: \"/((?!api|static|.*\\\\..*|_next|auth).*)\""}
+    - {path: middleware.ts, line: 15, quote: "const redirectToChat = session && request.nextUrl.pathname === \"/\""}
+database:
+  status: required
+  engines: [supabase]
+  default: supabase
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY]
+  # The data layer is Supabase (Postgres plus auth, storage and REST APIs), not a PostgreSQL connection string.
+  evidence:
+    - {path: lib/supabase/browser-client.ts, line: 4, quote: "export const supabase = createBrowserClient<Database>("}
+    - {path: lib/supabase/browser-client.ts, line: 5, quote: "process.env.NEXT_PUBLIC_SUPABASE_URL!,"}
+    - {path: supabase/migrations/20240108234541_add_profiles.sql, line: 10, quote: "user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,"}
+    - {path: supabase/migrations/20240108234540_setup.sql, line: 5, quote: "create extension vector with schema extensions;"}
+    - {path: middleware.ts, line: 13, quote: "const session = await supabase.auth.getSession()"}
+migrations:
+  mode: command
+  accept: ["supabase db push", "npm run db-migrate"]
+  # Migrations are SQL files for the Supabase CLI; the app never runs them.
+  evidence:
+    - {path: package.json, line: 8, quote: "\"update\": \"git pull origin main && npm run db-migrate && npm run db-types\","}
+    - {path: supabase/migrations/20240108234540_setup.sql, line: 5, quote: "create extension vector with schema extensions;"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  s3: none
+  s3SelectBy: {}
+  # Files and profile images use Supabase Storage buckets, not an S3 client in the app.
+  evidence:
+    - {path: supabase/migrations/20240108234541_add_profiles.sql, line: 155, quote: "INSERT INTO storage.buckets (id, name, public) VALUES ('profile_images', 'profile_images', true);"}
+    - {path: supabase/migrations/20240108234544_add_files.sql, line: 90, quote: "INSERT INTO storage.buckets (id, name, public) VALUES ('files', 'files', false);"}
+env:
+  required:
+    - {name: NEXT_PUBLIC_SUPABASE_URL, secret: false, buildTime: true, note: "URL of a Supabase project; inlined into the browser bundle at build time"}
+    - {name: NEXT_PUBLIC_SUPABASE_ANON_KEY, secret: false, buildTime: true, note: "Supabase anon key; inlined into the browser bundle at build time"}
+    - {name: SUPABASE_SERVICE_ROLE_KEY, secret: true, buildTime: false, note: "server-side admin key used by retrieval and custom chat routes"}
+  optional: [OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_GEMINI_API_KEY, MISTRAL_API_KEY, GROQ_API_KEY, PERPLEXITY_API_KEY, OPENROUTER_API_KEY, NEXT_PUBLIC_OLLAMA_URL, EMAIL_DOMAIN_WHITELIST, EMAIL_WHITELIST, NEXT_PUBLIC_USER_FILE_SIZE_LIMIT]
+  buildTime: [NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY]
+  evidence:
+    - {path: .env.local.example, line: 2, quote: "NEXT_PUBLIC_SUPABASE_URL="}
+    - {path: .env.local.example, line: 3, quote: "NEXT_PUBLIC_SUPABASE_ANON_KEY="}
+    - {path: .env.local.example, line: 6, quote: "SUPABASE_SERVICE_ROLE_KEY="}
+    - {path: app/api/retrieval/process/route.ts, line: 20, quote: "process.env.SUPABASE_SERVICE_ROLE_KEY!"}
+blockers:
+  expected:
+    - "The app requires the Supabase platform (auth, REST API, Storage, Postgres with RLS and pgvector), which Deployz does not provide"
+  mustNot:
+    - "Missing Dockerfile must not be the main blocker: the architecture is the blocker, and a Dockerfile would not change the outcome"
+    - "Missing Redis, worker or queue must not be reported: none exist"
+    - "LLM provider keys (OpenAI, Anthropic, Google, Mistral, Groq, Perplexity, OpenRouter, Azure) must not be reported as unsupported services: they are optional external APIs"
+    - "Ollama on localhost:11434 must not be reported as a required service: it is an optional local model server"
+    - "RDS PostgreSQL must not be reported as a sufficient replacement for Supabase"
+vendorQuestions:
+  legitimate:
+    - "Will Supabase be an external hosted project? (outside the MVP: the app needs auth, REST and Storage that Deployz does not provide)"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile? (none exists)"
+    - "Health path? (none; /login is enough)"
+traps:
+  - "supabase/migrations/*.sql looks like normal PostgreSQL migrations and a rule that finds `.sql` and `postgres` may report PostgreSQL, but the SQL needs auth.users, storage.buckets and RLS from Supabase (add_profiles.sql:10, :155)"
+  - "No database URL variable exists (DATABASE_URL, POSTGRES_URL): the app reaches the data only through Supabase HTTP APIs, so env-based database detection finds nothing"
+  - "supabase/config.toml is the local Supabase CLI stack config, not an app config"
+  - "NEXT_PUBLIC_SUPABASE_* values are inlined at build time, so a runtime-only setting would not reach the browser"
+  - "Several API routes use `export const runtime = \"edge\"` (Vercel edge runtime); under `next start` on Node they still work but are not Node routes"
+  - "README and package.json `chat` script start `supabase start` (Docker Compose of Supabase services), not the app alone (package.json:6)"
+  - "The `.github` and husky files are CI and git hooks, not deployment"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: "accept [NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: the repository has no Dockerfile (find over the tree), which is CODE_CHANGE under the fix-class policy; NOT_DEPLOYABLE stays the primary answer because the app needs the Supabase platform (auth, storage, RLS)", evidence: "package.json:6 supabase start; supabase/migrations/*.sql (auth.users, storage.buckets)"}
+  - {field: "port, startCommand, healthPath, database", change: "none: next start script and Next default port 3000, /login page without auth, no DATABASE_URL (Supabase HTTP only)", evidence: "package.json:13 next start; app/[locale]/login/page.tsx"}
+  - {field: all, change: verified, evidence: "22 citations checked"}

@@ -1,0 +1,133 @@
+id: new-153
+repository: growthbook/growthbook
+commit: a6748ca1d3eb0027532ff147b9f76c570ffb689a
+summary: >
+  GrowthBook open-source feature-flag and experimentation platform (TypeScript pnpm monorepo: Express back-end on 3100,
+  Next.js front-end on 3000, Python gbstats). The root Dockerfile builds from source but runs two supervised Node
+  processes (back-end and front-end, plus a Python stats subprocess) through scripts/run-apps.js. The data store is
+  MongoDB only (MONGODB_URI). MongoDB is not supported by Deployz, so the app cannot run on a Deployz RDS stack.
+outcome:
+  # The worst required item sets the outcome (docs/ai-analysis.md): the capability gap makes it NOT_DEPLOYABLE.
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The required database is MongoDB (no SQL backend exists), which Deployz does not provide. The image also runs two
+    long-running servers (front-end 3000 and back-end API 3100) under one supervisor, and the browser calls the API
+    host directly, so one ALB port cannot serve it. Uploads default to local disk (ephemeral).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: preview/Dockerfile.append, reason: "snippet appended to the main Dockerfile for preview environments"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 31, quote: "FROM dhi.io/python:${PYTHON_MAJOR}-debian12-dev AS pybuild"}
+    - {path: Dockerfile, line: 133, quote: "pnpm build \\"}
+    - {path: Dockerfile, line: 199, quote: "FROM dhi.io/node:${NODE_MAJOR}-debian12"}
+    - {path: Dockerfile, line: 265, quote: "CMD [\"/usr/local/bin/node\", \"scripts/run-apps.js\", \"start\", \"ecosystem.config.js\"]"}
+    - {path: Dockerfile, line: 16, quote: "Building this file requires `docker login dhi.io`"}
+runtime: {accept: [node]}
+port:
+  accept: [3000, 3100]
+  evidence:
+    - {path: Dockerfile, line: 261, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 262, quote: "EXPOSE 3100"}
+    - {path: docker-compose.yml, line: 12, quote: "- \"3000:3000\""}
+    - {path: docker-compose.yml, line: 13, quote: "- \"3100:3100\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker-compose.yml, line: 12, quote: "- \"3000:3000\""}
+startCommand:
+  source: image
+  accept: ["node scripts/run-apps.js start ecosystem.config.js"]
+  evidence:
+    - {path: Dockerfile, line: 265, quote: "CMD [\"/usr/local/bin/node\", \"scripts/run-apps.js\", \"start\", \"ecosystem.config.js\"]"}
+    - {path: ecosystem.config.js, line: 11, quote: "name: \"back-end\","}
+    - {path: ecosystem.config.js, line: 24, quote: "name: \"front-end\","}
+healthPath:
+  accept: ["/healthcheck"]
+  # /healthcheck is served by the back-end on 3100 and needs no JWT or CORS.
+  evidence:
+    - {path: packages/back-end/src/app.ts, line: 253, quote: "// Health check route  (does not require JWT or cors)"}
+    - {path: packages/back-end/src/app.ts, line: 254, quote: "app.get(\"/healthcheck\", (req, res) => {"}
+database:
+  status: required
+  engines: [mongodb]
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [MONGODB_URI, MONGODB_HOST, MONGODB_USERNAME, MONGODB_PASSWORD]
+  evidence:
+    - {path: packages/back-end/src/util/secrets.ts, line: 105, quote: "let MONGODB_URI = process.env.MONGODB_URI || \"\";"}
+    - {path: packages/back-end/src/util/secrets.ts, line: 124, quote: "Missing MONGODB_URI or required alternate environment variables to generate it"}
+    - {path: docker-compose.yml, line: 3, quote: "image: \"mongo:latest\""}
+    - {path: docker-compose.yml, line: 17, quote: "MONGODB_URI=mongodb://root:password@mongo:27017/growthbook?authSource=admin"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: packages/back-end/src/server.ts, line: 24, quote: "const server = app.listen(app.get(\"port\"), () => {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: ecosystem.config.js, line: 11, quote: "name: \"back-end\","}
+    - {path: ecosystem.config.js, line: 24, quote: "name: \"front-end\","}
+scheduledJobs:
+  status: embedded
+  items: [in-process agenda jobs]
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/usr/local/src/app/packages/back-end/uploads]
+  s3: native
+  s3SelectBy: {UPLOAD_METHOD: s3}
+  evidence:
+    - {path: packages/back-end/src/util/secrets.ts, line: 85, quote: "export const UPLOAD_METHOD = (() => {"}
+    - {path: packages/back-end/src/util/secrets.ts, line: 87, quote: "if (method && [\"s3\", \"google-cloud\"].includes(method)) {"}
+    - {path: packages/back-end/src/util/secrets.ts, line: 158, quote: "export const S3_BUCKET = process.env.S3_BUCKET || \"\";"}
+    - {path: docker-compose.yml, line: 19, quote: "- uploads:/usr/local/src/app/packages/back-end/uploads"}
+env:
+  required:
+    - {name: MONGODB_URI, secret: true, buildTime: false, note: "MongoDB connection string"}
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "app refuses to start outside localhost with JWT_SECRET=dev"}
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "refuses ENCRYPTION_KEY=dev in production"}
+    - {name: APP_ORIGIN, secret: false, buildTime: false, note: "public front-end URL, default http://localhost:3000"}
+    - {name: API_HOST, secret: false, buildTime: false, note: "public back-end URL used by the browser, on port 3100"}
+  optional: [UPLOAD_METHOD, S3_BUCKET, S3_REGION, S3_DOMAIN, S3_ENDPOINT, PM2_AUTORESTART, TRACING_PROVIDER]
+  buildTime: []
+  evidence:
+    - {path: packages/back-end/src/util/secrets.ts, line: 137, quote: "const RAW_APP_ORIGIN = process.env.APP_ORIGIN || \"http://localhost:3000\";"}
+    - {path: packages/back-end/src/util/secrets.ts, line: 177, quote: "export const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || \"dev\";"}
+    - {path: packages/back-end/src/util/secrets.ts, line: 197, quote: "export const JWT_SECRET = process.env.JWT_SECRET || \"dev\";"}
+blockers:
+  expected:
+    - "MongoDB is required (MONGODB_URI) and is not a Deployz-supported database (only RDS PostgreSQL and MySQL)"
+    - "The image runs two long-running servers (front-end 3000 and back-end API 3100) under one supervisor; the browser needs both reachable"
+  mustNot:
+    - "Missing PostgreSQL must not be reported as the blocker; the blocker is that the app needs MongoDB"
+    - "Redis must not be required: no Redis dependency exists in the open-source back-end"
+    - "Python gbstats must not count as a separate worker: it is a subprocess of the back-end"
+    - "The Dockerfile base on dhi.io must not be treated as a prebuilt-artefact problem: it builds the app from source"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (3000 UI, 3100 API)"
+    - "Health path? (/healthcheck)"
+traps:
+  - "Dockerfile builds from source and looks fully deployable, but its base images need `docker login dhi.io` (Dockerfile:16)"
+  - "Two EXPOSE lines, 3000 and 3100, both required in production (Dockerfile:261-262)"
+  - "MongoDB is hidden behind MONGODB_URI helper variables with a localhost fallback default (secrets.ts:105-127)"
+  - "The image CMD is a custom Node supervisor replacing pm2-runtime, not a single server (Dockerfile:265, scripts/run-apps.js)"
+  - "UPLOAD_METHOD defaults to local disk; S3 is optional and chosen by env (secrets.ts:85-91)"
+  - "ENCRYPTION_KEY and JWT_SECRET default to dev and are fatal outside localhost (secrets.ts:177-200)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: "added DEPLOYABLE_WITH_CHANGES to accept (policy: two supervised processes, local upload disk and a base image that needs docker login dhi.io are CODE_CHANGE; NOT_DEPLOYABLE stays for MongoDB as the only engine)", evidence: "Dockerfile:265 CMD run-apps.js; ecosystem.config.js:11; ecosystem.config.js:24; Dockerfile:16; packages/back-end/src/util/secrets.ts:105"}
+  - {field: port / startCommand / healthPath / database, change: "none: 3000 and 3100 exposed, supervisor CMD, /healthcheck without JWT, MongoDB only", evidence: "Dockerfile:261-262; Dockerfile:265; packages/back-end/src/app.ts:253-254; packages/back-end/src/util/secrets.ts:124"}
+  - {field: all, change: verified, evidence: "29 citations checked"}
+  - {field: outcome, change: "integrator: back to [NOT_DEPLOYABLE]; the CODE_CHANGE items do not lower the capability gap, the worst required item sets the outcome", evidence: "docs/ai-analysis.md Compatibility findings"}

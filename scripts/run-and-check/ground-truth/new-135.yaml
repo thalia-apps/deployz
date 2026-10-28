@@ -1,0 +1,144 @@
+id: new-135
+repository: binwiederhier/ntfy
+commit: 3cb7a98d0176c92407333bee1639c512dcd04220
+summary: >
+  ntfy is a Go pub-sub notification server with an embedded React web app. One process (`ntfy serve`) listens on one
+  HTTP port (default :80) and serves publish, subscribe (JSON stream, SSE, WebSocket, long poll) and the web UI. State
+  is optional: by default messages stay in memory. A PostgreSQL URL (NTFY_DATABASE_URL) or SQLite files give
+  persistence, and attachments go to a local directory or an S3 URL. The root Dockerfile copies a pre-built `ntfy`
+  binary, but Dockerfile-build is a full multi-stage build from the repo source (docs, web, Go).
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Dockerfile-build builds the app from the repo source and the image runs one process on one port. The image has
+    ENTRYPOINT ["ntfy"] and no CMD, so the start command `serve` must be set (a Deployz setting). Defaults work with no
+    database. PostgreSQL (NTFY_DATABASE_URL) is supported but optional. Attachment S3 needs static keys in the URL, so
+    the Deployz task role does not work for it, and local attachment storage is ephemeral. DEPLOYABLE_WITH_CHANGES is
+    also defensible because the Dockerfile name is non-standard.
+dockerfile:
+  accept: [Dockerfile-build]
+  reject:
+    - {path: Dockerfile, reason: "COPY ntfy /usr/bin: copies a pre-built binary from the build context (goreleaser artefact), the app is never compiled"}
+    - {path: Dockerfile-arm, reason: "same pattern as Dockerfile: COPY ntfy /usr/bin, a pre-built ARM binary"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile-build, line: 1, quote: "FROM golang:1.26-bookworm AS builder"}
+    - {path: Dockerfile-build, line: 36, quote: "ADD go.mod go.sum main.go ./"}
+    - {path: Dockerfile-build, line: 59, quote: "make VERSION=$VERSION COMMIT=$COMMIT cli-linux-server"}
+    - {path: Dockerfile-build, line: 75, quote: "COPY --from=builder /app/dist/ntfy_linux_server/ntfy /usr/bin/ntfy"}
+    - {path: Dockerfile, line: 16, quote: "COPY ntfy /usr/bin"}
+runtime: {accept: [go]}
+port:
+  accept: [80]
+  evidence:
+    - {path: server/config.go, line: 20, quote: "DefaultListenHTTP                           = \":80\""}
+    - {path: Dockerfile-build, line: 77, quote: "EXPOSE 80/tcp"}
+    - {path: docker-compose.yml, line: 14, quote: "- 80:80"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/config.go, line: 20, quote: "DefaultListenHTTP                           = \":80\""}
+startCommand:
+  source: explicit
+  # The image has ENTRYPOINT ["ntfy"] and no CMD, so it prints help and exits unless `serve` is given.
+  accept: ["serve", "ntfy serve"]
+  evidence:
+    - {path: Dockerfile-build, line: 78, quote: "ENTRYPOINT [\"ntfy\"]"}
+    - {path: docker-compose.yml, line: 6, quote: "- serve"}
+    - {path: cmd/serve.go, line: 135, quote: "Name:      \"serve\","}
+healthPath:
+  accept: ["/v1/health"]
+  # Unauthenticated JSON {"healthy":true}. Returns 200 unless clustering marks the node stale. /v1/ready is the cluster LB probe.
+  evidence:
+    - {path: server/server.go, line: 118, quote: "apiHealthPath                                        = \"/v1/health\""}
+    - {path: server/server.go, line: 688, quote: "r.URL.Path == apiHealthPath"}
+    - {path: server/server.go, line: 841, quote: "func (s *Server) handleHealth("}
+database:
+  status: optional
+  engines: [postgres, sqlite]
+  default: null
+  deployzEngine: postgres
+  selectBy: {NTFY_DATABASE_URL: "postgres://user:pass@host:5432/ntfy"}
+  connectionVars: [NTFY_DATABASE_URL]
+  # With no database-url and no cache-file/auth-file the server keeps messages in memory and has no users.
+  # database-url replaces the SQLite files (auth-file, cache-file, web-push-file must then be unset).
+  evidence:
+    - {path: cmd/serve.go, line: 45, quote: "EnvVars: []string{\"NTFY_DATABASE_URL\"}"}
+    - {path: cmd/serve.go, line: 353, quote: "if database-url is set, it must start with postgres:// or postgresql://"}
+    - {path: cmd/serve.go, line: 355, quote: "if database-url is set, auth-file, cache-file, and web-push-file must not be set"}
+    - {path: docs/config.md, line: 509, quote: "By default, ntfy keeps messages **in-memory for 12 hours**"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: db/schema/schema.go, line: 53, quote: "func Migrate(db *sql.DB, dialect Dialect, store string, create MigrateFunc, migrations Migrations) error {"}
+    - {path: db/pg/pg.go, line: 19, quote: "SchemaLockKey = int64(0x6e7466792586a)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Message pruning, attachment cleanup and mail/Twilio senders run in the one process. Cluster mode is experimental and optional.
+  evidence:
+    - {path: cmd/serve.go, line: 73, quote: "interval of for message pruning and stats printing"}
+scheduledJobs:
+  status: embedded
+  items: [message pruning, attachment expiry]
+  evidence:
+    - {path: cmd/serve.go, line: 70, quote: "duration after which uploaded attachments will be deleted"}
+storage:
+  local: conditional
+  paths: [/var/cache/ntfy]
+  s3: native
+  s3SelectBy: {NTFY_ATTACHMENT_CACHE_DIR: "s3://ACCESS_KEY:SECRET_KEY@BUCKET/PREFIX?region=REGION"}
+  # Attachments need NTFY_BASE_URL and a directory or S3 URL. S3 uses static keys inside the URL (SigV4 signer),
+  # not the ECS task role. Without it, attachments are off.
+  evidence:
+    - {path: cmd/serve.go, line: 67, quote: "cache directory for attached files, or S3 URL (s3://ACCESS_KEY:SECRET_KEY@BUCKET[/PREFIX]?region=REGION"}
+    - {path: cmd/serve.go, line: 393, quote: "if attachment-cache-dir is set, base-url must also be set"}
+    - {path: docker-compose.yml, line: 11, quote: "- /var/cache/ntfy:/var/cache/ntfy"}
+    - {path: s3/client_auth.go, line: 16, quote: "func (c *Client) signV4(req *http.Request, hash string) {"}
+env:
+  required: []
+  optional: [NTFY_BASE_URL, NTFY_DATABASE_URL, NTFY_ATTACHMENT_CACHE_DIR, NTFY_AUTH_DEFAULT_ACCESS, NTFY_AUTH_USERS, NTFY_BEHIND_PROXY, NTFY_ENABLE_LOGIN, NTFY_ENABLE_SIGNUP, NTFY_WEB_ROOT, NTFY_LISTEN_HTTP, NTFY_SMTP_SENDER_PASS, NTFY_UPSTREAM_BASE_URL]
+  buildTime: []
+  # Recommended: NTFY_BASE_URL (public URL), NTFY_BEHIND_PROXY=true (ALB X-Forwarded-For for rate limits), NTFY_AUTH_DEFAULT_ACCESS=deny-all with NTFY_AUTH_USERS (secret), because the default is read-write for everyone.
+  evidence:
+    - {path: cmd/serve.go, line: 37, quote: "EnvVars: []string{\"NTFY_BASE_URL\"}"}
+    - {path: cmd/serve.go, line: 62, quote: "Value: \"read-write\""}
+    - {path: cmd/serve.go, line: 116, quote: "EnvVars: []string{\"NTFY_BEHIND_PROXY\"}"}
+blockers:
+  expected: []
+  mustNot:
+    - "The root Dockerfile must not be accepted: it copies a pre-built ntfy binary (Dockerfile:16); Dockerfile-build is the source build"
+    - "PostgreSQL must not be reported as required: in-memory is the default and NTFY_DATABASE_URL is optional"
+    - "SMTP server (smtp-server-listen, port 25), Firebase, Twilio, Stripe and web push must not block: all are optional and off by default"
+    - "WebSocket and SSE subscriptions must not block: they use the same HTTP port through the ALB"
+    - "Redis must not be reported: none is used"
+    - "The experimental cluster ports (experimental-cluster-listen) must not count as a second app port: cluster mode is off by default"
+vendorQuestions:
+  legitimate:
+    - "Should messages and users persist? PostgreSQL via NTFY_DATABASE_URL (otherwise messages are in memory and lost on restart, and there are no users)"
+    - "What is the public base URL (NTFY_BASE_URL) and should access be restricted (default is read-write for everyone)?"
+  unnecessary:
+    - "Which port? (80)"
+    - "Which Dockerfile? (Dockerfile-build)"
+    - "Health path? (/v1/health)"
+    - "Who runs migrations? (the schema is created at start)"
+traps:
+  - "The root Dockerfile is the short, obvious one but copies a pre-built `ntfy` binary (Dockerfile:16); the source build is the oddly named Dockerfile-build"
+  - "ENTRYPOINT is [\"ntfy\"] with no CMD (Dockerfile-build:78), so the container prints help and exits unless the command `serve` is set"
+  - "/health does not exist; the path is /v1/health (server.go:118)"
+  - "database-url and the SQLite file options are mutually exclusive (serve.go:355)"
+  - "Attachment S3 uses access keys inside the URL, not the task role (serve.go:67, s3/client_auth.go)"
+  - "Listens on :80 as root in the image, which is fine on Fargate but the port is not 8080"
+  - "docs/ and web/ build steps (mkdocs, npm) are inside Dockerfile-build, so the build needs Python and Node and is slow"
+openQuestions:
+  - "Whether a rule-based tool should treat Dockerfile-build (non-standard name) as the source build; Deployz needs the Dockerfile path as a setting"
+crossReview:
+  - {field: storage evidence docker-compose.yml, change: "line 10 -> 11: the /var/cache/ntfy volume line is line 11", evidence: "docker-compose.yml:11"}
+  - {field: outcome / startCommand / port / healthPath, change: "none: Dockerfile-build has EXPOSE 80 and ENTRYPOINT [ntfy] with no CMD, so serve is a setting; /v1/health is apiHealthPath; outcomes 1 and 2 accepted", evidence: "Dockerfile-build:77 Dockerfile-build:78 server/server.go:118"}
+  - {field: all, change: "verified", evidence: "30 citations checked"}

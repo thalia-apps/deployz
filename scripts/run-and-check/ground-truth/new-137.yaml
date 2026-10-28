@@ -1,0 +1,123 @@
+id: new-137
+repository: schlagmichdoch/PairDrop
+commit: 1b0c9c9d903c3cfc706df1303dc75c3b54d04c77
+summary: >
+  PairDrop is a Node.js (Express + ws) local file-sharing web app, a clone of Snapdrop. One process serves the static
+  web client from public/ and a WebSocket signalling server on the same HTTP port (3000). Files travel peer to peer
+  over WebRTC between browsers, not through the server. There is no database, no Redis, no worker and no local state.
+  Optional TURN or STUN servers and an optional server-relayed WebSocket fallback are set by environment variables.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The Dockerfile builds from the repo source and runs `npm start` (one Node process, one port, no state). The server
+    only brokers signalling over WebSocket on the same port through the ALB. WebRTC data flows between the browsers
+    (default STUN stun.l.google.com), so Deployz does not need to host any UDP service. Transfers across different
+    networks need a TURN server or WS_FALLBACK=true (server relay over the WebSocket); that is an optional setting,
+    not a blocker.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "FROM alpine:latest"}
+    - {path: Dockerfile, line: 8, quote: "RUN NODE_ENV=\"production\" npm ci --omit=dev"}
+    - {path: Dockerfile, line: 11, quote: "COPY . ."}
+    - {path: Dockerfile, line: 21, quote: "ENTRYPOINT [\"npm\", \"start\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: server/index.js, line: 38, quote: "conf.port = process.env.PORT || 3000;"}
+    - {path: Dockerfile, line: 16, quote: "EXPOSE 3000"}
+    - {path: server/server.js, line: 69, quote: "server.listen(conf.port, hostname);"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/server.js, line: 66, quote: "const hostname = conf.localhostOnly ? '127.0.0.1' : null;"}
+    - {path: server/index.js, line: 108, quote: "conf.localhostOnly = process.argv.includes('--localhost-only');"}
+startCommand:
+  source: image
+  accept: ["npm start", "node server/index.js"]
+  evidence:
+    - {path: Dockerfile, line: 21, quote: "ENTRYPOINT [\"npm\", \"start\"]"}
+    - {path: package.json, line: 8, quote: "\"start\": \"node server/index.js\","}
+healthPath:
+  accept: ["/"]
+  # / serves public/index.html (express.static) with HTTP 200. There is no /health route: every unknown path is redirected 301 to /.
+  evidence:
+    - {path: server/server.js, line: 36, quote: "app.use(express.static(publicPathAbs));"}
+    - {path: server/server.js, line: 58, quote: "res.redirect(301, '/');"}
+    - {path: Dockerfile, line: 19, quote: "wget --quiet --tries=1 --spider http://localhost:3000"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The signalling WebSocket server runs inside the web process (new PairDropWsServer(pairDropServer.server, conf)).
+  evidence:
+    - {path: server/index.js, line: 181, quote: "new PairDropWsServer(pairDropServer.server, conf);"}
+    - {path: server/ws-server.js, line: 17, quote: "this._wss = new WebSocketServer({ server });"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: server/server.js, line: 36, quote: "app.use(express.static(publicPathAbs));"}
+env:
+  required: []
+  optional: [PORT, WS_FALLBACK, RTC_CONFIG, RATE_LIMIT, DEBUG_MODE, IPV6_LOCALIZE, SIGNALING_SERVER]
+  buildTime: []
+  # RATE_LIMIT=1 (number of proxy hops) is advisable behind the ALB so that peers are grouped by the real client IP (X-Forwarded-For).
+  # WS_FALLBACK=true lets transfers between different networks go through the server over the WebSocket when no TURN server exists.
+  evidence:
+    - {path: server/index.js, line: 40, quote: "conf.wsFallback = process.argv.includes('--include-ws-fallback') || process.env.WS_FALLBACK === \"true\";"}
+    - {path: server/index.js, line: 42, quote: "conf.rtcConfig = process.env.RTC_CONFIG && process.env.RTC_CONFIG !== \"false\""}
+    - {path: server/index.js, line: 61, quote: "if (process.argv.includes('--rate-limit') || process.env.RATE_LIMIT === \"true\") {"}
+    - {path: server/peer.js, line: 48, quote: "else if (request.headers['x-forwarded-for']) {"}
+blockers:
+  expected: []
+  mustNot:
+    - "WebRTC, STUN or TURN must not block: peer data flows browser to browser; Deployz only hosts signalling on the HTTP port"
+    - "The WebSocket server must not be treated as a second port or a separate worker: it shares port 3000 with Express"
+    - "The coturn service in docker-compose-coturn.yml must not be required: it is an optional extra for cross-network transfers"
+    - "A missing database, Redis or storage must not be reported as a blocker: the app is stateless"
+    - "A missing /health route must not block: / returns 200"
+vendorQuestions:
+  legitimate:
+    - "Do users transfer files between different networks? That needs a TURN server (RTC_CONFIG) or WS_FALLBACK=true (relay through the server)"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile? (Dockerfile)"
+    - "Is a database needed? (no)"
+traps:
+  - "docker-compose-coturn.yml runs a coturn TURN server on UDP/TCP 3478 and a range of UDP relay ports, which look like unsupported extra services but are optional (docker-compose-coturn.yml)"
+  - "/health does not exist and unknown paths return a 301 redirect to / (server.js:57-59), so a health check on /health sees a redirect, not 200"
+  - "Docker HEALTHCHECK is wget --spider on / (Dockerfile:18-19)"
+  - "The default STUN server is stun.l.google.com (index.js:48), an outbound call from the browser, not from the server"
+  - "Peers are grouped by client IP; behind the ALB the client IP comes from X-Forwarded-For (peer.js:48) and RATE_LIMIT sets the proxy hop count (server.js:25)"
+  - "Dockerfile uses alpine:latest with apk-installed Node (Dockerfile:1,6), not a node image"
+openQuestions:
+  - "Whether a tool should treat cross-network WebRTC as needing TURN (UDP) and reject the app; this file judges it optional because WS_FALLBACK relays over the WebSocket"
+crossReview:
+  - {field: outcome / port / startCommand / healthPath, change: "none: Dockerfile builds from source with EXPOSE 3000, ENTRYPOINT npm start, HEALTHCHECK on /; stateless; outcome 1 only holds by policy", evidence: "Dockerfile:14 Dockerfile:16-17 Dockerfile:19 server/server.js:69"}
+  - {field: all, change: "verified", evidence: "21 citations checked"}

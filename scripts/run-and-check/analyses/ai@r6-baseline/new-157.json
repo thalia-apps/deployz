@@ -1,0 +1,172 @@
+{
+  "id": "new-157",
+  "commit": "35c3cc4e96b57dcc8ba9353aa59bf9ff8cb9570c",
+  "analyser": "ai@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "scripts/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"--port\", \"8080\", \"--data\", \"/var/opt/bytebase\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GHOST_MAX_AUTH_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/component/ghost/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06579936,
+        "promptTokens": 12701,
+        "completionTokens": 783
+      },
+      "latencyMs": 10973
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": 8080,
+        "answer": "value",
+        "reasons": [],
+        "subject": "port",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q3",
+        "value": "PG_URL",
+        "answer": "value",
+        "reasons": [
+          "PG_URL does not name a database URL or JDBC URL"
+        ],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10979,
+    "questions": 3,
+    "generatedAt": "2026-10-28T13:56:41.603Z",
+    "failedChecks": 1,
+    "promptVersion": 16
+  }
+}

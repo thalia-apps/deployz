@@ -1,0 +1,140 @@
+id: new-125
+repository: go-shiori/shiori
+commit: aebb4021a56048eed4c8feb325399be5f46e5470
+summary: >
+  Shiori is a Go bookmark manager (single static binary, embedded HTML templates and assets, optional Vue webapp v2).
+  `shiori server` listens on 8080 on all interfaces and uses SQLite by default, with optional PostgreSQL or MySQL/MariaDB
+  chosen by SHIORI_DATABASE_URL. Thumbnails and archives go to the data directory on local disk. The root Dockerfile and
+  Dockerfile.alpine only copy a pre-built goreleaser binary (dist/shiori_*), so no Dockerfile builds Shiori from source.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz: one Go process, port 8080, an unauthenticated /system/liveness route, PostgreSQL through
+    SHIORI_DATABASE_URL, migrations at start. But every Dockerfile copies dist/ from a goreleaser run (not in the repo), or is
+    a development or e2e image. A deploy needs a new multi-stage Dockerfile (go build). A strict read of "no prebuilt
+    artefacts" gives NOT_DEPLOYABLE; a read that allows a vendor-written Dockerfile gives DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "COPY dist/shiori_${TARGETOS}_${TARGETARCH}... from a goreleaser run; the binary is never compiled in the Dockerfile and dist/ is not in the repo"}
+    - {path: Dockerfile.alpine, reason: "same pre-built dist/ binary copy on an Alpine base"}
+    - {path: Dockerfile.compose, reason: "development image (golang image, `go run main.go`, source mounted by docker-compose); its header says development only"}
+    - {path: Dockerfile.e2e, reason: "end-to-end test image (go run main.go)"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 8, quote: "COPY dist/shiori_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}/shiori /usr/bin/shiori"}
+    - {path: Dockerfile.alpine, line: 7, quote: "COPY dist/shiori_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}/shiori /usr/bin/shiori"}
+    - {path: Dockerfile.compose, line: 1, quote: "# This Dockerfile is intended for Development purposes only to use"}
+    - {path: Dockerfile.e2e, line: 10, quote: "COPY . /src/shiori"}
+    - {path: .goreleaser.yaml, line: 12, quote: "- binary: shiori"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: internal/config/config.go, line: 53, quote: "Port         int    `env:\"HTTP_PORT,default=8080\"`"}
+    - {path: internal/cmd/server.go, line: 22, quote: "cmd.Flags().IntP(\"port\", \"p\", 8080, \"Port used by the server\")"}
+    - {path: Dockerfile, line: 28, quote: "EXPOSE ${PORT}"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: internal/config/config.go, line: 54, quote: "Address      string `env:\"HTTP_ADDRESS,default=:\"`"}
+    - {path: internal/http/server.go, line: 238, quote: "Addr:    fmt.Sprintf(\"%s%d\", cfg.Http.Address, cfg.Http.Port),"}
+startCommand:
+  source: image
+  accept: ["shiori server", "/usr/bin/shiori server"]
+  evidence:
+    - {path: Dockerfile, line: 30, quote: "ENTRYPOINT [\"/usr/bin/shiori\"]"}
+    - {path: Dockerfile, line: 31, quote: "CMD [\"server\"]"}
+healthPath:
+  # GET /api/v1/system/ping (internal/http/server.go:89) is a public route too.
+  accept: ["/system/liveness", "/api/v1/system/ping"]
+  # Public JSON with version, commit and date; the global middleware does not require a session.
+  evidence:
+    - {path: internal/http/server.go, line: 64, quote: "s.mux.HandleFunc(\"GET /system/liveness\", ToHTTPHandler(deps,"}
+    - {path: internal/http/handlers/system.go, line: 10, quote: "// HandleLiveness handles the liveness check endpoint"}
+    - {path: internal/http/handlers/system_test.go, line: 25, quote: "// Test that liveness check works without authentication"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {SHIORI_DATABASE_URL: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [SHIORI_DATABASE_URL]
+  evidence:
+    - {path: internal/config/config.go, line: 106, quote: "URL string `env:\"DATABASE_URL\"`"}
+    - {path: internal/config/config.go, line: 136, quote: "c.Database.URL = fmt.Sprintf(\"sqlite:///%s?_txlock=immediate\", filepath.Join(c.Storage.DataDir, \"shiori.db\"))"}
+    - {path: internal/database/database.go, line: 37, quote: "case \"mysql\":"}
+    - {path: internal/database/database.go, line: 40, quote: "case \"postgres\":"}
+    - {path: internal/database/database.go, line: 42, quote: "case \"sqlite\":"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/database/pg.go, line: 103, quote: "if err := runMigrations(ctx, db, postgresMigrations); err != nil {"}
+    - {path: internal/database/sqlite.go, line: 180, quote: "if err := runMigrations(ctx, db, sqliteMigrations); err != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: go.mod, line: 1, quote: "module github.com/go-shiori/shiori"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: Dockerfile, line: 31, quote: "CMD [\"server\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: Dockerfile, line: 31, quote: "CMD [\"server\"]"}
+storage:
+  local: conditional
+  paths: [/shiori, /shiori/thumb, /shiori/archive]
+  s3: none
+  s3SelectBy: {}
+  # The data directory (SHIORI_DIR) holds the SQLite file by default plus thumbnails and offline archives, even with PostgreSQL.
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "ENV SHIORI_DIR=/shiori"}
+    - {path: internal/config/config.go, line: 110, quote: "DataDir string `env:\"DIR\"` // Using DIR to be backwards compatible with the old config"}
+    - {path: internal/cmd/delete.go, line: 65, quote: "thumbDir := fp.Join(cfg.Storage.DataDir, \"thumb\")"}
+    - {path: internal/cmd/delete.go, line: 66, quote: "archiveDir := fp.Join(cfg.Storage.DataDir, \"archive\")"}
+env:
+  required:
+    - {name: SHIORI_DATABASE_URL, secret: true, buildTime: false, note: "postgres://user:pass@host:5432/db?sslmode=require; without it the app uses SQLite on ephemeral disk. Contains the DB password"}
+  optional: [SHIORI_HTTP_SECRET_KEY, SHIORI_HTTP_PORT, SHIORI_HTTP_ADDRESS, SHIORI_HTTP_ROOT_PATH, SHIORI_DIR, SHIORI_HTTP_SERVE_WEB_UI_V2, SHIORI_HTTP_BODY_LIMIT, SHIORI_HTTP_CORS_ORIGINS, HOSTNAME]
+  buildTime: []
+  # SHIORI_HTTP_SECRET_KEY falls back to a random value, which invalidates all sessions at each restart; set it as a secret.
+  evidence:
+    - {path: internal/config/config.go, line: 82, quote: "SHIORI_HTTP_SECRET_KEY is not set, using random value."}
+    - {path: internal/config/config.go, line: 114, quote: "Hostname    string `env:\"HOSTNAME,required\"`"}
+    - {path: internal/config/config.go, line: 185, quote: "envconfig.MapLookuper(map[string]string{\"HOSTNAME\": os.Getenv(\"HOSTNAME\")}),"}
+blockers:
+  expected:
+    - "No Dockerfile builds Shiori from the repo archive: Dockerfile and Dockerfile.alpine copy a pre-built goreleaser binary from dist/, Dockerfile.compose and Dockerfile.e2e are development and test images"
+  mustNot:
+    - "SQLite default must not block: PostgreSQL is supported through SHIORI_DATABASE_URL"
+    - "Redis, workers or a message queue must not be required: the app is a single process"
+    - "The bundled Vue webapp (webapp/, bun) must not be a blocker: the embedded legacy UI in internal/view is served by default"
+    - "Missing S3 support must not block: archives and thumbnails are optional local files"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile should Deployz use? The repo has none that compiles Shiori from source"
+    - "Archives and thumbnails are on local disk and lost on each task restart: is that acceptable?"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/system/liveness)"
+    - "Who runs migrations? (the app, at start)"
+    - "Is a worker needed? (no)"
+traps:
+  - "Dockerfile sets ENV PORT=8080, but the app reads SHIORI_HTTP_PORT or the -p flag, not PORT; only Procfile passes `-p $PORT` (Dockerfile:16, internal/config/config.go:53, Procfile:1)"
+  - "Dockerfile and Dockerfile.alpine look like production images but only copy dist/ from goreleaser (Dockerfile:8)"
+  - "Dockerfile.compose and docker-compose.yaml are development only (Dockerfile.compose:1, docker-compose.yaml:1)"
+  - "docker-compose.yaml adds postgres, mariadb and nginx for development; they are not required (docker-compose.yaml:29-45)"
+  - "Config requires HOSTNAME; containers normally set it, so it must not become a vendor secret (internal/config/config.go:114)"
+  - "Dockerfile final stage is FROM scratch with no shell (Dockerfile:14)"
+openQuestions:
+  - "Whether a vendor-written Dockerfile should also build webapp/ (bun) for the experimental UI v2; the default UI does not need it"
+crossReview:
+  - {field: outcome / dockerfile / healthPath / port / database / migrations, change: "none: no Dockerfile builds from source (Dockerfile:8 and Dockerfile.alpine:7 COPY dist/), so a repository change is needed and outcome 2 is already accepted; /system/liveness and 8080 hold", evidence: "Dockerfile:8 Dockerfile.alpine:7 internal/http/server.go:64 internal/config/config.go:53 internal/database/database.go:40"}
+  - {field: all, change: "verified", evidence: "32 citations checked"}

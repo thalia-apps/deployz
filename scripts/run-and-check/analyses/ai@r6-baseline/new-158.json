@@ -1,0 +1,279 @@
+{
+  "id": "new-158",
+  "commit": "57cc866b4c5e8cb5a1964d6a58a789e76853d537",
+  "analyser": "ai@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsc && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/docker-entrypoint\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BIGQUERY_TEST_CREDENTIALS_FILE",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/drivers/bigquery/test.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "BIGQUERY_TEST_DATASET_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/drivers/bigquery/test.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BIGQUERY_TEST_DATASET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/drivers/bigquery/test.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BIGQUERY_TEST_GCP_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/drivers/bigquery/test.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/lib/config/config-utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LISTEN_FDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ODBC_CONNECTION_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/drivers/unixodbc/test.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLPAD_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/drivers/drill/drill.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USERPROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/lib/config/config-utils.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: Kubernetes manifests are present (sqlpad-charts/Chart.yaml). Deployz runs the app as a single container, not on a Kubernetes cluster."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: Kubernetes manifests are present (sqlpad-charts/Chart.yaml). Deployz runs the app as a single container, not on a Kubernetes cluster."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BIGQUERY_TEST_CREDENTIALS_FILE. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.03776652,
+        "promptTokens": 9212,
+        "completionTokens": 65
+      },
+      "latencyMs": 2838
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 2839,
+    "questions": 1,
+    "generatedAt": "2026-10-28T13:56:31.255Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

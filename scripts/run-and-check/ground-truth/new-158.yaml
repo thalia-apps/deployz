@@ -1,0 +1,142 @@
+id: new-158
+repository: sqlpad/sqlpad
+commit: 57cc866b4c5e8cb5a1964d6a58a789e76853d537
+summary: >
+  SQLPad is a Node.js (Express, Sequelize) web SQL editor with a React client in client/. It connects to many user
+  databases (PostgreSQL, MySQL, SQL Server, Oracle, Snowflake and others) as managed targets. The root Dockerfile is a
+  two-stage build from repo source (yarn install, `npm run build --prefix client`, copy into server/public) and the
+  runtime stage starts `node /usr/app/server.js` on port 3000. Its own backend database is SQLite on local disk by
+  default (SQLPAD_DB_PATH=/var/lib/sqlpad); SQLPAD_BACKEND_DB_URI switches it to PostgreSQL, MySQL, MariaDB or SQL Server.
+  Sessions and query results default to files on the same disk and can use the backend database or Redis.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The root Dockerfile builds the app from the repo archive, listens on 3000 (0.0.0.0 by default) and answers
+    /api/app without login. Setting SQLPAD_BACKEND_DB_URI to the Deployz RDS PostgreSQL, with the session store and the
+    query result store on `database`, removes all local state. The user databases SQLPad queries are not requirements.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: bundle
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 3, quote: "FROM node:20-slim AS build"}
+    - {path: Dockerfile, line: 47, quote: "RUN npm run build --prefix client && \\"}
+    - {path: Dockerfile, line: 54, quote: "FROM node:20-slim as bundle"}
+    - {path: Dockerfile, line: 72, quote: "COPY --from=build /sqlpad/server ."}
+    - {path: Dockerfile, line: 78, quote: "ENTRYPOINT [\"/docker-entrypoint\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 76, quote: "ENV SQLPAD_PORT 3000"}
+    - {path: Dockerfile, line: 77, quote: "EXPOSE 3000"}
+    - {path: server/lib/config/config-items.js, line: 64, quote: "envVar: 'SQLPAD_PORT',"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/lib/config/config-items.js, line: 59, quote: "envVar: 'SQLPAD_IP',"}
+    - {path: server/lib/config/config-items.js, line: 60, quote: "default: '0.0.0.0',"}
+startCommand:
+  source: image
+  accept: ["node /usr/app/server.js", "/docker-entrypoint"]
+  evidence:
+    - {path: Dockerfile, line: 78, quote: "ENTRYPOINT [\"/docker-entrypoint\"]"}
+    - {path: docker-entrypoint, line: 10, quote: "exec node /usr/app/server.js $@"}
+healthPath:
+  accept: ["/api/app", "/"]
+  # There is no dedicated health route (the Dockerfile says "Perhaps add a healthcheck?"). /api/app is the public
+  # bootstrap call of the single-page app and returns JSON without a session; / serves the SPA index.
+  evidence:
+    - {path: server/routes/app.js, line: 52, quote: "router.get('*/api/app', wrap(getApp));"}
+    - {path: Dockerfile, line: 81, quote: "# Perhaps add a healthcheck?"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql, mariadb, mssql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {SQLPAD_BACKEND_DB_URI: "postgres://user:password@host:5432/sqlpad"}
+  connectionVars: [SQLPAD_BACKEND_DB_URI]
+  # The databases users connect to from SQLPad are managed targets, not requirements (server/drivers/).
+  evidence:
+    - {path: server/sequelize-db/index.js, line: 31, quote: "if (config.get('backendDatabaseUri')) {"}
+    - {path: server/sequelize-db/index.js, line: 37, quote: "dialect: 'sqlite',"}
+    - {path: server/lib/config/config-items.js, line: 314, quote: "envVar: 'SQLPAD_BACKEND_DB_URI',"}
+    - {path: docs/src/pages/en/configuration.md, line: 138, quote: "SQLPad may be configured to use SQLite, PostgreSQL, MySQL, MariaDB, or SQL Server as a backing database."}
+    - {path: server/package.json, line: 89, quote: "\"pg\": \"^8.7.3\","}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/lib/config/config-items.js, line: 79, quote: "envVar: 'SQLPAD_DB_AUTOMIGRATE',"}
+    - {path: docs/src/pages/en/configuration.md, line: 184, quote: "SQLPAD_DB_AUTOMIGRATE = \"true\""}
+redis:
+  status: optional
+  selectBy: {SQLPAD_SESSION_STORE: redis, SQLPAD_REDIS_URI: "redis://host:6379"}
+  # The default session store is `file`; `database` also works with the backend database, so Redis is never needed.
+  evidence:
+    - {path: server/lib/config/config-items.js, line: 45, quote: "default: 'file', // database, redis, memory"}
+    - {path: server/lib/config/config-items.js, line: 318, quote: "key: 'redisUri',"}
+    - {path: docs/src/pages/en/configuration.md, line: 130, quote: "# URI for redis instance to use when SQLPAD_SESSION_STORE or SQLPAD_QUERY_RESULT_STORE are set to `redis`"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: docker-entrypoint, line: 10, quote: "exec node /usr/app/server.js $@"}
+scheduledJobs:
+  status: embedded
+  items: [query batch and statement runners, result cache cleanup]
+  evidence: []
+storage:
+  local: conditional
+  paths: [/var/lib/sqlpad]
+  s3: none
+  s3SelectBy: {}
+  # With the default settings /var/lib/sqlpad holds sqlpad.sqlite, sessions/ and query result files. With
+  # SQLPAD_BACKEND_DB_URI plus SQLPAD_SESSION_STORE=database and SQLPAD_QUERY_RESULT_STORE=database nothing is kept on disk.
+  evidence:
+    - {path: Dockerfile, line: 75, quote: "ENV SQLPAD_DB_PATH /var/lib/sqlpad"}
+    - {path: server/app.js, line: 158, quote: "const sessionPath = path.join(config.get('dbPath'), '/sessions');"}
+    - {path: docs/src/pages/en/configuration.md, line: 70, quote: "# Similar to session storage, query result storage may also be configured."}
+env:
+  required:
+    - {name: SQLPAD_BACKEND_DB_URI, secret: true, buildTime: false, note: "PostgreSQL URI including the password; without it SQLite on ephemeral disk loses all data on restart"}
+    - {name: SQLPAD_COOKIE_SECRET, secret: true, buildTime: false, note: "the default is the public string 'secret-used-to-sign-cookies-please-set-and-make-strong'"}
+    - {name: SQLPAD_PASSPHRASE, secret: true, buildTime: false, note: "encrypts stored connection passwords; the default is a public string, and a change makes saved connection passwords unreadable"}
+  optional: [SQLPAD_ADMIN, SQLPAD_ADMIN_PASSWORD, SQLPAD_SESSION_STORE, SQLPAD_QUERY_RESULT_STORE, SQLPAD_REDIS_URI, SQLPAD_BASE_URL, SQLPAD_PUBLIC_URL, SQLPAD_COOKIE_SECURE, SQLPAD_TRUST_PROXY, SQLPAD_DB_AUTOMIGRATE, SQLPAD_PORT, SQLPAD_IP]
+  buildTime: []
+  evidence:
+    - {path: server/lib/config/config-items.js, line: 24, quote: "envVar: 'SQLPAD_COOKIE_SECRET',"}
+    - {path: server/lib/config/config-items.js, line: 25, quote: "default: 'secret-used-to-sign-cookies-please-set-and-make-strong',"}
+    - {path: server/lib/config/config-items.js, line: 89, quote: "envVar: 'SQLPAD_PASSPHRASE',"}
+    - {path: server/lib/config/config-items.js, line: 109, quote: "envVar: 'SQLPAD_ADMIN',"}
+blockers:
+  expected: []
+  mustNot:
+    - "The databases SQLPad queries (PostgreSQL, MySQL, SQL Server, Oracle, Snowflake, Cassandra, Vertica and others in server/drivers) must not be reported as required databases or as unsupported engines"
+    - "SQLite as the default backend must not be reported as an unsupported database: SQLPAD_BACKEND_DB_URI selects PostgreSQL"
+    - "Redis must not be required: it is only an optional session or result store"
+    - "Local data in /var/lib/sqlpad must not block by itself: it is avoidable with the backend database and database stores"
+    - "ODBC_ENABLED build arg must not be required: it is off by default"
+vendorQuestions:
+  legitimate:
+    - "Should SQLPad use the Deployz RDS PostgreSQL for its own data (SQLPAD_BACKEND_DB_URI) and database session and result stores, so that nothing is kept on local disk?"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile? (Dockerfile at the root)"
+    - "Which database do users query? (user-supplied connections)"
+    - "Who runs migrations? (automigrate at start)"
+traps:
+  - "Many drivers in server/drivers (pg, mysql, mssql, oracle ODBC, snowflake, cassandra, vertica) are client drivers for user targets, not dependencies"
+  - "SQLite default backend and file session store look like required local disk state but are replaceable by environment settings (config-items.js:45, sequelize-db/index.js:28-41)"
+  - "The default port in code is 80, the Docker image sets 3000 (config-items.js:64, Dockerfile:76)"
+  - "No /health route exists and the Dockerfile has no HEALTHCHECK; / and /api/app answer 200 (Dockerfile:81)"
+  - "Public default secrets for cookie signing and the passphrase (config-items.js:25, :96)"
+  - "The first user to sign up becomes the admin unless SQLPAD_ADMIN and SQLPAD_ADMIN_PASSWORD are set"
+  - "docker-examples/, kubernetes-examples/ and sqlpad-charts/ are examples; the postgres-docker-compose example shows PostgreSQL as backend"
+  - "docker-entrypoint is a bash script that sources /etc/docker-entrypoint.d hooks; it needs bash in the runtime image (node:20-slim has it)"
+openQuestions: []
+crossReview:
+  - {field: outcome, change: "accept [DEPLOYABLE] -> [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: default SQLite backend and file session store give durable local disk state, which is CODE_CHANGE under the fix-class policy; the state can also be moved off disk by settings, so DEPLOYABLE stays", evidence: "Dockerfile:75 ENV SQLPAD_DB_PATH /var/lib/sqlpad"}
+  - {field: "dockerfile, port, startCommand, healthPath, database, redis", change: "none: root Dockerfile, ENV SQLPAD_PORT 3000 and EXPOSE 3000, ENTRYPOINT /docker-entrypoint, public */api/app route, Redis optional only", evidence: "Dockerfile:76; Dockerfile:77; Dockerfile:78; server/routes/app.js:52"}
+  - {field: all, change: verified, evidence: "32 citations checked"}

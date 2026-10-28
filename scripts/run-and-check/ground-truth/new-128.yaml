@@ -1,0 +1,149 @@
+id: new-128
+repository: linkwarden/linkwarden
+commit: eff7c6b735f6b20a4766745dc86c6bdc52bd9840
+summary: >
+  Linkwarden is a Yarn workspace monorepo (Next.js web app in apps/web, a Node worker in apps/worker, Prisma with PostgreSQL).
+  The root Dockerfile builds both from source (Rust monolith stage, Node build stage, runtime stage with Playwright Chromium
+  headless shell). The image CMD runs `prisma migrate deploy` and then starts the web server (`next start`, port 3000) and the
+  worker (`tsx worker.ts`) together through `concurrently`. The worker is required: it archives links, indexes search and polls RSS.
+  PostgreSQL is the only database. Meilisearch, S3 and AI providers are optional.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One Dockerfile builds the app from source, the database is PostgreSQL, and no Redis is needed. The web app and the worker
+    are two processes that the image starts together with `concurrently`; Deployz should run them as a web service (`next start`)
+    and a declared worker (`tsx worker.ts`) from the same image, plus a migration command (`prisma migrate deploy`). That is a
+    Deployz settings change, so DEPLOYABLE holds; a read that treats the `concurrently` start script as an unsupported
+    multi-process image gives DEPLOYABLE_WITH_CHANGES. The image also holds Chromium, so a Small size may be too tight.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 4, quote: "FROM docker.io/rust:1.96-bookworm AS monolith-builder"}
+    - {path: Dockerfile, line: 39, quote: "RUN yarn prisma:generate && \\"}
+    - {path: Dockerfile, line: 40, quote: "yarn web:build"}
+    - {path: Dockerfile, line: 50, quote: "FROM node:22.23.4-bookworm-slim AS main-app"}
+    - {path: Dockerfile, line: 83, quote: "playwright install --with-deps chromium-headless-shell && \\"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: Dockerfile, line: 97, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 95, quote: "CMD [ \"/usr/bin/curl\", \"--silent\", \"--fail\", \"http://127.0.0.1:3000/\" ]"}
+    - {path: docker-compose.yml, line: 15, quote: "- 3000:3000"}
+bindAllInterfaces:
+  value: true
+  # `next start` has no --hostname flag in the command, so Next.js uses its default of all interfaces.
+  evidence:
+    - {path: apps/web/package.json, line: 11, quote: "\"start\": \"next start\","}
+    - {path: docker-compose.yml, line: 15, quote: "- 3000:3000"}
+startCommand:
+  source: image
+  accept: ["cd /data/apps/web && exec next start", "next start", "yarn web:start"]
+  # The image CMD starts the web app and the worker together. For Deployz the web service runs `next start` and the worker is a separate declared command.
+  evidence:
+    - {path: Dockerfile, line: 99, quote: "exec concurrently -k -n web,worker \\\"cd /data/apps/web && exec next start\\\" \\\"cd /data/apps/worker && exec tsx worker.ts\\\""}
+    - {path: package.json, line: 18, quote: "\"concurrently:start\": \"concurrently"}
+healthPath:
+  accept: ["/api/v1/config", "/login", "/"]
+  # /api/v1/config is a public Next.js API route that returns 200 JSON with no session. The image HEALTHCHECK curls "/" (a page that may redirect to /login or /dashboard).
+  evidence:
+    - {path: apps/web/pages/api/v1/config/index.ts, line: 5, quote: "return res.status(200).json({ response: getEnvData() });"}
+    - {path: Dockerfile, line: 95, quote: "CMD [ \"/usr/bin/curl\", \"--silent\", \"--fail\", \"http://127.0.0.1:3000/\" ]"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: packages/prisma/schema.prisma, line: 6, quote: "provider = \"postgresql\""}
+    - {path: packages/prisma/schema.prisma, line: 7, quote: "url      = env(\"DATABASE_URL\")"}
+    - {path: docker-compose.yml, line: 11, quote: "- DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres"}
+    - {path: .env.sample, line: 8, quote: "DATABASE_URL="}
+migrations:
+  mode: command
+  accept: ["prisma migrate deploy --schema=/data/packages/prisma/schema.prisma", "yarn prisma:deploy"]
+  # The image CMD runs the migration before the servers start. A separate app-level data migration runs in the worker at start (migrationWorker).
+  evidence:
+    - {path: Dockerfile, line: 99, quote: "prisma migrate deploy --schema=/data/packages/prisma/schema.prisma"}
+    - {path: package.json, line: 19, quote: "\"prisma:deploy\": \"dotenv -- yarn workspace @linkwarden/prisma deploy\","}
+    - {path: apps/worker/worker.ts, line: 12, quote: "await migrationWorker();"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 1, quote: "services:"}
+workers:
+  status: independent
+  commands: ["cd /data/apps/worker && tsx worker.ts", "yarn worker:start"]
+  # The worker handles link archiving (Playwright, monolith), search indexing, RSS polling and auto-tagging; links stay unprocessed without it.
+  evidence:
+    - {path: apps/worker/worker.ts, line: 15, quote: "startRSSPolling();"}
+    - {path: apps/worker/worker.ts, line: 16, quote: "linkProcessing(workerIntervalInSeconds);"}
+    - {path: apps/worker/worker.ts, line: 18, quote: "startIndexing(workerIntervalInSeconds);"}
+    - {path: apps/worker/package.json, line: 9, quote: "\"start\": \"tsx index.ts\""}
+scheduledJobs:
+  status: embedded
+  items: [RSS polling, link processing loop, auto tagging, search indexing]
+  evidence:
+    - {path: apps/worker/worker.ts, line: 15, quote: "startRSSPolling();"}
+storage:
+  local: conditional
+  paths: [/data/data]
+  s3: native
+  s3SelectBy: {SPACES_BUCKET_NAME: "<bucket>"}
+  # Archived pages, PDFs, screenshots and avatars go to STORAGE_FOLDER (default "data", resolved two levels above apps/web, so /data/data)
+  # unless the S3 client is configured. The S3 client needs SPACES_ENDPOINT, SPACES_REGION, SPACES_KEY and SPACES_SECRET (static keys, no task-role credential chain).
+  evidence:
+    - {path: packages/filesystem/s3Client.ts, line: 4, quote: "process.env.SPACES_ENDPOINT &&"}
+    - {path: packages/filesystem/s3Client.ts, line: 13, quote: "credentials: {"}
+    - {path: packages/filesystem/createFile.ts, line: 50, quote: "const storagePath = process.env.STORAGE_FOLDER || \"data\";"}
+    - {path: docker-compose.yml, line: 17, quote: "- ./data:/data/data"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "postgresql://user:pass@host:5432/db; contains the DB password"}
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "session signing secret; set a random value"}
+    - {name: NEXTAUTH_URL, secret: false, buildTime: false, note: "public HTTPS URL of the app plus /api/v1/auth; the sample value is http://localhost:3000/api/v1/auth"}
+  optional: [MEILI_HOST, MEILI_MASTER_KEY, SPACES_KEY, SPACES_SECRET, SPACES_ENDPOINT, SPACES_BUCKET_NAME, SPACES_REGION, SPACES_FORCE_PATH_STYLE, STORAGE_FOLDER, DISABLE_BROWSER, PLAYWRIGHT_WS_URL, NEXT_PUBLIC_DISABLE_REGISTRATION, NEXT_PUBLIC_EMAIL_PROVIDER, EMAIL_FROM, EMAIL_SERVER, BASE_URL, MAX_WORKERS, OPENAI_API_KEY, NEXT_PUBLIC_OLLAMA_ENDPOINT_URL]
+  buildTime: []
+  evidence:
+    - {path: .env.sample, line: 3, quote: "NEXTAUTH_URL=http://localhost:3000/api/v1/auth"}
+    - {path: .env.sample, line: 4, quote: "NEXTAUTH_SECRET="}
+    - {path: .env.sample, line: 8, quote: "DATABASE_URL="}
+    - {path: .env.sample, line: 40, quote: "DISABLE_BROWSER="}
+blockers:
+  expected: []
+  mustNot:
+    - "Meilisearch must not be a blocker: the client is null without MEILI_MASTER_KEY, and indexing returns early (packages/lib/meilisearchClient.ts:5, apps/worker/workers/linkIndexing.ts:45)"
+    - "The Playwright Chromium in the image must not be treated as a browser sidecar: it is installed in the app image, and DISABLE_BROWSER turns archiving off"
+    - "The worker must not be dropped: it is a required separate process (declared worker), not an optional extra"
+    - "The Rust monolith build stage must not block: it is a multi-stage build step in the same Dockerfile"
+    - "Local /data/data must not block by itself: S3 storage is native"
+    - "Redis, Kafka or other queues must not be required"
+vendorQuestions:
+  legitimate:
+    - "Is S3 storage wanted? The S3 client needs static access keys and an endpoint (SPACES_*); the default is ephemeral local disk"
+    - "Size: the worker runs Chromium; is the default size enough for archiving?"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which database? (PostgreSQL only)"
+    - "Who runs migrations? (prisma migrate deploy, in the image CMD)"
+    - "Is a worker needed? (yes: apps/worker, declared)"
+    - "Health path? (/api/v1/config)"
+traps:
+  - "The image CMD starts web and worker together with `concurrently` and runs the migration first; Deployz needs them as web, worker and migration command (Dockerfile:99)"
+  - "docker-compose.yml uses the published ghcr.io/linkwarden/linkwarden image and adds postgres and meilisearch; neither compose service is the build (docker-compose.yml:13)"
+  - "docker-compose.dev.yml is a development stack (not the production image)"
+  - "NEXTAUTH_URL ends with /api/v1/auth, not the site root (.env.sample:3)"
+  - "The S3 variables are named SPACES_* (DigitalOcean Spaces naming) and need explicit keys and an endpoint; AWS_* variables are not read (packages/filesystem/s3Client.ts:3-7)"
+  - "The web postinstall runs `playwright install`; the Dockerfile skips it with PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD (Dockerfile:18)"
+  - "The sample .env lists dozens of optional variables (SSO providers, AI keys) that are not required"
+openQuestions:
+  - "Whether a Small task has enough memory for Next.js, the worker and Chromium together"
+crossReview:
+  - {field: outcome / startCommand / workers / healthPath / port, change: "none: image CMD runs prisma migrate deploy then concurrently web and worker; outcomes 1 and 2 already accepted; HEALTHCHECK and EXPOSE confirm 3000; /api/v1/config exists under apps/web/pages/api/v1", evidence: "Dockerfile:95 Dockerfile:97 Dockerfile:99 apps/web/package.json:11"}
+  - {field: all, change: "verified", evidence: "35 citations checked"}

@@ -1,0 +1,136 @@
+id: new-134
+repository: Athou/commafeed
+commit: 88b75ec0cba1407a61f073d83cf8ac7206c2cdb0
+summary: >
+  CommaFeed is a self-hosted RSS reader (Quarkus/Java 25 server, React client in commafeed-client built by Maven's
+  frontend plugin). One process serves the REST API, the web UI and a WebSocket on HTTP port 8082. The default
+  database is embedded H2 in ./data; PostgreSQL, MySQL and MariaDB are chosen when the jar is BUILT (Maven profile),
+  not at run time. The repo has no root Dockerfile. Only two Dockerfiles exist under commafeed-server/src/main/docker,
+  and both copy a pre-built CI artefact.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits (one process, port 8082, optional PostgreSQL, no Redis, no workers). No Dockerfile builds
+    the app from the repo archive, so a deploy needs a new multi-stage Dockerfile (./mvnw package -Ppostgresql, which
+    also builds the client). The PostgreSQL driver is selected at build time by the Maven profile, so the default
+    (h2) build cannot talk to RDS. A strict read of "no CI-built artefacts" gives NOT_DEPLOYABLE; a read that allows
+    a vendor-written Dockerfile gives DEPLOYABLE_WITH_CHANGES. Without PostgreSQL the H2 file is lost on every task restart.
+dockerfile:
+  accept: []
+  reject:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, reason: "copies artifacts/extracted-jvm-package/quarkus-app, a CI-built package that is not in the repo"}
+    - {path: commafeed-server/src/main/docker/Dockerfile.native, reason: "copies artifacts/commafeed-*-runner, a CI-built native binary that is not in the repo"}
+  target: null
+  context: .
+  evidence:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 9, quote: "COPY artifacts/extracted-jvm-package/quarkus-app/ /commafeed"}
+    - {path: commafeed-server/src/main/docker/Dockerfile.native, line: 11, quote: "COPY artifacts/commafeed-*-${TARGETARCH}-runner /commafeed/commafeed"}
+    - {path: README.md, line: 70, quote: "./mvnw clean package [-P<database> [-Pnative]] [-DskipTests]"}
+runtime: {accept: [java]}
+port:
+  accept: [8082]
+  evidence:
+    - {path: commafeed-server/src/main/resources/application.properties, line: 2, quote: "quarkus.http.port=8082"}
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 4, quote: "EXPOSE 8082"}
+    - {path: README.md, line: 123, quote: "listen on http://localhost:8082"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 4, quote: "EXPOSE 8082"}
+startCommand:
+  source: explicit
+  # The jvm image runs `java ... -jar quarkus-run.jar` from /commafeed. A vendor-written Dockerfile must set it.
+  accept: ["java -jar quarkus-run.jar"]
+  evidence:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 17, quote: "\"quarkus-run.jar\"]"}
+    - {path: README.md, line: 81, quote: "java -jar quarkus-run.jar"}
+healthPath:
+  accept: ["/rest/server/get", "/"]
+  # No health extension (no quarkus-smallrye-health). /rest/server/get is @PermitAll and returns JSON server info (touches the DB).
+  # / serves the React UI without login.
+  evidence:
+    - {path: commafeed-server/src/main/java/com/commafeed/frontend/resource/ServerREST.java, line: 44, quote: "@Path(\"/get\")"}
+    - {path: commafeed-server/src/main/java/com/commafeed/frontend/resource/ServerREST.java, line: 46, quote: "@PermitAll"}
+    - {path: commafeed-server/src/main/resources/application.properties, line: 10, quote: "quarkus.http.filter.index-html.matches=/"}
+database:
+  status: optional
+  engines: [h2, postgres, mysql, mariadb]
+  default: h2
+  deployzEngine: postgres
+  # The engine is a BUILD-time Maven profile (-Ppostgresql) plus runtime quarkus.datasource.* values.
+  selectBy: {QUARKUS_DATASOURCE_JDBC_URL: "jdbc:postgresql://host:5432/commafeed"}
+  connectionVars: [QUARKUS_DATASOURCE_JDBC_URL, QUARKUS_DATASOURCE_USERNAME, QUARKUS_DATASOURCE_PASSWORD]
+  evidence:
+    - {path: commafeed-server/src/main/resources/application.properties, line: 63, quote: "%prod.quarkus.datasource.jdbc.url=jdbc:h2:./data/db;DEFRAG_ALWAYS=TRUE"}
+    - {path: README.md, line: 98, quote: "jdbc:postgresql://localhost:5432/commafeed"}
+    - {path: README.md, line: 72, quote: "`<database>` can be one of `h2`, `postgresql`, `mysql` or `mariadb`. The default is `h2`."}
+    - {path: commafeed-server/pom.xml, line: 559, quote: "<id>postgresql</id>"}
+    - {path: commafeed-server/pom.xml, line: 566, quote: "<artifactId>quarkus-jdbc-postgresql</artifactId>"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: commafeed-server/src/main/resources/application.properties, line: 30, quote: "quarkus.liquibase.migrate-at-start=true"}
+    - {path: commafeed-server/src/main/resources/application.properties, line: 29, quote: "quarkus.liquibase.change-log=migrations.xml"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Feed refresh, cleanup and WebSocket push all run inside the one Quarkus process.
+  evidence:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 17, quote: "\"quarkus-run.jar\"]"}
+scheduledJobs:
+  status: embedded
+  items: [feed refresh, database cleanup]
+  evidence:
+    - {path: commafeed-server/src/main/java/com/commafeed/backend/task/ScheduledTask.java, line: 34, quote: "executor.scheduleWithFixedDelay(runnable, getInitialDelay(), getPeriod(), getTimeUnit());"}
+storage:
+  local: conditional
+  paths: [/commafeed/data]
+  s3: none
+  s3SelectBy: {}
+  # The only local data is the H2 file at ./data/db, used when no PostgreSQL URL is set.
+  evidence:
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 6, quote: "RUN mkdir -p /commafeed/data"}
+    - {path: commafeed-server/src/main/docker/Dockerfile.jvm, line: 7, quote: "VOLUME /commafeed/data"}
+    - {path: README.md, line: 91, quote: "The database file will be stored in"}
+env:
+  required: []
+  optional: [QUARKUS_DATASOURCE_JDBC_URL, QUARKUS_DATASOURCE_USERNAME, QUARKUS_DATASOURCE_PASSWORD, QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY]
+  buildTime: []
+  # QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY (min 16 chars, secret) keeps logins valid across restarts; without it each restart logs everyone out.
+  evidence:
+    - {path: README.md, line: 120, quote: "`quarkus.http.auth.session.encryption-key` property to a fixed value (min. 16 characters)"}
+    - {path: README.md, line: 111, quote: "Environment variables (keys in UPPER_CASE)"}
+blockers:
+  expected:
+    - "No Dockerfile builds CommaFeed from the repo archive: both Dockerfiles copy CI-built artifacts/ (Dockerfile.jvm:9, Dockerfile.native:11)"
+    - "The database engine is a build-time Maven profile: the default build only ships the H2 driver, so RDS PostgreSQL needs ./mvnw package -Ppostgresql"
+  mustNot:
+    - "PostgreSQL must not be reported as required: H2 is the default and the app starts without any database configuration"
+    - "Redis, workers and a queue must not be reported: none exist"
+    - "The WebSocket endpoint must not block: it runs on the same port 8082 and the app falls back to polling"
+    - "Local disk at /commafeed/data must not block by itself when PostgreSQL is configured"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source (vendor must supply a Maven build stage with -Ppostgresql)"
+  unnecessary:
+    - "Which port? (8082)"
+    - "Who runs migrations? (Liquibase runs at start)"
+    - "Is a worker process needed? (no)"
+traps:
+  - "Both Dockerfiles live in commafeed-server/src/main/docker and copy artifacts/ that only CI creates (Dockerfile.jvm:9, Dockerfile.native:11)"
+  - "H2 is the default and the app runs without configuration, but H2 data on Fargate disk is lost on restart; the Postgres choice must also be made at build time (pom.xml:559)"
+  - "Port 8082 is not the Quarkus default 8080 (application.properties:2); %dev uses 8083, %test uses 8085"
+  - "No /health route exists; /rest/server/get is the unauthenticated JSON route (ServerREST.java:44-46)"
+  - "First visitor creates the admin account when the user table is empty (ServerREST.java initialSetupRequired), so the public URL must be claimed quickly"
+  - "The compose-like env names are Quarkus names (QUARKUS_DATASOURCE_*), not DATABASE_URL"
+openQuestions:
+  - "Whether to treat a vendor-written Dockerfile as DEPLOYABLE_WITH_CHANGES or a missing Dockerfile as NOT_DEPLOYABLE"
+crossReview:
+  - {field: outcome / dockerfile, change: "none: both Dockerfiles copy CI-built artifacts/ (no source build), so a repository change; outcome 2 already accepted; the PostgreSQL driver is a Maven profile", evidence: "commafeed-server/src/main/docker/Dockerfile.jvm:9 commafeed-server/pom.xml:559 commafeed-server/pom.xml:566"}
+  - {field: healthPath, change: "none: /rest/server/get is @PermitAll", evidence: "commafeed-server/src/main/java/com/commafeed/frontend/resource/ServerREST.java:44-46"}
+  - {field: all, change: "verified", evidence: "26 citations checked"}

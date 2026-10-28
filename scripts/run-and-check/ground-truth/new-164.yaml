@@ -1,0 +1,126 @@
+id: new-164
+repository: QuivrHQ/quivr
+commit: 1f72133e27e1cc0a7a05fb35a93df0f9e33136c4
+summary: >
+  The repository is now "Quivr V2", a Go search and monitoring engine (module github.com/The-Vibe-Company/quivr),
+  not the old Python RAG app. One `quivr` binary has the commands api, worker and migrate. A working stack needs
+  PostgreSQL 17, Temporal, S3-compatible storage (SeaweedFS), Weaviate, a TEI embedding server and a first-party
+  plugin process, plus an optional Node UI (quivr-search). The README says it is in evaluation stage and must not be
+  run in production.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core API cannot run alone: it needs Temporal, Weaviate and a TEI embedding service next to PostgreSQL and
+    S3. Deployz has no Temporal, Weaviate or embedding service, and runs one container with one ALB port. The engine
+    has a REST API with no end-user UI in the core (quivr-search is a demo UI that calls it). The health probes are
+    on a second port (8081).
+dockerfile:
+  accept: [deploy/images/quivr.Dockerfile]
+  reject:
+    - {path: cmd/quivr-autoscaler/Dockerfile, reason: "autoscaler helper binary, not the product"}
+    - {path: deploy/mlflow/Dockerfile, reason: "MLflow tracking server for evaluation runs"}
+    - {path: deploy/railway/core.Dockerfile, reason: "Railway all-in-one core entrypoint with plugins and tokenizer; Railway specific"}
+    - {path: deploy/railway/web.Dockerfile, reason: "Node demo UI (quivr-search), a second service"}
+    - {path: deploy/railway/temporal.Dockerfile, reason: "Temporal service image"}
+    - {path: deploy/railway/postgres.Dockerfile, reason: "PostgreSQL service image"}
+    - {path: deploy/railway/seaweed.Dockerfile, reason: "SeaweedFS (S3) service image"}
+    - {path: deploy/railway/tei.Dockerfile, reason: "embedding server image"}
+    - {path: deploy/cpu/embeddings.Dockerfile, reason: "embedding server image"}
+    - {path: deploy/images/plugin.Dockerfile, reason: "plugin runtime image, a second process"}
+  target: null
+  context: .
+  evidence:
+    - {path: deploy/images/quivr.Dockerfile, line: 13, quote: "-o /out/quivr ./cmd/quivr"}
+    - {path: deploy/images/quivr.Dockerfile, line: 35, quote: "EXPOSE 8080 8081"}
+    - {path: deploy/images/quivr.Dockerfile, line: 37, quote: "CMD [\"api\"]"}
+    - {path: README.md, line: 12, quote: "> **Status: evaluation stage.**"}
+    - {path: README.md, line: 48, quote: "A single `quivr` binary provides the `api`, `worker` and `migrate` commands."}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: deploy/images/quivr.Dockerfile, line: 35, quote: "EXPOSE 8080 8081"}
+    - {path: internal/app/run.go, line: 468, quote: "cfg.Listen = \"127.0.0.1:8080\""}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: internal/app/run.go, line: 468, quote: "cfg.Listen = \"127.0.0.1:8080\""}
+startCommand:
+  source: image
+  accept: ["quivr api"]
+  evidence:
+    - {path: deploy/images/quivr.Dockerfile, line: 37, quote: "CMD [\"api\"]"}
+healthPath:
+  accept: ["/healthz", "/readyz"]
+  # Probe handlers are on the separate probe port 8081, not on the API port 8080.
+  evidence:
+    - {path: internal/app/run.go, line: 905, quote: "probes.HandleFunc(\"GET /healthz\""}
+    - {path: internal/app/run.go, line: 471, quote: "cfg.ProbeListen = \"127.0.0.1:8081\""}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [QUIVR_CONFIG]
+  evidence:
+    - {path: README.md, line: 53, quote: "Transactional catalog | PostgreSQL 17"}
+    - {path: deploy/compose/compose.yaml, line: 2, quote: "postgres:"}
+migrations:
+  mode: command
+  accept: ["quivr migrate"]
+  evidence:
+    - {path: README.md, line: 48, quote: "provides the `api`, `worker` and `migrate` commands."}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: ["quivr worker"]
+  evidence:
+    - {path: README.md, line: 48, quote: "provides the `api`, `worker` and `migrate` commands."}
+    - {path: deploy/compose/compose.yaml, line: 43, quote: "temporal:"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/tmp]
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: README.md, line: 54, quote: "Canonical bytes and artifacts | S3-compatible storage"}
+    - {path: deploy/images/quivr.Dockerfile, line: 33, quote: "VOLUME [\"/tmp\"]"}
+env:
+  required:
+    - {name: QUIVR_CONFIG, secret: true, buildTime: false, note: "config file or content that holds database, S3, Temporal, Weaviate and plugin settings"}
+  optional: [QUIVR_LOG_LEVEL, QUIVR_ENVIRONMENT]
+  buildTime: []
+  evidence:
+    - {path: cmd/quivr/main.go, line: 22, quote: "QUIVR_CONFIG"}
+blockers:
+  expected:
+    - "Temporal, Weaviate and a TEI embedding server are required runtime services; Deployz provides none of them"
+    - "The README says evaluation stage, API v0, not for production"
+    - "Separate worker process and plugin processes beside the API"
+  mustNot:
+    - "PostgreSQL and S3 alone must not be called enough: Weaviate and Temporal are also required"
+    - "The probe port 8081 must not be treated as the app port"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which Dockerfile? (several; none gives a complete product)"
+    - "Which database? (PostgreSQL)"
+traps:
+  - "The repository name QuivrHQ/quivr suggests the old Python RAG chat app -> the current tree is a Go engine rewrite"
+  - "deploy/images/quivr.Dockerfile builds from source and looks deployable -> it is only the API/worker binary, it needs five other services"
+  - "Many deploy/railway Dockerfiles look like a full production topology -> they are separate services for Railway"
+  - "Probes /healthz and /readyz are on port 8081, EXPOSE lists 8080 and 8081 (quivr.Dockerfile:35)"
+  - "Default listen addresses are 127.0.0.1 (internal/app/run.go:468)"
+  - "Image is FROM scratch with USER 10001 and no shell (quivr.Dockerfile:20, :34)"
+crossReview:
+  - {field: outcome, change: "none: NOT_DEPLOYABLE holds, the required-service check lists weaviate_url and temporal_address and Deployz has neither Weaviate nor Temporal (capability gap)", evidence: "internal/app/run.go:526; internal/app/run.go:68"}
+  - {field: "dockerfile, port, healthPath, startCommand", change: "none: deploy/images/quivr.Dockerfile builds the binary, API 8080, probes on 8081", evidence: "deploy/images/quivr.Dockerfile:35"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

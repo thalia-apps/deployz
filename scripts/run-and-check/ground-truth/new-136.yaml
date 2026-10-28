@@ -1,0 +1,132 @@
+id: new-136
+repository: gotify/server
+commit: dd06dc77190696e93d3297b9a733711516fb17d9
+summary: >
+  Gotify server is a Go (gin) push-notification server with a React UI (ui/, built with yarn) embedded into the
+  binary. One process serves the REST API, the WebSocket stream (/stream) and the UI on one HTTP port (80 by
+  default, GOTIFY_SERVER_PORT). The database is SQLite by default (data/gotify.db); MySQL and PostgreSQL are
+  selected at run time by GOTIFY_DATABASE_DIALECT and GOTIFY_DATABASE_CONNECTION. docker/Dockerfile builds the
+  server from the repo source, but by default it does NOT build the UI (build arg BUILD_JS=0).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    Single process, one port, unauthenticated GET /health, optional PostgreSQL, no Redis and no workers. The Dockerfile
+    builds from source but skips the UI unless the build argument BUILD_JS=1 is passed, and the Go package embeds
+    `build/*` from ui/build, which is not in the repo. Deployz cannot pass build arguments, so a deploy needs the
+    default changed to BUILD_JS=1 (DEPLOYABLE_WITH_CHANGES). A read that only looks at the runtime shape gives DEPLOYABLE.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 13, quote: "FROM --platform=${BUILDPLATFORM} node:24 AS js-builder"}
+    - {path: docker/Dockerfile, line: 15, quote: "ARG BUILD_JS=0"}
+    - {path: docker/Dockerfile, line: 42, quote: "COPY . /src/gotify"}
+    - {path: docker/Dockerfile, line: 55, quote: "FROM debian:${DEBIAN}"}
+    - {path: docker/Dockerfile, line: 75, quote: "COPY --from=builder /target /"}
+runtime: {accept: [go]}
+port:
+  accept: [80]
+  evidence:
+    - {path: docker/Dockerfile, line: 61, quote: "ARG GOTIFY_SERVER_EXPOSE=80"}
+    - {path: docker/Dockerfile, line: 62, quote: "ENV GOTIFY_SERVER_PORT=$GOTIFY_SERVER_EXPOSE"}
+    - {path: config/config.go, line: 104, quote: "Port: 80,"}
+    - {path: config/keys.go, line: 7, quote: "EnvServerPort                       = \"GOTIFY_SERVER_PORT\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config/keys.go, line: 6, quote: "EnvServerListenAddr                 = \"GOTIFY_SERVER_LISTENADDR\""}
+    - {path: runner/runner.go, line: 25, quote: "startListening(\"plain connection\", conf.Server.ListenAddr, conf.Server.Port"}
+startCommand:
+  source: image
+  accept: ["./gotify-app serve", "serve"]
+  evidence:
+    - {path: docker/Dockerfile, line: 77, quote: "ENTRYPOINT [\"./gotify-app\"]"}
+    - {path: docker/Dockerfile, line: 78, quote: "CMD [\"serve\"]"}
+healthPath:
+  accept: ["/health"]
+  # Unauthenticated GET/HEAD; pings the database and returns 200 or 500. The Dockerfile HEALTHCHECK uses it.
+  evidence:
+    - {path: router/router.go, line: 141, quote: "g.Match([]string{\"GET\", \"HEAD\"}, \"/health\", healthHandler.Health)"}
+    - {path: api/health.go, line: 35, quote: "if err := a.DB.Ping(); err != nil {"}
+    - {path: docker/Dockerfile, line: 72, quote: "curl --fail http://localhost:$GOTIFY_SERVER_PORT/health"}
+database:
+  status: optional
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {GOTIFY_DATABASE_DIALECT: postgres}
+  connectionVars: [GOTIFY_DATABASE_DIALECT, GOTIFY_DATABASE_CONNECTION]
+  evidence:
+    - {path: config/config.go, line: 118, quote: "Dialect:    \"sqlite3\","}
+    - {path: database/database.go, line: 53, quote: "case \"mysql\":"}
+    - {path: database/database.go, line: 55, quote: "case \"postgres\":"}
+    - {path: database/database.go, line: 57, quote: "case \"sqlite3\":"}
+    - {path: config/keys.go, line: 29, quote: "EnvDatabaseConnection               = \"GOTIFY_DATABASE_CONNECTION\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: database/database.go, line: 90, quote: "db.AutoMigrate(new(model.User), new(model.Application), new(model.Message), new(model.Client), new(model.PluginConf))"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: router/router.go, line: 74, quote: "streamHandler := stream.New("}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [data/gotify.db, data/images, data/plugins, data/certs]
+  s3: none
+  s3SelectBy: {}
+  # SQLite file is only used with the default dialect. Uploaded application images and Go plugins stay on local disk
+  # (ephemeral on Fargate) even with PostgreSQL; this loses app icons on restart but does not stop the server.
+  evidence:
+    - {path: config/config.go, line: 119, quote: "Connection: \"data/gotify.db\","}
+    - {path: config/config.go, line: 126, quote: "UploadedImagesDir: \"data/images\","}
+    - {path: config/config.go, line: 127, quote: "PluginsDir:        \"data/plugins\","}
+env:
+  required:
+    - {name: GOTIFY_DEFAULTUSER_PASS, secret: true, buildTime: false, note: "the first-run admin is admin/admin (config.go:122-123); set a strong password before exposing the URL"}
+  optional: [GOTIFY_DATABASE_DIALECT, GOTIFY_DATABASE_CONNECTION, GOTIFY_DEFAULTUSER_NAME, GOTIFY_SERVER_PORT, GOTIFY_SERVER_LISTENADDR, GOTIFY_REGISTRATION, GOTIFY_UPLOADEDIMAGESDIR, GOTIFY_PLUGINSDIR, GOTIFY_SERVER_TRUSTEDPROXIES, GOTIFY_SERVER_SECURECOOKIE]
+  buildTime: []
+  evidence:
+    - {path: config/keys.go, line: 31, quote: "EnvDefaultUserPass                  = \"GOTIFY_DEFAULTUSER_PASS\""}
+    - {path: config/config.go, line: 123, quote: "Pass: \"admin\","}
+blockers:
+  expected:
+    - "The Dockerfile skips the UI build by default (ARG BUILD_JS=0, Dockerfile:15); ui/build is not in the repo and ui/serve.go embeds build/*, so the default build has no UI or may fail to compile"
+  mustNot:
+    - "PostgreSQL must not be reported as required: SQLite is the default"
+    - "The WebSocket stream must not block: it uses the same HTTP port through the ALB"
+    - "Redis, workers and a queue must not be reported: none exist"
+    - "Local disk (data/) must not block by itself: it is a conditional ephemeral path"
+vendorQuestions:
+  legitimate:
+    - "Is the UI needed? The Dockerfile only builds it with the build argument BUILD_JS=1, which Deployz cannot pass"
+    - "Should data persist? SQLite on Fargate disk is lost on restart; use PostgreSQL (GOTIFY_DATABASE_DIALECT=postgres)"
+  unnecessary:
+    - "Which port? (80)"
+    - "Which Dockerfile? (docker/Dockerfile)"
+    - "Health path? (/health)"
+    - "Who runs migrations? (GORM AutoMigrate at start)"
+traps:
+  - "Dockerfile is in docker/, not at the repo root, and needs the repo root as build context (docker/Dockerfile:42 COPY . /src/gotify)"
+  - "BUILD_JS defaults to 0 (docker/Dockerfile:15): the image has no web UI unless the build arg is set, and ui/build is gitignored"
+  - "Default login is admin/admin (config/config.go:122-123)"
+  - "Default listen port is 80, not 8080 (config.go:104, Dockerfile:61)"
+  - "The base image is debian:sid-slim and the build base is the registry image gotify/build (Dockerfile:29), not a plain golang image"
+  - "/health returns 500 when the DB ping fails, so health depends on the database"
+openQuestions:
+  - "Whether the Go build succeeds with BUILD_JS=0: ui/serve.go has `//go:embed build/*` and no ui/build exists in the archive (not built here)"
+crossReview:
+  - {field: outcome / dockerfile / healthPath / port, change: "none: ARG BUILD_JS=0 skips the UI, CMD serve, port 80 from GOTIFY_SERVER_PORT, /health is unauthenticated; outcomes 1 and 2 accepted", evidence: "docker/Dockerfile:15 docker/Dockerfile:62 docker/Dockerfile:72 docker/Dockerfile:77-78 router/router.go:141"}
+  - {field: all, change: "verified", evidence: "28 citations checked"}

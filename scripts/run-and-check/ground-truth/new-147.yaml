@@ -1,0 +1,106 @@
+id: new-147
+repository: bluewave-labs/Checkmate
+commit: 47bde889f685dfaee46fe01d0fcd9b29a5447748
+summary: >
+  Checkmate is an uptime and infrastructure monitoring tool: a React client and a Node/Express server in one
+  multi-stage docker/Dockerfile that builds both from repo source and serves the client from the server on port
+  52345. The only supported database is MongoDB (DB_TYPE enum has the single value mongodb; mongoose). Job
+  scheduling runs in the same process by default (QUEUE_MODE primary).
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    MongoDB is the only database, and Deployz supports only RDS PostgreSQL and MySQL. The Dockerfile itself is a
+    clean source build of one process, so the only blocker is the database.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 22, quote: "FROM node:24-slim AS app"}
+    - {path: docker/Dockerfile, line: 45, quote: "EXPOSE 52345 52346"}
+runtime: {accept: [node]}
+port:
+  accept: [52345]
+  evidence:
+    - {path: server/src/config/envValidation.ts, line: 42, quote: "PORT: z.string().default(\"52345\"),"}
+    - {path: docker/docker-compose.yaml, line: 7, quote: "- \"52345:52345\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/src/index.ts, line: 108, quote: "const server = app.listen(env.PORT, () => {"}
+startCommand:
+  source: image
+  accept: ["node dist/index.js"]
+  evidence:
+    - {path: docker/Dockerfile, line: 47, quote: "CMD [\"node\", \"dist/index.js\"]"}
+healthPath:
+  accept: ["/api/v1/health"]
+  # Port 52346 serves /livez and /readyz for the worker; it is a second port, not the app port.
+  evidence:
+    - {path: server/src/app.ts, line: 119, quote: "app.use(\"/api/v1/health\", (req, res) => {"}
+database:
+  status: required
+  engines: [mongodb]
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [DB_CONNECTION_STRING]
+  evidence:
+    - {path: server/src/domain/app-settings/app-settings.type.ts, line: 4, quote: "export const DbTypes = [\"mongodb\"] as const;"}
+    - {path: server/package.json, line: 59, quote: "\"mongoose\": \"^8.3.3\","}
+    - {path: docker/docker-compose.yaml, line: 9, quote: "DB_CONNECTION_STRING=mongodb://mongodb:27017/uptime_db"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/src/db/db.mongo.ts, line: 1, quote: "import { Mongoose } from \"mongoose\";"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # QUEUE_MODE=primary with QUEUE_PRIMARY_PROCESSES=true (both defaults) runs the job worker in the API process.
+  evidence:
+    - {path: server/src/config/envValidation.ts, line: 52, quote: "QUEUE_MODE: z.enum(QueueModes).default(\"primary\"),"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: DB_CONNECTION_STRING, secret: true}
+    - {name: JWT_SECRET, secret: true}
+    - {name: CLIENT_HOST, secret: false}
+  optional: [ENCRYPTION_KEY, PORT, HEALTH_PORT, QUEUE_MODE, QUEUE_PRIMARY_PROCESSES, TOKEN_TTL, LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: server/src/config/envValidation.ts, line: 49, quote: "DB_CONNECTION_STRING: z.string().min(1, \"Database connection string is required\"),"}
+    - {path: server/src/config/envValidation.ts, line: 56, quote: "JWT_SECRET: z.string().min(1, \"JWT_SECRET is required\"),"}
+blockers:
+  expected:
+    - "MongoDB is the only database (DbTypes is [\"mongodb\"]); Deployz supports PostgreSQL and MySQL only"
+  mustNot:
+    - "The second port 52346 must not count as the app port or block: it is a health listener for the worker (/livez, /readyz)"
+    - "Missing Redis must not be reported as required"
+    - "Dockerfile must not be reported as missing or broken: docker/Dockerfile builds client and server from source"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (52345)"
+    - "Health path? (/api/v1/health)"
+traps:
+  - "docker/Dockerfile is at docker/ and uses the repo root as context (COPY client, COPY server)"
+  - "Two ports are exposed: 52345 (API and UI) and 52346 (health server with /livez and /readyz, not on the app port)"
+  - "A QUEUE_MODE=worker mode exists for scale-out, but the default runs the worker embedded"
+  - "Checkmate is the server only; the Capture agent for remote hosts is a separate repository"
+  - "Database must not be guessed from a PostgreSQL or MySQL-like driver: only mongoose is present"
+crossReview:
+  - {field: port.evidence, change: "fixed line number of the compose port mapping 5 -> 7", evidence: "docker/docker-compose.yaml:7"}
+  - {field: outcome, change: "none: MongoDB is the only engine (DbTypes has one value, mongoose only), a capability gap; the Dockerfile is a clean source build", evidence: "server/src/domain/app-settings/app-settings.type.ts:4; server/package.json:59"}
+  - {field: healthPath / port / startCommand, change: "none: /api/v1/health is mounted before the main routes with no auth, 52345 default, CMD node dist/index.js", evidence: "server/src/app.ts:119; server/src/config/envValidation.ts:42; docker/Dockerfile:47"}
+  - {field: all, change: verified, evidence: "14 citations checked"}

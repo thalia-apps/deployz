@@ -1,0 +1,94 @@
+id: new-169
+repository: OpenInterpreter/open-interpreter
+commit: ac1fcc8fe57aba51fcc3c79afd57a0883237fe87
+summary: >
+  The repository is now Open Interpreter as a Rust terminal coding agent: a fork of OpenAI Codex (workspace
+  codex-rs with the `codex` binary in codex-rs/cli, npm wrapper codex-cli, Bazel build). It is installed with a
+  curl or PowerShell installer and runs in the user's terminal. The old Python library is gone. There is no
+  application Dockerfile: the only Dockerfile is a CI Bazel toolchain image. The app-server and acp-server crates
+  are protocol servers for IDE or client integrations, not a web UI.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    A local command-line coding agent. It executes commands and edits files on the user's machine and needs local
+    sandboxing (bwrap). No Dockerfile builds a service, and there is no browser UI or HTTP application for end users.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .github/workflows/Dockerfile.bazel, reason: "CI Bazel toolchain image (ubuntu:24.04), not the product"}
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 29, quote: "## Installation"}
+    - {path: README.md, line: 34, quote: "curl -fsSL https://www.openinterpreter.com/install | sh"}
+    - {path: codex-rs/cli/Cargo.toml, line: 10, quote: "name = \"codex\""}
+    - {path: .github/workflows/Dockerfile.bazel, line: 1, quote: "FROM ubuntu:24.04"}
+    - {path: FORK_BRANDING.md, line: 3, quote: "Open Interpreter inherits internal crate, protocol, and compatibility names"}
+runtime: {accept: [rust]}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "A terminal coding agent (Rust CLI), installed by script: no web application, no Dockerfile that builds a service"
+  mustNot:
+    - "The app-server crate must not be taken as a deployable web server: it is a protocol server for client integrations"
+    - "The CI Bazel Dockerfile must not be accepted as the product build"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port, database or health path? (no application exists)"
+traps:
+  - "The name Open Interpreter suggests the old Python library and server (OpenInterpreter/open-interpreter) -> the tree is a Rust Codex fork with no Python"
+  - "The repo and file names say codex (codex-rs, codex-cli, @openai/codex) -> internal names kept from the upstream project (FORK_BRANDING.md)"
+  - "package.json at the root is tooling for formatting only (name codex-monorepo, private)"
+  - "Crates named app-server, app-server-transport and acp-server look like servers -> client protocol servers"
+  - "The only Dockerfile is under .github/workflows -> CI image"
+crossReview:
+  - {field: outcome, change: "none: Rust terminal coding agent; only Dockerfile is the CI Bazel image; app-server and acp-server are client protocol servers, no web application, so NOT_DEPLOYABLE holds", evidence: ".github/workflows/Dockerfile.bazel:1; codex-rs/cli/Cargo.toml:10"}
+  - {field: all, change: verified, evidence: "5 citations checked"}

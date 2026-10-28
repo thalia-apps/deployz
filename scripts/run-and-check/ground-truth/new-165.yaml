@@ -1,0 +1,141 @@
+id: new-165
+repository: Significant-Gravitas/AutoGPT
+commit: e2316d032883070a2e9aded36d2eb38b8e3a03df
+summary: >
+  AutoGPT is a monorepo. The product is autogpt_platform: a Next.js frontend (port 3000, Better Auth embedded) and a
+  Python backend that runs as many separate processes (rest_server 8006, websocket_server 8001, executor,
+  copilot_executor, database_manager, scheduler_server, notification_server, platform_linking_manager), with
+  PostgreSQL 15 plus pgvector, Redis, RabbitMQ, FalkorDB and ClamAV. The repo also has a single-container "appliance"
+  Dockerfile that runs PostgreSQL, Valkey, RabbitMQ, FalkorDB, nginx and every service under supervisord, but it needs
+  Docker Bake named contexts and keeps its data on local volumes. The classic/ folder is the legacy CLI agent.
+outcome:
+  # The worst required item sets the outcome (docs/ai-analysis.md): the capability gap makes it NOT_DEPLOYABLE.
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The real deployment is about ten processes plus RabbitMQ, Redis, FalkorDB and pgvector. Deployz serves one
+    container on one ALB port with RDS PostgreSQL (no pgvector claim), optional Redis and S3. No single image builds
+    from the repo with a plain docker build: the backend and frontend images are separate, and the appliance image
+    embeds its own PostgreSQL and message broker on local disk and needs Bake named contexts.
+dockerfile:
+  accept: []
+  reject:
+    - {path: autogpt_platform/backend/Dockerfile, reason: "backend only; target server runs one process per container (CMD rest); needs the other backend services, RabbitMQ, Redis and PostgreSQL"}
+    - {path: autogpt_platform/frontend/Dockerfile, reason: "frontend only (node server.js); calls the backend over AGPT_SERVER_URL"}
+    - {path: autogpt_platform/single-container/Dockerfile, reason: "appliance with embedded PostgreSQL, Valkey, RabbitMQ and FalkorDB under supervisord; FROM autogpt-backend and autogpt-backend-base are Docker Bake named contexts, not images; data on local volumes"}
+    - {path: classic/Dockerfile.autogpt, reason: "legacy classic CLI agent image, not the platform"}
+    - {path: autogpt_platform/scripted_model/Dockerfile, reason: "test helper"}
+    - {path: autogpt_platform/swap_proxy/Dockerfile, reason: "helper proxy"}
+  target: null
+  context: .
+  evidence:
+    - {path: autogpt_platform/backend/Dockerfile, line: 196, quote: "FROM server-base AS server"}
+    - {path: autogpt_platform/backend/Dockerfile, line: 217, quote: "CMD [\"rest\"]"}
+    - {path: autogpt_platform/frontend/Dockerfile, line: 64, quote: "CMD [\"node\", \"server.js\"]"}
+    - {path: autogpt_platform/single-container/Dockerfile, line: 55, quote: "FROM autogpt-backend AS backend-code"}
+    - {path: autogpt_platform/single-container/Dockerfile, line: 282, quote: "CMD [\"/usr/bin/supervisord\", \"-n\", \"-c\""}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 287, quote: "rest_server:"}
+runtime: {accept: [python, node]}
+port:
+  accept: [3000, 8006]
+  evidence:
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 594, quote: "- \"3000:3000\""}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 314, quote: "- \"8006:8006\""}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 432, quote: "- \"8001:8001\""}
+    - {path: autogpt_platform/single-container/Dockerfile, line: 276, quote: "EXPOSE 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: autogpt_platform/frontend/Dockerfile, line: 63, quote: "EXPOSE 3000"}
+startCommand:
+  source: image
+  accept: ["rest", "node server.js"]
+  evidence:
+    - {path: autogpt_platform/backend/Dockerfile, line: 217, quote: "CMD [\"rest\"]"}
+    - {path: autogpt_platform/frontend/Dockerfile, line: 64, quote: "CMD [\"node\", \"server.js\"]"}
+healthPath:
+  accept: ["/health"]
+  # Backend rest_server: GET /health (needs the database). Frontend: route /health under the (platform) group.
+  evidence:
+    - {path: autogpt_platform/backend/backend/api/rest_api.py, line: 611, quote: "@app.get(path=\"/health\", tags=[\"health\"], dependencies=[])"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  # Prisma schema uses the pgvector extension and an Unsupported("vector(1536)") column. RDS PostgreSQL can enable pgvector, but Deployz does not manage extensions.
+  evidence:
+    - {path: autogpt_platform/backend/schema.prisma, line: 2, quote: "provider   = \"postgresql\""}
+    - {path: autogpt_platform/backend/schema.prisma, line: 5, quote: "extensions = [pgvector(map: \"vector\")]"}
+    - {path: autogpt_platform/docker-compose.yml, line: 156, quote: "image: pgvector/pgvector:pg15"}
+migrations:
+  mode: command
+  accept: ["prisma migrate deploy"]
+  evidence:
+    - {path: autogpt_platform/backend/Dockerfile, line: 74, quote: "FROM debian:13-slim AS migrate"}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 87, quote: "migrate:"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 136, quote: "redis-0:"}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 244, quote: "rabbitmq:"}
+workers:
+  status: independent
+  commands: ["rest", "ws", "executor", "copilot-executor", "scheduler", "notification", "database-manager"]
+  evidence:
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 326, quote: "executor:"}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 365, quote: "copilot_executor:"}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 474, quote: "scheduler_server:"}
+    - {path: autogpt_platform/backend/pyproject.toml, line: 147, quote: "executor = \"backend.exec:main\""}
+scheduledJobs:
+  status: independent
+  items: [scheduler_server]
+  evidence:
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 474, quote: "scheduler_server:"}
+storage:
+  local: required
+  paths: [/app/autogpt_platform/backend/workspaces, /app/autogpt_platform/backend/store-media]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 621, quote: "workspace-data:"}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 622, quote: "store-media-data:"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL for frontend (Better Auth) and backend"}
+    - {name: BETTER_AUTH_SECRET, secret: true, buildTime: false, note: "frontend auth secret"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "compose requires it (make init-env generates it)"}
+  optional: [OPENAI_API_KEY, ANTHROPIC_API_KEY, BETTER_AUTH_URL, AUTH_ALLOW_NEW_ACCOUNTS]
+  buildTime: [NEXT_PUBLIC_FRONTEND_BASE_URL]
+  evidence:
+    - {path: autogpt_platform/frontend/.env.default, line: 6, quote: "BETTER_AUTH_SECRET="}
+    - {path: autogpt_platform/docker-compose.platform.yml, line: 615, quote: "DATABASE_URL: postgresql://postgres:"}
+blockers:
+  expected:
+    - "About ten backend processes plus RabbitMQ, Redis, FalkorDB and ClamAV; one Deployz container and one ALB port cannot host them"
+    - "No plain docker build produces the single-container appliance (Docker Bake named contexts); the backend and frontend are separate images"
+    - "pgvector extension and FalkorDB graph store are not Deployz managed services"
+  mustNot:
+    - "The old Supabase stack must not be reported: auth is Better Auth in the Next.js server and the database is PostgreSQL"
+    - "The frontend Dockerfile alone must not be called the product: it needs the backend over AGPT_SERVER_URL"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (3000 frontend, 8006 REST, 8001 WebSocket)"
+    - "Which Dockerfile? (none is the whole product)"
+traps:
+  - "Three Dockerfiles build from repo source and look deployable (backend, frontend, single-container) -> each is one part or needs Bake"
+  - "single-container/Dockerfile exposes only 3000 and looks like the one-image answer -> it embeds PostgreSQL, RabbitMQ, Valkey and FalkorDB in the container with local data (single-container/Dockerfile:98-140, :276)"
+  - "single-container FROM autogpt-backend and autogpt-backend-base are not registry images (single-container/Dockerfile:55, :64)"
+  - "classic/ holds the legacy CLI agent with its own Dockerfile.autogpt and forge/Dockerfile -> not the platform"
+  - "The backend Dockerfile default CMD is rest only; the other processes use the same image with another command (docker-compose.platform.yml:326, :407)"
+  - "docker-compose.yml publishes loopback ports for infrastructure only (docker-compose.platform.yml:142-258)"
+openQuestions:
+  - "Whether a vendor-written wrapper that runs all processes in one container with RDS and ElastiCache would be accepted (not supported by the MVP topology)"
+crossReview:
+  - {field: outcome, change: "accept [NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: the reviewer reasons include a multi-process image and Dockerfiles that do not build alone (CODE_CHANGE under the fix-class policy); RabbitMQ and FalkorDB remain a capability gap so NOT_DEPLOYABLE stays primary", evidence: "autogpt_platform/single-container/Dockerfile:55; autogpt_platform/single-container/Dockerfile:64"}
+  - {field: "dockerfile, port, healthPath, redis", change: "none: backend, frontend and single-container Dockerfiles exist and none is the whole product", evidence: "autogpt_platform/backend/Dockerfile; autogpt_platform/frontend/Dockerfile; autogpt_platform/single-container/Dockerfile"}
+  - {field: all, change: verified, evidence: "30 citations checked"}
+  - {field: outcome, change: "integrator: back to [NOT_DEPLOYABLE]; the CODE_CHANGE items do not lower the capability gap, the worst required item sets the outcome", evidence: "docs/ai-analysis.md Compatibility findings"}

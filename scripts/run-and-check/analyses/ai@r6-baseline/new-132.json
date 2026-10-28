@@ -1,0 +1,1215 @@
+{
+  "id": "new-132",
+  "commit": "279fe65c0499a7d5c92ff98c0937414e4be6c229",
+  "analyser": "ai@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "nuxt build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/app/run.sh\"]",
+      "port": 9000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALEMBIC_CONFIG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/db/init_db.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOWED_IFRAME_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_PASSWORD_LOGIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_SIGNUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_DOCS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BRANDING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CROWDIN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in dev/code-generation/gen_ts_locales.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DAILY_SCHEDULE_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_ENGINE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set \"postgres\" to use the managed PostgreSQL database",
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_HOUSEHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GIT_COMMIT_HASH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST_IP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_ALLOW_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_DISALLOW_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_DEMO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_ADMIN_FILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_BASE_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_ENABLE_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_ID_ATTRIBUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_MAIL_ATTRIBUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_NAME_ATTRIBUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_QUERY_BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_QUERY_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_TLS_CACERTFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_TLS_INSECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_USER_FILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_CONFIG_OVERRIDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ADMIN_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_AUTO_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CONFIGURATION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_GROUPS_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_NAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_NATIVE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_NATIVE_CONFIDENTIAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_PROVIDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_REMEMBER_ME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_REQUIRES_EMAIL_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_SCOPES_OVERRIDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_SIGNUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_TLS_CACERTFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_USER_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_USER_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_VERIFY_X509_STRICT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRODUCTION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mealie/core/config.py",
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH_SECRET_HEADER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH_SIGNUP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRAPER_FLARESOLVERR_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRAPER_FLARESOLVERR_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRAPER_PROXY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRAPER_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SECURITY_MAX_LOGIN_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECURITY_USER_LOCKOUT_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SMTP_AUTH_STRATEGY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLITE_MIGRATE_JOURNAL_WAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRATEGY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TESTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/config.py",
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TLS_CERTIFICATE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TLS_PRIVATE_KEY_PATH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TOKEN_TIME",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UVICORN_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_PER_CORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "YTDLP_COOKIEFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mealie/core/settings/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: DB_ENGINE, PRODUCTION. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07289568,
+        "promptTokens": 14278,
+        "completionTokens": 826
+      },
+      "latencyMs": 12192
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 12193,
+    "questions": 2,
+    "generatedAt": "2026-10-28T12:56:40.729Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

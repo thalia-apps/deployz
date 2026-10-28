@@ -1,0 +1,899 @@
+{
+  "id": "new-146",
+  "commit": "f8057fbe1f17e8eef6b0fc7c28b73cbccdaa0a62",
+  "analyser": "rules@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "apps/dashboard",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "apps/dashboard/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": ".",
+      "missingSources": [
+        "\".\""
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"server.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/tokens",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AI_GATEWAY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "API_MAX_IN_FLIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMIT_BURST_PER_10S",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMIT_PUBLIC_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RATE_LIMIT_WRITES_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AXIOM_DATASET",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/server/src/index.ts",
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AXIOM_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/server/src/index.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in apps/private-location/internal/server/server.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "BIRD_ACCESS_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/notifications/bird-whatsapp/src/env.ts",
+            "read in packages/notifications/bird-whatsapp/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BIRD_CHANNEL_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/notifications/bird-whatsapp/src/env.ts",
+            "read in packages/notifications/bird-whatsapp/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BIRD_WORKSPACE_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/notifications/bird-whatsapp/src/env.ts",
+            "read in packages/notifications/bird-whatsapp/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CHECKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRON_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in apps/private-location/internal/server/routes.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "DASHBOARD_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_AUTH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/db/env.mjs",
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "apps/dashboard/.env.example declares DATABASE_URL",
+            "apps/status-page/.env.example declares DATABASE_URL",
+            "apps/server/.env.example declares DATABASE_URL",
+            "packages/db/.env.example declares DATABASE_URL",
+            "apps/dashboard/Dockerfile declares DATABASE_URL",
+            "read in packages/db/env.mjs",
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EXTERNAL_REPORT_SALT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLY_REGION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/server/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GCP_CLIENT_EMAIL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GCP_LOCATION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GCP_PRIVATE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GCP_PROJECT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_OPENPANEL_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/analytics/env.ts",
+            "read in packages/analytics/src/server.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "apps/dashboard/.env.example declares NEXT_PUBLIC_SENTRY_DSN",
+            "apps/status-page/.env.example declares NEXT_PUBLIC_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/analytics/env.ts",
+            "read in packages/db/env.mjs",
+            "read in apps/server/src/env.ts",
+            "read in apps/server/src/serve.ts",
+            "read in apps/server/src/index.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/analytics/src/server.ts",
+            "read in packages/emails/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in packages/notifications/email/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTIFICATION_TIMEOUT_MS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OAUTH_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENPANEL_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/analytics/env.ts",
+            "read in packages/analytics/src/server.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OUTBOX_DEADLINE_MS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OUTBOX_ROLLOUT_PCT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PAGERDUTY_APP_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/notifications/pagerduty/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts",
+            "read in apps/private-location/internal/server/server.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROJECT_ID_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QSTASH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "RESEND_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/emails/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in packages/notifications/email/env.ts",
+            "read in packages/notifications/email/src/index.ts",
+            "resend requires RESEND_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SCREENSHOT_SERVICE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SELF_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/index.ts",
+            "read in apps/workflows/src/env.ts",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SITE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_FEEDBACK_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_SIGNING_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STALE_CHECK_MS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/api/src/env.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPER_ADMIN_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "TEAM_ID_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEGRAM_BOT_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in packages/notifications/telegram/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "TINYBIRD_NOOP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/dashboard/src/app/api/health/route.ts",
+            "read in apps/server/src/routes/health.ts",
+            "read in apps/status-page/src/app/api/health/route.ts",
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in apps/server/src/libs/clients.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TINYBIRD_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/private-location/internal/server/server.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TINYBIRD_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/dashboard/src/app/api/health/route.ts",
+            "read in apps/server/src/routes/health.ts",
+            "read in apps/status-page/src/app/api/health/route.ts",
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in apps/server/src/libs/clients.ts",
+            "read in apps/server/src/utils/audit-log.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TINY_BIRD_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/dashboard/src/app/api/health/route.ts",
+            "read in apps/status-page/src/app/api/health/route.ts",
+            "read in apps/server/src/env.ts",
+            "read in apps/workflows/src/env.ts",
+            "read in packages/api/src/env.ts",
+            "read in apps/server/src/libs/clients.ts",
+            "read in apps/server/src/utils/audit-log.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TWILLIO_ACCOUNT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/workflows/src/env.ts",
+            "read in packages/notifications/twillio-sms/src/env.ts",
+            "read in packages/notifications/twillio-sms/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TWILLIO_AUTH_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/workflows/src/env.ts",
+            "read in packages/notifications/twillio-sms/src/env.ts",
+            "read in packages/notifications/twillio-sms/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "UNKEY_API_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "UNKEY_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/server/src/env.ts",
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "UPSTASH_REDIS_REST_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in apps/dashboard/src/app/api/health/route.ts",
+            "read in apps/server/src/routes/health.ts",
+            "read in apps/status-page/src/app/api/health/route.ts",
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "UPSTASH_REDIS_REST_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in apps/dashboard/src/app/api/health/route.ts",
+            "read in apps/server/src/routes/health.ts",
+            "read in apps/status-page/src/app/api/health/route.ts",
+            "read in apps/server/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VERCEL_AUTH_BEARER_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/api/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/analytics/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend",
+      "sentry",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yaml defines 7 application services (libsql, tinybird-local, workflows, server, private-location, dashboard, status-page). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yaml defines 7 application services (libsql, tinybird-local, workflows, server, private-location, dashboard, status-page). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies \".\", which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: AXIOM_DATASET, AXIOM_TOKEN, BIRD_ACCESS_KEY, BIRD_CHANNEL_ID, BIRD_WORKSPACE_ID, and 27 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 26,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,1872 @@
+{
+  "id": "new-129",
+  "commit": "fb25e42702806d361e8fbc9a502f15d073a79372",
+  "analyser": "ai@r6-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "turbo build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"node\", \"index.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "ASSET_STORE_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSETS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_PREPROCESSING_JOB_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_PREPROCESSING_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_STORE_S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_STORE_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_STORE_S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_STORE_S3_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ASSET_STORE_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ASSET_STORE_S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSER_CONNECT_ONDEMAND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSER_COOKIE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSER_WEBSOCKET_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSER_WEB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHANGELOG_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_CHALLENGE_WAIT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_DOMAIN_RATE_LIMIT_MAX_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_DOMAIN_RATE_LIMIT_WINDOW_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_DOWNLOAD_BANNER_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_ENABLE_ADBLOCKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_ENABLE_AUTOCONSENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_FULL_PAGE_ARCHIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_FULL_PAGE_ARCHIVE_MAX_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_FULL_PAGE_SCREENSHOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_HEADLESS_BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_IP_VALIDATION_DNS_RESOLVER_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_JOB_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_MONOLITH_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_NAVIGATE_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_PARSER_MEM_LIMIT_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_PARSE_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_PREFLIGHT_USER_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_SCREENSHOT_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_STORE_PDF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_STORE_SCREENSHOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_VIDEO_DOWNLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_VIDEO_DOWNLOAD_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_VIDEO_DOWNLOAD_ON_DEMAND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CRAWLER_VIDEO_DOWNLOAD_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DATA_DIR",
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_WAL_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEGRADED_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_MODE_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_MODE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_NEW_RELEASE_CHECK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_PASSWORD_AUTH",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_SIGNUPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_VERIFICATION_REQUIRED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_CONTEXT_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_DIMENSIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_ENABLE_AUTO_INDEXING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_JOB_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_TEXT_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_TEXT_MODEL_DIMENSION_OVERRIDE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVENT_LOGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FREE_BROWSER_CRAWLING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FREE_QUOTA_ASSET_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FREE_QUOTA_BOOKMARK_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTML_CONTENT_SIZE_INLINE_THRESHOLD_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_CONTEXT_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_ENABLE_AUTO_SUMMARIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_ENABLE_AUTO_TAGGING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_FETCH_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_IMAGE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_JOB_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_LANG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_MAX_OUTPUT_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_SUPPORTS_STRUCTURED_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_TEXT_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFERENCE_USE_MAX_COMPLETION_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_ASSET_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_RSS_FEEDS_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_WEBHOOKS_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/search-meilisearch/src/env.ts",
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/search-meilisearch/src/env.ts",
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_BATCH_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/search-meilisearch/src/env.ts",
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_MASTER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/plugins/search-meilisearch/src/env.ts",
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_VECTOR_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_VECTOR_MASTER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/plugins/vectorstore-meilisearch/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NEXTAUTH_SECRET",
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/trpc/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_AUTO_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_PROVIDER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OAUTH_WELLKNOWN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OCR_CACHE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OCR_CONFIDENCE_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OCR_USE_LLM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_PROXY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_SERVICE_TIER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EVENT_LOGS_EXPORT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_TRACING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAID_BROWSER_CRAWLING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAID_QUOTA_ASSET_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAID_QUOTA_BOOKMARK_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRIVACY_POLICY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMETHEUS_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMITING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_ADMIN_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_DISPATCHER_INACTIVITY_TIMEOUT_SECS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_ENABLE_DISPATCHERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_ENABLE_RUNNERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_EXPOSE_CORE_SERVICES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_LISTEN_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESTATE_PUB_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/plugins/queue-restate/src/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVENUECAT_ALLOW_SANDBOX_PURCHASES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVENUECAT_ENTITLEMENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVENUECAT_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVENUECAT_SECRET_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REVENUECAT_WEBHOOK_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RULE_ENGINE_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH_JOB_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEARCH_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEMANTIC_SEARCH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_PUBLISHABLE_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_YEARLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMS_OF_SERVICE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TURNSTILE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TURNSTILE_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USING_LEGACY_SEPARATE_CONTAINERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_RETRY_TIMES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBHOOK_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKERS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKERS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/shared/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "kubernetes/kustomization.yaml"
+    ],
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (kubernetes/kustomization.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05182056,
+        "promptTokens": 11976,
+        "completionTokens": 222
+      },
+      "latencyMs": 4357
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "sqlite",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4358,
+    "questions": 1,
+    "generatedAt": "2026-10-28T12:56:48.845Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}

@@ -1,0 +1,111 @@
+id: new-150
+repository: flipt-io/flipt
+commit: 33ddb30f98f779a0215428d7291d455aead6ee9f
+summary: >
+  Flipt v2 is a Go feature-flag server with an embedded React UI. v2 has no SQL database: flag state lives in a git
+  repository (a local directory, or a remote git repo that Flipt polls and pushes to). The default storage backend is
+  memory. HTTP and UI are on 8080 and gRPC is on 9000. No Dockerfile builds Flipt from the repo source: build/Dockerfile
+  copies a GoReleaser binary, and Dockerfile.dev and ui/Dockerfile are development images.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The architecture fits Deployz (one process, no database, port 8080, /health), with flag state in a remote git
+    repository (FLIPT_STORAGE_* settings) so local disk is not needed. But no Dockerfile in the repo builds from source,
+    so the vendor must add a multi-stage Dockerfile (npm build of ui, then go build ./cmd/flipt). A strict read of "no
+    CI-built artefacts" gives NOT_DEPLOYABLE. A deploy that keeps flag state only in memory or in a local directory loses
+    data on restart.
+dockerfile:
+  accept: []
+  reject:
+    - {path: build/Dockerfile, reason: "GoReleaser runtime image: copies a pre-built flipt binary from $TARGETPLATFORM, no build step"}
+    - {path: Dockerfile.dev, reason: "development image (mise, hot reload) used by docker-compose.yml"}
+    - {path: ui/Dockerfile, reason: "UI dev server image (npm run dev on 5173)"}
+  target: null
+  context: .
+  evidence:
+    - {path: build/Dockerfile, line: 15, quote: "COPY $TARGETPLATFORM/$BINARY /"}
+    - {path: docker-compose.yml, line: 13, quote: "command: [\"mise\", \"run\", \"dev\"]"}
+    - {path: ui/embed.go, line: 11, quote: "//go:embed dist/*"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: internal/config/server.go, line: 35, quote: "v.SetDefault(\"server.http_port\", 8080)"}
+    - {path: build/Dockerfile, line: 21, quote: "EXPOSE 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: internal/config/server.go, line: 33, quote: "v.SetDefault(\"server.host\", \"0.0.0.0\")"}
+startCommand:
+  source: explicit
+  accept: ["/flipt server", "flipt server"]
+  evidence:
+    - {path: build/Dockerfile, line: 26, quote: "CMD [\"/flipt\", \"server\"]"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: internal/cmd/http.go, line: 278, quote: "r.Mount(\"/health\", runtime.NewServeMux(runtime.WithHealthEndpointAt(grpc_health_v1.NewHealthClient(conn), \"/health\")))"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # v2 stores flags in git (storage.<name>.remote or backend.path), not in SQL.
+  evidence:
+    - {path: internal/config/storage.go, line: 32, quote: "v.SetDefault(\"storage.default.backend.type\", \"memory\")"}
+    - {path: internal/config/storage.go, line: 75, quote: "LocalStorageBackendType  = StorageBackendType(\"local\")"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/var/opt/flipt, /etc/flipt]
+  s3: none
+  s3SelectBy: {}
+  # Default storage is memory (state lost on restart). A remote git repo (storage.default.remote with credentials) keeps state outside the task.
+  evidence:
+    - {path: internal/config/storage.go, line: 32, quote: "v.SetDefault(\"storage.default.backend.type\", \"memory\")"}
+    - {path: build/Dockerfile, line: 13, quote: "mkdir -p /var/opt/flipt"}
+env:
+  required: []
+  optional: [FLIPT_STORAGE_DEFAULT_REMOTE, FLIPT_STORAGE_DEFAULT_BRANCH, FLIPT_STORAGE_DEFAULT_CREDENTIALS, FLIPT_SERVER_HTTP_PORT, FLIPT_CONFIG]
+  buildTime: []
+  evidence:
+    - {path: internal/config/config.go, line: 28, quote: "EnvPrefix = \"FLIPT\""}
+blockers:
+  expected:
+    - "No Dockerfile builds Flipt from the repo archive: build/Dockerfile copies a GoReleaser binary, Dockerfile.dev and ui/Dockerfile are development images; the embedded UI (ui/dist) also needs an npm build"
+    - "Default flag state is in memory; durable state needs a remote git repository and credentials in the configuration"
+  mustNot:
+    - "Missing SQL database must not be a blocker: Flipt v2 uses git storage"
+    - "gRPC port 9000 must not count as the app port: HTTP and UI are on 8080"
+    - "Redis must not be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Which git repository holds the flag state, and which credentials does Flipt use to read and push to it?"
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source"
+  unnecessary:
+    - "Which port? (8080; 9000 is gRPC)"
+    - "Health path? (/health)"
+traps:
+  - "build/Dockerfile looks like the production image but only copies a pre-built binary from the GoReleaser output (build/Dockerfile:15)"
+  - "Dockerfile.dev and docker-compose.yml build a dev server with mise and mount the source tree (docker-compose.yml)"
+  - "ui/Dockerfile runs the Vite dev server on 5173, not the product UI; the product UI is embedded in the Go binary through ui/embed.go"
+  - "Older Flipt (v1) used SQLite or PostgreSQL; this commit is the v2 branch where SQL is gone, so database detectors that match v1 docs find nothing"
+  - "/health is a gRPC-gateway route backed by the gRPC health service on 9000, still served on the HTTP port"
+crossReview:
+  - {field: docker-compose / build evidence, change: "fixed two line numbers: docker-compose.yml command 11 -> 13, build/Dockerfile mkdir -p /var/opt/flipt 10 -> 13", evidence: "docker-compose.yml:13; build/Dockerfile:13"}
+  - {field: outcome / dockerfile.accept, change: "none: no Dockerfile builds from source (build/Dockerfile copies a GoReleaser binary at line 15), so CODE_CHANGE; DEPLOYABLE_WITH_CHANGES already accepted", evidence: "build/Dockerfile:15; Dockerfile.dev; ui/embed.go:11"}
+  - {field: port / startCommand / healthPath / database, change: "none: 8080 default, CMD /flipt server, /health mounted on the HTTP router, memory default storage and no SQL", evidence: "internal/config/server.go:35; build/Dockerfile:26; internal/cmd/http.go:278; internal/config/storage.go:32"}
+  - {field: all, change: verified, evidence: "13 citations checked"}

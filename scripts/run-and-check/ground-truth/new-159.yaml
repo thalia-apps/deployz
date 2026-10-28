@@ -1,0 +1,172 @@
+id: new-159
+repository: InvoiceShelf/InvoiceShelf
+commit: c8d10f76891c4efdecb71c04b49109e8f67f8e7c
+summary: >
+  InvoiceShelf is an open-source invoicing app (Laravel 12, PHP 8.5, Vue 3 front end built with pnpm and Vite). The
+  production image docker/production/Dockerfile builds from repo source (static_builder stage with `pnpm build`, then
+  `composer install` on serversideup/php:8.5-fpm-nginx-alpine). The base image runs nginx and php-fpm under s6-overlay
+  on port 8080, and this Dockerfile adds a third s6 service that runs `php artisan schedule:work` (recurring invoices,
+  overdue flags, estimate expiry). Default database is SQLite in storage/app on local disk; MySQL, MariaDB and
+  PostgreSQL are supported. Queue, cache and session default to sync and file. A browser install wizard creates the
+  first admin.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The production Dockerfile builds from source, port 8080 and /up work, and PostgreSQL or MySQL replace SQLite through
+    DB_CONNECTION. The blocker is the image shape: nginx, php-fpm and the Laravel scheduler run as three s6-overlay
+    services in one container, and Deployz rejects images that supervise several long-running processes. With
+    SCHEDULER_ENABLED=false only the base image's nginx and php-fpm pair remains, but then recurring invoices,
+    overdue flagging and estimate expiry never run, unless the scheduler is declared as a separate worker (a repository
+    change). A strict read of the s6-overlay rule gives NOT_DEPLOYABLE. Uploads and PDFs use local disk (storage/) unless an
+    S3 disk is configured in the app, and the marketplace Modules/ directory needs a writable volume.
+dockerfile:
+  accept: [docker/production/Dockerfile]
+  reject:
+    - {path: docker/development/Dockerfile, reason: "development image with bind-mounted source and dev tools"}
+    - {path: docker/development/nginx.Dockerfile, reason: "development nginx front for the dev compose files"}
+    - {path: docker/development/adminer/Dockerfile, reason: "Adminer database UI for development compose files"}
+  target: production
+  context: .
+  evidence:
+    - {path: docker/production/Dockerfile, line: 5, quote: "RUN corepack enable && pnpm install --frozen-lockfile && pnpm build"}
+    - {path: docker/production/Dockerfile, line: 13, quote: "FROM serversideup/php:8.5-fpm-nginx-alpine-v5.0.2 AS base"}
+    - {path: docker/production/Dockerfile, line: 32, quote: "FROM base AS production"}
+    - {path: docker/production/Dockerfile, line: 76, quote: "composer install --prefer-dist --no-dev --optimize-autoloader"}
+    - {path: docker/production/docker-compose.mysql.yml, line: 31, quote: "dockerfile: docker/production/Dockerfile"}
+runtime: {accept: [php]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: docker/production/docker-compose.mysql.yml, line: 61, quote: "- \"8090:8080\" # 8090 is the public port."}
+    - {path: docker/production/docker-compose.sqlite.yml, line: 13, quote: "- \"8090:8080\" # 8090 is the public port."}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/production/docker-compose.mysql.yml, line: 61, quote: "- \"8090:8080\" # 8090 is the public port."}
+startCommand:
+  source: image
+  accept: []
+  # No CMD or ENTRYPOINT in the repo Dockerfile: the serversideup base image starts s6-overlay, which runs
+  # /etc/entrypoint.d/*.sh (00-setup.sh here), then nginx, php-fpm and the scheduler service.
+  evidence:
+    - {path: docker/production/Dockerfile, line: 80, quote: "COPY --chmod=755 docker/production/entrypoint.d/ /etc/entrypoint.d/"}
+    - {path: docker/production/Dockerfile, line: 90, quote: "COPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: bootstrap/app.php, line: 57, quote: "health: '/up',"}
+database:
+  status: required
+  engines: [sqlite, mysql, mariadb, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION: pgsql, DB_HOST: "host", DB_PORT: "5432", DB_DATABASE: "invoiceshelf", DB_USERNAME: "user", DB_PASSWORD: "password"}
+  connectionVars: [DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_URL]
+  # SQLite is the default and lives in storage/app/database.sqlite on local disk, so a Deployz deploy must select
+  # pgsql (or mysql) through DB_CONNECTION. MySQL and MariaDB are also valid; PostgreSQL is the preferred Deployz engine.
+  evidence:
+    - {path: .env.example, line: 10, quote: "DB_CONNECTION=sqlite"}
+    - {path: config/database.php, line: 29, quote: "'default' => env('DB_CONNECTION', 'sqlite'),"}
+    - {path: config/database.php, line: 99, quote: "'pgsql' => ["}
+    - {path: config/database.php, line: 59, quote: "'mysql' => ["}
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 80, quote: "if [ \"$DB_CONNECTION\" = \"sqlite\" ] || [ -z \"$DB_CONNECTION\" ]; then"}
+migrations:
+  mode: startup
+  accept: ["php artisan migrate --force"]
+  # The entrypoint runs migrations only when the app is already installed (migrate:status succeeds). A first install
+  # runs through the browser wizard, which creates the schema.
+  evidence:
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 180, quote: "echo \"**** Running migrations (if app is installed) ****\""}
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 187, quote: "./artisan migrate --force"}
+    - {path: docker/production/Dockerfile, line: 33, quote: "ENV AUTORUN_ENABLED=true"}
+redis:
+  status: optional
+  selectBy: {CACHE_STORE: redis, SESSION_DRIVER: redis, QUEUE_CONNECTION: redis}
+  # The phpredis extension is installed, but cache, session and queue default to file and sync, so Redis is never required.
+  evidence:
+    - {path: config/cache.php, line: 16, quote: "'default' => env('CACHE_STORE', 'file'),"}
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+    - {path: docker/production/Dockerfile, line: 27, quote: "redis \\"}
+workers:
+  status: optional-independent
+  commands: ["php /var/www/html/artisan schedule:work --no-interaction"]
+  # The scheduler runs as an s6 service next to nginx and php-fpm. SCHEDULER_ENABLED=false stops it so that it can be
+  # run as a separate container. QUEUE_CONNECTION defaults to sync, so no queue worker is needed.
+  evidence:
+    - {path: docker/production/s6-overlay/s6-rc.d/scheduler/run, line: 23, quote: "exec php /var/www/html/artisan schedule:work --no-interaction"}
+    - {path: docker/production/s6-overlay/s6-rc.d/scheduler/run, line: 10, quote: "# Set SCHEDULER_ENABLED=false when something else drives the schedule, such as"}
+    - {path: docker/production/Dockerfile, line: 82, quote: "# Supervise Laravel's scheduler next to nginx and php-fpm. The base image"}
+    - {path: config/queue.php, line: 16, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+scheduledJobs:
+  status: required
+  items: [recurring-invoices:generate, recurring-costs:generate, invoices:send-reminders, invoiceshelf:catch-up]
+  evidence:
+    - {path: routes/console.php, line: 26, quote: "Schedule::command('invoiceshelf:catch-up')"}
+    - {path: routes/console.php, line: 36, quote: "Schedule::command('recurring-invoices:generate')"}
+    - {path: routes/console.php, line: 49, quote: "Schedule::command('invoices:send-reminders')"}
+storage:
+  local: required
+  paths: [/var/www/html/storage, /var/www/html/Modules]
+  s3: native
+  s3SelectBy: {FILESYSTEM_DISK: s3, AWS_BUCKET: "bucket", AWS_REGION: "region"}
+  # storage/ holds uploads, attachments, generated PDFs, logs, the generated APP_KEY copy and the OAuth keys, and
+  # Modules/ holds marketplace modules. Both are volumes in the compose examples. Uploads can go to an S3 disk chosen in
+  # the app settings, but storage/framework, logs and fonts always stay on local disk (ephemeral writes only).
+  evidence:
+    - {path: docker/production/docker-compose.mysql.yml, line: 58, quote: "- invoiceshelf_storage:/var/www/html/storage/"}
+    - {path: docker/production/docker-compose.mysql.yml, line: 59, quote: "- invoiceshelf_modules:/var/www/html/Modules"}
+    - {path: config/filesystems.php, line: 47, quote: "'s3' => ["}
+    - {path: config/filesystems.php, line: 16, quote: "'default' => env('FILESYSTEM_DISK', 'local'),"}
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 34, quote: "storage/app/public \\"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "base64 Laravel key; if unset the entrypoint generates one into storage/app/.app_key, which is lost with ephemeral disk and breaks stored encrypted data; the shipped public key is refused"}
+    - {name: DB_CONNECTION, secret: false, buildTime: false, note: "pgsql or mysql; default sqlite"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "managed by Deployz"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: "managed by Deployz"}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: "managed by Deployz"}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: "managed by Deployz"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public https URL; used for links, the storage URL and Sanctum"}
+  optional: [APP_ENV, APP_DEBUG, APP_NAME, SESSION_DOMAIN, SANCTUM_STATEFUL_DOMAINS, TRUSTED_PROXIES, FORCE_HTTPS, SCHEDULER_ENABLED, INVOICESHELF_DOTENV, INVOICESHELF_MANAGED, CACHE_STORE, SESSION_DRIVER, QUEUE_CONNECTION, FILESYSTEM_DISK, PDF_DRIVER]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 3, quote: "APP_KEY="}
+    - {path: .env.example, line: 7, quote: "APP_URL="}
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 115, quote: "if [ \"$APP_KEY\" = \"$SHIPPED_APP_KEY\" ]; then"}
+    - {path: docker/production/entrypoint.d/00-setup.sh, line: 129, quote: "elif [ -z \"$APP_KEY\" ] && [ \"$DOTENV\" = \"false\" ]; then"}
+blockers:
+  expected:
+    - "The production image runs three long-running s6-overlay services (nginx, php-fpm, Laravel scheduler) in one container; the scheduler can be turned off with SCHEDULER_ENABLED=false only at the cost of recurring invoices, overdue flags and estimate expiry"
+  mustNot:
+    - "SQLite default must not be reported as an unsupported database: DB_CONNECTION=pgsql or mysql selects a supported engine"
+    - "Gotenberg in the development compose files must not be required: PDF_DRIVER defaults to dompdf"
+    - "Redis must not be required: cache, session and queue default to file and sync"
+    - "A queue worker must not be reported: QUEUE_CONNECTION defaults to sync"
+    - "docker/development/* Dockerfiles and the Adminer container must not be chosen or reported"
+    - "mobile/ (a separate mobile client) must not be reported as part of the deployable app"
+vendorQuestions:
+  legitimate:
+    - "Is the Laravel scheduler needed (recurring invoices, reminders, estimate expiry)? If yes, how should it run, as the s6 service inside the web container or as a separate worker with `php artisan schedule:work`?"
+    - "Where should uploads and PDFs go? Local storage/ is ephemeral on Fargate; configure an S3 file disk"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/up)"
+    - "Which Dockerfile? (docker/production/Dockerfile)"
+    - "Which database? (PostgreSQL or MySQL; SQLite is the default only)"
+traps:
+  - "docker/production/s6-overlay/ looks like the unsupported multi-process pattern; nginx and php-fpm come from the base image, and the repo only adds a scheduler service (Dockerfile:82-90)"
+  - "The Dockerfile has no EXPOSE, CMD or ENTRYPOINT; the 8080 port and the start come from the serversideup base image and the compose files"
+  - "The Dockerfile is in docker/production/ but the context is the repo root (compose: context ../../, Dockerfile:59 COPY .)"
+  - "The final stage is `production`; `base` and `static_builder` are intermediate stages"
+  - "SQLite is the default DB in .env.example and the entrypoint creates storage/app/database.sqlite; PostgreSQL or MySQL need DB_CONNECTION"
+  - "APP_KEY unset is not fatal: the entrypoint generates a key on the storage volume, which is ephemeral on Fargate (00-setup.sh:122-147)"
+  - "The entrypoint migrates only when the app is already installed; the first install is the browser wizard, where the first visitor creates the admin"
+  - "Modules/ must be writable for marketplace installs; it is a volume in the compose files (Dockerfile:61-66)"
+  - "Dockerfile COPY . happens before `composer install`, and the build needs network access to GitHub (composer VCS repository) with an optional composer_auth secret (Dockerfile:70-76)"
+  - "Development compose files bundle Gotenberg, Adminer and a separate nginx; none is part of production"
+openQuestions:
+  - "Whether Deployz treats nginx plus php-fpm from the serversideup base image as one web server (accepted) or as the unsupported supervised multi-process image"
+crossReview:
+  - {field: outcome, change: "none: DEPLOYABLE_WITH_CHANGES already in accept (three s6 services in one image is a multi-process image, CODE_CHANGE); NOT_DEPLOYABLE kept as the strict read", evidence: "docker/production/s6-overlay/s6-rc.d/scheduler/run; docker/production/Dockerfile:85"}
+  - {field: "dockerfile, port, healthPath, database, workers, storage", change: "none: production stage in docker/production/Dockerfile (FROM base AS production), /up health route registered, SQLite default replaceable by DB_CONNECTION, scheduler worker via SCHEDULER_ENABLED", evidence: "docker/production/Dockerfile:32; bootstrap/app.php:57 health: '/up'"}
+  - {field: all, change: verified, evidence: "38 citations checked"}
