@@ -1,0 +1,1049 @@
+{
+  "id": "new-68",
+  "commit": "891a056a305ecf25498911e57ed57973b87878bc",
+  "analyser": "ai@integrated-76",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "pnpm copy-scripts && pnpm build:esbuild",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./bin/docker\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "PGHOST",
+          "kind": "host"
+        },
+        {
+          "name": "PGPASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "PGUSER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "DUCKLAKE_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": "python manage.py migrate",
+      "mode": "pre_deploy"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOW_DEV_API_KEY_REVEAL",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares ALLOW_DEV_API_KEY_REVEAL"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ALLOW_DEV_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares ALLOW_DEV_LOGIN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "API_QUERIES_PER_TEAM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares API_QUERIES_PER_TEAM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BILLING_SERVICE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares BILLING_SERVICE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CDP_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares CDP_REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_API_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares CLICKHOUSE_API_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_API_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_API_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_APP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares CLICKHOUSE_APP_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_APP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_APP_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_BILLING_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares CLICKHOUSE_BILLING_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_BILLING_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_BILLING_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_DATABASE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_DICT_READER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares CLICKHOUSE_DICT_READER_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_DICT_READER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_DICT_READER_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_SECURE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_SIGNALS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares CLICKHOUSE_SIGNALS_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_SIGNALS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_SIGNALS_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CLICKHOUSE_VERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares CLICKHOUSE_VERIFY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COOKIELESS_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares COOKIELESS_REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DAGSTER_UI_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DAGSTER_UI_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DAGSTER_UI_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DAGSTER_UI_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DAGSTER_WEB_PREAGGREGATED_MAX_PARTITIONS_PER_RUN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DAGSTER_WEB_PREAGGREGATED_MAX_PARTITIONS_PER_RUN"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DEBUG",
+            ".env.development declares DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISABLE_SECURE_SSL_REDIRECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares DISABLE_SECURE_SSL_REDIRECT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKGRES_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_BUCKET"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_BUCKET_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_BUCKET_REGION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_RDS_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_RDS_DATABASE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_RDS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_RDS_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_RDS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares DUCKLAKE_RDS_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_RDS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_RDS_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_RDS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares DUCKLAKE_RDS_USERNAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_S3_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares DUCKLAKE_S3_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUCKLAKE_S3_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares DUCKLAKE_S3_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ELEVENLABS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ELEVENLABS_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ERROR_TRACKING_CYMBAL_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares ERROR_TRACKING_CYMBAL_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEATMAP_BROWSERLESS_SCREENSHOT_COOKIES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HEATMAP_BROWSERLESS_SCREENSHOT_COOKIES_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEATMAP_BROWSERLESS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares HEATMAP_BROWSERLESS_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "HEATMAP_BROWSERLESS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares HEATMAP_BROWSERLESS_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INGESTION_FLAG_EVALUATIONS_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares INGESTION_FLAG_EVALUATIONS_MODE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INGESTION_FLAG_EVALUATIONS_TEAMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares INGESTION_FLAG_EVALUATIONS_TEAMS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INGESTION_OUTPUT_FLAG_EVALUATIONS_TOPIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares INGESTION_OUTPUT_FLAG_EVALUATIONS_TOPIC"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INTERNAL_REQUEST_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares INTERNAL_REQUEST_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IS_BEHIND_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares IS_BEHIND_PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "KAFKA_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares KAFKA_HOSTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LLM_GATEWAY_POSTHOG_AI_LANE_CAPTURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LLM_GATEWAY_POSTHOG_AI_LANE_CAPTURE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OBJECT_STORAGE_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares OBJECT_STORAGE_ACCESS_KEY_ID"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OBJECT_STORAGE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares OBJECT_STORAGE_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OBJECT_STORAGE_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares OBJECT_STORAGE_FORCE_PATH_STYLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OBJECT_STORAGE_PUBLIC_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OBJECT_STORAGE_PUBLIC_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares OBJECT_STORAGE_SECRET_ACCESS_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_RSA_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OIDC_RSA_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_EXPORTER_OTLP_ENDPOINT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_LOGS_EXPORTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_LOGS_EXPORTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_METRICS_EXPORTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_METRICS_EXPORTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_PYTHON_DJANGO_INSTRUMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_PYTHON_DJANGO_INSTRUMENT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_PYTHON_DJANGO_MIDDLEWARE_POSITION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_PYTHON_DJANGO_MIDDLEWARE_POSITION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_PYTHON_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_PYTHON_LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_SERVICE_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_TRACES_EXPORTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares OTEL_TRACES_EXPORTER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PERSONHOG_ADDR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares PERSONHOG_ADDR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PERSONHOG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares PERSONHOG_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PGHOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares PGHOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PGPASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.services declares PGPASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PGUSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares PGUSER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_ALLOW_DUCKLAKE_CATALOG_RESET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares POSTHOG_ALLOW_DUCKLAKE_CATALOG_RESET"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "POSTHOG_SCHEMA_RESTORE_IN_DEV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares POSTHOG_SCHEMA_RESTORE_IN_DEV"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PYDEVD_DISABLE_FILE_VALIDATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares PYDEVD_DISABLE_FILE_VALIDATION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.services declares REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANDBOX_JWT_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SANDBOX_JWT_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANDBOX_MCP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SANDBOX_MCP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANDBOX_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SANDBOX_PROVIDER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SESSION_RECORDING_API_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares SESSION_RECORDING_API_REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SESSION_RECORDING_V2_S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares SESSION_RECORDING_V2_S3_ENDPOINT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SKIP_SERVICE_VERSION_REQUIREMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares SKIP_SERVICE_VERSION_REQUIREMENTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TEMPORAL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares TEMPORAL_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WIZARD_CLOUD_RUN_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares WIZARD_CLOUD_RUN_OAUTH_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported architecture: livestream/docker-compose.yml defines 2 application services (redpanda, console). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: livestream/docker-compose.yml defines 2 application services (redpanda, console). Deployz runs ONE web process per deployment plus declared background workers."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07784964,
+        "promptTokens": 15614,
+        "completionTokens": 809
+      },
+      "latencyMs": 12040
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "python manage.py migrate"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 12041,
+    "questions": 2,
+    "generatedAt": "2026-10-27T17:38:08.072Z",
+    "failedChecks": 0,
+    "promptVersion": 16
+  }
+}
