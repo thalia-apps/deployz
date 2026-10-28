@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { EventName, type EventEntity } from '@paddle/paddle-node-sdk';
 
@@ -109,8 +109,14 @@ async function isPendingCheckoutOf(
 async function resolveOrganizationId(
   tx: RuntimeDb,
   event: EventEntity,
+  pricePlatform: string,
 ): Promise<string | undefined> {
-  const data = event.data as { id: string; customData?: unknown; transactionId?: string | null };
+  const data = event.data as {
+    id: string;
+    customData?: unknown;
+    transactionId?: string | null;
+    items?: { price?: { id: string } | null }[];
+  };
   const fromCustomData = organizationIdFromCustomData(data.customData);
   const [existing] = await tx
     .select({ organizationId: schema.billingSubscriptions.organizationId })
@@ -124,7 +130,12 @@ async function resolveOrganizationId(
   if (existing) {
     return existing.organizationId;
   }
-  if (fromCustomData && (await isPendingCheckoutOf(tx, fromCustomData, data))) {
+  // Only subscription.created carries a transaction id, so the transaction
+  // check above cannot bind the later events; the platform price is what a
+  // checkout Deployz opened always contains, and one opened by a client with
+  // other items does not.
+  const hasPlatformPrice = data.items?.some((item) => item.price?.id === pricePlatform) ?? false;
+  if (fromCustomData && hasPlatformPrice && (await isPendingCheckoutOf(tx, fromCustomData, data))) {
     return fromCustomData;
   }
   return undefined;
@@ -240,7 +251,11 @@ async function touchTransactionSubscription(
   if (!data.subscriptionId) return false;
   const updated = await tx
     .update(schema.billingSubscriptions)
-    .set({ lastProviderEventAt: occurredAt })
+    .set({
+      // Never backwards: a delayed transaction event must not reopen the
+      // door to subscription events older than one already applied.
+      lastProviderEventAt: sql`greatest(coalesce(${schema.billingSubscriptions.lastProviderEventAt}, ${occurredAt.toISOString()}::timestamptz), ${occurredAt.toISOString()}::timestamptz)`,
+    })
     .where(eq(schema.billingSubscriptions.providerSubscriptionId, data.subscriptionId))
     .returning();
   return updated.length > 0;
@@ -340,7 +355,7 @@ export async function handlePaddleWebhook(
 
   try {
     const outcome = await db.transaction(async (tx) => {
-      const organizationId = await resolveOrganizationId(tx, event);
+      const organizationId = await resolveOrganizationId(tx, event, paddle.config.pricePlatform);
       if (!organizationId) {
         await markEvent(tx, eventRowId, 'IGNORED', now(), undefined, 'organization not found');
         return { outcome: 'IGNORED' } as const;

@@ -110,7 +110,7 @@ function subscriptionActivated(
       billing_cycle: { interval: 'month', frequency: 1 },
       current_billing_period: { starts_at: occurredAt, ends_at: occurredAt },
       scheduled_change: null,
-      items: [],
+      items: [{ status: 'active', quantity: 1, recurring: true, created_at: occurredAt, updated_at: occurredAt, price: { id: 'pri_platform_replace_me', product_id: 'pro_test_1', description: 'Test price', tax_mode: 'account_setting' } }],
       custom_data: checkoutIntentId ? { organizationId, checkoutIntentId } : { organizationId },
     },
   };
@@ -341,6 +341,34 @@ describe('POST /api/billing/checkout (Paddle migration Phase 8)', () => {
       expect(first.statusCode, first.body).toBe(200);
       expect(second.statusCode, second.body).toBe(200);
       // Paddle is asked once: a second transaction would be left dangling.
+      expect(calls).toBe(1);
+      expect(second.json()).toEqual(first.json());
+      expect(await pendingIntents(db, org.organizationId)).toHaveLength(1);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('two simultaneous checkouts (a double click) open exactly one Paddle transaction', async () => {
+    let calls = 0;
+    const app = await buildServer({
+      auth,
+      db,
+      paddle: buildPaddle(async () => {
+        calls += 1;
+        const id = `txn_test_race_${calls}`;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return { id };
+      }),
+    });
+    try {
+      await clearIntents(db, org.organizationId);
+      const [first, second] = await Promise.all([
+        postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie }),
+        postJson(app, '/api/billing/checkout', {}, { cookie: org.cookie }),
+      ]);
+      expect(first.statusCode, first.body).toBe(200);
+      expect(second.statusCode, second.body).toBe(200);
       expect(calls).toBe(1);
       expect(second.json()).toEqual(first.json());
       expect(await pendingIntents(db, org.organizationId)).toHaveLength(1);

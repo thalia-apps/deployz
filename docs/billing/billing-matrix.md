@@ -94,6 +94,10 @@ Integration tests: `billing-entitlements.test.ts` (tests 4–9),
 | Deploy / rollback / restart / config / destroy an EXISTING deployment | ✅ | ✅ | ✅ | ✅ | ✅ |
 | TEST deployment, analysis, configuration, customers, releases | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Customer portal (`POST /api/billing/portal`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ |
+| Billing details and invoice PDFs (`GET /api/billing/account`, `/api/billing/invoices/:id`) | 409 `NO_SUBSCRIPTION` | ✅ | ✅ | ✅ | ✅ |
+
+Checkout, portal, billing details and invoices need an owner or admin (403
+for a member; `billing-account.test.ts`, `billing-github-roles.test.ts`).
 
 Payment state never touches running customer infrastructure.
 

@@ -140,6 +140,7 @@ import {
   DEPLOYMENT_PRICE_DOLLARS,
 } from './billing-domain.js';
 import { markDeploymentLive, markDeploymentRemoved } from './billing-lifecycle.js';
+import { getBillingAccount, getInvoiceUrl } from './billing-account.js';
 import { createBillingPortalLinks } from './billing-portal.js';
 import { reconcileBilling } from './billing-reconcile.js';
 import { handlePaddleWebhook } from './billing-webhooks.js';
@@ -8356,6 +8357,26 @@ export async function buildServer({
     const organizationId = requireSessionOrganizationId(request);
     return createBillingPortalLinks({ db, paddle }, organizationId);
   });
+
+  // GET /api/billing/account — the next payment, the payment method and the
+  // invoices, read live from Paddle for the organization's own subscription.
+  app.get('/api/billing/account', { preHandler: requireAuth }, async (request) => {
+    requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
+    const organizationId = requireSessionOrganizationId(request);
+    return getBillingAccount({ db, paddle }, organizationId);
+  });
+
+  // GET /api/billing/invoices/:transactionId — a short-lived link to one
+  // invoice PDF of the organization's own subscription.
+  app.get<{ Params: { transactionId: string } }>(
+    '/api/billing/invoices/:transactionId',
+    { preHandler: requireAuth },
+    async (request) => {
+      requireOwnerOrAdmin(request, BILLING_ROLE_MESSAGE);
+      const organizationId = requireSessionOrganizationId(request);
+      return getInvoiceUrl({ db, paddle }, organizationId, request.params.transactionId);
+    },
+  );
 
   // POST /api/billing/webhook — Paddle subscription/transaction events.
   // Signature-verified over the raw body (see the addContentTypeParser

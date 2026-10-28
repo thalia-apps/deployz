@@ -38,6 +38,26 @@ Verified after creation: both prices `active`, USD, `billing_cycle`
 `{ interval: month, frequency: 1 }`, amounts `4900` and `1900`,
 `trial_period` null, tax category `standard`.
 
+## Production
+
+Created 2026-10-28 through the authenticated Paddle **live** MCP, with the
+same names, descriptions, amounts, quantity limits and tax mode as the
+sandbox. Read back as `active`, USD, monthly, `4900` / `1900`, no trial.
+
+| Entity | Id |
+|---|---|
+| Product — Deployz Platform | `pro_01m610t14e20720ks2fynbt22p` |
+| Price — $49/month, quantity 1..1 | `pri_01m610t25agdphge6d8w4fh77r` |
+| Product — Customer Deployment | `pro_01m610t1gtesdqqk3vbp52jasw` |
+| Price — $19/month, quantity 1..1000 | `pri_01m610t2fp2ydcya68hn9gvr14` |
+| Notification destination — `https://api.app.deployz.dev/api/billing/webhook` | `ntfset_01m610t35kcj28shbpr0s5jw3h` |
+
+The notification destination receives platform traffic only (no
+simulations) for the nine events `apps/api/src/billing-webhooks.ts`
+handles: `subscription.created`, `.activated`, `.updated`, `.past_due`,
+`.paused`, `.resumed`, `.canceled`, `transaction.completed` and
+`transaction.payment_failed`. Its secret key is `PADDLE_WEBHOOK_SECRET`.
+
 ## Creating the production equivalents
 
 Production has its OWN ids. Do not copy the sandbox ids above into a
@@ -56,9 +76,10 @@ production environment — they do not exist there.
 4. Confirm both prices read back `active`, USD, monthly, `4900` / `1900`,
    with no trial period.
 5. Set `PADDLE_PRICE_PLATFORM` and `PADDLE_PRICE_DEPLOYMENT` to the new price
-   ids as GitHub secrets (see `.github/workflows/deploy-api.yml`), together
+   ids as secrets of the `production` GitHub environment (see
+   `.github/workflows/deploy-api.yml`), together
    with `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_CLIENT_TOKEN`, and
-   the `PADDLE_ENVIRONMENT` variable set to `production`.
+   the environment variable `PADDLE_ENVIRONMENT` set to `production`.
 6. Record the production ids in this file, in a section of their own.
 
 ## Changing a price
