@@ -1,3 +1,5 @@
+import { gunzipSync } from 'node:zlib';
+
 import { describe, it, expect } from 'vitest';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
@@ -113,5 +115,33 @@ describe('toLambdaResult', () => {
     });
 
     expect(result.headers).toEqual({ 'content-length': '0' });
+  });
+
+  it('gzips a large body when the client accepts gzip', () => {
+    const body = JSON.stringify({ rows: Array.from({ length: 200 }, (_, id) => ({ id, state: 'RUNNING' })) });
+    const result = toLambdaResult(
+      { statusCode: 200, headers: { 'content-length': body.length, vary: 'Origin' }, body },
+      'gzip, deflate, br',
+    );
+
+    expect(result.isBase64Encoded).toBe(true);
+    expect(result.headers).toEqual({ 'content-encoding': 'gzip', vary: 'Origin, Accept-Encoding' });
+    expect(gunzipSync(Buffer.from(result.body!, 'base64')).toString()).toBe(body);
+  });
+
+  it('sends the body as it is when the client does not accept gzip', () => {
+    const body = 'x'.repeat(2048);
+    const result = toLambdaResult({ statusCode: 200, headers: {}, body });
+
+    expect(result.isBase64Encoded).toBe(false);
+    expect(result.body).toBe(body);
+    expect(result.headers).toEqual({ vary: 'Accept-Encoding' });
+  });
+
+  it('does not gzip a small body', () => {
+    const result = toLambdaResult({ statusCode: 200, headers: {}, body: '{"ok":true}' }, 'gzip');
+
+    expect(result.isBase64Encoded).toBe(false);
+    expect(result.body).toBe('{"ok":true}');
   });
 });
