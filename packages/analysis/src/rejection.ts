@@ -6,6 +6,7 @@
  * No AI, no network, no side effects.
  */
 
+import { isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER } from './ai-analysis/evidence-pack.js';
 import type { ComposeService, FileTree } from './detectors.js';
 import {
   TREE_PATHS,
@@ -728,7 +729,7 @@ const RABBITMQ_ENV_REGEX = /^(?:RABBITMQ_(?:URL|HOST)|AMQP_URL|CLOUDAMQP_URL)$/;
 /** Kafka: clients/consumers + Kafka/Confluent images in compose. */
 export function checkKafka(tree: FileTree): RejectionFinding {
   const compose = composeServices(tree);
-  if (compose?.services.some((s) => s.image && /kafka|confluentinc/i.test(s.image))) {
+  if (compose?.services.some((s) => !s.optional && s.image && /kafka|confluentinc/i.test(s.image))) {
     return { detected: true, dependency: 'kafka', reason: `Unsupported infrastructure: a Kafka service is defined in ${compose.file}.` };
   }
 
@@ -762,10 +763,11 @@ export function checkKafka(tree: FileTree): RejectionFinding {
   return { detected: false, dependency: 'none', reason: 'No Kafka infrastructure detected' };
 }
 
-/** RabbitMQ: AMQP clients + rabbitmq images in compose. */
+/** RabbitMQ: AMQP clients + rabbitmq services in compose. */
 export function checkRabbitMq(tree: FileTree): RejectionFinding {
   const compose = composeServices(tree);
-  if (compose?.services.some((s) => s.image && /rabbitmq/i.test(s.image))) {
+  // A service that `extends` another file's rabbitmq service has no image of its own (AutoGPT).
+  if (compose?.services.some((s) => !s.optional && ((s.image && /rabbitmq/i.test(s.image)) || /^rabbitmq$/i.test(s.name)))) {
     return { detected: true, dependency: 'rabbitmq', reason: `Unsupported infrastructure: a RabbitMQ service is defined in ${compose.file}.` };
   }
 
@@ -782,6 +784,8 @@ export function checkRabbitMq(tree: FileTree): RejectionFinding {
       client = `a RabbitMQ client declared in ${path}`;
     } else if (/(?:^|\/)Gemfile$/.test(path) && /^gem\s+['"]bunny['"]/m.test(content)) {
       client = `a RabbitMQ client declared in ${path}`;
+    } else if (isRuntimeSourcePath(path) && (JS_SOURCE_REGEX.test(path) || LANGUAGE_SOURCE_REGEX.test(path)) && /["'`]amqps?:\/\//.test(content)) {
+      client = `an AMQP URL in ${path}`;
     }
   }
   if (client) {
@@ -1087,9 +1091,30 @@ export function checkGpu(tree: FileTree): RejectionFinding {
 const DOCUMENT_ONLY_PATH_REGEX =
   /^\.(?:github|gitignore|gitattributes|editorconfig)(?:\/|$)|(?:^|\/)(?:readme|licen[cs]e|copying|notice|changelog|contributing|code_of_conduct|security|authors|funding)(?:\.[\w.-]+)?$|\.(?:md|rst|png|jpe?g|gif|svg|webp)$/i;
 
+// A workspace root only lists packages; examples, templates and cookbooks are not the product.
+const WORKSPACE_ROOT_MANIFEST_REGEX = /"workspaces"\s*:|^\s*\[(?:workspace|tool\.uv\.workspace)\]/m;
+const SCAFFOLD_PATH_REGEX = /(?:^|\/)(?:templates?|cookbooks?|starters?|scaffolds?)\//i;
+// `"main"`, `"module"` and `"types"` alone do not publish: an application's package.json has them too.
+const ENTRY_FIELD_ONLY_REGEX = /^\s*"(?:main|module|types|typings)"\s*:/;
+
+/**
+ * The production package manifests when EVERY one of them publishes its code for others to
+ * install (a `bin`, `exports`, a build backend, console scripts, a Rust `[lib]`), else empty.
+ * One manifest that packages nothing (an application's package.json or composer.json, a Rust
+ * binary crate) means the repository holds an application.
+ */
+function publishedPackageManifests(tree: FileTree): string[] {
+  const manifests = Object.keys(tree).filter(
+    (path) => PACKAGE_MANIFEST.test(path) && isProductionFile(path) && !SCAFFOLD_PATH_REGEX.test(path) && !WORKSPACE_ROOT_MANIFEST_REGEX.test(tree[path] ?? ''),
+  );
+  const publishes = (path: string): boolean => (tree[path] ?? '').split('\n').some((line) => PACKAGE_MARKER.test(line) && !ENTRY_FIELD_ONLY_REGEX.test(line));
+  return manifests.every(publishes) ? manifests.sort() : [];
+}
+
 /**
  * A repository with no Dockerfile that builds a production image cannot be
- * deployed: no Deployz setting adds one. Rejects only on complete evidence
+ * deployed: no Deployz setting adds one. A repository whose every package
+ * manifest publishes a library, framework, SDK or CLI is not an application. Rejects only on complete evidence
  * (`detectUnbuildableDockerfile`), never on a capped or partial file list
  * (COMP-021).
  */
@@ -1106,6 +1131,14 @@ export function checkNoBuildableDockerfile(tree: FileTree): RejectionFinding {
   const reason = detectUnbuildableDockerfile(tree);
   if (reason === null) {
     return { detected: false, dependency: 'none', reason: 'A Dockerfile that can build the app exists, or the file list is incomplete' };
+  }
+  const packages = publishedPackageManifests(tree);
+  if (packages.length > 0) {
+    return {
+      detected: true,
+      dependency: 'library-repository',
+      reason: `Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (${packages.slice(0, 3).join(', ')}), and no Dockerfile builds an application.`,
+    };
   }
   return {
     detected: true,
@@ -1297,6 +1330,11 @@ function isLocalDirValue(value: string): boolean {
 /** A web-server front end or php-fpm: part of one web service, not an extra application. */
 const WEB_FRONT_END = /(?<![a-z])(?:nginx|apache2?|httpd|caddy)(?![a-z])|fpm/i;
 
+/** A supervised queue worker or scheduler (`artisan schedule:work`), not a web process. */
+function isSupervisedWorker(name: string, command: string): boolean {
+  return isWorkerServiceCommand(name, command) || /\bschedul(?:e|er)\b|schedule:work|\bcrond?\b/i.test(`${name} ${command}`);
+}
+
 /** True when a COPY or ADD source of the selected Dockerfile brings the tree path into the image. */
 function dockerfileCopiesPath(dockerfileLines: string[], dockerfilePath: string, path: string): boolean {
   const directory = dockerfilePath.includes('/') ? dockerfilePath.slice(0, dockerfilePath.lastIndexOf('/')) : '';
@@ -1341,34 +1379,62 @@ export function checkMultiProcessImage(tree: FileTree): RejectionFinding {
   const lines = dockerfile.split('\n');
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS] ?? Object.keys(tree);
   const copied = (path: string): boolean => selected !== undefined && dockerfileCopiesPath(lines, selected, path);
+  // A base image that serves the web front end itself (serversideup/php:*-fpm-nginx) supervises it too.
+  const webBase = [...dockerfile.matchAll(/^\s*FROM\s+(?:--\S+\s+)*(\S+)/gim)].some((match) => WEB_FRONT_END.test(match[1] ?? ''));
   if (/s6-overlay|S6_OVERLAY|\bs6-svscan\b/i.test(dockerfile)) {
     const services = new Set<string>();
+    let web = webBase;
+    let worker = false;
     for (const path of paths) {
       const name = /(?:^|\/)(?:s6-rc\.d|services\.d)\/([\w.-]+)\/run$/.exec(path)?.[1];
-      if (name !== undefined && copied(path) && !WEB_FRONT_END.test(`${name} ${tree[path] ?? ''}`)) services.add(name);
+      if (name === undefined || !copied(path)) continue;
+      // A comment names other services ("supervised alongside nginx"), not this one's command.
+      const script = (tree[path] ?? '').replace(/^\s*#.*$/gm, '');
+      if (WEB_FRONT_END.test(`${name} ${script}`)) {
+        web = true;
+        continue;
+      }
+      services.add(name);
+      worker ||= isSupervisedWorker(name, script);
     }
-    if (services.size >= 2) {
+    // The web service plus one worker (the Laravel scheduler next to nginx and php-fpm) is two processes too.
+    if (services.size >= 2 || (services.size === 1 && web && worker)) {
       return {
         detected: true,
         dependency: 'multi-process-image',
-        reason: `Unsupported container setup: ${selected} runs s6-overlay with ${services.size} long-running services (${[...services].slice(0, 4).join(', ')}) in one container. Deployz runs one web process and declared workers as separate services.`,
+        reason: `Unsupported container setup: ${selected} runs s6-overlay with ${services.size >= 2 ? `${services.size} long-running services` : 'a web server and a worker service'} (${[...services].slice(0, 4).join(', ')}) in one container. Deployz runs one web process and declared workers as separate services.`,
       };
     }
   }
   if (/\bsupervisord\b/i.test(dockerfile)) {
     for (const [path, content] of Object.entries(tree)) {
       if (!/supervisor[\w.-]*\.(?:conf|ini)$/i.test(path) || !content || !copied(path)) continue;
-      const programs = content
-        .split(/^\s*(?=\[program:[^\]]+\])/m)
-        .filter((section) => section.startsWith('[program:') && !WEB_FRONT_END.test(section));
-      if (programs.length >= 2) {
+      const sections = content.split(/^\s*(?=\[program:[^\]]+\])/m).filter((section) => section.startsWith('[program:'));
+      const programs = sections.filter((section) => !WEB_FRONT_END.test(section));
+      const web = webBase || programs.length < sections.length;
+      const worker = programs.some((section) => isSupervisedWorker(/^\[program:([^\]]+)\]/.exec(section)?.[1] ?? '', section));
+      if (programs.length >= 2 || (programs.length === 1 && web && worker)) {
         return {
           detected: true,
           dependency: 'multi-process-image',
-          reason: `Unsupported container setup: ${selected} runs supervisord with ${programs.length} programs (${path}) in one container. Deployz runs one web process and declared workers as separate services.`,
+          reason: `Unsupported container setup: ${selected} runs supervisord with ${programs.length >= 2 ? `${programs.length} programs` : 'a web server and a worker program'} (${path}) in one container. Deployz runs one web process and declared workers as separate services.`,
         };
       }
     }
+  }
+  // A shell-form start that backgrounds a server before the foreground one (`node worker.js & node server.js`).
+  const start = lines
+    .filter((line) => /^\s*(?:ENTRYPOINT|CMD)\b/i.test(line))
+    .map((line) => line.replace(/^\s*(?:ENTRYPOINT|CMD)\s+/i, '').replace(/[[\]"]|,(?=\s*")/g, ' '))
+    .join(' ');
+  const inline = /(?:^|[;&|]|-c\s)\s*([^&|;]+?)\s+&(?!&)\s*([^&|;]+)/.exec(start);
+  const background = inline?.[1]?.trim() ?? '';
+  if (inline && !WEB_FRONT_END.test(background) && !/migrat|^(?:sleep|wait|trap)\b/i.test(background) && !/^\s*(?:wait|sleep)\b/.test(inline[2] ?? '')) {
+    return {
+      detected: true,
+      dependency: 'multi-process-image',
+      reason: `Unsupported container setup: the start command of ${selected} runs ${background} in the background next to ${inline[2]?.trim()} in one container. Deployz runs one web process and declared workers as separate services.`,
+    };
   }
   // A start script that puts two or more long-running servers in the background
   // (`redis-server &`, `node server.js &`) is a supervisor of its own. A migration it waits for is no server.

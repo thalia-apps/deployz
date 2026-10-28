@@ -1,0 +1,537 @@
+{
+  "id": "new-143",
+  "commit": "a84bbb65e32edf972856b329417096ac413518e9",
+  "analyser": "rules@r6-gaps",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "parcel build manifest.json --target prod && web-ext build -s dist/prod/",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/opt/focalboard/bin/focalboard-server\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/ping",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "FOCALBOARD_AUTHMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_DATARETENTIONDAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_DBCONFIGSTRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_DBPINGATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_DBTABLEPREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_DBTYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_ENABLEDATARETENTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_ENABLELOCALMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_ENABLEPUBLICSHAREDBOARDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_FEATUREFLAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_FILESDRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_FILESPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_HTTP_SERVER_BASEPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/web/webserver.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_LOCALMODESOCKETLOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_LOCALONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_NOTIFYFREQBOARDSECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_NOTIFYFREQCARDSECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_PROMETHEUSADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SECURECOOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SERVERROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SESSIONEXPIRETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SESSIONREFRESHTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SHOWEMAILADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SHOWFULLNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_SINGLE_USER_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/main/main.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_TEAMMATENAMEDISPLAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_TELEMETRYID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_UNIT_TESTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/integrationtests/clienttestlib.go",
+            "read in server/utils/debug.go",
+            "read in server/web/webserver.go",
+            "read in server/services/store/sqlstore/data_migrations.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_UNIT_TESTING_COMPLIANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/integrationtests/pluginteststore.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_WEBHOOKUPDATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FOCALBOARD_WEBPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MM_BOARDS_NOTIFY_FREQ_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/notify/notifysubscriptions/subscriptions_backend.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MM_CLOUD_INSTALLATION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/server/server.go",
+            "read in server/services/metrics/metrics.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUDDER_DATAPLANE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/services/telemetry/telemetry.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUDDER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/services/telemetry/telemetry.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

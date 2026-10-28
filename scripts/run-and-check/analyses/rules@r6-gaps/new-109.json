@@ -1,0 +1,618 @@
+{
+  "id": "new-109",
+  "commit": "8dd46a4d14ecbce4e2ee4a71561d7a5e917dfed3",
+  "analyser": "rules@r6-gaps",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsdown && tsc -p tsconfig.build.json",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"windmill\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APPDATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKEND_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_INTERNAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in multiplayer/server.mjs",
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in chat-sdk/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISABLE_S3_STORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in multiplayer/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HUB_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "I_ACK_NUM_WORKERS_IS_UNSAFE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LISTEN_NEW_EVENTS_INTERVAL_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NUM_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in multiplayer/server.mjs",
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REQUIRE_SIGNED_MULTIPLAYER_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in multiplayer/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_UPDATE_CA_CERTIFICATE_AT_START",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUN_UPDATE_CA_CERTIFICATE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RUST_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SETTINGS_RELOAD_PERIOD_SECS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_MIGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_CLICKTRACKING_OFF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DISABLE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS_IMPLICIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/windmill-common/src/server.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_CACHED_RT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEMP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TMP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TMPDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WINDMILL_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in multiplayer/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WMILL_AI_EVAL_BACKEND_VALIDATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ai_evals/cli/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WMILL_AI_EVAL_REASONING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ai_evals/cli/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WMILL_CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WMILL_INSTANCE_LOCAL_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cli/src/core/settings.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "WMILL_NO_REENCRYPT_ON_KEY_CHANGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/src/core/settings.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WM_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares WM_IMAGE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WM_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in chat-sdk/src/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WM_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in chat-sdk/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_CONFIG_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_RUNTIME_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/windmill-utils-internal/src/config/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 2 application services (windmill_server, windmill_extra). Deployz runs ONE web process per deployment plus declared background workers.",
+      "The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (windmill_server, windmill_extra). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "The Dockerfile copies or reads the .git directory, which the source archive Deployz builds from does not contain"
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

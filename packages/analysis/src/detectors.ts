@@ -378,7 +378,52 @@ export function composeServices(tree: FileTree): { file: string; services: Compo
     if (inPorts && listItem?.[1]) current.ports.push(listItem[1]);
     if (inCommand && listItem?.[1] !== undefined) current.command = `${current.command ?? ''} ${listItem[1]}`.trim();
   }
+  // A lighter stand-alone production variant next to the file (`docker-compose.flags-only.yml`) that
+  // runs the first application service with a subset of the services makes every service it leaves
+  // out optional (Flagsmith). An overlay merged with `-f` (`docker-compose.s3.yml`) defines its
+  // services only in part, so it is no variant.
+  const directory = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
+  const names = composeServiceDefinitions(content);
+  const main = services.find(
+    (service) => service.build !== null || (service.image !== null && !INFRA_COMPOSE_IMAGE_REGEX.test(service.image) && !TOOL_COMPOSE_IMAGE_REGEX.test(service.image)),
+  );
+  for (const [variant, variantContent] of Object.entries(tree)) {
+    if (main === undefined || variant === path || !variantContent || variant.slice(0, variant.lastIndexOf('/') + 1) !== directory) continue;
+    if (!COMPOSE_VARIANT_FILENAME_REGEX.test(variant.slice(directory.length)) || !isProductionComposeFile(variant) || SOURCE_MOUNT_REGEX.test(variantContent)) continue;
+    const kept = composeServiceDefinitions(variantContent);
+    const standalone = kept.size > 0 && [...kept].every(([name, defined]) => defined && names.has(name));
+    if (!standalone || !kept.has(main.name) || kept.size >= names.size) continue;
+    for (const service of services) if (!kept.has(service.name)) service.optional = true;
+  }
   return { file: path, services };
+}
+
+const COMPOSE_VARIANT_FILENAME_REGEX = /^(?:docker-compose|compose)[.-][\w.-]+\.ya?ml$/i;
+
+/** The services of a Compose file (the keys one level under `services:`), each true when it names its own `image`, `build` or `extends`. */
+function composeServiceDefinitions(content: string): Map<string, boolean> {
+  const services = new Map<string, boolean>();
+  let serviceIndent = -1;
+  let inServices = false;
+  let current: string | null = null;
+  for (const line of content.split(/\r?\n/)) {
+    if (/^services:\s*$/.test(line)) {
+      inServices = true;
+      continue;
+    }
+    if (!inServices || /^\s*(?:#|$)/.test(line)) continue;
+    const indent = line.length - line.trimStart().length;
+    if (indent === 0) break;
+    if (serviceIndent === -1) serviceIndent = indent;
+    const header = indent === serviceIndent ? /^\s*([a-zA-Z0-9_.-]+):\s*$/.exec(line) : null;
+    if (header?.[1]) {
+      current = header[1];
+      services.set(current, false);
+    } else if (current !== null && /^\s*(?:image|build|extends):/.test(line)) {
+      services.set(current, true);
+    }
+  }
+  return services;
 }
 
 /**
@@ -2085,6 +2130,8 @@ const LANGUAGE_PG_SIGNALS: { token: string; name: string }[] = [
   { token: 'pg8000', name: 'pg8000' },
   { token: 'github.com/jackc/pgx', name: 'jackc/pgx' },
   { token: 'github.com/lib/pq', name: 'lib/pq' },
+  // GORM's PostgreSQL driver; it pulls jackc/pgx in as an `// indirect` module.
+  { token: 'gorm.io/driver/postgres', name: 'gorm.io/driver/postgres' },
   { token: 'pg', name: 'pg (Ruby)' },
   // PHP, JVM, .NET, Rust and Elixir drivers (Stage A COMP-029).
   { token: 'ext-pdo_pgsql', name: 'pdo_pgsql (PHP)' },
@@ -2117,8 +2164,8 @@ function detectLanguagePostgres(tree: FileTree): string[] {
   for (const { token, name } of LANGUAGE_PG_SIGNALS) {
     // The bare `pg` token is deliberately ambiguous (node pg, ruby pg) — only
     // accept it from a Ruby manifest line (`gem 'pg'`) to avoid false hits on
-    // any file containing the word "pg".
-    const paths = findDependencyEvidence(tree, token);
+    // any file containing the word "pg". A `// indirect` go.mod line is a transitive module, not the app's driver.
+    const paths = findDependencyEvidence(tree, token, true);
     if (paths.length === 0) continue;
     if (token === 'pg') {
       const rubyHit = paths.some((p) => RB_DEPENDENCY_FILES.test(p));
@@ -6234,7 +6281,8 @@ export function detectDockerfileMissingCopySources(tree: FileTree, dockerfilePat
     for (const token of copyAddSources(args.replace(/^(?:\s*--\S+)+\s*(?=\[)/, ''))) {
       if (/[*?$[]|^[a-z]+:\/\//i.test(token) || GIT_SOURCE_TOKEN_REGEX.test(token)) continue;
       // A leading `/` is still relative to the build context.
-      const source = token.replace(/^\/+/, '').replace(/^\.\//, '').replace(/\/+$/, '');
+      // A trailing `/.` (`COPY src/web/. ./`) names the directory itself.
+      const source = token.replace(/^\/+/, '').replace(/^\.\//, '').replace(/(?:\/\.?)+$/, '');
       if (source === '' || source === '.') continue;
       if (exists(source) || (dockerDir !== '' && exists(`${dockerDir}/${source}`))) continue;
       if (!missing.includes(source)) missing.push(source);
@@ -6262,6 +6310,43 @@ function isDevOnlyDockerfile(path: string, content: string): boolean {
   const runsDevServer = start.some((line) => DEV_RUNTIME_REGEX.test(line.replace(/["',[\]\s]+/g, ' ')));
   const buildsSomething = lines.some((line) => /^\s*RUN\b.*\b(?:build|compile|publish)\b/i.test(line));
   return runsDevServer || start.length === 0 || !buildsSomething;
+}
+
+// A RUN step that builds or installs the app: a compiler, a package manager or a build tool.
+const BUILD_RUN_REGEX =
+  /^\s*RUN\b.*\b(?:go|cargo|rustc|npm|npx|yarn|pnpm|bun|deno|node|mvnw?|gradlew?|sbt|ant|make|cmake|gcc|javac|dotnet|pip3?|poetry|uv|pipenv|python3?|bundle|gem|composer|mix|tsc)\b/im;
+
+/**
+ * Build outputs that a Dockerfile with no build step copies from the build context: a
+ * generated directory the repository does not contain (`COPY dist/shiori …`) or a path
+ * of build arguments with no default (`COPY $TARGETPLATFORM/$BINARY /`). A CI job
+ * (goreleaser) makes them before `docker build`, so the release build cannot.
+ */
+function prebuiltArtefactSources(tree: FileTree, dockerfilePath: string): string[] {
+  const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
+  const content = (tree[dockerfilePath] ?? '').replace(/\\\r?\n/g, ' ');
+  if (!paths || BUILD_RUN_REGEX.test(content)) return [];
+  const dockerDir = dockerfilePath.includes('/') ? dockerfilePath.slice(0, dockerfilePath.lastIndexOf('/')) : '';
+  const exists = (path: string): boolean => paths.some((candidate) => candidate === path || candidate.startsWith(`${path}/`));
+  const defaults = new Map<string, string>();
+  for (const [, arg, env, value] of content.matchAll(/^[ \t]*(?:ARG[ \t]+(\w+)=|ENV[ \t]+(\w+)(?:=|[ \t]+))["']?([^\s"']+)/gim)) defaults.set((arg ?? env)!, value!);
+  const artefacts: string[] = [];
+  for (const match of content.matchAll(DOCKERFILE_COPY_ADD_REGEX)) {
+    const args = match[1] ?? '';
+    if (COPY_FROM_FLAG_REGEX.test(args)) continue;
+    for (const token of copyAddSources(args.replace(/^(?:\s*--\S+)+\s*(?=\[)/, ''))) {
+      if (/[*?[]|^[a-z]+:\/\//i.test(token)) continue;
+      const source = token
+        .replace(/\$\{?(\w+)\}?/g, (variable, name: string) => defaults.get(name) ?? variable)
+        .replace(/^\/+/, '')
+        .replace(/^\.\//, '')
+        .replace(/(?:\/\.?)+$/, '');
+      const missingOutput =
+        GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? '') && !exists(source) && !(dockerDir !== '' && exists(`${dockerDir}/${source}`));
+      if ((source.includes('$') || missingOutput) && !artefacts.includes(token)) artefacts.push(token);
+    }
+  }
+  return artefacts;
 }
 
 /**
@@ -6295,12 +6380,13 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   if (buildable.length === 0) {
     return `The only Dockerfile${tracked.length > 1 ? 's are' : ' is'} for development or a template (${tracked.slice(0, 3).join(', ')}).`;
   }
-  const missing = detectDockerfileMissingCopySources(tree).filter(
-    (source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? ''),
-  );
+  const selectedPath = selectedDockerfile(tree)?.path;
+  const missing = [
+    ...detectDockerfileMissingCopySources(tree).filter((source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? '')),
+    ...(selectedPath === undefined ? [] : prebuiltArtefactSources(tree, selectedPath)),
+  ];
   // An image that takes nothing from the build context runs code from another image, not
   // from this commit (outline copies build/ and node_modules/ from the floating outline-base image).
-  const selectedPath = selectedDockerfile(tree)?.path;
   if (missing.length === 0 && selectedPath !== undefined && !copiesFromContext(tree[selectedPath] ?? '')) {
     const fromContext = buildable.some(
       (path) => path !== selectedPath && /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) && copiesFromContext(tree[path] ?? ''),
@@ -6313,13 +6399,15 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   }
   // Another candidate with a command that copies only repository content is a Dockerfile
   // the vendor can select (n8n's every image copies a CI build output; its base image
-  // only EXPOSEs a port).
+  // only EXPOSEs a port). A candidate that copies nothing runs a mounted checkout (shiori's Dockerfile.compose).
   const selected = selectedDockerfile(tree)?.path;
   const alternative = buildable.some(
     (path) =>
       path !== selected &&
       /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) &&
-      detectDockerfileMissingCopySources(tree, path).length === 0,
+      copiesFromContext(tree[path] ?? '') &&
+      detectDockerfileMissingCopySources(tree, path).length === 0 &&
+      prebuiltArtefactSources(tree, path).length === 0,
   );
   if (alternative) return null;
   return `Every Dockerfile with a start command copies files the repository does not contain (${selected} copies ${missing.slice(0, 3).join(', ')}).`;

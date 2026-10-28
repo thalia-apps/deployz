@@ -9,10 +9,12 @@ import { cite, fact, fakeGateway, toWire } from './helpers.js';
 
 const withPaths = (files: Record<string, string>): FileTree => Object.defineProperty(files, TREE_PATHS, { value: Object.keys(files), enumerable: false });
 
-// A Python framework and CLI with no Dockerfile (crewAI, new-166).
+// A Python framework and CLI with no Dockerfile (crewAI, new-166), and a website
+// manifest that publishes nothing, so the rules alone cannot call it a library (Strapi).
 const FRAMEWORK = (): FileTree =>
   withPaths({
     'README.md': '# Acme agents\nA Python framework for agents.\n',
+    'website/package.json': JSON.stringify({ name: 'acme-website', private: true, scripts: { start: 'next start' } }),
     'pyproject.toml': [
       '[project]',
       'name = "acme-agents"',
@@ -79,6 +81,7 @@ describe('AI Analysis: repository kind', () => {
     const node = withPaths({
       'package.json': ['{', '  "name": "@acme/cli",', '  "bin": {', '    "acme": "bin/acme.js"', '  }', '}'].join('\n'),
       'bin/acme.js': 'console.log("acme");\n',
+      'website/package.json': JSON.stringify({ name: 'acme-website', private: true }),
     });
     const { report: nodeReport } = await outcomeOf(node, 'cli', { evidence: cite('package.json', 4, '"acme": "bin/acme.js"') });
     expect(nodeReport.outcome).toBe('NOT_DEPLOYABLE');
