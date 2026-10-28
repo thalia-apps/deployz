@@ -275,14 +275,14 @@ function SubscribeCard({
         <div className="flex flex-col gap-2 rounded-lg border p-4 text-sm" data-testid="billing-price">
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-medium">Platform</span>
-            <span className="tabular-nums">
+            <span className="whitespace-nowrap tabular-nums">
               <span className="text-lg font-semibold">{formatDollars(billing.base)}</span>
               <span className="text-muted-foreground">/month</span>
             </span>
           </div>
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-medium">Each live customer deployment</span>
-            <span className="tabular-nums text-muted-foreground">
+            <span className="whitespace-nowrap tabular-nums text-muted-foreground">
               + {formatDollars(billing.deploymentPrice)}/month
             </span>
           </div>
@@ -297,8 +297,10 @@ function SubscribeCard({
           ) : null}
           <Separator />
           <p className="text-muted-foreground">
-            You pay {formatDollars(billing.base)} today, then monthly. A customer deployment adds{' '}
-            {formatDollars(billing.deploymentPrice)}/month only while it is live.
+            You pay {formatDollars(billing.base)} today, then monthly.{' '}
+            {included > 0
+              ? `Each live customer deployment beyond the ${included} included adds ${formatDollars(billing.deploymentPrice)}/month.`
+              : `A customer deployment adds ${formatDollars(billing.deploymentPrice)}/month only while it is live.`}
           </p>
         </div>
       </CardContent>
