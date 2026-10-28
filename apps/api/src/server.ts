@@ -5960,8 +5960,11 @@ export async function buildServer({
         // Spec components from the existing component states only — the list
         // endpoint does no per-row stack-event query (see the detail route).
         const specComponents = specComponentsForStatus(row.deployment.specV2, derived.components, []);
+        // The frozen spec and manifest are most of a row's size and no list
+        // view reads them; the detail route still returns both.
+        const { specV2: _specV2, desiredState: _desiredState, ...fleetRow } = toFleetRow(derivedRow);
         return {
-          ...toFleetRow(derivedRow),
+          ...fleetRow,
           installLinkToken: installLinkToken(derivedRow.deployment.installLinkId),
           deploymentStatus: {
             ...toVendorDeploymentStatus(derived),

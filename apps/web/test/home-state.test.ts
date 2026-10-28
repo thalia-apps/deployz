@@ -59,7 +59,6 @@ function deployment(overrides: Partial<FleetDeployment> = {}): FleetDeployment {
     currentReleaseConfirmedAt: null,
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY',
-    desiredState: {},
     observedState: null,
     infraVersion: 'runtime-v1',
     installationId: 'inst-1',

@@ -147,10 +147,23 @@ describe('Applications list status', () => {
   it('shows no badge for an analysed application until its status is known', async () => {
     mocks.fetchApplications.mockResolvedValue([application('a')]);
     mocks.fetchDeployments.mockReturnValue(new Promise(() => undefined));
+    mocks.fetchReadiness.mockResolvedValue(readiness());
 
     await renderList();
 
+    // Readiness is read without waiting for the deployments read.
+    expect(mocks.fetchReadiness).toHaveBeenCalledWith('a');
     expect(badge('a')).toBeUndefined();
+  });
+
+  it('says the status is unknown when the deployments read fails', async () => {
+    mocks.fetchApplications.mockResolvedValue([application('a')]);
+    mocks.fetchDeployments.mockRejectedValue(new Error('boom'));
+    mocks.fetchReadiness.mockResolvedValue(readiness());
+
+    await renderList();
+
+    expect(badge('a')).toBe('Status unknown');
   });
 
   it('follows the analysis, not an older verdict, while an application is analysing', async () => {
