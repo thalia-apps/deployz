@@ -2899,6 +2899,9 @@ describe('server — fleet list & deployment detail joins, readiness derivation 
     expect(row!.region).toBe('us-east-1');
     expect(row!.state).toBe('HEALTHY');
     expect(row!.awsAccountId).toBe(`1234${'•'.repeat(8)}`);
+    // The frozen spec and manifest stay off the list; the detail route serves them.
+    expect(row).not.toHaveProperty('specV2');
+    expect(row).not.toHaveProperty('desiredState');
 
     const detailResponse = await app.inject({
       method: 'GET',
@@ -2912,6 +2915,8 @@ describe('server — fleet list & deployment detail joins, readiness derivation 
       version: string | null;
       jobs: unknown[];
     };
+    expect(detailBody).toHaveProperty('specV2');
+    expect(detailBody).toHaveProperty('desiredState');
     expect(detailBody.customerName).toBe('Acme Corp');
     expect(detailBody.applicationName).toBe('Analytics API');
     expect(detailBody.version).toBe('1.4.2');

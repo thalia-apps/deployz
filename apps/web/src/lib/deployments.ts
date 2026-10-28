@@ -71,7 +71,6 @@ export interface FleetDeployment {
   installLinkToken: string;
   /** When the install link stops starting new installs; null = no limit. */
   installLinkExpiresAt: string | null;
-  desiredState: Record<string, unknown>;
   observedState: Record<string, unknown> | null;
   infraVersion: string;
   installationId: string;

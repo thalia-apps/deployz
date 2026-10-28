@@ -52,7 +52,6 @@ function detail(overrides: Partial<FleetDeploymentDetail> = {}): FleetDeployment
     components: null,
     installLinkId: 'link-1',
     installLinkExpiresAt: null,
-    desiredState: {},
     observedState: null,
     infraVersion: '1',
     installationId: 'inst-1',

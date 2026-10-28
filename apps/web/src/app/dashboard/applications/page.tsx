@@ -139,11 +139,14 @@ function ApplicationList({ applications }: { applications: Application[] }) {
       if (!cancelled) setBadges((current) => new Map(current).set(id, badge));
     };
     void (async () => {
-      const deployments = await fetchDeployments({ includeDeleted: true }).catch(() => null);
+      // Started before the readiness reads, not awaited first: the two are
+      // independent, and waiting serialized the whole list behind it.
+      const deploymentsRead = fetchDeployments({ includeDeleted: true }).catch(() => null);
       await mapWithConcurrency(analysed, READINESS_FETCH_CONCURRENCY, async (app) => {
-        if (deployments === null) return show(app.id, STATUS_UNKNOWN_BADGE);
         try {
           const readiness = await fetchReadiness(app.id);
+          const deployments = await deploymentsRead;
+          if (deployments === null) return show(app.id, STATUS_UNKNOWN_BADGE);
           show(
             app.id,
             applicationListBadge(

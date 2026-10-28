@@ -21,7 +21,6 @@ export function fleetDeployment(
     relayStatus: 'CONNECTED',
     healthStatus: 'HEALTHY',
     components: null,
-    desiredState: {},
     observedState: null,
     infraVersion: 'runtime-v1',
     installationId: 'inst-1',
