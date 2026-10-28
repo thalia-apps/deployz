@@ -13,12 +13,14 @@
  *   the app reads PORT (Deployz sets PORT to the manifest port);
  * - the database variable is read on a cited production line, and its name
  *   says that it holds a whole connection URL or JDBC URL;
+ * - a repository kind other than "application" has high confidence and a
+ *   cited manifest line that packages the code for others to install;
  * - a low-confidence answer never passes.
  */
 import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
-import { isProductionFile, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import { isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
 
 export interface AnswerCheck {
@@ -431,6 +433,23 @@ function checkDatabaseVariable(ctx: CheckContext, id: string, name: string, answ
   return result(id, reasons);
 }
 
+// ── Repository kind ────────────────────────────────────────────────────────
+
+export const REPOSITORY_KINDS = ['application', 'library', 'framework', 'sdk', 'cli'] as const;
+export type RepositoryKind = (typeof REPOSITORY_KINDS)[number];
+
+/**
+ * A repository that is not an application changes the outcome to "not
+ * deployable", the costliest wrong answer: it needs high confidence and a
+ * cited packaging line of a manifest. "application" changes nothing.
+ */
+function checkRepositoryKind(ctx: CheckContext, id: string, kind: RepositoryKind, answer: FactAnswer): AnswerCheck {
+  if (kind === 'application') return result(id, []);
+  const reasons = answer.confidence === 'high' ? [] : [`${kind} needs high confidence`];
+  reasons.push(...checkEvidence(ctx.pack, answer.evidence, (line, path) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line)));
+  return result(id, reasons);
+}
+
 /** A fact answer's value in its typed shape, or null when it does not parse. */
 export function factValue(question: Question, value: string): number | string | DockerfileValue | MigrationValue | null {
   if (question.kind !== 'fact') return null;
@@ -445,6 +464,8 @@ export function factValue(question: Question, value: string): number | string | 
       return value.trim().length > 0 ? value.trim() : null;
     case 'databaseVariable':
       return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim()) ? value.trim() : null;
+    case 'repositoryKind':
+      return (REPOSITORY_KINDS as readonly string[]).includes(value.trim()) ? value.trim() : null;
     case 'dockerfile':
     case 'migration': {
       let parsed: unknown;
@@ -486,6 +507,8 @@ export function checkFact(ctx: CheckContext, question: Question, answer: FactAns
       return checkMigration(ctx, answer.id, value as MigrationValue, answer);
     case 'databaseVariable':
       return checkDatabaseVariable(ctx, answer.id, value as string, answer);
+    case 'repositoryKind':
+      return checkRepositoryKind(ctx, answer.id, value as RepositoryKind, answer);
   }
 }
 

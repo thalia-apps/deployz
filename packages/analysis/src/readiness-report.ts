@@ -345,6 +345,16 @@ const NO_SOURCE_COPY: RejectionCopy = {
   suggestedOutcome: 'Connect the repository that holds the application source code.',
 };
 
+const LIBRARY_COPY: RejectionCopy = {
+  ...NO_DOCKERFILE_COPY,
+  id: 'unsupported-library-repository',
+  title: 'Is a library, not an application',
+  plainEnglishExplanation:
+    'This repository is a library, framework, SDK or command-line tool that other projects install. It has no web server to deploy.',
+  whyItMatters: 'Deployz deploys an application that serves HTTP. A Dockerfile does not give a library a server to run.',
+  suggestedOutcome: 'Connect the repository of an application that uses this project.',
+};
+
 /** Maps a §10/§11 rejection `dependency` to its blocking-finding copy. */
 function rejectionCopy(dependency: string): RejectionCopy {
   if (dependency === 'redis-unsupported') return REDIS_COPY;
@@ -367,6 +377,7 @@ function rejectionCopy(dependency: string): RejectionCopy {
   if (dependency === 'gpu') return GPU_COPY;
   if (dependency === 'no-buildable-dockerfile') return NO_DOCKERFILE_COPY;
   if (dependency === 'no-application-source') return NO_SOURCE_COPY;
+  if (dependency === 'library-repository') return LIBRARY_COPY;
   if (
     dependency === 'kubernetes' ||
     dependency === 'serverless' ||
@@ -420,6 +431,7 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'unsupported-gpu': 'CAPABILITY_GAP',
   'unsupported-architecture': 'CAPABILITY_GAP',
   'unsupported-no-application-source': 'CAPABILITY_GAP',
+  'unsupported-library-repository': 'CAPABILITY_GAP',
 };
 
 /**
@@ -539,7 +551,7 @@ export function buildReadinessReport(
   // ── Required (fixable) findings ───────────────────────────────────────────
   if (
     metadata['hasDockerfile'] !== true &&
-    !result.rejections.some((r) => r.detected && r.dependency === 'no-buildable-dockerfile')
+    !result.rejections.some((r) => r.detected && (r.dependency === 'no-buildable-dockerfile' || r.dependency === 'library-repository'))
   ) {
     findings.push({
       id: 'container-setup',

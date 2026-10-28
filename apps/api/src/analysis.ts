@@ -469,7 +469,11 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // runs its own command; a root NestJS controller joins with one slash.
 // Stored v72 rows can carry a false Kubernetes blocker, miss a SQLite blocker,
 // or name the wrong image, port, start command or health path.
-export const ANALYSIS_VERSION = 73;
+// Version 74 (AI prompt v17): with no buildable Dockerfile, the AI Analysis
+// asks whether the repository is a library, framework, SDK or CLI; a checked
+// answer is NOT_DEPLOYABLE (`library-repository`), not "add a Dockerfile".
+// Stored v73 AI rows can ask a framework repository for a Dockerfile.
+export const ANALYSIS_VERSION = 74;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

@@ -374,6 +374,12 @@ is final.
     app reads its required database connection from (the
     `database-connection-unverified` case: no binding name is read with
     evidence).
+  - The repository kind, when the rules found no Dockerfile that builds the
+    repository (`no-buildable-dockerfile`): an application, or a library,
+    framework, SDK or CLI that others install. "Add a Dockerfile" is the
+    wrong fix for a repository with no server to run (crewAI, agno,
+    superagent, Strapi). A rule cannot decide it: these repositories have
+    ports, start scripts and Dockerfiles in examples and templates.
   - A repository with no open item makes no model call.
 - **Evidence files** (`evidenceFileRequests`): the rules tree fetches at
   most 200 files of some source languages (TypeScript, JavaScript, Python,
@@ -403,7 +409,11 @@ is final.
   migrations (`MigrateMaster(install)`, `databaseManager.Install()`, a boot
   `ensureSchema()`), and an import, a comment or a namespace line ranks
   last. For the database variable, a line that reads the environment ranks
-  first. Start and
+  first. The repository kind shows the packaging lines of the six
+  shallowest package manifests (`package.json`, `pyproject.toml`,
+  `setup.py`, `setup.cfg`, `Cargo.toml`, `composer.json`, a gemspec), then
+  the server entrypoints of the code (`.listen(`, uvicorn, `FastAPI(`, a
+  `start` script). Start and
   migration questions also get the `scripts` block of `package.json`.
   Limits: 8,000 characters for the start path, 8,000 for each question,
   40,000 for the pack. The pack starts with the Deployz binding contract
@@ -411,12 +421,15 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 16): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 17): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
     `not_used`;
-  - a fact: a value, or `unknown`.
+  - a fact: a value, or `unknown`. The repository kind is `application`,
+    `library`, `framework`, `sdk` or `cli`; when the repository also holds
+    an app that serves HTTP, or when the model is not sure, it is
+    `application`.
   Each answer has a confidence and `{path, line, quote}` evidence. When a
   window does not let the model decide, it answers `required` or `unknown`.
   The provider is held to a flat list of plain strings; the strict schemas
@@ -458,6 +471,13 @@ is final.
     connection: a URL (`DB_URL`, `*_DSN`, `*_DB_URI`) or a JDBC URL. A part
     (`DB_HOST`) or a name without a known format (`BTCPAY_POSTGRES`, a
     driver connection string) fails: Deployz cannot set its value.
+  - Repository kind: `application` changes nothing. Any other kind needs
+    high confidence (not medium) and a cited line of a package manifest
+    that packages the code for others to install: a build backend
+    (`build-backend`, `requires = ["hatchling"]`), `[project.scripts]` or a
+    console script entry, `"bin"`, `"main"`, `"exports"`, `"types"` or
+    `"publishConfig"`, a Rust `[lib]` or `[[bin]]`, a Composer `"type":
+    "library"`, a gemspec. A project name or a README line fails.
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the
@@ -467,7 +487,12 @@ is final.
   set it: it becomes a required variable, and its source names the value
   (outcome 2, deployable with changes). Each open fact that passes its
   check fills its value on its own. An open fact that stays unresolved
-  keeps its rules finding, so a resolved fact cannot hide it. (Before
+  keeps its rules finding, so a resolved fact cannot hide it. A passing
+  repository kind other than `application` replaces the
+  `no-buildable-dockerfile` rejection with `library-repository` (finding
+  `unsupported-library-repository`, a `CAPABILITY_GAP`): outcome 3, not
+  deployable, and no "add a Dockerfile" finding. The rules engine and a
+  fallback keep outcome 2 for these repositories. (Before
   prompt v15 the open facts were all or nothing, because an unknown
   migration was not a question then: new-23 became READY and did not
   start.) A migration answer that is unknown or fails its own check stays an open
