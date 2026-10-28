@@ -106,6 +106,12 @@ export async function fetchBillingSummary(): Promise<BillingSummary> {
   return getJson<BillingSummary>('/api/billing/summary');
 }
 
+/** Whether subscriptions can be bought here (`GET /api/billing/config`). */
+export async function fetchBillingEnabled(): Promise<boolean> {
+  const { enabled } = await getJson<{ enabled: boolean }>('/api/billing/config');
+  return enabled;
+}
+
 /** Fetch the org's billing details. Never throws for a 403 or a provider
  *  failure: the rest of the billing page still renders. */
 export async function fetchBillingAccount(): Promise<BillingAccountResult> {
