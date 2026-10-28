@@ -7,8 +7,6 @@
  * loaded in a unit test — which is precisely how two cookie defects shipped to
  * production unnoticed. The translation is pure, so it is tested directly.
  */
-import { gzipSync } from 'node:zlib';
-
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,
@@ -70,13 +68,8 @@ export function toInjectOptions(event: APIGatewayProxyEventV2): InjectOptions {
   };
 }
 
-// API Gateway HTTP APIs do not compress responses, and the list routes send
-// hundreds of KB of JSON. Smaller bodies go as they are.
-const GZIP_MIN_BYTES = 1024;
-
 export function toLambdaResult(
   response: InjectedResponse,
-  acceptEncoding?: string,
 ): APIGatewayProxyStructuredResultV2 {
   // Fastify hands back `set-cookie` as a string[] whenever more than one
   // cookie is set — and Better Auth sets the OAuth state and PKCE cookies
@@ -95,22 +88,11 @@ export function toLambdaResult(
     headers[key] = String(value);
   }
 
-  const compressible =
-    headers['content-encoding'] === undefined && Buffer.byteLength(response.body) >= GZIP_MIN_BYTES;
-  if (compressible) {
-    headers.vary = headers.vary ? `${headers.vary}, Accept-Encoding` : 'Accept-Encoding';
-  }
-  const gzip = compressible && /gzip/i.test(acceptEncoding ?? '');
-  if (gzip) {
-    headers['content-encoding'] = 'gzip';
-    delete headers['content-length'];
-  }
-
   return {
     statusCode: response.statusCode,
     headers,
     ...(cookies.length > 0 ? { cookies } : {}),
-    body: gzip ? gzipSync(response.body).toString('base64') : response.body,
-    isBase64Encoded: gzip,
+    body: response.body,
+    isBase64Encoded: false,
   };
 }

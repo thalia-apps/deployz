@@ -573,15 +573,6 @@ export async function fetchReadiness(applicationId: string): Promise<Application
   return (await response.json()) as ApplicationReadiness;
 }
 
-/** Fetch every application's §19 readiness result, keyed by application id. */
-export async function fetchAllReadiness(): Promise<Record<string, ApplicationReadiness>> {
-  const response = await fetch(`${apiUrl}/api/applications/readiness`, { credentials: 'include', cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Readiness request failed (${response.status})`);
-  }
-  return ((await response.json()) as { readiness: Record<string, ApplicationReadiness> }).readiness;
-}
-
 /** A refused dispute; `code` is the API error code (FINDING_CHANGED, ANALYSIS_IN_PROGRESS, …). */
 export class BlockerDisputeError extends Error {
   constructor(
