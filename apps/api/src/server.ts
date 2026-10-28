@@ -4890,6 +4890,45 @@ export async function buildServer({
     return computeReadiness(db, app, deployments);
   });
 
+  // GET /api/applications/readiness — every application's readiness, keyed by
+  // id: the Applications list makes one read instead of one per application.
+  app.get('/api/applications/readiness', { preHandler: requireAuth }, async (request) => {
+    const organizationId = requireSessionOrganizationId(request);
+    const applications = await db
+      .select()
+      .from(schema.applications)
+      .where(eq(schema.applications.organizationId, organizationId));
+    const deployments =
+      applications.length === 0
+        ? []
+        : await db
+            .select({
+              applicationId: schema.deployments.applicationId,
+              id: schema.deployments.id,
+              customerName: schema.customers.name,
+              state: schema.deployments.state,
+              desiredState: schema.deployments.desiredState,
+              specV2: schema.deployments.specV2,
+            })
+            .from(schema.deployments)
+            .innerJoin(schema.customers, eq(schema.deployments.customerId, schema.customers.id))
+            .where(
+              inArray(
+                schema.deployments.applicationId,
+                applications.map((application) => application.id),
+              ),
+            );
+    const readiness: Record<string, ReadinessResponse> = {};
+    for (const application of applications) {
+      readiness[application.id] = await computeReadiness(
+        db,
+        application,
+        deployments.filter((deployment) => deployment.applicationId === application.id),
+      );
+    }
+    return { readiness };
+  });
+
   // GET /api/applications/:id/preflight — the pre-deployment gate for this
   // application, against the vendor defaults or one customer's configuration
   // (Phase 5). Read-only; the same evaluation deployment creation enforces.

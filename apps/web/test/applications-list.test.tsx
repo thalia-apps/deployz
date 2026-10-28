@@ -15,7 +15,7 @@ import { fleetDeployment } from './fixtures/fleet-deployment';
 const mocks = vi.hoisted(() => ({
   fetchApplications: vi.fn(),
   fetchDeployments: vi.fn(),
-  fetchReadiness: vi.fn(),
+  fetchAllReadiness: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -36,7 +36,7 @@ vi.mock('@/lib/deployments', async (importOriginal) => {
 
 vi.mock('@/lib/readiness', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/readiness')>();
-  return { ...actual, fetchReadiness: mocks.fetchReadiness };
+  return { ...actual, fetchAllReadiness: mocks.fetchAllReadiness };
 });
 
 const ApplicationsPage = (await import('../src/app/dashboard/applications/page')).default;
@@ -118,13 +118,13 @@ describe('Applications list status', () => {
         currentReleaseConfirmedAt: '2026-10-19T00:00:00.000Z',
       }),
     ]);
-    mocks.fetchReadiness.mockImplementation(async (id: string) =>
-      id === 'a'
-        ? readiness({
-            environmentSetup: { needsDecision: 1, missingValue: 0, missingBuildValue: 0, customer: 0, total: 1 },
-          })
-        : readiness(),
-    );
+    mocks.fetchAllReadiness.mockResolvedValue({
+      a: readiness({
+        environmentSetup: { needsDecision: 1, missingValue: 0, missingBuildValue: 0, customer: 0, total: 1 },
+      }),
+      b: readiness(),
+      c: readiness(),
+    });
 
     await renderList();
 
@@ -137,7 +137,17 @@ describe('Applications list status', () => {
   it('says the status is unknown when the reads fail, never the readiness verdict', async () => {
     mocks.fetchApplications.mockResolvedValue([application('a')]);
     mocks.fetchDeployments.mockResolvedValue([]);
-    mocks.fetchReadiness.mockRejectedValue(new Error('boom'));
+    mocks.fetchAllReadiness.mockRejectedValue(new Error('boom'));
+
+    await renderList();
+
+    expect(badge('a')).toBe('Status unknown');
+  });
+
+  it('says the status is unknown when the read has no readiness for an application', async () => {
+    mocks.fetchApplications.mockResolvedValue([application('a')]);
+    mocks.fetchDeployments.mockResolvedValue([]);
+    mocks.fetchAllReadiness.mockResolvedValue({});
 
     await renderList();
 
@@ -147,19 +157,17 @@ describe('Applications list status', () => {
   it('shows no badge for an analysed application until its status is known', async () => {
     mocks.fetchApplications.mockResolvedValue([application('a')]);
     mocks.fetchDeployments.mockReturnValue(new Promise(() => undefined));
-    mocks.fetchReadiness.mockResolvedValue(readiness());
+    mocks.fetchAllReadiness.mockResolvedValue({ a: readiness() });
 
     await renderList();
 
-    // Readiness is read without waiting for the deployments read.
-    expect(mocks.fetchReadiness).toHaveBeenCalledWith('a');
     expect(badge('a')).toBeUndefined();
   });
 
   it('says the status is unknown when the deployments read fails', async () => {
     mocks.fetchApplications.mockResolvedValue([application('a')]);
     mocks.fetchDeployments.mockRejectedValue(new Error('boom'));
-    mocks.fetchReadiness.mockResolvedValue(readiness());
+    mocks.fetchAllReadiness.mockResolvedValue({ a: readiness() });
 
     await renderList();
 
@@ -169,10 +177,10 @@ describe('Applications list status', () => {
   it('follows the analysis, not an older verdict, while an application is analysing', async () => {
     mocks.fetchApplications.mockResolvedValue([application('a', { analysisStatus: 'ANALYZING' })]);
     mocks.fetchDeployments.mockResolvedValue([]);
+    mocks.fetchAllReadiness.mockResolvedValue({ a: readiness({ state: 'READY' }) });
 
     await renderList();
 
     expect(badge('a')).toBe('Analysing');
-    expect(mocks.fetchReadiness).not.toHaveBeenCalled();
   });
 });
