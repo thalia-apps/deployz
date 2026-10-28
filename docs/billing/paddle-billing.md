@@ -175,10 +175,19 @@ reconciles any ACTIVE/PAST_DUE subscription not checked for an hour.
 
 - Two app-wide banners, and only two: PAST_DUE (deep-links to Paddle's card
   form) and CANCELED. Evaluation gets none.
-- The billing page tells the truth: evaluation reads as free; subscribed
-  shows the rate, next billing date, per-customer breakdown, and "Manage
-  billing" into Paddle's hosted portal via a short-lived session for the
-  organization's own customer id.
+- The billing page is driven by the subscription status. Its Plan card says
+  where the organization stands and carries the one action that state needs:
+  evaluation shows what is free, the price and "Start subscription"; CANCELED
+  shows "Restart subscription"; PAST_DUE leads with the card form; PAUSED with
+  the portal; ACTIVE shows the next payment, the payment method and the
+  portal and cancel links. Starting or restarting opens the same
+  subscribe-only checkout as the Invite customer page
+  (`components/start-subscription-button.tsx`), then waits up to 30 seconds
+  for the webhook to make the subscription ACTIVE and refreshes. Only an
+  owner or admin sees these actions; with billing disabled the page says
+  subscriptions are not available. Below the Plan card: the per-customer
+  breakdown (before tax), then the invoices. The portal links use a
+  short-lived session for the organization's own customer id.
 - For an owner or admin, the subscribed page also shows what Paddle holds,
   read live and never stored: the next payment (date, amount with tax and
   proration, and Paddle's line items), a scheduled cancellation, the payment

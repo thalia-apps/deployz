@@ -11,6 +11,7 @@ import { copyInstallLink } from '@/components/copy-install-link';
 import { CustomerPicker } from '@/components/customer-picker';
 import { DocsLink } from '@/components/docs-link';
 import { ManageBillingButton } from '@/components/manage-billing-button';
+import { StartSubscriptionButton } from '@/components/start-subscription-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,12 +25,7 @@ import {
   inviteApplicationLabel,
   type Application,
 } from '@/lib/applications';
-import {
-  createCheckoutIntent,
-  fetchBillingConfig,
-  fetchSubscriptionStatus,
-  openSubscriptionCheckout,
-} from '@/lib/billing-checkout';
+import { fetchSubscriptionStatus } from '@/lib/billing-checkout';
 import type { SubscriptionStatus } from '@/lib/organization-vocabulary';
 import {
   createCustomerRecord,
@@ -151,8 +147,6 @@ function NewDeploymentScreen() {
   // customers can confirm installations; past-due/paused vendors need the
   // portal instead. Test mode never hits this (test deployments are free).
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null | undefined>(undefined);
-  const [checkoutState, setCheckoutState] = useState<'idle' | 'opening' | 'paid'>('idle');
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -321,23 +315,6 @@ function NewDeploymentScreen() {
     setCustomerEmailInput('');
   }
 
-  // Customer mode: a subscribe-only checkout intent (no parked deployment)
-  // opens Paddle's overlay; when the vendor pays, the webhook activates the
-  // subscription and customers can then confirm their invitations.
-  async function onStartSubscription(): Promise<void> {
-    setCheckoutError(null);
-    setCheckoutState('opening');
-    try {
-      const config = await fetchBillingConfig();
-      const intent = await createCheckoutIntent({});
-      const outcome = await openSubscriptionCheckout(config, intent.transactionId);
-      setCheckoutState(outcome === 'completed' ? 'paid' : 'idle');
-    } catch (caught) {
-      setCheckoutError(errorMessage(caught));
-      setCheckoutState('idle');
-    }
-  }
-
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     // A second submit while the first is still in flight must do nothing —
@@ -469,25 +446,10 @@ function NewDeploymentScreen() {
             </CardDescription>
             <DocsLink href={DOCS.billing}>How pricing and billing work</DocsLink>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-3">
-            {checkoutState === 'paid' ? (
-              <p className="text-sm text-muted-foreground">
-                Payment received. Customers can now confirm installations.
-              </p>
-            ) : (
-              <Button
-                onClick={() => void onStartSubscription()}
-                loading={checkoutState === 'opening'}
-                loadingText="Opening checkout…"
-              >
-                Start subscription
-              </Button>
-            )}
-            {checkoutError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {checkoutError}
-              </p>
-            ) : null}
+          <CardContent>
+            <StartSubscriptionButton onActivated={() => setSubscriptionStatus('ACTIVE')}>
+              Start subscription
+            </StartSubscriptionButton>
           </CardContent>
         </Card>
       ) : null}
@@ -738,6 +700,10 @@ function NewDeploymentScreen() {
               {submitHint ? (
                 <p id="submit-hint" className="text-sm text-muted-foreground">
                   {submitHint}
+                </p>
+              ) : !isTestDeployment && subscriptionStatus !== undefined && subscriptionStatus !== 'ACTIVE' ? (
+                <p className="text-sm text-muted-foreground" data-testid="invite-subscription-hint">
+                  Your customer can confirm this invitation only after you subscribe.
                 </p>
               ) : null}
             </div>
