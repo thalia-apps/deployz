@@ -459,7 +459,17 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Compose port are not the app port; `CMD ["--help"]` is no start command.
 // Stored v71 rows can miss the database or Redis, carry a false GPU blocker,
 // or pick the wrong image, port or health path.
-export const ANALYSIS_VERSION = 72;
+// Version 73 (2026-10 corpus round 6): drizzle-orm or knex beside a SQLite or
+// libSQL driver is not PostgreSQL; a PHP app that opens its own SQLite file
+// is SQLite; an `// indirect` Go MySQL module is not MySQL; a repository of
+// only documents has no app (NOT_DEPLOYABLE); a prefixed Helm chart directory
+// is a self-hosting sample; a FROM scratch export image and a hidden tool
+// directory's image are not the app image; a heredoc COPY reads no file; an
+// unprivileged nginx image serves on 8080 and an official nginx or httpd base
+// runs its own command; a root NestJS controller joins with one slash.
+// Stored v72 rows can carry a false Kubernetes blocker, miss a SQLite blocker,
+// or name the wrong image, port, start command or health path.
+export const ANALYSIS_VERSION = 73;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
