@@ -101,7 +101,10 @@ if (!process.env.EMAIL_FROM) {
     '[email] EMAIL_FROM not set — transactional email (team invitations, membership changes) is logged instead of sent. Set it in .env.',
   );
 }
-if (!process.env.GITHUB_APP_ID || !process.env.GITHUB_APP_PRIVATE_KEY) {
+if (
+  !process.env.GITHUB_APP_ID ||
+  (!process.env.GITHUB_APP_PRIVATE_KEY && !process.env.GITHUB_APP_PRIVATE_KEY_SECRET_ARN)
+) {
   console.warn(
     '[github] GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY not set — the GitHub App is not configured (installation-token vending + repo listing no-op). Set them in .env.',
   );
