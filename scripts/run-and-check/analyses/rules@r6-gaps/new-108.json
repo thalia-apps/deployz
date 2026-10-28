@@ -1,0 +1,383 @@
+{
+  "id": "new-108",
+  "commit": "280f6bb396f1fa55aed9267ca022429fd138a461",
+  "analyser": "rules@r6-gaps",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "fastify",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsc -p tsconfig.lib.json",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"tini\", \"--\", \"./docker-entrypoint.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/api/v1/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "AP_POSTGRES_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "AP_POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "AP_POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "AP_POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "AP_POSTGRES_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AP_REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "AP_REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AP_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AP_ENCRYPTION_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AP_ENGINE_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_ENGINE_EXECUTABLE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_ENVIRONMENT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_EXECUTION_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_EXECUTION_MODE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_FLOW_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_FLOW_TIMEOUT_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_FRONTEND_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AP_JWT_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "AP_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AP_OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_POSTGRES_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_POSTGRES_DATABASE"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_POSTGRES_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AP_POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_POSTGRES_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_POSTGRES_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_POSTGRES_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_REDIS_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_REDIS_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_TELEMETRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_TELEMETRY_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_TEMPLATES_SOURCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_TEMPLATES_SOURCE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_TOOL_SEARCH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_TOOL_SEARCH_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_TRIGGER_DEFAULT_POLL_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_TRIGGER_DEFAULT_POLL_INTERVAL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AP_WEBHOOK_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AP_WEBHOOK_TIMEOUT_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

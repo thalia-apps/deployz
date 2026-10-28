@@ -378,16 +378,21 @@ export function composeServices(tree: FileTree): { file: string; services: Compo
     if (inPorts && listItem?.[1]) current.ports.push(listItem[1]);
     if (inCommand && listItem?.[1] !== undefined) current.command = `${current.command ?? ''} ${listItem[1]}`.trim();
   }
-  // A lighter production variant next to the file (`docker-compose.flags-only.yml`) that runs the
-  // same app with a subset of its services makes every service it leaves out optional (Flagsmith).
+  // A lighter stand-alone production variant next to the file (`docker-compose.flags-only.yml`) that
+  // runs the first application service with a subset of the services makes every service it leaves
+  // out optional (Flagsmith). An overlay merged with `-f` (`docker-compose.s3.yml`) defines its
+  // services only in part, so it is no variant.
   const directory = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
-  const names = new Set(services.map((service) => service.name));
+  const names = composeServiceDefinitions(content);
+  const main = services.find(
+    (service) => service.build !== null || (service.image !== null && !INFRA_COMPOSE_IMAGE_REGEX.test(service.image) && !TOOL_COMPOSE_IMAGE_REGEX.test(service.image)),
+  );
   for (const [variant, variantContent] of Object.entries(tree)) {
-    if (variant === path || !variantContent || variant.slice(0, variant.lastIndexOf('/') + 1) !== directory) continue;
+    if (main === undefined || variant === path || !variantContent || variant.slice(0, variant.lastIndexOf('/') + 1) !== directory) continue;
     if (!COMPOSE_VARIANT_FILENAME_REGEX.test(variant.slice(directory.length)) || !isProductionComposeFile(variant) || SOURCE_MOUNT_REGEX.test(variantContent)) continue;
-    const kept = composeServiceNames(variantContent);
-    const runsApp = services.some((service) => kept.has(service.name) && service.image !== null && !INFRA_COMPOSE_IMAGE_REGEX.test(service.image) && !TOOL_COMPOSE_IMAGE_REGEX.test(service.image));
-    if (kept.size === 0 || !runsApp || [...kept].some((name) => !names.has(name))) continue;
+    const kept = composeServiceDefinitions(variantContent);
+    const standalone = kept.size > 0 && [...kept].every(([name, defined]) => defined && names.has(name));
+    if (!standalone || !kept.has(main.name) || kept.size >= names.size) continue;
     for (const service of services) if (!kept.has(service.name)) service.optional = true;
   }
   return { file: path, services };
@@ -395,11 +400,12 @@ export function composeServices(tree: FileTree): { file: string; services: Compo
 
 const COMPOSE_VARIANT_FILENAME_REGEX = /^(?:docker-compose|compose)[.-][\w.-]+\.ya?ml$/i;
 
-/** The service names of a Compose file: the keys one level under `services:`. */
-function composeServiceNames(content: string): Set<string> {
-  const names = new Set<string>();
+/** The services of a Compose file (the keys one level under `services:`), each true when it names its own `image`, `build` or `extends`. */
+function composeServiceDefinitions(content: string): Map<string, boolean> {
+  const services = new Map<string, boolean>();
   let serviceIndent = -1;
   let inServices = false;
+  let current: string | null = null;
   for (const line of content.split(/\r?\n/)) {
     if (/^services:\s*$/.test(line)) {
       inServices = true;
@@ -410,9 +416,14 @@ function composeServiceNames(content: string): Set<string> {
     if (indent === 0) break;
     if (serviceIndent === -1) serviceIndent = indent;
     const header = indent === serviceIndent ? /^\s*([a-zA-Z0-9_.-]+):\s*$/.exec(line) : null;
-    if (header?.[1]) names.add(header[1]);
+    if (header?.[1]) {
+      current = header[1];
+      services.set(current, false);
+    } else if (current !== null && /^\s*(?:image|build|extends):/.test(line)) {
+      services.set(current, true);
+    }
   }
-  return names;
+  return services;
 }
 
 /**
@@ -6270,7 +6281,8 @@ export function detectDockerfileMissingCopySources(tree: FileTree, dockerfilePat
     for (const token of copyAddSources(args.replace(/^(?:\s*--\S+)+\s*(?=\[)/, ''))) {
       if (/[*?$[]|^[a-z]+:\/\//i.test(token) || GIT_SOURCE_TOKEN_REGEX.test(token)) continue;
       // A leading `/` is still relative to the build context.
-      const source = token.replace(/^\/+/, '').replace(/^\.\//, '').replace(/\/+$/, '');
+      // A trailing `/.` (`COPY src/web/. ./`) names the directory itself.
+      const source = token.replace(/^\/+/, '').replace(/^\.\//, '').replace(/(?:\/\.?)+$/, '');
       if (source === '' || source === '.') continue;
       if (exists(source) || (dockerDir !== '' && exists(`${dockerDir}/${source}`))) continue;
       if (!missing.includes(source)) missing.push(source);
@@ -6328,7 +6340,7 @@ function prebuiltArtefactSources(tree: FileTree, dockerfilePath: string): string
         .replace(/\$\{?(\w+)\}?/g, (variable, name: string) => defaults.get(name) ?? variable)
         .replace(/^\/+/, '')
         .replace(/^\.\//, '')
-        .replace(/\/+$/, '');
+        .replace(/(?:\/\.?)+$/, '');
       const missingOutput =
         GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? '') && !exists(source) && !(dockerDir !== '' && exists(`${dockerDir}/${source}`));
       if ((source.includes('$') || missingOutput) && !artefacts.includes(token)) artefacts.push(token);

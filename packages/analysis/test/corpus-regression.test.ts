@@ -1002,6 +1002,9 @@ describe('Round 6 analysis gaps', () => {
     expect(checkNoBuildableDockerfile(flipt('COPY $TARGETPLATFORM/$BINARY /', ['go.mod'])).dependency).toBe('no-buildable-dockerfile');
     // A variable path with a default that the repository holds is a plain copy.
     expect(checkNoBuildableDockerfile(flipt('COPY ${BINARY} /', ['go.mod', 'build/flipt'])).detected).toBe(false);
+    // A trailing `/.` names the directory itself (khoj's `COPY src/interface/web/. ./`).
+    const khoj = withPaths({ Dockerfile: 'FROM oven/bun:1\nCOPY src/interface/web/. ./\nRUN bun run build\nCMD ["bun", "start"]\n' }, ['src/interface/web/package.json']);
+    expect(detectDockerfileMissingCopySources(khoj)).toEqual([]);
   });
 
   it('rejects a web image that also supervises a worker (invoiceshelf scheduler, supervisord queue)', () => {
@@ -1011,7 +1014,7 @@ describe('Round 6 analysis gaps', () => {
         'FROM serversideup/php:8.5-fpm-nginx-alpine AS base\nFROM base AS production\nCOPY . /var/www/html\nCOPY --chmod=755 docker/production/s6-overlay/ /etc/s6-overlay/\n',
       ...files,
     });
-    expect(multiProcess(s6({ 'docker/production/s6-overlay/s6-rc.d/scheduler/run': '#!/bin/sh\nexec php artisan schedule:work\n' }))).toBe(true);
+    expect(multiProcess(s6({ 'docker/production/s6-overlay/s6-rc.d/scheduler/run': '#!/bin/sh\n# Supervised alongside nginx and php-fpm.\nexec php artisan schedule:work\n' }))).toBe(true);
     expect(multiProcess(s6({ 'docker/production/s6-overlay/s6-rc.d/app/run': '#!/bin/sh\nexec php artisan octane:start\n' }))).toBe(false);
 
     const supervisord = (programs: string): FileTree => ({
@@ -1038,6 +1041,8 @@ describe('Round 6 analysis gaps', () => {
       '    image: postgres:15',
       '  flagsmith:',
       '    image: flagsmith/flagsmith:latest',
+      '    ports:',
+      '      - 8000:8000',
       '  kafka:',
       '    image: apache/kafka:3.9.1',
       '  clickhouse:',
@@ -1046,7 +1051,9 @@ describe('Round 6 analysis gaps', () => {
       '    image: flagsmith/events-ingestion-api:latest',
       '',
     ].join('\n');
-    const lighter = 'services:\n  postgres:\n    image: postgres:15\n  flagsmith:\n    image: flagsmith/flagsmith:latest\n';
+    const lighter = 'services:\n  postgres:\n    image: postgres:15\n  flagsmith:\n    image: flagsmith/flagsmith:latest\n    ports:\n      - 8000:8000\n';
+    // An overlay merged with `-f` defines its services only in part: it is no lighter stack.
+    const overlay = 'services:\n  flagsmith:\n    environment:\n      EXPERIMENTATION_ENABLED: "false"\n';
     const tree = (files: FileTree): FileTree => ({ 'docker-compose.yml': compose, 'api/pyproject.toml': '[project]\ndependencies = ["clickhouse-driver==0.2.11"]\n', ...files });
     expect(checkOtherUnsupportedDatabases(tree({ 'docker-compose.flags-only.yml': lighter })).detected).toBe(false);
     expect(checkKafka(tree({ 'docker-compose.flags-only.yml': lighter })).detected).toBe(false);
@@ -1054,6 +1061,7 @@ describe('Round 6 analysis gaps', () => {
     // Without the lighter variant the services are part of the default stack.
     expect(checkOtherUnsupportedDatabases(tree({})).dependency).toBe('clickhouse');
     expect(checkKafka(tree({})).detected).toBe(true);
+    expect(checkKafka(tree({ 'docker-compose.experiments.yml': overlay })).detected).toBe(true);
   });
 
   it('finds RabbitMQ from a Compose service that extends another file, or an AMQP URL (AutoGPT)', () => {

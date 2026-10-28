@@ -1388,12 +1388,14 @@ export function checkMultiProcessImage(tree: FileTree): RejectionFinding {
     for (const path of paths) {
       const name = /(?:^|\/)(?:s6-rc\.d|services\.d)\/([\w.-]+)\/run$/.exec(path)?.[1];
       if (name === undefined || !copied(path)) continue;
-      if (WEB_FRONT_END.test(`${name} ${tree[path] ?? ''}`)) {
+      // A comment names other services ("supervised alongside nginx"), not this one's command.
+      const script = (tree[path] ?? '').replace(/^\s*#.*$/gm, '');
+      if (WEB_FRONT_END.test(`${name} ${script}`)) {
         web = true;
         continue;
       }
       services.add(name);
-      worker ||= isSupervisedWorker(name, tree[path] ?? '');
+      worker ||= isSupervisedWorker(name, script);
     }
     // The web service plus one worker (the Laravel scheduler next to nginx and php-fpm) is two processes too.
     if (services.size >= 2 || (services.size === 1 && web && worker)) {
