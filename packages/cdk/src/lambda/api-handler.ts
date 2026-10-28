@@ -16,10 +16,11 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from 'aws-lambda';
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from '@aws-sdk/client-secrets-manager';
 import type { FastifyInstance } from 'fastify';
-
-import { buildServer } from '@deployz/api/server';
-import { createAuth } from '@deployz/api/auth';
 
 import { toInjectOptions, toLambdaResult } from './api-gateway-adapter.js';
 import { connectDb } from './db-connection.js';
@@ -29,6 +30,12 @@ let appPromise: Promise<FastifyInstance> | null = null;
 function getApp(): Promise<FastifyInstance> {
   if (!appPromise) {
     appPromise = (async () => {
+      await loadGithubAppPrivateKey();
+      // Imported only now: the API reads its configuration when it loads.
+      const [{ buildServer }, { createAuth }] = await Promise.all([
+        import('@deployz/api/server'),
+        import('@deployz/api/auth'),
+      ]);
       const db = await connectDb();
       const auth = createAuth(db);
       const app = await buildServer({ auth, db });
@@ -37,6 +44,17 @@ function getApp(): Promise<FastifyInstance> {
     })();
   }
   return appPromise;
+}
+
+// The key is kept out of the Lambda environment (api-lambda.ts), so it comes
+// from its secret.
+async function loadGithubAppPrivateKey(): Promise<void> {
+  const secretArn = process.env.GITHUB_APP_PRIVATE_KEY_SECRET_ARN;
+  if (!secretArn) return;
+  const secret = await new SecretsManagerClient({}).send(
+    new GetSecretValueCommand({ SecretId: secretArn }),
+  );
+  if (secret.SecretString) process.env.GITHUB_APP_PRIVATE_KEY = secret.SecretString;
 }
 
 export async function handler(

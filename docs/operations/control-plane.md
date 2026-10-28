@@ -181,6 +181,7 @@ API reads is validated in `apps/api/src/env.ts`.
 | Release builds | `DOCKERHUB_SECRET_NAME` (variable) | [`../docker-hub-credentials.md`](../docker-hub-credentials.md). Unresolvable name fails every build; empty means unset. |
 | Billing | `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_CLIENT_TOKEN`, `PADDLE_PRICE_PLATFORM`, `PADDLE_PRICE_DEPLOYMENT`, `PADDLE_ENVIRONMENT` (variable, defaults to `sandbox`), `BILLING_ENFORCEMENT` (variable; `off` pauses the production-deployment subscription gate) | [`../billing/paddle-billing.md`](../billing/paddle-billing.md) |
 | Secrets | `DEPLOYZ_KMS_KEY_ARN` | Set by CDK from the stack's own key; the API fails to start without it |
+| Lambda environment size | — | Lambda refuses an environment over 4 KB, and the deploy then fails with `UPDATE_FAILED`. The API Lambda does not get `GITHUB_APP_PRIVATE_KEY` in its environment: CDK stores it in a Secrets Manager secret, passes `GITHUB_APP_PRIVATE_KEY_SECRET_ARN`, and the handler reads the key at cold start, before it loads the API. The worker Lambda still gets the key in its environment. |
 | Set by CDK | `DATABASE_URL`, `JOB_QUEUE_URL`, `DEPLOYZ_ECR_REPOSITORY_NAME`, `BUILD_LOG_GROUP_NAME`, `SOURCE_BUCKET`, `BUILD_PROJECT_NAME` | Not in the workflow. CDK also gives the Lambda `DEPLOYZ_TEMPLATE_BUCKET_PREFIX` outside production; in production the API defaults it to `deployz-templates`. |
 
 `TEAM_ADMIN_EMAILS` and `GITHUB_FIXTURE_MODE` are local-development only and

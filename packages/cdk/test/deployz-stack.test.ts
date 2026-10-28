@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { DeployzStack } from '../src/deployz-stack.js';
@@ -255,6 +255,27 @@ describe('DeployzStack', () => {
       new DeployzStack(new App({ context: { bootstrapBuildId: 'abc123def456' } }), 'DeployzTest'),
     );
     expect(lambdaEnvironments(withId).some((env) => env['BOOTSTRAP_BUILD_ID'] === 'abc123def456')).toBe(true);
+  });
+
+  // Lambda refuses an environment over 4 KB, and the GitHub App key is the
+  // largest value in it.
+  it('gives the API the GitHub App key through a secret, not its environment', () => {
+    vi.stubEnv('GITHUB_APP_PRIVATE_KEY', '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----');
+    try {
+      const template = Template.fromStack(new DeployzStack(new App(), 'DeployzTest'));
+      const environments = Object.values(template.findResources('AWS::Lambda::Function')).map(
+        (resource) => (resource.Properties as { Environment?: { Variables?: Record<string, unknown> } })
+          .Environment?.Variables ?? {},
+      );
+      const api = environments.find((env) => 'JOB_QUEUE_URL' in env);
+      expect(api).not.toHaveProperty('GITHUB_APP_PRIVATE_KEY');
+      expect(api).toHaveProperty('GITHUB_APP_PRIVATE_KEY_SECRET_ARN');
+      template.hasResourceProperties('AWS::SecretsManager::Secret', {
+        SecretString: '-----BEGIN RSA PRIVATE KEY-----\nkey\n-----END RSA PRIVATE KEY-----',
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   // Failed-release evidence: the API reads the release build project's log

@@ -1,4 +1,4 @@
-import { Duration } from 'aws-cdk-lib';
+import { Duration, SecretValue } from 'aws-cdk-lib';
 import type { ISecurityGroup, IVpc } from 'aws-cdk-lib/aws-ec2';
 import { SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
@@ -39,6 +39,17 @@ export class ApiLambda extends Construct {
   constructor(scope: Construct, id: string, props: ApiLambdaProps) {
     super(scope, id);
 
+    // Lambda refuses an environment over 4 KB, and the GitHub App key is
+    // about 1.7 KB of it. The key goes into a secret instead, which
+    // api-handler.ts reads before it loads the API.
+    const { GITHUB_APP_PRIVATE_KEY: githubAppPrivateKey, ...environment } = props.environment ?? {};
+    const githubAppPrivateKeySecret =
+      githubAppPrivateKey === undefined
+        ? undefined
+        : new Secret(this, 'GithubAppPrivateKey', {
+            secretStringValue: SecretValue.unsafePlainText(githubAppPrivateKey),
+          });
+
     this.function = new NodejsFunction(this, 'Function', {
       runtime: Runtime.NODEJS_22_X,
       entry: join(import.meta.dirname, '..', 'src', 'lambda', 'api-handler.ts'),
@@ -52,7 +63,10 @@ export class ApiLambda extends Construct {
       environment: {
         DB_SECRET_ARN: props.dbSecretArn,
         NODE_ENV: 'production',
-        ...props.environment,
+        ...environment,
+        ...(githubAppPrivateKeySecret
+          ? { GITHUB_APP_PRIVATE_KEY_SECRET_ARN: githubAppPrivateKeySecret.secretArn }
+          : {}),
       },
       bundling: {
         // pg uses dynamic require(); CJS bundling avoids ESM loader errors.
@@ -68,5 +82,6 @@ export class ApiLambda extends Construct {
     // Grant Lambda read access to the RDS secret in Secrets Manager.
     const dbSecret = Secret.fromSecretCompleteArn(this, 'DbSecret', props.dbSecretArn);
     dbSecret.grantRead(this.function);
+    githubAppPrivateKeySecret?.grantRead(this.function);
   }
 }
