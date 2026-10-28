@@ -1,4 +1,13 @@
-import { ArnFormat, CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from 'aws-cdk-lib';
+import {
+  ArnFormat,
+  CfnOutput,
+  Duration,
+  RemovalPolicy,
+  SecretValue,
+  Stack,
+  Tags,
+  type StackProps,
+} from 'aws-cdk-lib';
 import {
   InstanceType,
   InstanceClass,
@@ -21,6 +30,7 @@ import {
 } from 'aws-cdk-lib/aws-rds';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Key } from 'aws-cdk-lib/aws-kms';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Queue, QueueEncryption } from 'aws-cdk-lib/aws-sqs';
 import {
   BlockPublicAccess,
@@ -198,7 +208,19 @@ export class DeployzStack extends Stack {
     });
 
     // ── API Lambda ───────────────────────────────────────────────────────
-    const credentialEnv = collectEnvVars();
+    // Lambda caps environment variables at 4 KB. The GitHub App PEM alone is
+    // most of that, so it goes to Secrets Manager and the functions read it
+    // at cold start (lambda/github-app-key.ts).
+    const { GITHUB_APP_PRIVATE_KEY: githubAppPrivateKey, ...credentialEnv } = collectEnvVars();
+    const githubAppKeySecret = githubAppPrivateKey
+      ? new Secret(this, 'GithubAppPrivateKey', {
+          description: 'Deployz GitHub App private key (PEM).',
+          secretStringValue: SecretValue.unsafePlainText(githubAppPrivateKey),
+        })
+      : undefined;
+    const githubAppKeyEnv: Record<string, string> = githubAppKeySecret
+      ? { GITHUB_APP_PRIVATE_KEY_SECRET_ARN: githubAppKeySecret.secretArn }
+      : {};
 
     // Set once the publisher has uploaded a template (see
     // `pnpm --filter @deployz/cdk run publish:bootstrap`, which prints the
@@ -230,6 +252,7 @@ export class DeployzStack extends Stack {
       dbSecretArn: dbInstance.secret?.secretArn ?? '',
       environment: {
         ...credentialEnv,
+        ...githubAppKeyEnv,
         JOB_QUEUE_URL: jobQueue.queueUrl,
         // Where the customer's CloudFormation fetches the bootstrap template
         // from. The API builds every install link off this value, so an
@@ -260,6 +283,7 @@ export class DeployzStack extends Stack {
     });
 
     jobQueue.grantSendMessages(apiLambda.function);
+    githubAppKeySecret?.grantRead(apiLambda.function);
 
     // Phase 1.1: the API rewrites the ECR repository policy to grant/revoke
     // per-installation cross-account pull access. Scoped to this repository,
@@ -319,6 +343,7 @@ export class DeployzStack extends Stack {
       queue: jobQueue,
       environment: {
         ...credentialEnv,
+        ...githubAppKeyEnv,
         SOURCE_BUCKET: sourceBucket.bucketName,
         BUILD_PROJECT_NAME: buildPipeline.project.projectName,
         DEPLOYZ_KMS_KEY_ARN: configSecretsKey.keyArn,
@@ -326,6 +351,7 @@ export class DeployzStack extends Stack {
     });
 
     sourceBucket.grantPut(worker.function);
+    githubAppKeySecret?.grantRead(worker.function);
     // aws-codebuild has no grant helper for StartBuild/BatchGetBuilds, so the
     // statement is written out — scoped to this project, not codebuild:* on
     // everything. CodeBuild authorizes both actions against the PROJECT

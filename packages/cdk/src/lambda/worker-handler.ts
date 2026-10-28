@@ -25,6 +25,7 @@ import { createSecretCipherFromEnv, type SecretCipher } from '@deployz/api/pendi
 import type { QueueMessage } from '@deployz/api/queue';
 
 import { connectDb, type LambdaDb } from './db-connection.js';
+import { loadGithubAppPrivateKey } from './github-app-key.js';
 import {
   handleMessage,
   inventoryConfigSecrets,
@@ -184,6 +185,11 @@ function isSqsEvent(event: WorkerEvent): event is SqsEvent {
 
 export async function handler(event: WorkerEvent): Promise<BatchResponse | void> {
   const db = await connectDb();
+  // Sets GITHUB_APP_PRIVATE_KEY for createDeps. A failed read fails only the
+  // work that needs GitHub, loudly; the sweeps below still run.
+  await loadGithubAppPrivateKey().catch((error: unknown) => {
+    console.error(JSON.stringify({ event: 'github:app-key-unavailable', error: String(error) }));
+  });
 
   if (!isSqsEvent(event)) {
     if (event['detail-type'] === 'CodeBuild Build State Change') {

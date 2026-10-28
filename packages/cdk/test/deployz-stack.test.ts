@@ -257,6 +257,82 @@ describe('DeployzStack', () => {
     expect(lambdaEnvironments(withId).some((env) => env['BOOTSTRAP_BUILD_ID'] === 'abc123def456')).toBe(true);
   });
 
+  // Lambda refuses an environment over 4 KB (keys plus values). A production
+  // release with Paddle configured measured 4391 bytes and rolled back, so
+  // the GitHub App PEM moved to Secrets Manager.
+  it('keeps a fully configured Lambda environment under the 4 KB limit', () => {
+    const pem = `-----BEGIN RSA PRIVATE KEY-----\n${'A'.repeat(64).concat('\n').repeat(25)}-----END RSA PRIVATE KEY-----\n`;
+    const configured: Record<string, string> = {
+      BETTER_AUTH_SECRET: 's'.repeat(64),
+      BETTER_AUTH_URL: 'https://api.app.deployz.dev',
+      GITHUB_CLIENT_ID: 'Iv23li'.padEnd(20, 'x'),
+      GITHUB_CLIENT_SECRET: 'c'.repeat(40),
+      GITHUB_APP_ID: '1234567',
+      GITHUB_APP_PRIVATE_KEY: pem,
+      GITHUB_WEBHOOK_SECRET: 'w'.repeat(64),
+      GITHUB_APP_INSTALL_URL: 'https://github.com/apps/deployz-app/installations/new',
+      EMAIL_FROM: 'noreply@deployz.dev',
+      API_URL: 'https://api.app.deployz.dev',
+      WEB_URL: 'https://app.deployz.dev',
+      MARKETING_URL: 'https://deployz.dev',
+      COOKIE_DOMAIN: '.app.deployz.dev',
+      COOKIE_PREFIX: 'deployz',
+      AI_GATEWAY_BASE_URL: `https://gateway.ai.cloudflare.com/v1/${'a'.repeat(32)}/deployz`,
+      AI_MODEL: 'anthropic/claude-sonnet-4-5',
+      AI_PROVIDER_API_KEY: 'k'.repeat(108),
+      FIX_INSTRUCTIONS_AI_PROVIDER: 'openrouter',
+      OPENROUTER_API_KEY: 'o'.repeat(73),
+      AWS_SES_ACCESS_KEY_ID: 'A'.repeat(20),
+      AWS_SES_SECRET_ACCESS_KEY: 'S'.repeat(40),
+      CLOUDFLARE_ZONE_ID: 'z'.repeat(32),
+      CLOUDFLARE_ZONE_NAME: 'deployz.dev',
+      DEPLOYZ_DEFAULT_HOSTNAME_PREFIX: 'd-',
+      CLOUDFLARE_ZONE_EDIT_API_TOKEN: 't'.repeat(40),
+      PADDLE_API_KEY: `pdl_live_apikey_${'p'.repeat(64)}`,
+      PADDLE_WEBHOOK_SECRET: `pdl_ntfset_${'n'.repeat(26)}_${'s'.repeat(32)}`,
+      PADDLE_CLIENT_TOKEN: `live_${'c'.repeat(27)}`,
+      PADDLE_PRICE_PLATFORM: 'pri_01m610t25agdphge6d8w4fh77r',
+      PADDLE_PRICE_DEPLOYMENT: 'pri_01m610t2fp2ydcya68hn9gvr14',
+      PADDLE_ENVIRONMENT: 'production',
+      BILLING_ENFORCEMENT: 'off',
+    };
+    const saved = { ...process.env };
+    Object.assign(process.env, configured);
+    let template: Template;
+    try {
+      const regions =
+        'us-east-1,us-east-2,us-west-1,us-west-2,ca-central-1,sa-east-1,eu-west-1,eu-west-2,eu-west-3,eu-central-1,eu-north-1,ap-northeast-1,ap-northeast-2,ap-northeast-3,ap-south-1,ap-southeast-1,ap-southeast-2';
+      const app = new App({
+        context: {
+          bootstrapTemplateUrl: `https://deployz-templatebucket88a95323-${'x'.repeat(12)}.s3.us-east-1.amazonaws.com/bootstrap/v1/bootstrap-template-v1.json`,
+          bootstrapBuildId: 'abc123def456',
+          deployableAwsRegions: regions,
+        },
+      });
+      template = Template.fromStack(new DeployzStack(app, 'DeployzTest'));
+    } finally {
+      process.env = saved;
+    }
+
+    const environments = Object.values(template.findResources('AWS::Lambda::Function')).map(
+      (resource) => (resource.Properties as { Environment?: { Variables?: Record<string, unknown> } })
+        .Environment?.Variables ?? {},
+    );
+    const withKey = environments.filter((env) => 'GITHUB_APP_PRIVATE_KEY_SECRET_ARN' in env);
+    expect(withKey).toHaveLength(2);
+    for (const env of environments) {
+      expect(env).not.toHaveProperty('GITHUB_APP_PRIVATE_KEY');
+      // An unresolved reference (an ARN, a URL) counts as 150 bytes — longer
+      // than any of them resolves to.
+      const size = Object.entries(env).reduce(
+        (total, [key, value]) => total + key.length + (typeof value === 'string' ? value.length : 150),
+        0,
+      );
+      expect(size).toBeLessThan(4096 - 512);
+    }
+    template.hasResourceProperties('AWS::SecretsManager::Secret', { SecretString: pem });
+  });
+
   // Failed-release evidence: the API reads the release build project's log
   // group, and only that group, and only GetLogEvents.
   it('lets the API read only the release build log group', () => {

@@ -23,6 +23,7 @@ import { createAuth } from '@deployz/api/auth';
 
 import { toInjectOptions, toLambdaResult } from './api-gateway-adapter.js';
 import { connectDb } from './db-connection.js';
+import { loadGithubAppPrivateKey } from './github-app-key.js';
 
 let appPromise: Promise<FastifyInstance> | null = null;
 
@@ -31,7 +32,13 @@ function getApp(): Promise<FastifyInstance> {
     appPromise = (async () => {
       const db = await connectDb();
       const auth = createAuth(db);
-      const app = await buildServer({ auth, db });
+      // env.ts is read at import, before the key is loaded, so it is passed
+      // in. A failed read leaves only the GitHub features unconfigured.
+      const githubAppPrivateKey = await loadGithubAppPrivateKey().catch((error: unknown) => {
+        console.error(JSON.stringify({ event: 'github:app-key-unavailable', error: String(error) }));
+        return undefined;
+      });
+      const app = await buildServer({ auth, db, githubAppPrivateKey });
       await app.ready();
       return app;
     })();
