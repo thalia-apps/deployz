@@ -164,7 +164,7 @@ function escape(text: string): string {
  * default client port of a database, cache or broker protocol (`port 6379`, `DEF_PGPORT 5432`).
  */
 export const DATASTORE_ROLE =
-  /\b(?:database (?:server|management system)|datastore|data store|key[- ]value (?:store|database)|search engine|vector (?:database|store|search engine)|(?:message|messaging|streaming)(?: and streaming)? broker|event streaming|object stor(?:e|age) server|S3 object store|distributed file system|time[- ]series database)\b|port\b\D{0,30}\b(?:1883|8883|5671|5672|9092|4222|3306|5432|6379|27017|9042|7687|26257)\b/i;
+  /\b(?:database (?:server|management system)|relational databases?|datastore|data store|key[- ]value (?:store|database)|search engine|vector (?:database|store|search engine)|(?:message|messaging|streaming)(?: and streaming)? broker|event streaming|object stor(?:e|age) server|S3 object store|distributed file system|time[- ]series database)\b|port\b\D{0,30}\b(?:1883|8883|5671|5672|9092|4222|3306|5432|6379|27017|9042|7687|26257)\b/i;
 
 /** What each fact question searches the production files for. */
 const FACT_SEARCH: Record<string, RegExp> = {

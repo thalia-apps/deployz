@@ -184,6 +184,20 @@ describe('AI Analysis: the root README for the repository kind', () => {
     expect(report.outcome).toBe('NOT_DEPLOYABLE');
   });
 
+  it('a README role sentence that wraps over two lines supports the answer (MariaDB new-209)', async () => {
+    const tree = withPaths({
+      ...README_ONLY(),
+      'README.md': ['# MariaDB Server', '', 'MariaDB Server is one of the most widely deployed open source relational', ' databases. It is built by a global community.'].join('\n'),
+    });
+    const { report, failedChecks } = await outcomeOf(tree, 'datastore', {
+      evidence: [cite('README.md', 1, '# MariaDB Server')[0]!, cite('README.md', 3, 'open source relational')[0]!],
+    });
+    expect(failedChecks).toBe(0);
+    expect(report.outcome).toBe('NOT_DEPLOYABLE');
+    // The title line alone names no role.
+    expect((await outcomeOf(tree, 'datastore', { evidence: cite('README.md', 1, '# MariaDB Server') })).failedChecks).toBe(1);
+  });
+
   it('is never production evidence for another answer', () => {
     expect(isProductionFile('README.md')).toBe(false);
     expect(isProductionFile('docs/README.md')).toBe(false);
