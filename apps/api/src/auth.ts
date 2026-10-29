@@ -67,7 +67,27 @@ export function createAuth(
         }
       : {}),
     database: drizzleAdapter(db, { provider: 'pg', schema }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: {
+      enabled: true,
+      // The e-mail links straight to the web app's reset page with the token;
+      // Better Auth's own callback URL would add a redirect through the API.
+      // The response to a reset request is the same for unknown addresses.
+      // A reset also signs out every session, so a stolen session ends.
+      sendResetPassword: async ({ user, token }) => {
+        await sendQuietly(emailSender, {
+          to: user.email,
+          subject: 'Reset your Deployz password',
+          body: [
+            'Use this link to choose a new Deployz password. The link is valid for 1 hour:',
+            '',
+            `${env.webUrl}/reset-password?token=${encodeURIComponent(token)}`,
+            '',
+            'If you did not ask for this, ignore this email. Your password does not change.',
+          ].join('\n'),
+        });
+      },
+      revokeSessionsOnPasswordReset: true,
+    },
     // Sign-in stays open to unverified accounts; organization invitations
     // (the only way to join another tenant) require a verified e-mail.
     emailVerification: {

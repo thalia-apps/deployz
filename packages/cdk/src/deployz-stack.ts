@@ -19,6 +19,8 @@ import {
   Vpc,
   type IVpc,
 } from 'aws-cdk-lib/aws-ec2';
+import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
+import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { Rule } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { ComputeType } from 'aws-cdk-lib/aws-codebuild';
@@ -31,6 +33,8 @@ import {
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Key } from 'aws-cdk-lib/aws-kms';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { Topic } from 'aws-cdk-lib/aws-sns';
+import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Queue, QueueEncryption } from 'aws-cdk-lib/aws-sqs';
 import {
   BlockPublicAccess,
@@ -80,9 +84,15 @@ export interface DeployzStackProps extends StackProps {
  */
 export class DeployzStack extends Stack {
   constructor(scope: Construct, id: string, props?: DeployzStackProps) {
-    super(scope, id, { ...props, env: { region: 'us-east-1' } });
+    const stage = props?.stage ?? 'production';
+    super(scope, id, {
+      ...props,
+      env: { region: 'us-east-1' },
+      // Only production is protected: a staging stack must stay deletable.
+      terminationProtection: stage === 'production',
+    });
 
-    const names = stageNames(props?.stage ?? 'production');
+    const names = stageNames(stage);
 
     Tags.of(this).add('deployz:managed', 'true');
     Tags.of(this).add('deployz:scope', 'control-plane');
@@ -130,7 +140,7 @@ export class DeployzStack extends Stack {
     // one a message that always throws is retried until it silently expires.
     const jobDeadLetterQueue = new Queue(this, 'JobDeadLetterQueue', {
       encryption: QueueEncryption.SQS_MANAGED,
-      retentionPeriod: Duration.days(3),
+      retentionPeriod: Duration.days(14),
     });
     const jobQueue = new Queue(this, 'JobQueue', {
       encryption: QueueEncryption.SQS_MANAGED,
@@ -474,6 +484,98 @@ export class DeployzStack extends Stack {
       },
       targets: [new LambdaFunction(worker.function)],
     });
+
+    // ── Alarms ───────────────────────────────────────────────────────────
+    // One topic. The email subscription is optional: without an address the
+    // topic and the alarms still exist, and the subscription can be added by
+    // hand. A blank value counts as unset (an unset GitHub Actions variable
+    // arrives as an empty string).
+    const alertEmail = [
+      this.node.tryGetContext('alertEmail') as string | undefined,
+      process.env.ALERT_EMAIL,
+    ]
+      .map((value) => value?.trim())
+      .find((value) => value !== undefined && value.length > 0);
+    const alarmTopic = new Topic(this, 'AlarmTopic', {
+      displayName: `${this.stackName} alarms`,
+    });
+    if (alertEmail) {
+      alarmTopic.addSubscription(new EmailSubscription(alertEmail));
+    }
+    const alarmAction = new SnsAction(alarmTopic);
+    const addAlarm = (
+      alarmId: string,
+      alarmProps: ConstructorParameters<typeof Alarm>[2],
+      description: string,
+    ): void => {
+      const alarm = new Alarm(this, alarmId, {
+        ...alarmProps,
+        alarmDescription: description,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+      });
+      alarm.addAlarmAction(alarmAction);
+      alarm.addOkAction(alarmAction);
+    };
+    addAlarm(
+      'ApiErrorsAlarm',
+      {
+        metric: apiLambda.function.metricErrors({ period: Duration.minutes(5), statistic: 'Sum' }),
+        threshold: 5,
+        evaluationPeriods: 1,
+      },
+      'API Lambda errors: 5 or more in 5 minutes.',
+    );
+    addAlarm(
+      'WorkerErrorsAlarm',
+      {
+        metric: worker.function.metricErrors({ period: Duration.minutes(15), statistic: 'Sum' }),
+        threshold: 3,
+        evaluationPeriods: 1,
+      },
+      'Worker Lambda errors: 3 or more in 15 minutes.',
+    );
+    addAlarm(
+      'JobDeadLetterQueueAlarm',
+      {
+        metric: jobDeadLetterQueue.metricApproximateNumberOfMessagesVisible({
+          period: Duration.minutes(5),
+          statistic: 'Maximum',
+        }),
+        threshold: 1,
+        evaluationPeriods: 1,
+      },
+      'A job message is in the dead-letter queue.',
+    );
+    // Both API hostnames map this one HTTP API, so one alarm covers both.
+    addAlarm(
+      'HttpApi5xxAlarm',
+      {
+        metric: httpApi.metricServerError({ period: Duration.minutes(5), statistic: 'Sum' }),
+        threshold: 10,
+        evaluationPeriods: 1,
+      },
+      'HTTP API 5xx responses: 10 or more in 5 minutes.',
+    );
+    addAlarm(
+      'DatabaseFreeMemoryAlarm',
+      {
+        metric: dbInstance.metricFreeableMemory({ period: Duration.minutes(5), statistic: 'Average' }),
+        threshold: 64 * 1024 * 1024,
+        comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
+        evaluationPeriods: 3,
+      },
+      'Database freeable memory under 64 MiB for 15 minutes.',
+    );
+    addAlarm(
+      'DatabaseFreeStorageAlarm',
+      {
+        metric: dbInstance.metricFreeStorageSpace({ period: Duration.minutes(5), statistic: 'Minimum' }),
+        threshold: 2 * 1024 * 1024 * 1024,
+        comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
+        evaluationPeriods: 1,
+      },
+      'Database free storage under 2 GiB.',
+    );
 
     // ── Stack outputs ────────────────────────────────────────────────────
     this.exportValue(dbInstance.instanceEndpoint.hostname, {

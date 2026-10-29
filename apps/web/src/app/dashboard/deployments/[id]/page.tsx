@@ -506,7 +506,11 @@ function DetailBody({
         </DeploymentHero>
       </section>
 
-      <ConnectorUpdateAlert connector={detail.deploymentStatus.connector} customerName={detail.customerName} />
+      <ConnectorUpdateAlert
+        connector={detail.deploymentStatus.connector}
+        customerName={detail.customerName}
+        offline={detail.relayStatus !== 'CONNECTED'}
+      />
 
       {detail.state === 'NOT_INSTALLED' || detail.state === 'WAITING_FOR_RELAY' ? (
         <InstallLinkCard detail={detail} />
@@ -991,8 +995,16 @@ function DeploymentActions({
     (neverConnected || actionSupported(capabilities, 'disconnect'));
   // Recovery for a failed FIRST install: the API refuses it once any install
   // has succeeded, so it is offered exactly where the day-2 actions are not.
-  const canRetryInstall = canRetryFirstInstall(detail.state, everRan, inFlightOperation);
-  const retryCtaKind = canRetryInstall ? retryCta(retryEligibility) : null;
+  const needsNewInstallLink = retryNeedsNewInstallLink(detail.relayStatus, detail.installationId);
+  const offlineInstallFailure = hero.kind === 'install-failed' && needsNewInstallLink;
+  const canRetryInstall = canRetryFirstInstall(
+    detail.state,
+    everRan,
+    inFlightOperation,
+    offlineInstallFailure,
+  );
+  const eligibilityCta = canRetryInstall ? retryCta(retryEligibility) : null;
+  const retryCtaKind = offlineInstallFailure && eligibilityCta === 'none' ? 'retry' : eligibilityCta;
   // Capability copy applies only while the deployment would otherwise be
   // actionable — an offline/busy/removed deployment reports its own reason.
   const anyCapabilityGatedOff =
@@ -1172,7 +1184,7 @@ function DeploymentActions({
         open={open === 'retryInstall'}
         deploymentId={detail.id}
         applicationName={detail.applicationName}
-        needsNewInstallLink={retryNeedsNewInstallLink(detail.relayStatus, detail.installationId)}
+        needsNewInstallLink={needsNewInstallLink}
         onDone={() => {
           setOpen(null);
           onChanged();

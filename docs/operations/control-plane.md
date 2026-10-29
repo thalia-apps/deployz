@@ -178,6 +178,7 @@ API reads is validated in `apps/api/src/env.ts`.
 | Fix instructions | `FIX_INSTRUCTIONS_AI_PROVIDER` (repository variable: `openrouter` or `gateway`; the deploy uses `gateway` when unset), `FIX_INSTRUCTIONS_AI_MODEL` (repository variable, optional; OpenRouter only), `OPENROUTER_API_KEY` (secret) | No fallback model: a provider without its credentials answers 503 for fix instructions only, with `details.reason: not_configured`; a local API names the missing setting. `gateway` is the rollback to the shared gateway and `AI_MODEL` |
 | Customer templates | `BOOTSTRAP_TEMPLATE_URL` (variable), `DEPLOYABLE_AWS_REGIONS` (variable), `BOOTSTRAP_REPUBLISH` (variable), `DEPLOYZ_TEMPLATE_BUCKET_PREFIX` (variable) | See *Publishing customer templates*. `DEPLOYZ_TEMPLATE_BUCKET_PREFIX` names this stage's regional buckets for the republish step; the Lambda's own copy comes from CDK. |
 | Web deploy (`deploy-web.yml`) | `LIGHTSAIL_SERVICE_NAME`, `API_URL`, `APP_HOST`, `MARKETING_HOST`, `COOKIE_PREFIX`, `DEPLOYZ_STAGE` | Variables on the same Environment. `APP_HOST` and `MARKETING_HOST` are bare hostnames. The service name is also the local image tag, so a build for one stage cannot be pushed under another stage's name. |
+| Alarms | `ALERT_EMAIL` (variable) | Optional. The address that gets alarm email (see *Alarms*). Unset still creates the topic and the alarms. |
 | Release builds | `DOCKERHUB_SECRET_NAME` (variable) | [`../docker-hub-credentials.md`](../docker-hub-credentials.md). Unresolvable name fails every build; empty means unset. |
 | Billing | `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`, `PADDLE_CLIENT_TOKEN`, `PADDLE_PRICE_PLATFORM`, `PADDLE_PRICE_DEPLOYMENT`, `PADDLE_ENVIRONMENT` (variable, defaults to `sandbox`), `BILLING_ENFORCEMENT` (variable; `off` pauses the production-deployment subscription gate) | [`../billing/paddle-billing.md`](../billing/paddle-billing.md) |
 | Secrets | `DEPLOYZ_KMS_KEY_ARN` | Set by CDK from the stack's own key; the API fails to start without it |
@@ -535,6 +536,27 @@ stuck builds, billing reconciliation, a count-only config-secret inventory
 (`watchdog:config-secret-inventory`; `stub` and `other` must be zero in
 production), and expiry of pending secrets. Timings and rules are in
 [`../deployment-resilience.md`](../deployment-resilience.md).
+
+## Alarms
+
+The stack has one SNS topic and six CloudWatch alarms. Each alarm sends a
+message to the topic when it goes to ALARM and again when it returns to OK.
+Missing data counts as good. Set the `ALERT_EMAIL` variable on the GitHub
+Environment to subscribe an address. The first deploy after the change sends
+a confirmation email; the subscription is active only after someone confirms
+it. With `ALERT_EMAIL` unset, the topic and the alarms still exist, and an
+operator can add a subscriber on the topic by hand.
+
+| Alarm | Fires when | First action |
+| --- | --- | --- |
+| API Lambda errors | 5 or more errors in 5 minutes | Read the API Lambda log group for the first error. If it follows a deploy, roll back (see *Promotion, approval and rollback*). |
+| Worker Lambda errors | 3 or more errors in 15 minutes | Read the worker log group. Failed jobs retry up to 3 times, then go to the dead-letter queue. |
+| Job dead-letter queue | 1 or more messages in the queue | A job failed 3 times. Read the message and the worker log for its error. Fix the cause, then redrive or delete the message. The queue keeps messages for 14 days. |
+| HTTP API 5xx | 10 or more 5xx responses in 5 minutes | Check the API Lambda errors alarm and the database alarms. A 5xx without a Lambda error often means a timeout or throttling. The browser hostname and the relay hostname share this one API. |
+| Database free memory | Under 64 MiB for 15 minutes | Look for a long query or too many connections (see *Database connections*). Make the instance larger if the load is real. |
+| Database free storage | Under 2 GiB | Storage grows on its own up to 100 GB. Under 2 GiB means growth is near its limit or stalled. Find the large tables and raise `maxAllocatedStorage`. |
+
+The production stack has termination protection. A staging stack does not.
 
 ## Local development
 

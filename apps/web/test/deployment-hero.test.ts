@@ -427,6 +427,17 @@ describe('canRetryFirstInstall', () => {
   });
 });
 
+describe('canRetryFirstInstall with an offline connector', () => {
+  it('offers the recovery even when the API reports an earlier install', () => {
+    expect(canRetryFirstInstall('FAILED', true, null, true)).toBe(true);
+  });
+
+  it('still refuses while a DESTROY runs or outside a failed deployment', () => {
+    expect(canRetryFirstInstall('FAILED', true, job({ type: 'DESTROY', state: 'RUNNING' }), true)).toBe(false);
+    expect(canRetryFirstInstall('HEALTHY', true, null, true)).toBe(false);
+  });
+});
+
 describe('showApplicationUrl', () => {
   it('shows the address unless the install failed or the deployment is going away', () => {
     expect(showApplicationUrl('live', 'https://x.test')).toBe(true);
