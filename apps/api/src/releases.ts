@@ -7,7 +7,7 @@ import { env } from './env.js';
 import { ApiError } from './errors.js';
 import { readEnvironmentSettings } from './environment-setup.js';
 import { recordEvent } from './events.js';
-import { flipHealthyDeploymentsToUpdateAvailable } from './jobs.js';
+import { flipHealthyDeploymentsToUpdateAvailable, isUniqueViolation } from './jobs.js';
 import { listProvidedConfigKeys } from './config.js';
 import { enqueue } from './queue.js';
 import { hashRelayToken } from './relay-store.js';
@@ -83,6 +83,17 @@ export async function createReleaseRecord(
       payload: { schemaVersion: 1, applicationId: params.applicationId },
     });
     return inserted;
+  }).catch((error: unknown) => {
+    // Two requests for one version both pass the route's duplicate check; the
+    // unique index refuses the second.
+    if (isUniqueViolation(error)) {
+      throw new ApiError(
+        409,
+        'RELEASE_VERSION_EXISTS',
+        `Version ${params.version} already exists for this application. Use a different version number.`,
+      );
+    }
+    throw error;
   });
   // A release with no build is a release that can never deploy: the
   // §21 image digest only exists once CodeBuild has pushed the image.
