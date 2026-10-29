@@ -27,7 +27,7 @@ import { createAuth, type Auth } from './auth.js';
 import { compileDeploymentIntent } from './compiler-artifact.js';
 import { primaryServiceLogicalIds } from './deployment-status.js';
 import { readStoredDeploymentSpec, readStoredManifest } from './manifest.js';
-import { buildPullStatement, type EcrClient, type EcrGrantStatement } from './ecr-grants.js';
+import type { EcrClient, EcrGrantStatement } from './ecr-grants.js';
 import { env } from './env.js';
 import { ApiError } from './errors.js';
 import { GITHUB_FIXTURE_FILE_TREES } from './github.js';
@@ -6915,11 +6915,13 @@ const body = (await getInfrastructure(deployment.id, { cookie: org.cookie })).js
 // would.
 function createRecorderEcrClient(): EcrClient & {
   seed(statement: EcrGrantStatement): void;
-  statements(): Array<{ Sid: string; Principal: { AWS: string } }>;
-  statementFor(sid: string): { Sid: string; Principal: { AWS: string } } | undefined;
+  statements(): Array<{ Sid: string; Principal: { AWS: string | string[] } }>;
+  principals(): string[];
+  failWrites: boolean;
 } {
   let policy: { Statement?: unknown[] } | null = null;
   return {
+    failWrites: false,
     async getRepositoryPolicy(): Promise<{ policyText: Record<string, unknown> } | null> {
       return policy ? { policyText: policy as unknown as Record<string, unknown> } : null;
     },
@@ -6927,6 +6929,7 @@ function createRecorderEcrClient(): EcrClient & {
       _repositoryName: string,
       policyText: Record<string, unknown>,
     ): Promise<void> {
+      if (this.failWrites) throw new Error('AccessDenied');
       policy = policyText as unknown as { Statement?: unknown[] };
     },
     async deleteRepositoryPolicy(_repositoryName: string): Promise<void> {
@@ -6938,12 +6941,22 @@ function createRecorderEcrClient(): EcrClient & {
     },
     statements() {
       return (
-        (policy?.Statement as Array<{ Sid: string; Principal: { AWS: string } }> | undefined) ?? []
+        (policy?.Statement as Array<{ Sid: string; Principal: { AWS: string | string[] } }> | undefined) ??
+        []
       );
     },
-    statementFor(sid: string) {
-      return this.statements().find((s) => s.Sid === sid);
+    principals() {
+      return this.statements().flatMap((s) => [s.Principal.AWS].flat());
     },
+  };
+}
+
+function legacyPullStatement(installationId: string, accountId: string): EcrGrantStatement {
+  return {
+    Sid: `deployz-pull-${installationId}`,
+    Effect: 'Allow',
+    Principal: { AWS: `arn:aws:iam::${accountId}:root` },
+    Action: ['ecr:BatchGetImage'],
   };
 }
 
@@ -7010,10 +7023,37 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(response.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${installationId}`)).toMatchObject({
-      Sid: `deployz-pull-${installationId}`,
-      Principal: { AWS: 'arn:aws:iam::123456789012:root' },
+    expect(fakeEcr.statements()).toHaveLength(1);
+    expect(fakeEcr.principals()).toContain('arn:aws:iam::123456789012:root');
+  });
+
+  it('a failed grant answers 503 and the relay registers again; the replay grants', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    await seedReadyRelease(application.id);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'NOT_INSTALLED',
+      installationId: null,
     });
+    const installationId = `inst-grant-retry-${crypto.randomUUID()}`;
+    const register = () =>
+      postJson(
+        app,
+        '/api/relay/register',
+        { enrollmentCode: deployment.enrollmentCode, installationId, awsAccountId: '210987654300' },
+        { authorization: `Bearer ${RELAY_TOKEN}` },
+      );
+
+    fakeEcr.failWrites = true;
+    const failed = await register();
+    fakeEcr.failWrites = false;
+    expect(failed.statusCode).toBe(503);
+    expect(failed.json()).toMatchObject({ error: { code: 'ECR_GRANT_FAILED' } });
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654300:root');
+
+    const replay = await register();
+    expect(replay.statusCode).toBe(200);
+    expect(fakeEcr.principals()).toContain('arn:aws:iam::210987654300:root');
   });
 
   it('INSTALL success auto-enqueues a digest-pinned DEPLOY_RELEASE for the newest READY release', async () => {
@@ -7389,11 +7429,11 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
       state: 'HEALTHY',
       installationId: `inst-destroy-${crypto.randomUUID()}`,
-      awsAccountId: '123456789012',
+      awsAccountId: '210987654301',
       relayTokenHash: hashRelayToken(RELAY_TOKEN),
     });
     // The grant the install would have made.
-    fakeEcr.seed(buildPullStatement(deployment.installationId!, '123456789012'));
+    fakeEcr.seed(legacyPullStatement(deployment.installationId!, '210987654301'));
 
     const destroy = await postJson(
       app,
@@ -7413,7 +7453,45 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(result.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${deployment.installationId}`)).toBeUndefined();
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654301:root');
+  });
+
+  it('keeps the account grant while another live deployment uses the account', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const account = '210987654303';
+    const destroyed = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-shared-a-${crypto.randomUUID()}`,
+      awsAccountId: account,
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-shared-b-${crypto.randomUUID()}`,
+      awsAccountId: account,
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    fakeEcr.seed(legacyPullStatement(destroyed.installationId!, account));
+
+    const destroy = await postJson(
+      app,
+      `/api/deployments/${destroyed.id}/destroy`,
+      {},
+      { cookie: org.cookie },
+    );
+    expect(destroy.statusCode).toBe(202);
+    const commands = await claimCommands(destroyed.installationId!);
+    const destroyJob = commands.find((c) => c.type === 'DESTROY')!;
+    const result = await postJson(
+      app,
+      `/api/relay/commands/${destroyJob.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${RELAY_TOKEN}` },
+    );
+    expect(result.statusCode).toBe(200);
+
+    expect(fakeEcr.principals()).toContain(`arn:aws:iam::${account}:root`);
   });
 
   it('revokes the pull grant when a PURGE succeeds', async () => {
@@ -7423,10 +7501,10 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
       state: 'DELETED',
       cleanupState: 'SKIPPED_RELAY_OFFLINE',
       installationId: `inst-purge-${crypto.randomUUID()}`,
-      awsAccountId: '123456789012',
+      awsAccountId: '210987654302',
       relayTokenHash: hashRelayToken(RELAY_TOKEN),
     });
-    fakeEcr.seed(buildPullStatement(deployment.installationId!, '123456789012'));
+    fakeEcr.seed(legacyPullStatement(deployment.installationId!, '210987654302'));
 
     const purge = await postJson(
       app,
@@ -7446,7 +7524,7 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(result.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${deployment.installationId}`)).toBeUndefined();
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
 });
 
