@@ -552,6 +552,8 @@ export type GithubLiveState =
       accountLogin: string;
       accountType: 'Organization' | 'User';
       accountId: string | null;
+      /** When GitHub created the installation (ISO 8601); null when GitHub omitted it. */
+      createdAt: string | null;
     };
 
 // Reads the installation as GitHub has it now, with the App JWT. A 404 means
@@ -578,6 +580,7 @@ export async function fetchInstallationLiveState(
   const data = (await response.json()) as {
     account?: { login?: string; type?: string; id?: number | string } | undefined;
     suspended_at?: string | null | undefined;
+    created_at?: string | null | undefined;
   };
   const accountLogin = data.account?.login;
   if (!accountLogin) {
@@ -588,7 +591,61 @@ export async function fetchInstallationLiveState(
     accountLogin,
     accountType: data.account?.type === 'User' ? 'User' : 'Organization',
     accountId: data.account?.id === undefined ? null : String(data.account.id),
+    createdAt: data.created_at ?? null,
   };
+}
+
+// An installation id is a small public integer, and the signed state proves
+// only that an organization started an install — not that the caller controls
+// installation N. So a new binding needs proof of control:
+//  - with the installing user's OAuth `code` (GitHub sends it when the App
+//    asks for user authorization during installation), the installation must
+//    be one that user can see; or
+//  - without a `code`, the installation must be brand new, so only the install
+//    that just sent the browser here can be claimed.
+export const FRESH_INSTALLATION_WINDOW_MS = 15 * 60 * 1000;
+
+export function isFreshInstallation(createdAt: string | null, nowMs: number): boolean {
+  const created = createdAt === null ? Number.NaN : Date.parse(createdAt);
+  return Number.isFinite(created) && nowMs - created <= FRESH_INSTALLATION_WINDOW_MS && created - nowMs <= 60_000;
+}
+
+const USER_INSTALLATIONS_MAX_PAGES = 5;
+
+// Exchanges the installing user's OAuth `code` for a user token (the App's
+// client id and secret) and reports whether that user can see the
+// installation. Any failure answers false: the caller refuses the binding.
+export async function userCanSeeInstallation(
+  code: string,
+  installationId: string,
+  clientId: string,
+  clientSecret: string,
+  fetchFn: FetchFn,
+): Promise<boolean> {
+  const exchange = await fetchFn('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+  });
+  if (exchange.status < 200 || exchange.status >= 300) return false;
+  const token = ((await exchange.json()) as { access_token?: string | undefined }).access_token;
+  if (!token) return false;
+  for (let page = 1; page <= USER_INSTALLATIONS_MAX_PAGES; page += 1) {
+    const response = await fetchFn(`${GITHUB_API_BASE}/user/installations?per_page=100&page=${page}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (response.status < 200 || response.status >= 300) return false;
+    const installations = ((await response.json()) as { installations?: { id: number | string }[] | undefined })
+      .installations ?? [];
+    if (installations.some((installation) => String(installation.id) === installationId)) return true;
+    if (installations.length < 100) return false;
+  }
+  return false;
 }
 
 // The status a stored connection takes from GitHub's current state. A

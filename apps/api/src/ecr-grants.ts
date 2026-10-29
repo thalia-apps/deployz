@@ -3,18 +3,16 @@
  *
  * The control plane owns a private ECR repository. Customer accounts need
  * cross-account pull access to deploy images. This module provides pure
- * functions for building ECR repository policy statements that grant pull
- * access per installation, plus an injectable client interface for applying
- * and revoking those grants at runtime.
+ * functions for building the ECR repository policy, plus an injectable client
+ * interface for applying it at runtime.
  *
- * Grant lifecycle:
- *   INSTALL time  → grantPull(installationId, customerAccountId)
- *   DESTROY time   → revokePull(installationId)
- *
- * The grant is per-installation, not per-customer. Each installation gets its
- * own policy statement scoped to the customer's self-reported AWS account ID
- * (supplied at registration; no STS verification — grants are tag-scoped to
- * the installation and revocable via revokePull).
+ * The policy holds ONE pull statement (`deployz-pull`). Its principals are the
+ * de-duplicated account root ARNs of the customer accounts (self-reported at
+ * registration; no STS verification) that still have a live deployment. One
+ * statement per installation would reach the 10,240-character policy limit at
+ * about 44 installations. `syncPullPolicy` rewrites the whole statement from
+ * the wanted account list, so a grant, a revoke and the absorption of the older
+ * per-installation statements (`deployz-pull-<installation id>`) are one write.
  *
  * AWS-BLOCKED replaced — the real `EcrClient` implementation delegates to the
  * SDK v3. The `EcrClient` interface follows the same injectable-seam pattern as
@@ -121,7 +119,7 @@ export function createRealEcrClient(): EcrClient {
 export interface EcrGrantStatement {
   readonly Sid: string;
   readonly Effect: 'Allow';
-  readonly Principal: { readonly AWS: string };
+  readonly Principal: { readonly AWS: string | readonly string[] };
   readonly Action: readonly string[];
   readonly Condition?: Record<string, Record<string, string>> | undefined;
 }
@@ -131,23 +129,32 @@ type AwsPolicyDocument = {
   readonly Statement: readonly EcrGrantStatement[];
 };
 
-/** Builds the Sid (statement ID) for a given installation grant. */
-export function installationGrantSid(installationId: string): string {
-  return `deployz-pull-${installationId}`;
+/** Sid of the one pull statement. */
+export const PULL_GRANT_SID = 'deployz-pull';
+
+/** Sid prefix of the older per-installation statements (`deployz-pull-<id>`). */
+const LEGACY_PULL_SID_PREFIX = 'deployz-pull-';
+
+/** ECR rejects a repository policy larger than this many characters. */
+export const ECR_POLICY_MAX_CHARS = 10_240;
+
+function isPullGrantStatement(statement: EcrGrantStatement): boolean {
+  return (
+    statement.Sid === PULL_GRANT_SID ||
+    (typeof statement.Sid === 'string' && statement.Sid.startsWith(LEGACY_PULL_SID_PREFIX))
+  );
 }
 
 /**
- * Builds a single ECR repository policy statement granting cross-account
- * pull access for a specific installation.
+ * Builds the one pull statement for a list of customer account ids. The
+ * principals are de-duplicated and sorted, so equal inputs give equal output.
  */
-export function buildPullStatement(
-  installationId: string,
-  customerAccountId: string,
-): EcrGrantStatement {
+export function buildPullStatement(accountIds: readonly string[]): EcrGrantStatement {
+  const arns = [...new Set(accountIds.map((id) => `arn:aws:iam::${id}:root`))].sort();
   return {
-    Sid: installationGrantSid(installationId),
+    Sid: PULL_GRANT_SID,
     Effect: 'Allow',
-    Principal: { AWS: `arn:aws:iam::${customerAccountId}:root` },
+    Principal: { AWS: arns },
     Action: [...ECR_PULL_ACTIONS],
   };
 }
@@ -168,121 +175,66 @@ export function buildRepoPolicyDocument(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Grant lifecycle — pure orchestration (read-modify-write with the client)
-// ---------------------------------------------------------------------------
-
-export interface GrantResult {
-  readonly added: boolean;
-  readonly statementCount: number;
-}
-
 /**
- * Adds a pull grant for an installation to the ECR repository policy.
- *
- * Reads the current policy, adds the statement (idempotent — replaces an
- * existing statement with the same Sid), and writes the updated policy.
- * If no policy exists, creates one with the single statement.
+ * Returns the statements with every pull statement (the one statement and the
+ * older per-installation ones) replaced by one statement for `accountIds`.
+ * Other statements stay as they are. No accounts means no pull statement.
  */
-export async function grantPull(
-  client: EcrClient,
-  repositoryName: string,
-  installationId: string,
-  customerAccountId: string,
-): Promise<GrantResult> {
-  const sid = installationGrantSid(installationId);
-  const newStmt = buildPullStatement(installationId, customerAccountId);
-
-  const current = await client.getRepositoryPolicy(repositoryName);
-  const currentStatements: readonly EcrGrantStatement[] = current
-    ? ((current.policyText as AwsPolicyDocument).Statement ?? [])
-    : [];
-
-  // Replace existing statement with the same Sid, or append.
-  const idx = currentStatements.findIndex((s) => s.Sid === sid);
-  let updated: EcrGrantStatement[];
-  if (idx >= 0) {
-    updated = [...currentStatements];
-    updated[idx] = newStmt;
-  } else {
-    updated = [...currentStatements, newStmt];
-  }
-
-  const doc = buildRepoPolicyDocument(updated);
-  if (!doc) {
-    // Should not happen — we just added a statement.
-    throw new Error('BUG: empty policy after adding grant');
-  }
-
-  await client.setRepositoryPolicy(repositoryName, doc);
-
-  return {
-    added: idx < 0,
-    statementCount: updated.length,
-  };
+export function replacePullStatements(
+  statements: readonly EcrGrantStatement[],
+  accountIds: readonly string[],
+): EcrGrantStatement[] {
+  const others = statements.filter((statement) => !isPullGrantStatement(statement));
+  return accountIds.length === 0 ? others : [...others, buildPullStatement(accountIds)];
 }
 
-export interface RevokeResult {
-  readonly removed: boolean;
-  readonly statementCount: number;
+// ---------------------------------------------------------------------------
+// Policy write — read-modify-write with the client
+// ---------------------------------------------------------------------------
+
+export interface SyncPullPolicyResult {
+  readonly changed: boolean;
+  readonly accountCount: number;
   readonly policyDeleted: boolean;
 }
 
 /**
- * Revokes a pull grant for an installation from the ECR repository policy.
+ * Makes the repository policy grant pull access to exactly `accountIds`.
  *
- * Reads the current policy, removes the statement with the matching Sid,
- * and writes the updated policy. If the statement list becomes empty, the
- * entire policy is deleted (clean slate).
+ * Reads the current policy, replaces its pull statements (see
+ * `replacePullStatements`) and writes the result only when it differs. An
+ * empty result deletes the policy. A policy over the ECR size limit is
+ * refused before the write.
  *
- * Idempotent: if the grant doesn't exist, reports `removed: false` with
- * no error.
+ * The caller must serialize calls: this is a read-modify-write.
  */
-export async function revokePull(
+export async function syncPullPolicy(
   client: EcrClient,
   repositoryName: string,
-  installationId: string,
-): Promise<RevokeResult> {
-  const sid = installationGrantSid(installationId);
-
+  accountIds: readonly string[],
+): Promise<SyncPullPolicyResult> {
   const current = await client.getRepositoryPolicy(repositoryName);
-  if (!current) {
-    return { removed: false, statementCount: 0, policyDeleted: false };
+  const currentStatements: readonly EcrGrantStatement[] = current
+    ? ((current.policyText as AwsPolicyDocument).Statement ?? [])
+    : [];
+  const accountCount = new Set(accountIds).size;
+
+  const next = replacePullStatements(currentStatements, accountIds);
+  if (JSON.stringify(next) === JSON.stringify(currentStatements)) {
+    return { changed: false, accountCount, policyDeleted: false };
   }
 
-  const currentStatements: readonly EcrGrantStatement[] =
-    (current.policyText as AwsPolicyDocument).Statement ?? [];
-
-  const idx = currentStatements.findIndex((s) => s.Sid === sid);
-  if (idx < 0) {
-    return {
-      removed: false,
-      statementCount: currentStatements.length,
-      policyDeleted: false,
-    };
-  }
-
-  const updated = [
-    ...currentStatements.slice(0, idx),
-    ...currentStatements.slice(idx + 1),
-  ];
-
-  if (updated.length === 0) {
-    await client.deleteRepositoryPolicy(repositoryName);
-    return { removed: true, statementCount: 0, policyDeleted: true };
-  }
-
-  const doc = buildRepoPolicyDocument(updated);
+  const doc = buildRepoPolicyDocument(next);
   if (!doc) {
-    // Should not happen — we checked length > 0.
-    throw new Error('BUG: null policy for non-empty statement list');
+    await client.deleteRepositoryPolicy(repositoryName);
+    return { changed: true, accountCount, policyDeleted: true };
   }
 
+  if (JSON.stringify(doc).length > ECR_POLICY_MAX_CHARS) {
+    throw new Error(
+      `ECR repository policy would exceed ${ECR_POLICY_MAX_CHARS} characters with ${accountCount} accounts`,
+    );
+  }
   await client.setRepositoryPolicy(repositoryName, doc);
-
-  return {
-    removed: true,
-    statementCount: updated.length,
-    policyDeleted: false,
-  };
+  return { changed: true, accountCount, policyDeleted: false };
 }

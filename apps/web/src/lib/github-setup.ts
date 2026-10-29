@@ -16,6 +16,8 @@ interface GithubSetupInput {
   readonly installationId: string | undefined;
   /** `state` from the query string: the signed value the API issued when the install started. */
   readonly state?: string | undefined;
+  /** `code` from the query string: GitHub's OAuth code, sent when the App asks for user authorization during installation. */
+  readonly code?: string | undefined;
   readonly signedIn: boolean;
   /** The API origin the BROWSER can reach — this is a redirect target. */
   readonly apiUrl: string;
@@ -30,6 +32,7 @@ type GithubSetupRoute =
 export function resolveGithubSetupRoute({
   installationId,
   state,
+  code,
   signedIn,
   apiUrl,
 }: GithubSetupInput): GithubSetupRoute {
@@ -39,7 +42,8 @@ export function resolveGithubSetupRoute({
 
   const query =
     `installation_id=${encodeURIComponent(installationId)}` +
-    (state ? `&state=${encodeURIComponent(state)}` : '');
+    (state ? `&state=${encodeURIComponent(state)}` : '') +
+    (code ? `&code=${encodeURIComponent(code)}` : '');
 
   // Signed out: sign in first, then come back here and bind. The callback is
   // deliberately RELATIVE — the sign-in page rejects absolute URLs to close

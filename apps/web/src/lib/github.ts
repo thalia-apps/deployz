@@ -135,6 +135,11 @@ export const GITHUB_RETURN_MESSAGES: Record<string, { ok: boolean; message: stri
     message:
       'Deployz could not link the GitHub installation to this organization. An installation that another Deployz organization already uses cannot be linked here.',
   },
+  unverified: {
+    ok: false,
+    message:
+      'Deployz could not confirm that this GitHub installation is new. Connect GitHub again from your applications page.',
+  },
   missing_installation: { ok: false, message: 'GitHub did not return an installation. Try again.' },
   forbidden: { ok: false, message: 'Only an owner or admin can connect GitHub. Ask one of them to connect it.' },
 };

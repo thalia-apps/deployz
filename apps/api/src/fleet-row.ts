@@ -13,6 +13,19 @@ import { deriveHealthStatus } from './relay-liveness.js';
 export type DeploymentRow = typeof schema.deployments.$inferSelect;
 export type DeploymentJobRow = typeof schema.deploymentJobs.$inferSelect;
 
+// Relay enrollment material never crosses into a dashboard response: the
+// enrollment code re-opens enrollment, the relay credential authenticates the
+// relay and the token hash is a credential.
+export function withoutRelayMaterial(deployment: DeploymentRow) {
+  const {
+    enrollmentCode: _enrollmentCode,
+    relayCredential: _relayCredential,
+    relayTokenHash: _relayTokenHash,
+    ...rest
+  } = deployment;
+  return rest;
+}
+
 // §24 AWS accounts are shown, never in full — the control plane still stores
 // the real id, but nothing outside it should ever see more than a hint of it.
 export function maskAwsAccountId(awsAccountId: string | null): string | null {
@@ -46,11 +59,8 @@ export function toFleetRow(row: {
   // derivation (apps/api/src/deployment-status.ts) so the two can never
   // disagree about a component's merged state.
   const componentView = mergeComponentState(row.deployment.observedState, row);
-  // Relay enrollment material never crosses into a dashboard response: the
-  // enrollment code re-opens enrollment and the token hash is a credential.
-  const { enrollmentCode: _enrollmentCode, relayTokenHash: _relayTokenHash, ...deployment } = row.deployment;
   return {
-    ...deployment,
+    ...withoutRelayMaterial(row.deployment),
     awsAccountId: maskAwsAccountId(row.deployment.awsAccountId),
     relayStatus,
     healthStatus: deriveHealthStatus(row.deployment.healthStatus, relayStatus),

@@ -113,10 +113,9 @@ test.describe('vendor-dispute', () => {
     if (!created.ok()) {
       throw new Error(`create deployment failed: ${created.status()} ${await created.text()}`);
     }
-    const { id: deploymentId, installLinkId, enrollmentCode } = (await created.json()) as {
+    const { id: deploymentId, installLinkId } = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
 
     expect((await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} })).ok()).toBeTruthy();
@@ -126,6 +125,7 @@ test.describe('vendor-dispute', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relay = startSimulatedRelay({
       scenario: getScenario('vendor-dispute'),
       apiUrl: API_URL,

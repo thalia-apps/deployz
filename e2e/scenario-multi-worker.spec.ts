@@ -140,9 +140,8 @@ test.describe('multi-worker-sweep', () => {
     const deployment = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
-    const { id: deploymentId, installLinkId, enrollmentCode } = deployment;
+    const { id: deploymentId, installLinkId } = deployment;
 
     // ── The plan freezes the application's workloads: web + two worker
     // seats (the compiler's footprint also lists the one-shot migration
@@ -165,6 +164,7 @@ test.describe('multi-worker-sweep', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installInfo.quickCreateUrl!, 'RelayCredential');
     const installationId = `inst-${suffix}`;
     const relay = startSimulatedRelay({

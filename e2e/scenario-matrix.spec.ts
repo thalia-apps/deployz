@@ -334,7 +334,6 @@ test.describe('monorepo-classified-deploy (C)', () => {
     const deployment = (await deploymentResponse.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
     const launch = await request.post(`${API_URL}/api/install/${deployment.installLinkId}/launched`, {
       data: {},
@@ -351,6 +350,7 @@ test.describe('monorepo-classified-deploy (C)', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installInfo.quickCreateUrl!, 'RelayCredential');
     // The monorepo manifest provisions no database and no cache, so the relay
     // runs the stateless timeline — the relay's reported resources must match
@@ -359,7 +359,7 @@ test.describe('monorepo-classified-deploy (C)', () => {
       scenario: getScenario('stateless'),
       apiUrl: API_URL,
       installationId: `inst-${suffix}`,
-      enrollmentCode: deployment.enrollmentCode,
+      enrollmentCode,
       relayToken: relayCredential,
     });
     try {

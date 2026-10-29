@@ -266,6 +266,10 @@ jobs:
       # pulls anonymous, which is what Docker Hub meters per source address.
       DOCKERHUB_SECRET_NAME: ${{ vars.DOCKERHUB_SECRET_NAME }}
 
+      # Optional. The address that receives CloudWatch alarm email. Unset
+      # still creates the alarm topic and the alarms, with no subscriber.
+      ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+
       # Paddle billing (Phase 5). Optional in production too, mirroring
       # env.ts: the Paddle catalog (Phase 4) does not exist yet, so these
       # cannot be in the unconditional completeness gate below without

@@ -1,22 +1,33 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ECR_POLICY_MAX_CHARS,
   ECR_PULL_ACTIONS,
+  PULL_GRANT_SID,
   buildPullStatement,
   buildRepoPolicyDocument,
-  grantPull,
-  installationGrantSid,
-  revokePull,
+  replacePullStatements,
+  syncPullPolicy,
   type EcrClient,
   type EcrGrantStatement,
 } from './ecr-grants.js';
 
 // ── ECR Grants Tests (moved from @deployz/cdk with the module in Phase 1.1) ─
 
+function legacyStatement(installationId: string, accountId: string): EcrGrantStatement {
+  return {
+    Sid: `deployz-pull-${installationId}`,
+    Effect: 'Allow',
+    Principal: { AWS: `arn:aws:iam::${accountId}:root` },
+    Action: [...ECR_PULL_ACTIONS],
+  };
+}
+
 function createMockEcrClient(
   statements: EcrGrantStatement[] = [],
 ): EcrClient & {
   _getLog: () => string[];
+  _statements: () => EcrGrantStatement[];
 } {
   const log: string[] = [];
   let current: Record<string, unknown> | null =
@@ -26,6 +37,8 @@ function createMockEcrClient(
 
   return {
     _getLog: () => log,
+    _statements: () =>
+      ((current as { Statement?: EcrGrantStatement[] } | null)?.Statement ?? []) as EcrGrantStatement[],
     async getRepositoryPolicy(): Promise<{ policyText: Record<string, unknown> } | null> {
       log.push('getRepositoryPolicy');
       return current ? { policyText: current } : null;
@@ -34,7 +47,7 @@ function createMockEcrClient(
       _repoName: string,
       policyText: Record<string, unknown>,
     ): Promise<void> {
-      log.push(`setRepositoryPolicy:${JSON.stringify(policyText)}`);
+      log.push('setRepositoryPolicy');
       current = policyText;
     },
     async deleteRepositoryPolicy(_repoName: string): Promise<void> {
@@ -45,23 +58,16 @@ function createMockEcrClient(
 }
 
 describe('ecr-grants', () => {
-  describe('installationGrantSid', () => {
-    it('produces a deterministic Sid for an installation', () => {
-      expect(installationGrantSid('inst-abc')).toBe('deployz-pull-inst-abc');
-    });
-  });
-
   describe('buildPullStatement', () => {
-    it('builds a statement with the correct Sid, Effect, and Principal', () => {
-      const stmt = buildPullStatement('inst-1', '123456789012');
-      expect(stmt.Sid).toBe('deployz-pull-inst-1');
+    it('grants the three pull actions to the account roots, sorted and de-duplicated', () => {
+      const stmt = buildPullStatement(['222222222222', '111111111111', '222222222222']);
+      expect(stmt.Sid).toBe(PULL_GRANT_SID);
       expect(stmt.Effect).toBe('Allow');
-      expect(stmt.Principal.AWS).toBe('arn:aws:iam::123456789012:root');
-    });
-
-    it('includes all required ECR pull actions', () => {
-      const stmt = buildPullStatement('inst-1', '123456789012');
-      expect(stmt.Action.sort()).toEqual([...ECR_PULL_ACTIONS].sort());
+      expect(stmt.Principal.AWS).toEqual([
+        'arn:aws:iam::111111111111:root',
+        'arn:aws:iam::222222222222:root',
+      ]);
+      expect([...stmt.Action]).toEqual([...ECR_PULL_ACTIONS]);
     });
   });
 
@@ -70,100 +76,121 @@ describe('ecr-grants', () => {
       expect(buildRepoPolicyDocument([])).toBeNull();
     });
 
-    it('builds a valid policy document with one statement', () => {
-      const stmt = buildPullStatement('inst-1', '123456789012');
-      const doc = buildRepoPolicyDocument([stmt]);
-      expect(doc).not.toBeNull();
-      expect(doc!.Version).toBe('2012-10-17');
-      expect(doc!.Statement).toHaveLength(1);
-      expect(doc!.Statement[0].Sid).toBe('deployz-pull-inst-1');
-    });
-
-    it('builds a policy document with multiple statements', () => {
-      const s1 = buildPullStatement('inst-1', '111111111111');
-      const s2 = buildPullStatement('inst-2', '222222222222');
-      const doc = buildRepoPolicyDocument([s1, s2]);
-      expect(doc!.Statement).toHaveLength(2);
+    it('wraps statements in a 2012-10-17 policy', () => {
+      const doc = buildRepoPolicyDocument([buildPullStatement(['123456789012'])]);
+      expect(doc?.Version).toBe('2012-10-17');
+      expect(doc?.Statement).toHaveLength(1);
     });
   });
 
-  describe('grantPull', () => {
-    it('adds a new pull grant when no policy exists', async () => {
-      const client = createMockEcrClient();
-      const result = await grantPull(client, 'deployz-images', 'inst-1', '123456789012');
-
-      expect(result.added).toBe(true);
-      expect(result.statementCount).toBe(1);
-      expect(client._getLog()).toEqual([
-        'getRepositoryPolicy',
-        expect.stringContaining('deployz-pull-inst-1'),
+  describe('replacePullStatements', () => {
+    it('absorbs legacy per-installation statements into the one statement and keeps others', () => {
+      const other: EcrGrantStatement = {
+        Sid: 'other-team',
+        Effect: 'Allow',
+        Principal: { AWS: 'arn:aws:iam::999999999999:root' },
+        Action: ['ecr:BatchGetImage'],
+      };
+      const next = replacePullStatements(
+        [legacyStatement('inst-1', '111111111111'), other, legacyStatement('inst-2', '222222222222')],
+        ['111111111111', '222222222222'],
+      );
+      expect(next.map((s) => s.Sid)).toEqual(['other-team', PULL_GRANT_SID]);
+      expect(next[1]?.Principal.AWS).toEqual([
+        'arn:aws:iam::111111111111:root',
+        'arn:aws:iam::222222222222:root',
       ]);
     });
 
-    it('adds a second grant alongside an existing one', async () => {
-      const existing = buildPullStatement('inst-1', '111111111111');
-      const client = createMockEcrClient([existing]);
-      const result = await grantPull(client, 'deployz-images', 'inst-2', '222222222222');
-
-      expect(result.added).toBe(true);
-      expect(result.statementCount).toBe(2);
+    it('replaces the one statement when it already exists', () => {
+      const next = replacePullStatements([buildPullStatement(['111111111111'])], ['222222222222']);
+      expect(next).toHaveLength(1);
+      expect(next[0]?.Principal.AWS).toEqual(['arn:aws:iam::222222222222:root']);
     });
 
-    it('replaces an existing grant with the same installation id (idempotent)', async () => {
-      const existing = buildPullStatement('inst-1', '111111111111');
-      const client = createMockEcrClient([existing]);
-      const result = await grantPull(client, 'deployz-images', 'inst-1', '999999999999');
-
-      expect(result.added).toBe(false);
-      expect(result.statementCount).toBe(1);
-      // The updated statement should have the new account ID
-      const log = client._getLog();
-      const setLog = log.find((l) => l.startsWith('setRepositoryPolicy:'))!;
-      expect(setLog).toContain('999999999999');
+    it('leaves no pull statement when no account remains', () => {
+      expect(replacePullStatements([buildPullStatement(['111111111111'])], [])).toEqual([]);
     });
   });
 
-  describe('revokePull', () => {
-    it('removes a grant and deletes the policy when it was the only statement', async () => {
-      const existing = buildPullStatement('inst-1', '123456789012');
-      const client = createMockEcrClient([existing]);
-      const result = await revokePull(client, 'deployz-images', 'inst-1');
+  describe('syncPullPolicy', () => {
+    it('creates the policy when none exists', async () => {
+      const client = createMockEcrClient();
+      const result = await syncPullPolicy(client, 'deployz-images', ['123456789012']);
+      expect(result).toEqual({ changed: true, accountCount: 1, policyDeleted: false });
+      expect(client._statements()).toHaveLength(1);
+      expect(client._statements()[0]?.Principal.AWS).toEqual(['arn:aws:iam::123456789012:root']);
+    });
 
-      expect(result.removed).toBe(true);
-      expect(result.statementCount).toBe(0);
-      expect(result.policyDeleted).toBe(true);
+    it('merges a new account into the one statement', async () => {
+      const client = createMockEcrClient([buildPullStatement(['111111111111'])]);
+      await syncPullPolicy(client, 'deployz-images', ['111111111111', '222222222222']);
+      expect(client._statements()).toHaveLength(1);
+      expect(client._statements()[0]?.Principal.AWS).toEqual([
+        'arn:aws:iam::111111111111:root',
+        'arn:aws:iam::222222222222:root',
+      ]);
+    });
+
+    it('de-duplicates accounts that appear more than once', async () => {
+      const client = createMockEcrClient();
+      await syncPullPolicy(client, 'deployz-images', ['111111111111', '111111111111']);
+      expect(client._statements()[0]?.Principal.AWS).toEqual(['arn:aws:iam::111111111111:root']);
+    });
+
+    it('writes nothing when the policy already matches', async () => {
+      const client = createMockEcrClient([buildPullStatement(['111111111111'])]);
+      const result = await syncPullPolicy(client, 'deployz-images', ['111111111111']);
+      expect(result.changed).toBe(false);
+      expect(client._getLog()).toEqual(['getRepositoryPolicy']);
+    });
+
+    it('absorbs legacy statements, including the deployz-pull-<uuid> ones', async () => {
+      const uuid = '7b1d2f0a-aaaa-4bbb-8ccc-0123456789ab';
+      const client = createMockEcrClient([
+        legacyStatement('inst-1', '111111111111'),
+        legacyStatement(uuid, '222222222222'),
+      ]);
+      await syncPullPolicy(client, 'deployz-images', ['111111111111', '222222222222', '333333333333']);
+      expect(client._statements().map((s) => s.Sid)).toEqual([PULL_GRANT_SID]);
+      expect(client._statements()[0]?.Principal.AWS).toHaveLength(3);
+    });
+
+    it('drops an account that has no live deployment left', async () => {
+      const client = createMockEcrClient([buildPullStatement(['111111111111', '222222222222'])]);
+      const result = await syncPullPolicy(client, 'deployz-images', ['222222222222']);
+      expect(result.changed).toBe(true);
+      expect(client._statements()[0]?.Principal.AWS).toEqual(['arn:aws:iam::222222222222:root']);
+    });
+
+    it('deletes the policy when the last account is revoked', async () => {
+      const client = createMockEcrClient([buildPullStatement(['111111111111'])]);
+      const result = await syncPullPolicy(client, 'deployz-images', []);
+      expect(result).toEqual({ changed: true, accountCount: 0, policyDeleted: true });
       expect(client._getLog()).toContain('deleteRepositoryPolicy');
     });
 
-    it('removes a grant but retains the policy when other statements exist', async () => {
-      const s1 = buildPullStatement('inst-1', '111111111111');
-      const s2 = buildPullStatement('inst-2', '222222222222');
-      const client = createMockEcrClient([s1, s2]);
-      const result = await revokePull(client, 'deployz-images', 'inst-1');
-
-      expect(result.removed).toBe(true);
-      expect(result.statementCount).toBe(1);
-      expect(result.policyDeleted).toBe(false);
-      // Should NOT have called deleteRepositoryPolicy
-      expect(client._getLog()).not.toContain('deleteRepositoryPolicy');
+    it('does nothing when there is no policy and no account', async () => {
+      const client = createMockEcrClient();
+      const result = await syncPullPolicy(client, 'deployz-images', []);
+      expect(result.changed).toBe(false);
+      expect(client._getLog()).toEqual(['getRepositoryPolicy']);
     });
 
-    it('is idempotent — revoking a nonexistent grant returns removed: false', async () => {
+    it('keeps many accounts in one statement below the ECR size limit', async () => {
+      const accounts = Array.from({ length: 200 }, (_, i) => String(100000000000 + i));
       const client = createMockEcrClient();
-      const result = await revokePull(client, 'deployz-images', 'nonexistent');
-
-      expect(result.removed).toBe(false);
-      expect(result.statementCount).toBe(0);
-      expect(result.policyDeleted).toBe(false);
+      await syncPullPolicy(client, 'deployz-images', accounts);
+      expect(client._statements()).toHaveLength(1);
+      const doc = buildRepoPolicyDocument(client._statements());
+      expect(JSON.stringify(doc).length).toBeLessThan(ECR_POLICY_MAX_CHARS);
     });
 
-    it('is idempotent — revoking from a null policy returns removed: false', async () => {
+    it('refuses a policy over the ECR size limit before it writes', async () => {
+      const accounts = Array.from({ length: 400 }, (_, i) => String(100000000000 + i));
       const client = createMockEcrClient();
-      const result = await revokePull(client, 'deployz-images', 'inst-1');
-
-      expect(result.removed).toBe(false);
-      expect(result.statementCount).toBe(0);
-      expect(result.policyDeleted).toBe(false);
+      await expect(syncPullPolicy(client, 'deployz-images', accounts)).rejects.toThrow(/exceed/);
+      expect(client._getLog()).not.toContain('setRepositoryPolicy');
     });
   });
 });

@@ -67,7 +67,6 @@ async function seedDeployment(
   const deployment = (await deploymentResponse.json()) as {
     id: string;
     installLinkId: string;
-    enrollmentCode: string;
   };
   // DZ-AUDIT-013: fetch the server-minted relay credential from the install page.
   const installResponse = await page.request.get(`${API_URL}/api/install/${deployment.installLinkId}`, {
@@ -76,6 +75,7 @@ async function seedDeployment(
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();
+  const enrollmentCode = extractQuickCreateParam(installData.quickCreateUrl!, 'EnrollmentCode');
   const relayCredential = extractQuickCreateParam(installData.quickCreateUrl!, 'RelayCredential');
 
   return {
@@ -84,7 +84,7 @@ async function seedDeployment(
     // The relay mints its own id; a fresh one per seeded deployment.
     installationId: `inst-${crypto.randomUUID()}`,
     installLinkId: deployment.installLinkId,
-    enrollmentCode: deployment.enrollmentCode,
+    enrollmentCode,
     relayCredential,
   };
 }

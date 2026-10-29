@@ -41,6 +41,7 @@ import {
   githubManageUrl,
   handleInstallationWebhook,
   isDashboardReturnPath,
+  isFreshInstallation,
   listBranchCommits,
   listFixtureBranchCommits,
   listRepositories,
@@ -48,6 +49,7 @@ import {
   parseRepoFullName,
   reconciledStatus,
   requireActiveInstallation,
+  userCanSeeInstallation,
   verifyInstallState,
   verifyWebhookSignature,
   type AppJwtSigner,
@@ -436,13 +438,37 @@ describe('github — fixture-backed list helpers', () => {
 describe('github — installation live state and repository access', () => {
   it('reads suspension and the immutable account id from GitHub', async () => {
     const fetchFn: FetchFn = async () =>
-      makeFetchResponse(200, { account: { login: 'acme', type: 'User', id: 9001 }, suspended_at: '2026-10-01T00:00:00Z' });
+      makeFetchResponse(200, {
+        account: { login: 'acme', type: 'User', id: 9001 },
+        suspended_at: '2026-10-01T00:00:00Z',
+        created_at: '2026-09-01T00:00:00Z',
+      });
     expect(await fetchInstallationLiveState('77', 'jwt', fetchFn)).toEqual({
       state: 'suspended',
       accountLogin: 'acme',
       accountType: 'User',
       accountId: '9001',
+      createdAt: '2026-09-01T00:00:00Z',
     });
+  });
+
+  it('treats only an installation created in the last 15 minutes as fresh', () => {
+    const now = Date.parse('2026-10-29T12:00:00Z');
+    expect(isFreshInstallation('2026-10-29T11:50:00Z', now)).toBe(true);
+    expect(isFreshInstallation('2026-10-29T11:40:00Z', now)).toBe(false);
+    expect(isFreshInstallation('2026-10-29T13:00:00Z', now)).toBe(false);
+    expect(isFreshInstallation(null, now)).toBe(false);
+  });
+
+  it('checks the installation against the installations the code user can see', async () => {
+    const fetchFor = (installations: { id: number }[]): FetchFn => async (url) =>
+      url.endsWith('/login/oauth/access_token')
+        ? makeFetchResponse(200, { access_token: 'ghu_token' })
+        : makeFetchResponse(200, { installations });
+    expect(await userCanSeeInstallation('code', '77', 'id', 'secret', fetchFor([{ id: 77 }]))).toBe(true);
+    expect(await userCanSeeInstallation('code', '77', 'id', 'secret', fetchFor([{ id: 78 }]))).toBe(false);
+    const rejected: FetchFn = async () => makeFetchResponse(200, { error: 'bad_verification_code' });
+    expect(await userCanSeeInstallation('code', '77', 'id', 'secret', rejected)).toBe(false);
   });
 
   it('reads a 404 as an installation GitHub no longer has, and other failures as errors', async () => {

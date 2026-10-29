@@ -6,6 +6,7 @@ import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
 
 import { createAuth, type Auth } from './auth.js';
+import type { EmailMessage } from './email.js';
 import { buildServer } from './server.js';
 
 // Better Auth over a fresh in-memory PGlite (real Postgres semantics, full
@@ -149,5 +150,66 @@ describe('auth (Better Auth over PGlite)', () => {
     expect(body.organization?.slug).toContain('ada-');
     await app.close();
   }, 15_000);
+});
+
+describe('password reset (Better Auth over PGlite)', () => {
+  let client: PGlite | undefined;
+  let db: Db;
+  let auth: Auth;
+  const sent: EmailMessage[] = [];
+
+  beforeAll(async () => {
+    client = new PGlite();
+    await applyMigrations(client);
+    db = createDb(client);
+    auth = createAuth(db, {
+      emailSender: {
+        send: async (message) => {
+          sent.push(message);
+        },
+      },
+    });
+    await auth.api.signUpEmail({
+      body: { email: 'grace@example.com', password: 'old-password-1', name: 'Grace' },
+    });
+    sent.length = 0;
+  }, 60_000);
+
+  afterAll(async () => {
+    await client?.close();
+  });
+
+  it('answers the same for a known and an unknown address, and mails only the known one', async () => {
+    const known = await auth.api.requestPasswordReset({ body: { email: 'grace@example.com' } });
+    const unknown = await auth.api.requestPasswordReset({ body: { email: 'nobody@example.com' } });
+    expect(unknown).toEqual(known);
+    expect(sent.map((message) => message.to)).toEqual(['grace@example.com']);
+    expect(sent[0]!.body).toContain('/reset-password?token=');
+  });
+
+  it('sets the new password through the mailed token, ends old sessions and rejects the old password', async () => {
+    const oldSession = await auth.api.signInEmail({
+      body: { email: 'grace@example.com', password: 'old-password-1' },
+    });
+    const token = new URL(/https?:\/\/\S+/.exec(sent[0]!.body)![0]).searchParams.get('token')!;
+
+    await auth.api.resetPassword({ body: { newPassword: 'new-password-2', token } });
+
+    await expect(
+      auth.api.signInEmail({ body: { email: 'grace@example.com', password: 'old-password-1' } }),
+    ).rejects.toThrow();
+    const fresh = await auth.api.signInEmail({
+      body: { email: 'grace@example.com', password: 'new-password-2' },
+    });
+    expect(fresh.token).toBeTruthy();
+    const revoked = await db
+      .select()
+      .from(schema.session)
+      .where(eq(schema.session.token, oldSession.token));
+    expect(revoked).toHaveLength(0);
+    await expect(
+      auth.api.resetPassword({ body: { newPassword: 'third-password-3', token } }),
+    ).rejects.toThrow();
+  });
 });
 

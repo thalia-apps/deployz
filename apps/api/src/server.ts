@@ -174,6 +174,7 @@ import {
   githubManageUrl,
   handleInstallationWebhook,
   isDashboardReturnPath,
+  isFreshInstallation,
   listBranchCommits,
   listFixtureBranchCommits,
   listRepositories,
@@ -181,6 +182,7 @@ import {
   parseRepoFullName,
   reconciledStatus,
   requireActiveInstallation,
+  userCanSeeInstallation,
   verifyInstallState,
   verifyWebhookSignature,
   type FetchFn,
@@ -386,6 +388,7 @@ import {
   resolveAppUrl,
   resolveDefaultUrl,
   toFleetRow,
+  withoutRelayMaterial,
   type DeploymentJobRow,
   type DeploymentRow,
 } from './fleet-row.js';
@@ -446,6 +449,9 @@ export interface ServerDeps {
   // are testable on a machine (or a CI runner) with no .env.
   githubAppId?: string | undefined;
   githubAppPrivateKey?: string | undefined;
+  // The App's client credentials, used to verify the installing user's OAuth code.
+  githubClientId?: string | undefined;
+  githubClientSecret?: string | undefined;
   // Injectable logger, so a test can read back what a failing request
   // reported. Production uses the default below.
   loggerInstance?: FastifyBaseLogger | undefined;
@@ -2242,6 +2248,8 @@ export async function buildServer({
   githubFetch: injectedGithubFetch,
   githubAppId: injectedGithubAppId,
   githubAppPrivateKey: injectedGithubAppPrivateKey,
+  githubClientId = env.githubClientId,
+  githubClientSecret = env.githubClientSecret,
   aiGateway = env.aiFixtureMode ? createFixtureAiGateway() : createAiGateway(env.aiGateway),
   fixInstructionsAiGateway: injectedFixInstructionsAiGateway,
   jevFailureShadow = createJevFailureShadowRunnerFromEnv({ db }, env.jev),
@@ -2263,9 +2271,9 @@ export async function buildServer({
     injectedFixInstructionsAiGateway ??
     (env.aiFixtureMode ? createFixtureAiGateway() : createAiGateway(env.fixInstructionsAi));
   const billingFixtureModeResolved = billingFixtureMode ?? env.billingFixtureMode;
-  // Phase 1.1: the ECR grant lifecycle. Best-effort by design — a failing
-  // grant must not fail the install request that owns it (see ecr-pull-grants.ts).
-  const ecrGrantDeps: EcrPullGrantDeps = createEcrPullGrantDeps(ecrClient);
+  // Phase 1.1: the ECR grant lifecycle. A failed grant fails the request that
+  // owns it so it is retried; a failed revoke is only logged (see ecr-pull-grants.ts).
+  const ecrGrantDeps: EcrPullGrantDeps = createEcrPullGrantDeps(db, ecrClient);
   // Release-image availability: the real registry client only in the
   // deployed Lambda (env.releaseImageRegistryEnabled); everywhere else the
   // scriptable fixture, whose internal route below exists only under
@@ -2600,7 +2608,10 @@ export async function buildServer({
   // the organization slug — sufficient for the MVP since vendor orgs are
   // created with their GitHub org name as the slug.
   const githubStore = createGithubStore(db);
-  const githubFetch: FetchFn = injectedGithubFetch ?? globalThis.fetch.bind(globalThis);
+  // A stalled GitHub call must not hold a request until the platform timeout.
+  const githubFetch: FetchFn =
+    injectedGithubFetch ??
+    ((url, init) => globalThis.fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }));
   const githubAppId = injectedGithubAppId ?? env.githubAppId;
   const githubAppPrivateKey = injectedGithubAppPrivateKey ?? env.githubAppPrivateKey;
   const isGithubFixtureMode = (): boolean => githubFixtureMode ?? env.githubFixtureMode;
@@ -3953,13 +3964,15 @@ export async function buildServer({
       // resolving the tenant, say) must surface as itself rather than be
       // disguised as "please sign in".
       if (!(error instanceof UnauthorizedError)) throw error;
-      const { installation_id: installationId, state } = request.query as {
+      const { installation_id: installationId, state, code } = request.query as {
         installation_id?: string | undefined;
         state?: string | undefined;
+        code?: string | undefined;
       };
       const target = installationId
         ? `/github/setup?installation_id=${encodeURIComponent(installationId)}` +
-          (state ? `&state=${encodeURIComponent(state)}` : '')
+          (state ? `&state=${encodeURIComponent(state)}` : '') +
+          (code ? `&code=${encodeURIComponent(code)}` : '')
         : '/github/setup';
       return reply.redirect(`${env.webUrl}/sign-in?callbackUrl=${encodeURIComponent(target)}`);
     }
@@ -3998,9 +4011,10 @@ export async function buildServer({
     return reply.redirect(target.toString());
   });
   app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
-    const { installation_id: installationId, state } = request.query as {
+    const { installation_id: installationId, state, code } = request.query as {
       installation_id?: string | undefined;
       state?: string | undefined;
+      code?: string | undefined;
     };
     // This GET writes a binding, which the support-mode guard (non-GET only)
     // cannot see.
@@ -4014,7 +4028,7 @@ export async function buildServer({
     }
     const verifiedState = verifyInstallState(githubStateSecret, state, organizationId, Date.now());
     // Back to the page that started the install, when a valid state names one.
-    const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'missing_installation'): string =>
+    const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'unverified' | 'missing_installation'): string =>
       `${env.webUrl}${(verifiedState && verifiedState.returnPath) || '/dashboard/applications'}?github=${result}`;
     if (!installationId) {
       return reply.redirect(returnUrl('missing_installation'));
@@ -4048,6 +4062,22 @@ export async function buildServer({
       if (existing === null && !verifiedState) {
         request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
         return reply.redirect(returnUrl('failed'));
+      }
+      // The state proves this organization started an install, not that the
+      // caller controls THIS installation: an installation id is a small public
+      // integer. A new binding needs the installing user's OAuth code (the
+      // user can see the installation) or an installation GitHub created
+      // moments ago.
+      if (existing === null) {
+        const proven =
+          isFreshInstallation(account.createdAt, Date.now()) ||
+          (code && githubClientId && githubClientSecret
+            ? await userCanSeeInstallation(code, installationId, githubClientId, githubClientSecret, githubFetch)
+            : false);
+        if (!proven) {
+          request.log.warn({ installationId }, 'github setup refused: installation ownership not proven');
+          return reply.redirect(returnUrl('unverified'));
+        }
       }
       // A disconnect ends only through a reconnect this organization started
       // (members never get here). GitHub also sends the vendor here when
@@ -5210,7 +5240,7 @@ export async function buildServer({
       }, compilerDeps);
       return reply.code(201).send({
         link: toDeployLinkView({ link, application, deployment }),
-        deployment,
+        deployment: withoutRelayMaterial(deployment),
         token,
       });
     },
@@ -5881,7 +5911,7 @@ export async function buildServer({
       }
       throw error;
     }
-    return reply.code(201).send({ ...deployment, installLinkToken: installLinkToken(deployment.installLinkId) });
+    return reply.code(201).send({ ...withoutRelayMaterial(deployment), installLinkToken: installLinkToken(deployment.installLinkId) });
   });
 
   // GET /api/regions — the region options for the "Create customer
@@ -7586,6 +7616,12 @@ export async function buildServer({
     // fails inside buildInstallPayload with a bare 422 and no guidance.
     requirePreflightReady(await runDeploymentPreflight(db, deployment, null));
 
+    // Phase 1.1: a fresh install attempt re-grants pull access. Idempotent.
+    // It runs before anything changes, so a failure leaves the vendor a clean retry.
+    if (deployment.awsAccountId) {
+      await grantPullToCustomer(ecrGrantDeps, deployment.awsAccountId);
+    }
+
     // Superseded stale attempt (a dead relay invocation's RUNNING job, or a
     // queued job the FAILED state outran) is closed BEFORE the new insert —
     // the one-active-job index refuses a second active INSTALL otherwise.
@@ -7632,16 +7668,6 @@ export async function buildServer({
           payload: { supersededJobId: inFlight?.id ?? null },
         });
       });
-    }
-
-    if (created && deployment.installationId && deployment.awsAccountId) {
-      // Phase 1.1: a fresh install attempt re-grants pull access. Idempotent —
-      // a replay or an already-granted installation is a no-op policy write.
-      await grantPullToCustomer(
-        ecrGrantDeps,
-        deployment.installationId,
-        deployment.awsAccountId,
-      );
     }
 
     return { replayed: false, created, job };
@@ -8967,6 +8993,10 @@ export async function buildServer({
         deployment.installationId === body.installationId &&
         verifyRelayToken(deployment.relayTokenHash, token);
       if (sameRelay) {
+        // The first attempt may have failed at the grant: grant again (idempotent).
+        if (typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
+          await grantPullToCustomer(ecrGrantDeps, body.awsAccountId);
+        }
         return reply.code(200).send({ registered: true });
       }
       // Anything else is a second party trying to take the deployment over.
@@ -9152,6 +9182,10 @@ export async function buildServer({
         winner?.installationId === body.installationId &&
         verifyRelayToken(winner.relayTokenHash, token)
       ) {
+        // The first attempt may have failed at the grant: grant again (idempotent).
+        if (typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
+          await grantPullToCustomer(ecrGrantDeps, body.awsAccountId);
+        }
         return reply.code(200).send({ registered: true });
       }
       await recordEvent(db, {
@@ -9173,16 +9207,16 @@ export async function buildServer({
 
     // Phase 1.1: a just-enrolled relay's customer account needs pull access to
     // the vendor ECR before the INSTALL job queued above can ever start a task
-    // that pulls the image. Idempotent + best-effort: an already-granted
-    // installation (replay) is a no-op policy write, and a grant failure logs
-    // and surfaces later as the customer task's IMAGE_PULL_FAILED.
-    if (installJob && typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
-      await grantPullToCustomer(ecrGrantDeps, body.installationId!, body.awsAccountId);
+    // that pulls the image. Idempotent. A grant failure answers 503: the relay
+    // stays unregistered, fetches no command and registers again on its next
+    // poll (the replay path above grants again before it answers 200).
+    if (typeof body.awsAccountId === 'string' && body.awsAccountId.length > 0) {
+      await grantPullToCustomer(ecrGrantDeps, body.awsAccountId);
     }
-    // A retry or reset that minted a new installation id leaves the previous
-    // installation's grant behind; this re-enrollment replaces it.
+    // A retry or reset that changed the account leaves the old account's grant
+    // behind; the same rebuild drops an account with no live deployment left.
     if (deployment.previousInstallationId && deployment.previousInstallationId !== body.installationId) {
-      await revokePullFromCustomer(ecrGrantDeps, deployment.previousInstallationId);
+      await revokePullFromCustomer(ecrGrantDeps);
     }
 
     return reply.code(200).send({ registered: true });
@@ -9827,10 +9861,7 @@ export async function buildServer({
       }
     }
     if ((job.type === 'DESTROY' || job.type === 'PURGE') && state === 'SUCCEEDED') {
-      const installationId = deployment.installationId;
-      if (installationId) {
-        await revokePullFromCustomer(ecrGrantDeps, installationId);
-      }
+      await revokePullFromCustomer(ecrGrantDeps);
     }
     // Phase 11 record teardown (see preTxDefaultHttps above): the deployz-zone
     // CNAMEs are the control plane's to remove — the relay never sees them.

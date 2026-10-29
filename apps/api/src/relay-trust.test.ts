@@ -20,7 +20,7 @@ describe('relay trust boundary', () => {
   let organizationId: string;
   let applicationId: string;
   let customerId: string;
-  let policy: { Statement?: Array<{ Sid: string; Principal: { AWS: string }; Condition?: unknown }> } | null = null;
+  let policy: { Statement?: Array<{ Sid: string; Principal: { AWS: string | string[] }; Condition?: unknown }> } | null = null;
 
   const READY_MANIFEST = {
     application: { root: '.', runtime: 'node', framework: 'express', dockerfilePath: 'Dockerfile' },
@@ -151,11 +151,12 @@ describe('relay trust boundary', () => {
       }),
     });
     expect(good.statusCode).toBe(200);
-    const statement = policy?.Statement?.find((s) => s.Sid === `deployz-pull-${installationId}`);
-    expect(statement?.Principal.AWS).toBe('arn:aws:iam::999999999999:root');
+    expect(policy?.Statement?.flatMap((s) => [s.Principal.AWS].flat())).toContain(
+      'arn:aws:iam::999999999999:root',
+    );
   });
 
-  it('re-enrollment revokes the grant of the previous installation', async () => {
+  it('re-enrollment absorbs the legacy statement of the previous installation into one statement', async () => {
     const credential = 'cred-' + crypto.randomUUID();
     const previousInstallationId = 'inst-' + crypto.randomUUID();
     const deployment = await insertDeployment({
@@ -180,9 +181,10 @@ describe('relay trust boundary', () => {
       }),
     });
     expect(response.statusCode).toBe(200);
-    const sids = policy?.Statement?.map((s) => s.Sid);
-    expect(sids).toContain(`deployz-pull-${installationId}`);
-    expect(sids).not.toContain(`deployz-pull-${previousInstallationId}`);
+    expect(policy?.Statement?.map((s) => s.Sid)).toEqual(['deployz-pull']);
+    const principals = policy?.Statement?.flatMap((s) => [s.Principal.AWS].flat());
+    expect(principals).toContain('arn:aws:iam::222222222222:root');
+    expect(principals).not.toContain('arn:aws:iam::111111111111:root');
   });
 
   it('register refuses an expired install link', async () => {

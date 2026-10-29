@@ -317,7 +317,6 @@ async function seedAndLaunch(
   const deployment = (await deploymentResponse.json()) as {
     id: string;
     installLinkId: string;
-    enrollmentCode: string;
   };
 
   const launchResponse = await request.post(
@@ -335,16 +334,17 @@ async function seedAndLaunch(
   if (!installResponse.ok()) {
     throw new Error(`get install info failed: ${installResponse.status()}`);
   }
-  const installBody = (await installResponse.json()) as { quickCreateUrl: string | null; enrollmentCode?: string };
+  const installBody = (await installResponse.json()) as { quickCreateUrl: string | null };
   if (!installBody.quickCreateUrl) {
     throw new Error(`No quickCreateUrl for install ${deployment.installLinkId}`);
   }
+  const enrollmentCode = extractQuickCreateParam(installBody.quickCreateUrl, 'EnrollmentCode');
   const relayCredential = extractQuickCreateParam(installBody.quickCreateUrl, 'RelayCredential');
 
   return {
     deploymentId: deployment.id,
     installLinkId: deployment.installLinkId,
-    enrollmentCode: deployment.enrollmentCode,
+    enrollmentCode,
     relayCredential,
   };
 }
@@ -531,7 +531,7 @@ export const test = base.extend<{
     }
     const generated = (await generate.json()) as {
       link: { id: string };
-      deployment: { id: string; enrollmentCode: string };
+      deployment: { id: string };
       token: string;
     };
 
@@ -553,6 +553,7 @@ export const test = base.extend<{
     if (!installBody.quickCreateUrl) {
       throw new Error(`No quickCreateUrl for install ${installLinkId}`);
     }
+    const enrollmentCode = extractQuickCreateParam(installBody.quickCreateUrl, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installBody.quickCreateUrl, 'RelayCredential');
 
     // The customer opens the hosted page and presses "Deploy to AWS": both
@@ -580,7 +581,7 @@ export const test = base.extend<{
           scenario,
           apiUrl: API_URL,
           installationId,
-          enrollmentCode: generated.deployment.enrollmentCode,
+          enrollmentCode,
           relayToken: relayCredential,
           ...deployzRelayOptions,
         })
@@ -591,7 +592,7 @@ export const test = base.extend<{
         deploymentId: generated.deployment.id,
         deployLinkPublicId: generated.link.id,
         deployLinkToken: generated.token,
-        enrollmentCode: generated.deployment.enrollmentCode,
+        enrollmentCode,
         installationId,
         relay,
         api: buildApi(request),
