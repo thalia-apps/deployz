@@ -1020,6 +1020,33 @@ describe('customers-active', () => {
     expect(result.badge).toEqual({ label: 'Live', variant: 'success' });
   });
 
+  it.each(['NOT_INSTALLED', 'WAITING_FOR_RELAY', 'INSTALLING'] as const)(
+    'does not say Live when the only customer deployment is %s',
+    (state) => {
+      const result = deriveApplicationPresentation(
+        makeInput({ deployments: [customer({ id: 'c1', state })] }),
+      );
+      expect(result.badge).toEqual({ label: 'Awaiting customer', variant: 'secondary' });
+      expect(result.message).toBe('No customer deployment is live yet.');
+    },
+  );
+
+  it('does not say Live when the only customer deployment failed to install', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({ deployments: [customer({ id: 'c1', state: 'FAILED' })] }),
+    );
+    expect(result.badge).toEqual({ label: 'Needs attention', variant: 'warning' });
+  });
+
+  it('says Live when one customer deployment is live and another is waiting', () => {
+    const result = deriveApplicationPresentation(
+      makeInput({
+        deployments: [customer({ id: 'c1', state: 'HEALTHY' }), customer({ id: 'c2', state: 'NOT_INSTALLED' })],
+      }),
+    );
+    expect(result.badge).toEqual({ label: 'Live', variant: 'success' });
+  });
+
   it('does not count DELETING, DELETED or soft-deleted customer deployments', () => {
     const result = deriveApplicationPresentation(
       makeInput({

@@ -11,9 +11,12 @@ import { DOCS } from '@/lib/docs-links';
 export function ConnectorUpdateAlert({
   connector,
   customerName,
+  offline = false,
 }: {
   connector: VendorDeploymentStatus['connector'];
   customerName: string;
+  /** An offline connector cannot be updated; the reconnect path comes first. */
+  offline?: boolean;
 }) {
   if (connector.stackState === 'UPDATING') {
     return (
@@ -43,7 +46,7 @@ export function ConnectorUpdateAlert({
       </Alert>
     );
   }
-  if (!connector.updateAvailable) return null;
+  if (!connector.updateAvailable || offline) return null;
   const rolledBack = connector.stackState === 'ROLLED_BACK';
   return (
     <Alert data-testid="connector-update">

@@ -8,7 +8,7 @@
 // own application, readiness, deployment and install-link responses.
 
 import { requiredChangeLabel } from '@/lib/application-configuration';
-import { deploymentDisplayStatus } from '@/lib/deployment-status-groups';
+import { customerBucket, deploymentDisplayStatus } from '@/lib/deployment-status-groups';
 import type { FleetDeployment } from '@/lib/deployments';
 import type { PublicInstallLinkView } from '@/lib/public-install-links';
 import type { ApplicationReadiness, DeployabilityOutcome, FixClass, ReadinessFinding } from '@/lib/readiness';
@@ -279,6 +279,9 @@ const BADGES: Record<ApplicationState, { label: string; variant: ApplicationBadg
 
 // "Live" would hide a customer deployment that is failing or lost contact.
 const CUSTOMERS_NEED_ATTENTION_BADGE = { label: 'Needs attention', variant: 'warning' } as const;
+
+// "Live" needs at least one customer deployment that is live.
+const CUSTOMERS_AWAITING_BADGE = { label: 'Awaiting customer', variant: 'secondary' } as const;
 
 export const STATUS_UNKNOWN_BADGE = BADGES.unknown;
 
@@ -707,14 +710,17 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
 
     if (customers.length > 0) {
       const attention = customers.filter((d) => deploymentDisplayStatus(d).group === 'attention').length;
-      const shareInfo = attention === 0 ? describeReleaseForShare(releases, application.id) : null;
+      const live = customers.filter((d) => customerBucket(d) === 'active').length;
+      const shareInfo = attention === 0 && live > 0 ? describeReleaseForShare(releases, application.id) : null;
       return {
         state: 'customers-active',
         heading: countLabel(customers.length, 'customer deployment', 'customer deployments'),
         message:
           attention > 0
             ? `${countLabel(attention, 'deployment needs', 'deployments need')} attention.`
-            : (shareInfo?.message ?? 'Running in customer AWS accounts.'),
+            : live === 0
+              ? 'No customer deployment is live yet.'
+              : (shareInfo?.message ?? 'Running in customer AWS accounts.'),
         busy: false,
         primaryAction: action(
           'view-customer-deployments',
@@ -880,8 +886,12 @@ export function deriveApplicationPresentation(input: ApplicationStateInput): App
     badge:
       analysisStatus === 'PENDING'
         ? NOT_ANALYSED_BADGE
-        : core.state === 'customers-active' && customers.some((d) => deploymentDisplayStatus(d).group === 'attention')
-          ? CUSTOMERS_NEED_ATTENTION_BADGE
+        : core.state === 'customers-active'
+          ? customers.some((d) => deploymentDisplayStatus(d).group === 'attention')
+            ? CUSTOMERS_NEED_ATTENTION_BADGE
+            : customers.some((d) => customerBucket(d) === 'active')
+              ? BADGES[core.state]
+              : CUSTOMERS_AWAITING_BADGE
           : BADGES[core.state],
     heading: core.heading,
     message: core.message,

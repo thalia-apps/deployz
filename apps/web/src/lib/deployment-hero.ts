@@ -127,14 +127,17 @@ export function retryNeedsNewInstallLink(relayStatus: string, installationId: st
 /**
  * Whether Retry deployment may be offered: a failed, never-installed
  * deployment, unless a DESTROY is running — a retry would install into a
- * stack that is about to disappear.
+ * stack that is about to disappear. A failed install whose connector is
+ * offline also qualifies: the only way out is the new install link that the
+ * retry dialog leads with.
  */
 export function canRetryFirstInstall(
   state: string,
   everRan: boolean,
   inFlight: DeploymentJob | null,
+  offlineInstallFailure = false,
 ): boolean {
-  return state === 'FAILED' && !everRan && inFlight?.type !== 'DESTROY';
+  return state === 'FAILED' && (!everRan || offlineInstallFailure) && inFlight?.type !== 'DESTROY';
 }
 
 /**
