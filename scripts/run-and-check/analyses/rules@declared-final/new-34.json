@@ -1,0 +1,2375 @@
+{
+  "id": "new-34",
+  "commit": "b67a9728ef6e739a361ea1205f2c3249d2aad628",
+  "analyser": "rules@declared-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "vite build && workbox copyLibraries dist/",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [ \"/app/vikunja/vikunja\" ]",
+      "port": 3456
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "VIKUNJA_DATABASE_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "VIKUNJA_DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "VIKUNJA_DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "VIKUNJA_DATABASE_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "VIKUNJA_FILES_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APPIMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in desktop/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DRONE_BRANCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DRONE_TAG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DRONE_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NFPM_BIN_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RELEASE_GPG_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in build/magefile.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RELEASE_GPG_PASSPHRASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in build/magefile.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RELEASE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go",
+            "read in build/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPO_SUITE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VEANS_E2E_ADMIN_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in veans/magefile.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VEANS_E2E_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in veans/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VEANS_E2E_SKIP_BUILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in veans/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VEANS_E2E_TESTING_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in veans/magefile.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VEANS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in veans/internal/credentials/env.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUDIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUDIT_LOGFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUDIT_ROTATION_MAXAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUDIT_ROTATION_MAXSIZEMB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ATTRIBUTE_DISPLAYNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ATTRIBUTE_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ATTRIBUTE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ATTRIBUTE_MEMBERID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ATTRIBUTE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_AVATARSYNCATTRIBUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_BASEDN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_BINDDN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_BINDPASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_GROUPSYNCENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_GROUPSYNCFILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_GROUPSYNCUSESERVICEACCOUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_USERFILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_USETLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LDAP_VERIFYTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_LOCAL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_OPENID_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTH_OPENID_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTOTLS_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTOTLS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AUTOTLS_RENEWBEFORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AVATAR_GRAVATARBASEURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_AVATAR_GRAVATAREXPIRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_BACKGROUNDS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_BACKGROUNDS_PROVIDERS_UNSPLASH_ACCESSTOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_BACKGROUNDS_PROVIDERS_UNSPLASH_APPLICATIONID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_BACKGROUNDS_PROVIDERS_UNSPLASH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_BACKGROUNDS_PROVIDERS_UPLOAD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_CORS_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_CORS_MAXAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_CORS_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_MAXCONNECTIONLIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_MAXIDLECONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_MAXOPENCONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_SSLCERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_SSLKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_SSLMODE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "TLS setting: default \"disable\" cannot reach the managed PostgreSQL database, which accepts only TLS — set \"require\"",
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_SSLROOTCERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set a PostgreSQL value to use the managed PostgreSQL database",
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VIKUNJA_DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_AVATAR_FILE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_AVATAR_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_DEFAULT_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_DISCOVERABLE_BY_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_DISCOVERABLE_BY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_EMAIL_REMINDERS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_OVERDUE_TASKS_REMINDERS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_OVERDUE_TASKS_REMINDERS_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_DEFAULTSETTINGS_WEEK_START",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_E2E_SKIP_BUILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_E2E_TESTING_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in magefile.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_BASEPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_MAXSIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_ACCESSKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_DISABLESIGNING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_SECRETKEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_TEMPDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_S3_USEPATHSTYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_FILES_TYPE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set a value that stores files outside the container",
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VIKUNJA_KEYVALUE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LEGAL_IMPRINTURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LEGAL_PRIVACYURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_DATABASELEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_EVENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_EVENTSLEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_HTTP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_HTTPLEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_MAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_MAILLEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_LOG_STANDARD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_AUTHTYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_FORCESSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_FROMEMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_QUEUELENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_QUEUETIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_SKIPTLSVERIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MAILER_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_METRICS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_METRICS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_METRICS_PPROF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_METRICS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_CLAIMTIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MAXCSVROWS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MAXITEMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MICROSOFTTODO_CLIENTID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MICROSOFTTODO_CLIENTSECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MICROSOFTTODO_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_MICROSOFTTODO_REDIRECTURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TODOIST_CLIENTID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TODOIST_CLIENTSECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TODOIST_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TODOIST_REDIRECTURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TRELLO_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TRELLO_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_TRELLO_REDIRECTURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_VIKUNJAFILE_MAXFILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_VIKUNJAFILE_MAXSIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_MIGRATION_VIKUNJAFILE_MAXUSERSTORAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_OUTGOINGREQUESTS_ALLOWNONROUTABLEIPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_OUTGOINGREQUESTS_PROXYPASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_OUTGOINGREQUESTS_PROXYURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_OUTGOINGREQUESTS_TIMEOUTSECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_PLUGINS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_PLUGINS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_PLUGINS_LOADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_BASICAUTHLIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_KIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_NOAUTHLIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_PERIOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_STORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_RATELIMIT_TOKENREFRESHLIMIT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_REDIS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SENTRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SENTRY_FRONTENDDSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SENTRY_FRONTENDENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ALLOWICONCHANGES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_BCRYPTROUNDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_CUSTOMLOGOURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_CUSTOMLOGOURLDARK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_DEMOMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLECALDAV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLEEMAILREMINDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLELINKSHARING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLEOPENIDTEAMUSERSEARCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLEPUBLICTEAMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLEREGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLETASKATTACHMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLETASKCOMMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLETOTP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ENABLEUSERDELETION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_INTERFACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_IPEXTRACTIONMETHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_JWTSECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_JWTTTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_JWTTTLLONG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_JWTTTLSHORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_MAXAVATARSIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_MAXITEMSPERPAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_MOTD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_PUBLICURL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_ROOTPATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_TESTINGTOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_TRUSTEDPROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_UNIXSOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_SERVICE_UNIXSOCKETMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_WEBHOOKS_ALLOWNONROUTABLEIPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_WEBHOOKS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_WEBHOOKS_PROXYPASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_WEBHOOKS_PROXYURL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIKUNJA_WEBHOOKS_TIMEOUTSECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in pkg/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_DATA_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in desktop/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XGO_OUT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in build/magefile.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: VIKUNJA_DATABASE_SSLMODE, VIKUNJA_DATABASE_TYPE, VIKUNJA_FILES_TYPE. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE"
+}

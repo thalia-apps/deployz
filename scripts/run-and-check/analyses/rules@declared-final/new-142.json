@@ -1,0 +1,70 @@
+{
+  "id": "new-142",
+  "commit": "11b86fecdb5d8f6244cf931e1f87cec887ec1f1f",
+  "analyser": "rules@declared-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npx grunt prod",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"nginx\", \"-g\", \"daemon off;\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "GITHUB_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in Gruntfile.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE"
+}

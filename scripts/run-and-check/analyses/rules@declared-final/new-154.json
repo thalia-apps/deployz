@@ -1,0 +1,320 @@
+{
+  "id": "new-154",
+  "commit": "7aa44d13e44a715fb7235db47e047e1ac0c981fb",
+  "analyser": "rules@declared-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "cd ../packages/api && yarn build && cd ../web && yarn build && cd ../../app && yarn dist",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/home/dbgate-docker/entrypoint.sh\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMIN_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_DBGATE_PRIVATE_CLOUD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASIC_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js",
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLOUD_UPGRADE_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js",
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONSOLE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DBGATE_GTM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG_PRINT_ENV_VARIABLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/src/electron.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEVWEB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ELECTRON_START_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in app/src/electron.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FILE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGUAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/web/build-tailwind.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in common/translations-cli/translate.js",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PAGE_BODY_SCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAGE_HEAD_SCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in test-api/src/server.js",
+            "read in packages/aigwmock/src/index.js",
+            "read in packages/api/src/main.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIRECT_TO_DBGATE_CLOUD_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SKIP_ALL_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/controllers/config.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/api/src/main.js",
+            "read in packages/api/src/controllers/config.js",
+            "read in packages/api/src/mcp.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yaml defines 2 application services (dbgate, proxy). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yaml defines 2 application services (dbgate, proxy). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ELECTRON_START_URL, OPENAI_API_KEY. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}
