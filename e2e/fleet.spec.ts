@@ -65,7 +65,6 @@ async function seedDeployment(page: Page): Promise<{
   const deployment = (await deploymentResponse.json()) as {
     id: string;
     installLinkId: string;
-    enrollmentCode: string;
   };
 
   // DZ-AUDIT-013: the server-minted relay credential rides the Quick Create URL.
@@ -75,6 +74,7 @@ async function seedDeployment(page: Page): Promise<{
   expect(installResponse.ok()).toBeTruthy();
   const installData = (await installResponse.json()) as { quickCreateUrl: string | null };
   expect(installData.quickCreateUrl).not.toBeNull();
+  const enrollmentCode = extractQuickCreateParam(installData.quickCreateUrl!, 'EnrollmentCode');
   const relayCredential = extractQuickCreateParam(installData.quickCreateUrl!, 'RelayCredential');
 
   return {
@@ -84,7 +84,7 @@ async function seedDeployment(page: Page): Promise<{
     // per seeded deployment stands in for that here.
     installationId: `inst-${crypto.randomUUID()}`,
     installLinkId: deployment.installLinkId,
-    enrollmentCode: deployment.enrollmentCode,
+    enrollmentCode,
     relayCredential,
     applicationName: application.name,
     customerName: customer.name,

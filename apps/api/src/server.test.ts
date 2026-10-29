@@ -643,6 +643,51 @@ describe('server — organization identity comes from the session, not the clien
     expect((response.json() as { organizationId: string }).organizationId).toBe(orgA.organizationId);
   });
 
+  it('never returns relay enrollment material in create, list or detail responses', async () => {
+    const application = await insertApplication(db, orgA.organizationId, {
+      detectedMetadata: {
+        hasDockerfile: true,
+        dockerfilePath: 'Dockerfile',
+        port: '3000',
+        startupCommands: ['node dist/index.js'],
+        usesPostgresql: false,
+        postgres: { required: false },
+        usesRedis: false,
+        redis: { required: false },
+        usesS3: false,
+        usesLocalFilesystem: false,
+        databaseState: 'none',
+      },
+    });
+    await insertDeployableRelease(db, application.id);
+    const customer = await insertCustomer(db, orgA.organizationId);
+    const created = await postJson(
+      app,
+      '/api/deployments',
+      { applicationId: application.id, customerId: customer.id, region: 'us-east-1' },
+      { cookie: orgA.cookie },
+    );
+    expect(created.statusCode).toBe(201);
+    const { id } = created.json() as { id: string };
+    const [stored] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, id));
+    expect(stored!.enrollmentCode).toBeTruthy();
+    expect(stored!.relayCredential).toBeTruthy();
+    expect(stored!.relayTokenHash).toBeTruthy();
+
+    const list = await app.inject({ method: 'GET', url: '/api/deployments', headers: { cookie: orgA.cookie } });
+    const detail = await app.inject({ method: 'GET', url: `/api/deployments/${id}`, headers: { cookie: orgA.cookie } });
+    expect(list.statusCode).toBe(200);
+    expect(detail.statusCode).toBe(200);
+    for (const body of [created.body, list.body, detail.body]) {
+      expect(body).not.toContain(stored!.enrollmentCode);
+      expect(body).not.toContain(stored!.relayCredential!);
+      expect(body).not.toContain(stored!.relayTokenHash!);
+      expect(body).not.toContain('"enrollmentCode"');
+      expect(body).not.toContain('"relayCredential"');
+      expect(body).not.toContain('"relayTokenHash"');
+    }
+  });
+
   it('POST /api/deployments 404s for a well-formed but non-existent applicationId (not a 500)', async () => {
     const customer = await insertCustomer(db, orgA.organizationId);
 
@@ -4068,11 +4113,23 @@ describe('server — GitHub installation binding', () => {
 
   // GitHub's own view of the installation. The setup route reads the account
   // from the API rather than trusting the browser for anything but the id.
-  const githubFetch = (async (url: string) => ({
-    status: url.includes('/app/installations/4242') ? 200 : 404,
-    headers: { get: () => null },
-    json: async () => ({ account: { login: 'acme-inc', type: 'Organization' } }),
-  })) as unknown as Parameters<typeof buildServer>[0]['githubFetch'];
+  let installationCreatedAt = new Date().toISOString();
+  const githubFetch = (async (url: string, init?: { headers?: Record<string, string>; body?: string }) => {
+    const reply = (status: number, body: unknown) => ({ status, headers: { get: () => null }, json: async () => body });
+    // The OAuth exchange: only `good-code` belongs to a user who can see 4242.
+    if (url.endsWith('/login/oauth/access_token')) {
+      const { code } = JSON.parse(init!.body!) as { code: string };
+      return reply(200, code === 'good-code' ? { access_token: 'ghu_owner' } : { access_token: 'ghu_stranger' });
+    }
+    if (url.includes('/user/installations')) {
+      const owner = init?.headers?.['Authorization'] === 'Bearer ghu_owner';
+      return reply(200, { installations: owner ? [{ id: 4242 }] : [{ id: 1 }] });
+    }
+    return reply(url.includes('/app/installations/4242') ? 200 : 404, {
+      account: { login: 'acme-inc', type: 'Organization' },
+      created_at: installationCreatedAt,
+    });
+  }) as unknown as Parameters<typeof buildServer>[0]['githubFetch'];
 
   beforeAll(async () => {
     client = new PGlite();
@@ -4086,6 +4143,8 @@ describe('server — GitHub installation binding', () => {
       githubFetch,
       githubAppInstallUrl: 'https://github.com/apps/deployz-test/installations/new',
       githubAppId: 'test-app-id',
+      githubClientId: 'test-client-id',
+      githubClientSecret: 'test-client-secret',
       // A real key: the setup route signs an RS256 App JWT, so a placeholder
       // string fails inside node:crypto rather than in the route.
       githubAppPrivateKey: generateKeyPairSync('rsa', {
@@ -4158,6 +4217,50 @@ describe('server — GitHub installation binding', () => {
     expect(forged.headers['location']).toContain('/dashboard/applications?github=failed');
 
     expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+  });
+
+  it('refuses to bind an unbound installation GitHub created long ago', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
+      expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+    }
+  });
+
+  it('refuses a code whose user cannot see the installation, even for a new installation', async () => {
+    const state = await startInstall(org.cookie);
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=bad-code`,
+      headers: { cookie: org.cookie },
+    });
+    expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
+    expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+  });
+
+  it('binds an older installation when the code user can see it', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=good-code`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=connected');
+      expect(await db.select().from(schema.githubInstallations)).toHaveLength(1);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+      await db.delete(schema.githubInstallations);
+    }
   });
 
   it('binds an installation to the caller organization and redirects to the dashboard', async () => {
@@ -4364,6 +4467,7 @@ describe('server — GitHub disconnect and reconnect', () => {
       return json(200, {
         account: { login: found.login, type: 'Organization', id: found.id },
         suspended_at: found.suspended ? '2026-10-01T00:00:00Z' : null,
+        created_at: new Date().toISOString(),
       });
     }
     const repo = /\/repos\/([^/]+\/[^/]+)$/.exec(url);

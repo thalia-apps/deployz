@@ -164,9 +164,8 @@ test.describe('phase5-composition', () => {
     const deployment = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
-    const { id: deploymentId, installLinkId, enrollmentCode } = deployment;
+    const { id: deploymentId, installLinkId } = deployment;
 
     // ── The frozen plan proves the composition: web + worker + the cleanup
     // scheduled job, an SQS queue + its DLQ, and a schedule — grouped under
@@ -219,6 +218,7 @@ test.describe('phase5-composition', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installInfo.quickCreateUrl!, 'RelayCredential');
     const installationId = `inst-${suffix}`;
     const relay = startSimulatedRelay({

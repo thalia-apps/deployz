@@ -57,8 +57,15 @@ interface BatchResponse {
   readonly batchItemFailures: { readonly itemIdentifier: string }[];
 }
 
+// A stalled GitHub call must not hold the worker until the Lambda times out.
+// Archive downloads carry a whole repository, so they get a longer limit.
+const GITHUB_FETCH_TIMEOUT_MS = 10_000;
+const GITHUB_ARCHIVE_TIMEOUT_MS = 120_000;
+
 const fetchFn: RepositoryFetch = async (url, init) => {
+  const isArchive = url.includes('/tarball/') || new URL(url).hostname === 'codeload.github.com';
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(isArchive ? GITHUB_ARCHIVE_TIMEOUT_MS : GITHUB_FETCH_TIMEOUT_MS),
     method: init?.method ?? 'GET',
     ...(init?.headers ? { headers: init.headers } : {}),
     ...(init?.body ? { body: init.body } : {}),

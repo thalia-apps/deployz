@@ -174,6 +174,7 @@ import {
   githubManageUrl,
   handleInstallationWebhook,
   isDashboardReturnPath,
+  isFreshInstallation,
   listBranchCommits,
   listFixtureBranchCommits,
   listRepositories,
@@ -181,6 +182,7 @@ import {
   parseRepoFullName,
   reconciledStatus,
   requireActiveInstallation,
+  userCanSeeInstallation,
   verifyInstallState,
   verifyWebhookSignature,
   type FetchFn,
@@ -386,6 +388,7 @@ import {
   resolveAppUrl,
   resolveDefaultUrl,
   toFleetRow,
+  withoutRelayMaterial,
   type DeploymentJobRow,
   type DeploymentRow,
 } from './fleet-row.js';
@@ -446,6 +449,9 @@ export interface ServerDeps {
   // are testable on a machine (or a CI runner) with no .env.
   githubAppId?: string | undefined;
   githubAppPrivateKey?: string | undefined;
+  // The App's client credentials, used to verify the installing user's OAuth code.
+  githubClientId?: string | undefined;
+  githubClientSecret?: string | undefined;
   // Injectable logger, so a test can read back what a failing request
   // reported. Production uses the default below.
   loggerInstance?: FastifyBaseLogger | undefined;
@@ -2242,6 +2248,8 @@ export async function buildServer({
   githubFetch: injectedGithubFetch,
   githubAppId: injectedGithubAppId,
   githubAppPrivateKey: injectedGithubAppPrivateKey,
+  githubClientId = env.githubClientId,
+  githubClientSecret = env.githubClientSecret,
   aiGateway = env.aiFixtureMode ? createFixtureAiGateway() : createAiGateway(env.aiGateway),
   fixInstructionsAiGateway: injectedFixInstructionsAiGateway,
   jevFailureShadow = createJevFailureShadowRunnerFromEnv({ db }, env.jev),
@@ -2600,7 +2608,10 @@ export async function buildServer({
   // the organization slug — sufficient for the MVP since vendor orgs are
   // created with their GitHub org name as the slug.
   const githubStore = createGithubStore(db);
-  const githubFetch: FetchFn = injectedGithubFetch ?? globalThis.fetch.bind(globalThis);
+  // A stalled GitHub call must not hold a request until the platform timeout.
+  const githubFetch: FetchFn =
+    injectedGithubFetch ??
+    ((url, init) => globalThis.fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }));
   const githubAppId = injectedGithubAppId ?? env.githubAppId;
   const githubAppPrivateKey = injectedGithubAppPrivateKey ?? env.githubAppPrivateKey;
   const isGithubFixtureMode = (): boolean => githubFixtureMode ?? env.githubFixtureMode;
@@ -3953,13 +3964,15 @@ export async function buildServer({
       // resolving the tenant, say) must surface as itself rather than be
       // disguised as "please sign in".
       if (!(error instanceof UnauthorizedError)) throw error;
-      const { installation_id: installationId, state } = request.query as {
+      const { installation_id: installationId, state, code } = request.query as {
         installation_id?: string | undefined;
         state?: string | undefined;
+        code?: string | undefined;
       };
       const target = installationId
         ? `/github/setup?installation_id=${encodeURIComponent(installationId)}` +
-          (state ? `&state=${encodeURIComponent(state)}` : '')
+          (state ? `&state=${encodeURIComponent(state)}` : '') +
+          (code ? `&code=${encodeURIComponent(code)}` : '')
         : '/github/setup';
       return reply.redirect(`${env.webUrl}/sign-in?callbackUrl=${encodeURIComponent(target)}`);
     }
@@ -3998,9 +4011,10 @@ export async function buildServer({
     return reply.redirect(target.toString());
   });
   app.get('/api/github/setup', { preHandler: redirectSignedOutToSignIn }, async (request, reply) => {
-    const { installation_id: installationId, state } = request.query as {
+    const { installation_id: installationId, state, code } = request.query as {
       installation_id?: string | undefined;
       state?: string | undefined;
+      code?: string | undefined;
     };
     // This GET writes a binding, which the support-mode guard (non-GET only)
     // cannot see.
@@ -4014,7 +4028,7 @@ export async function buildServer({
     }
     const verifiedState = verifyInstallState(githubStateSecret, state, organizationId, Date.now());
     // Back to the page that started the install, when a valid state names one.
-    const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'missing_installation'): string =>
+    const returnUrl = (result: 'connected' | 'disconnected' | 'failed' | 'unverified' | 'missing_installation'): string =>
       `${env.webUrl}${(verifiedState && verifiedState.returnPath) || '/dashboard/applications'}?github=${result}`;
     if (!installationId) {
       return reply.redirect(returnUrl('missing_installation'));
@@ -4048,6 +4062,21 @@ export async function buildServer({
       if (existing === null && !verifiedState) {
         request.log.warn({ installationId }, 'github setup refused: missing or invalid state');
         return reply.redirect(returnUrl('failed'));
+      }
+      // The state proves this organization started an install, not that the
+      // caller controls THIS installation: an installation id is a small public
+      // integer. A new binding needs the installing user's OAuth code (the
+      // user can see the installation) or an installation GitHub created
+      // moments ago.
+      if (existing === null) {
+        const proven =
+          code && githubClientId && githubClientSecret
+            ? await userCanSeeInstallation(code, installationId, githubClientId, githubClientSecret, githubFetch)
+            : isFreshInstallation(account.createdAt, Date.now());
+        if (!proven) {
+          request.log.warn({ installationId }, 'github setup refused: installation ownership not proven');
+          return reply.redirect(returnUrl('unverified'));
+        }
       }
       // A disconnect ends only through a reconnect this organization started
       // (members never get here). GitHub also sends the vendor here when
@@ -5210,7 +5239,7 @@ export async function buildServer({
       }, compilerDeps);
       return reply.code(201).send({
         link: toDeployLinkView({ link, application, deployment }),
-        deployment,
+        deployment: withoutRelayMaterial(deployment),
         token,
       });
     },
@@ -5881,7 +5910,7 @@ export async function buildServer({
       }
       throw error;
     }
-    return reply.code(201).send({ ...deployment, installLinkToken: installLinkToken(deployment.installLinkId) });
+    return reply.code(201).send({ ...withoutRelayMaterial(deployment), installLinkToken: installLinkToken(deployment.installLinkId) });
   });
 
   // GET /api/regions — the region options for the "Create customer
