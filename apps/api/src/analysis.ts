@@ -503,7 +503,16 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // question; a checked "required" with a cited production line of an engine
 // Deployz does not provide is NOT_DEPLOYABLE. Stored v76 rows can call Huly,
 // zammad and mem0 deployable.
-export const ANALYSIS_VERSION = 77;
+// Version 78 (2026-10 corpus round 8, AI prompt v19): a repository that is a
+// database, cache, search engine, broker or storage server is NOT_DEPLOYABLE
+// (`datastore-server`): the rules reject an image that exposes a database or
+// broker client port, and the AI repository kind gains "datastore", asked
+// also when no port or start command is known or the app keeps durable local
+// state. A FROM-only, Windows, shell-only or undeclared-variable-FROM
+// Dockerfile and a `selenium/` image are not app images; a meta-repository of
+// submodules has no application source. Stored v77 rows can call a database
+// or broker server deployable or build a toolchain image.
+export const ANALYSIS_VERSION = 78;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

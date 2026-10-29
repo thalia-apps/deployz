@@ -814,7 +814,7 @@ export function detectNoDefaultServerCommand(content: string): string | null {
 // example (`docker_example/`) or a project template (payload `templates/blank/`),
 // never the application (a `dev/` build directory still can).
 const NON_APP_DOCKERFILE_DIR_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright|templates?|starters?)(?:\/|$)/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright|selenium|templates?|starters?)(?:\/|$)/i;
 
 // A `dev/` build directory or a hidden directory can hold the production Dockerfile; it counts
 // only when the image starts something (a tooling image such as `.oss-scanner/` has no CMD,
@@ -823,6 +823,20 @@ const DEV_DOCKERFILE_DIR_REGEX = /(?:^|\/)(?:dev|development|\.[\w-][\w.-]*)\//i
 
 // A template (mustache or jinja block tag, or a templated FROM) is not a Dockerfile Docker can build.
 const DOCKERFILE_TEMPLATE_REGEX = /^\s*(?:\{\{[#^/>!]|\{%)|^\s*FROM\s[^\n]*\{\{/im;
+// A Windows container image (PowerShell, a `C:\` path, a Windows base): Deployz builds and runs Linux images.
+const WINDOWS_DOCKERFILE_REGEX = /^\s*(?:FROM\s+mcr\.microsoft\.com\/windows|WORKDIR\s+[a-z]:\\|SHELL\s+\[\s*"powershell|(?:RUN|CMD|ENTRYPOINT)\s+\[?\s*"?powershell\b)/im;
+// A command that starts only a shell or exits at once (`CMD ["/bin/bash"]`, `CMD /bin/true`) runs no server.
+const SHELL_ONLY_COMMAND_REGEX = /^\s*(?:CMD|ENTRYPOINT)\s+(?:\[\s*"(?:\/(?:usr\/)?bin\/)?(?:ba|z)?sh"\s*\]|(?:\/(?:usr\/)?bin\/)?(?:(?:ba|z)?sh|true)|\[\s*"(?:\/(?:usr\/)?bin\/)?true"\s*\])\s*$/i;
+
+/** A `FROM ${name}` whose variable no `ARG` declares: a template that a build tool fills in (OpenSearch `${base_image}`). */
+function fromUndeclaredVariable(content: string): boolean {
+  // BuildKit predefines the platform variables (`FROM --platform=$BUILDPLATFORM`).
+  const declared = new Set([
+    ...[...content.matchAll(/^\s*ARG\s+([A-Za-z_]\w*)/gim)].map((match) => match[1]!),
+    ...['BUILDPLATFORM', 'BUILDOS', 'BUILDARCH', 'BUILDVARIANT', 'TARGETPLATFORM', 'TARGETOS', 'TARGETARCH', 'TARGETVARIANT'],
+  ]);
+  return [...content.matchAll(/^\s*FROM\s+[^\n]*\$\{?([A-Za-z_]\w*)/gim)].some((match) => !declared.has(match[1]!));
+}
 
 /**
  * A Dockerfile that cannot be the production image: one in a test, example or
@@ -833,10 +847,16 @@ const DOCKERFILE_TEMPLATE_REGEX = /^\s*(?:\{\{[#^/>!]|\{%)|^\s*FROM\s[^\n]*\{\{/
 function isUnusableDockerfile(path: string, content: string): boolean {
   if (NON_APP_DOCKERFILE_DIR_REGEX.test(path)) return true;
   if (content.length === 0) return false;
-  if (DOCKERFILE_TEMPLATE_REGEX.test(content)) return true;
+  if (DOCKERFILE_TEMPLATE_REGEX.test(content) || fromUndeclaredVariable(content) || WINDOWS_DOCKERFILE_REGEX.test(content)) return true;
+  // Several FROM lines and nothing else pin images for an update bot; they build nothing (a vendored `dependencies.Dockerfile`).
+  const instructions = normalizeDockerfile(content).split('\n').filter((line) => line.trim() !== '');
+  if (instructions.filter((line) => /^\s*FROM\b/i.test(line)).length > 1 && instructions.every((line) => /^\s*(?:FROM|ARG)\b/i.test(line))) return true;
   const runtime = productionStageText(content);
   const lines = runtime.split('\n');
   if (lines.some((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line) && DEV_RUNTIME_REGEX.test(line.replace(/["',[\]\s]+/g, ' ')))) return true;
+  // A build toolchain or a file-export image: its only command is a shell or a no-op and it exposes no port.
+  const commands = lines.filter((line) => /^\s*(?:CMD|ENTRYPOINT)\b/i.test(line));
+  if (commands.length > 0 && commands.every((line) => SHELL_ONLY_COMMAND_REGEX.test(line)) && !lines.some((line) => /^\s*EXPOSE\b/i.test(line))) return true;
   const startsSomething = lines.some((line) => /^\s*(?:CMD|ENTRYPOINT|EXPOSE)\b/i.test(line));
   if (DEV_DOCKERFILE_DIR_REGEX.test(path) && !startsSomething) return true;
   // A `FROM scratch` image with no command only exports files (focalboard `Dockerfile.build`, built with `--output`).
@@ -1108,7 +1128,7 @@ const NON_HTTP_PORTS = new Set(['22', '25', '53', '465', '587', '3306', '5432', 
  * Dockerfile sets with `ENV`/`ARG` (`EXPOSE ${APP_PORT}` after
  * `ENV APP_PORT=9000`), skipping non-HTTP ports (Stage A COMP-028).
  */
-function exposedPorts(dockerfile: string): string[] {
+export function exposedPorts(dockerfile: string): string[] {
   const values: string[] = [];
   for (const match of dockerfile.matchAll(DOCKERFILE_EXPOSE_REGEX)) {
     for (const token of (match[1] ?? '').trim().split(/\s+/)) {

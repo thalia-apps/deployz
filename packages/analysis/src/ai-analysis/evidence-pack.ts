@@ -154,6 +154,13 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * A line that says what a datastore server is: its role (a database, a broker, a search engine) or the
+ * default client port of a database, cache or broker protocol (`port 6379`, `DEF_PGPORT 5432`).
+ */
+export const DATASTORE_ROLE =
+  /\b(?:database server|datastore|data store|key[- ]value (?:store|database)|search engine|vector (?:database|store|search engine)|message broker|event streaming|object stor(?:e|age) server|time[- ]series database)\b|port\b\D{0,30}\b(?:1883|8883|5671|5672|9092|4222|3306|5432|6379|27017|9042|7687|26257)\b/i;
+
 /** What each fact question searches the production files for. */
 const FACT_SEARCH: Record<string, RegExp> = {
   port: /\bPORT\b|\.listen\(|\blisten\b|server\.port|--port\b|\bbind\b.*:\d{2,5}|ASPNETCORE_URLS|EXPOSE/,
@@ -161,8 +168,8 @@ const FACT_SEARCH: Record<string, RegExp> = {
   healthPath: /health|ready|alive|\bping\b|\/status\b|Map(?:Get|HealthChecks)|@(?:Get|RequestMapping)\(|\.get\(\s*["']\/["']|urlpatterns|\broutes?\b/i,
   migration: /migrat|db:prepare|db\s+push|alembic|flyway|liquibase|ecto\.migrate|syncdb|schema:update|ensure\w*(?:schema|tables?)\b|CREATE TABLE|\.Install\w*\(/i,
   databaseVariable: /(?<![a-z0-9])(?:db|database|postgres|pg|sql|dsn|datasource|connection)/i,
-  // A server entrypoint: what an application of this repository would start.
-  repositoryKind: /\.listen\(|uvicorn|gunicorn|FastAPI\(|Flask\(|createServer|ListenAndServe|HttpServer::new|axum::serve|runserver|"start"\s*:|^\s*web:/,
+  // A server entrypoint: what an application of this repository would start; or what a datastore server is.
+  repositoryKind: new RegExp(`${/\.listen\(|uvicorn|gunicorn|FastAPI\(|Flask\(|createServer|ListenAndServe|HttpServer::new|axum::serve|runserver|"start"\s*:|^\s*web:/.source}|${DATASTORE_ROLE.source}`, 'i'),
 };
 
 /** A line that reads the environment: the switches a blocker or a fact most often turns on. */
@@ -385,7 +392,7 @@ function renderFile(file: PackFile): string[] {
 
 function questionText(question: Question): string {
   if (question.kind === 'fact' && question.fact === 'repositoryKind') {
-    return `${question.id} (kind "fact", fact "repositoryKind"): the scanner found no Dockerfile that builds this repository. Is it an application that serves HTTP, or a library, framework, SDK or CLI that others install?`;
+    return `${question.id} (kind "fact", fact "repositoryKind"): is this repository an application that serves HTTP, a datastore server that other applications connect to, or a library, framework, SDK or CLI that others install?`;
   }
   if (question.kind === 'fact') return `${question.id} (kind "fact", fact "${question.fact}"): what is the ${question.fact}?`;
   const subject =

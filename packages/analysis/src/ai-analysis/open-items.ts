@@ -129,14 +129,21 @@ export function collectOpenItems(tree: FileTree, rules: AnalysisResult): OpenIte
   }
 
   const database = (meta['postgres'] as { required?: unknown } | undefined)?.required === true || (meta['mysql'] as { required?: unknown } | undefined)?.required === true;
+  const detected = (dependency: string): boolean => rules.rejections.some((rejection) => rejection.detected && rejection.dependency === dependency);
+  const port = typeof meta['port'] !== 'string';
+  const startCommand = !Array.isArray(meta['startupCommands']) || meta['startupCommands'].length === 0;
   const open: Record<OpenFact, boolean> = {
     dockerfile: listDockerfileCandidates(tree).length > 0 && (typeof meta['dockerfilePath'] !== 'string' || meta['dockerfileSelectionTied'] === true),
-    port: typeof meta['port'] !== 'string',
-    startCommand: !Array.isArray(meta['startupCommands']) || meta['startupCommands'].length === 0,
+    port,
+    startCommand,
     healthPath: meta['healthMode'] === 'vendor_required',
     migration: database && meta['migrationMode'] === 'unknown',
     databaseVariable: database && databaseConnectionUnverified(meta),
-    repositoryKind: rules.rejections.some((rejection) => rejection.detected && rejection.dependency === 'no-buildable-dockerfile'),
+    // No buildable Dockerfile, no web port or start command, or durable local state: the repository may be
+    // a library or a datastore server rather than an application.
+    repositoryKind:
+      !detected('datastore-server') &&
+      (detected('no-buildable-dockerfile') || port || startCommand || items.some((item) => item.kind === 'blocker' && item.category === 'local_state')),
   };
   for (const fact of OPEN_FACTS) if (open[fact]) items.push({ kind: 'fact', fact });
   return items;
