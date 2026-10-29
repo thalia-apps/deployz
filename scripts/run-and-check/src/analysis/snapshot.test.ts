@@ -78,6 +78,26 @@ describe('snapshot fetch', () => {
     await expect(offline(`https://api.github.com/repos/acme/api/git/blobs/missing`)).rejects.toThrow('cache miss');
   });
 
+  it('reads a missing blob of a served tree from raw.githubusercontent.com by its path, not from the rate-limited API', async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      calls.push(url);
+      if (url.includes('/git/trees/')) {
+        return new Response(JSON.stringify({ tree: [{ path: 'src/a b.ts', type: 'blob', sha: 'rawblob', size: 2 }], truncated: false }), { status: 200 });
+      }
+      if (url.startsWith('https://raw.githubusercontent.com/')) return new Response('hi', { status: 200 });
+      return new Response('{"message":"unexpected"}', { status: 500 });
+    }) as unknown as typeof fetch;
+    const fetchFn = createSnapshotFetch({ cacheDir, token: 't', fetchImpl });
+    await fetchFn(`https://api.github.com/repos/acme/raw/git/trees/${SHA}?recursive=1`);
+    const blob = await fetchFn('https://api.github.com/repos/acme/raw/git/blobs/rawblob');
+    expect(await blob.json()).toEqual({ sha: 'rawblob', size: 2, encoding: 'base64', content: 'aGk=' });
+    expect(calls).toEqual([`https://api.github.com/repos/acme/raw/git/trees/${SHA}?recursive=1`, `https://raw.githubusercontent.com/acme/raw/${SHA}/src/a%20b.ts`]);
+    // The answer is cached like an API answer.
+    const offline = createSnapshotFetch({ cacheDir, token: null, offline: true });
+    expect((await offline('https://api.github.com/repos/acme/raw/git/blobs/rawblob')).status).toBe(200);
+  });
+
   it('sends the token to GitHub, never the placeholder, and does not cache failures', async () => {
     const seen: { url: string; auth: string | null }[] = [];
     const fetchImpl = (async (url: string, init?: RequestInit) => {
