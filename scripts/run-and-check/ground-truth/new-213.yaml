@@ -1,0 +1,111 @@
+id: new-213
+repository: mysql/mysql-server
+commit: 06bcb0eb0ad281e08dd2b4d81b99ad25491433e7
+summary: >
+  MySQL Server is a C and C++ relational database server (mysqld, CMake build). It is a datastore, not a web
+  application. It speaks the MySQL wire protocol on TCP 3306 and keeps data in a datadir. The only Dockerfiles are
+  telemetry test helpers and vendored third-party copies (curl, opentelemetry-cpp, opentelemetry-proto); none builds
+  the server.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a database server. Clients use the MySQL wire protocol on 3306, which is not HTTP and cannot sit
+    behind the ALB. It needs a durable datadir that Fargate does not provide. No Dockerfile builds mysqld from the
+    source.
+dockerfile:
+  accept: []
+  reject:
+    - {path: components/telemetry/test/collector/Dockerfile, reason: "telemetry component test helper (OpenTelemetry collector)"}
+    - {path: components/telemetry/test/prometheus/Dockerfile, reason: "telemetry component test helper (Prometheus)"}
+    - {path: components/telemetry/test/loki/Dockerfile-all, reason: "telemetry component test helper (Loki)"}
+    - {path: components/telemetry/test/loki/Dockerfile-backend, reason: "telemetry component test helper (Loki)"}
+    - {path: components/telemetry/test/loki/Dockerfile-read, reason: "telemetry component test helper (Loki)"}
+    - {path: components/telemetry/test/loki/Dockerfile-write, reason: "telemetry component test helper (Loki)"}
+    - {path: extra/curl/curl-8.14.1/Dockerfile, reason: "vendored curl third-party file"}
+    - {path: extra/opentelemetry-cpp/opentelemetry-cpp-1.27.0/.devcontainer/Dockerfile.conan, reason: "vendored third-party devcontainer"}
+    - {path: extra/opentelemetry-cpp/opentelemetry-cpp-1.27.0/.devcontainer/Dockerfile.dev, reason: "vendored third-party devcontainer"}
+    - {path: extra/opentelemetry-cpp/opentelemetry-cpp-1.27.0/ext/test/w3c_tracecontext_http_test_server/Dockerfile, reason: "vendored third-party test server"}
+    - {path: extra/opentelemetry-proto/opentelemetry-proto-1.10.0/dependencies.Dockerfile, reason: "vendored third-party tooling image"}
+  target: null
+  context: .
+  evidence:
+    - {path: README, line: 3, quote: "This is a release of MySQL, an SQL database server."}
+runtime: {accept: [cpp]}
+port:
+  accept: [3306]
+  evidence:
+    - {path: include/mysql_version.h.in, line: 20, quote: "#define MYSQL_PORT                  @MYSQL_TCP_PORT@"}
+    - {path: sql/mysqld.cc, line: 2996, quote: "mysqld_port = MYSQL_PORT;"}
+bindAllInterfaces:
+  # The bind_address option accepts the wildcard values; the option decides.
+  value: true
+  evidence:
+    - {path: sql/sys_vars.cc, line: 1173, quote: "\"bind_address\","}
+startCommand:
+  source: explicit
+  accept: ["mysqld --datadir=/var/lib/mysql"]
+  evidence:
+    - {path: sql/sys_vars.cc, line: 2075, quote: "\"datadir\", \"Path to the database root directory\","}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # The server is the database; it has no external database dependency.
+  evidence:
+    - {path: README, line: 3, quote: "This is a release of MySQL, an SQL database server."}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/mysql]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: sql/sys_vars.cc, line: 2075, quote: "\"datadir\", \"Path to the database root directory\","}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is the MySQL database server; clients use the MySQL wire protocol on 3306, not HTTP"
+    - "The server needs a durable datadir; Fargate task storage is ephemeral"
+    - "No Dockerfile builds the server"
+  mustNot:
+    - "RDS MySQL 8.0 must not be offered as a way to deploy this repository: the repository is the database engine itself"
+    - "The Dockerfiles under components/telemetry/test and extra/ must not be accepted as app images"
+vendorQuestions:
+  legitimate:
+    - "Is MySQL being deployed as a database for another app? A database server is better run as a managed database"
+  unnecessary:
+    - "Which port? (3306)"
+    - "Which health path? (the server has no HTTP endpoint)"
+traps:
+  - "The repository has Dockerfiles, but only in test helpers and vendored libraries (components/telemetry/test, extra/)"
+  - "MYSQL_PORT comes from the CMake variable MYSQL_TCP_PORT, set at build time (include/mysql_version.h.in:20)"
+openQuestions:
+  - "The default value of MYSQL_TCP_PORT (3306) was not read in this tree's CMake files; it is the long-standing MySQL default"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "7 citations checked against the pinned commit by script (path, line, quote)"}

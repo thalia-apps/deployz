@@ -116,6 +116,8 @@ export function createSnapshotFetch(options: SnapshotFetchOptions): FetchFn {
       if (rateLimited && attempt < RATE_LIMIT_ATTEMPTS) {
         const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000;
         const wait = Math.min(Math.max(reset - now() + 1000, 1000), MAX_RATE_LIMIT_WAIT_MS);
+        // Say so: a silent wait of up to an hour looks like a hung job.
+        console.warn(`GitHub rate limit reached: waiting ${Math.round(wait / 1000)}s for the reset (attempt ${attempt} of ${RATE_LIMIT_ATTEMPTS}).`);
         await sleep(wait);
         continue;
       }

@@ -1,0 +1,132 @@
+id: new-205
+repository: NousResearch/hermes-agent
+commit: ef75bc708867e3884cb40a91363be6dc6fddc034
+summary: >
+  Hermes Agent is a Python self-improving AI agent with a CLI, a messaging gateway (chat platforms such as Teams and
+  Google Chat), an optional OpenAI-compatible API server (8642) and an optional web dashboard (9119). The root Dockerfile
+  builds the whole app from the repository source (COPY . .) into one s6-overlay supervised image. All state (config,
+  API keys in .env, the SQLite session database state.db, MEMORY.md and USER.md memory, skills, profiles) lives in the
+  HERMES_HOME directory /opt/data, declared as a VOLUME. The image runs nothing web-facing by default.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The agent keeps its memory, sessions, skills, credentials and profile definitions on a durable local data directory
+    (/opt/data, SQLite state.db plus files) that the repository itself treats as a persistent volume shared by the
+    gateway and dashboard services. Fargate task storage is ephemeral and EFS is not provided, so every restart would
+    lose the agent state, and the dashboard and gateway are two processes that must share that directory. The gateway is
+    a long-running client of chat platforms rather than an HTTP web service. The Dockerfile is buildable but does not
+    start an HTTP service unless HERMES_DASHBOARD is set.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker/sandbox-desktop.Dockerfile, reason: "terminal-backend sandbox image with a desktop; contains no Hermes runtime"}
+    - {path: scripts/termux/termux-builder.Dockerfile, reason: "Android Termux wheel build image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 352, quote: "FROM python_deps AS runtime"}
+    - {path: Dockerfile, line: 395, quote: "COPY --link --chmod=a+rX,go-w . ."}
+    - {path: Dockerfile, line: 574, quote: "ENTRYPOINT [ \"/opt/hermes/docker/entrypoint-dispatch.sh\" ]"}
+    - {path: docker/sandbox-desktop.Dockerfile, line: 1, quote: "# Terminal-backend sandbox image WITH a desktop"}
+runtime: {accept: [python]}
+port:
+  # 9119 is the dashboard (needs HERMES_DASHBOARD); 8642 is the optional OpenAI-compatible API server.
+  accept: [9119, 8642]
+  evidence:
+    - {path: docker/s6-rc.d/dashboard/run, line: 29, quote: "dash_port=\"${HERMES_DASHBOARD_PORT:-9119}\""}
+    - {path: gateway/platforms/api_server.py, line: 156, quote: "DEFAULT_PORT = 8642"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/s6-rc.d/dashboard/run, line: 28, quote: "dash_host=\"${HERMES_DASHBOARD_HOST:-0.0.0.0}\""}
+startCommand:
+  # ENTRYPOINT runs s6-overlay /init and CMD is empty. With no argument the main program is the interactive `hermes`
+  # CLI. The dashboard is a supervised service enabled only by HERMES_DASHBOARD=1.
+  source: image
+  accept: ["gateway run", "dashboard --host 0.0.0.0 --no-open"]
+  evidence:
+    - {path: Dockerfile, line: 574, quote: "ENTRYPOINT [ \"/opt/hermes/docker/entrypoint-dispatch.sh\" ]"}
+    - {path: docker/main-wrapper.sh, line: 16, quote: "no args                       → exec `hermes` (the default)"}
+    - {path: docker/s6-rc.d/dashboard/run, line: 9, quote: "case \"${HERMES_DASHBOARD:-}\" in"}
+    - {path: docker-compose.yml, line: 61, quote: "command: [\"gateway\", \"run\"]"}
+healthPath:
+  accept: ["/api/health", "/api/status"]
+  evidence:
+    - {path: hermes_cli/dashboard_auth/public_paths.py, line: 12, quote: "\"/api/health\","}
+database:
+  # SQLite state.db in HERMES_HOME; no external database is supported or needed.
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: hermes_state.py, line: 181, quote: "DEFAULT_DB_PATH = _IMPORT_DEFAULT_DB_PATH = get_hermes_home() / \"state.db\""}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  # The gateway is a separate long-running command from the same image; the dashboard is a third.
+  status: optional-independent
+  commands: ["gateway run"]
+  evidence:
+    - {path: docker-compose.yml, line: 61, quote: "command: [\"gateway\", \"run\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/opt/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 491, quote: "ENV HERMES_HOME=/opt/data"}
+    - {path: Dockerfile, line: 540, quote: "VOLUME [ \"/opt/data\" ]"}
+    - {path: docker-compose.yml, line: 37, quote: "- ~/.hermes:/opt/data"}
+    - {path: hermes_state.py, line: 181, quote: "get_hermes_home() / \"state.db\""}
+    - {path: README.md, line: 177, quote: "Persistent memory, user profiles"}
+env:
+  required:
+    - {name: HERMES_DASHBOARD, secret: false, buildTime: false, note: "set to 1 to start the dashboard service; otherwise nothing listens"}
+    - {name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME, secret: false, buildTime: false, note: "a non-loopback dashboard fails closed without an auth provider"}
+    - {name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD, secret: true, buildTime: false, note: "pair of the user name"}
+  optional: [HERMES_DASHBOARD_PORT, HERMES_DASHBOARD_HOST, HERMES_UID, HERMES_GID, API_SERVER_HOST, API_SERVER_KEY, API_SERVER_PORT, HERMES_DASHBOARD_OAUTH_CLIENT_ID]
+  buildTime: [HERMES_BOT_DESKTOP]
+  evidence:
+    - {path: docker/s6-rc.d/dashboard/run, line: 34, quote: "Password: set HERMES_DASHBOARD_BASIC_AUTH_USERNAME + _PASSWORD"}
+    - {path: Dockerfile, line: 95, quote: "ARG HERMES_BOT_DESKTOP=0"}
+blockers:
+  expected:
+    - "The agent state (memory, sessions in state.db, skills, profiles, API keys) is stored in the durable data directory /opt/data; Fargate has only ephemeral task storage"
+    - "The gateway and the dashboard are separate processes that share /opt/data; they need a shared durable volume"
+    - "Nothing serves HTTP unless HERMES_DASHBOARD is set; the default main program is the interactive CLI"
+  mustNot:
+    - "A database or Redis must not be reported as required: state is SQLite and files"
+    - "The image must not be treated as a failed build: the root Dockerfile builds from repo source"
+    - "docker/sandbox-desktop.Dockerfile must not be treated as the application image"
+vendorQuestions:
+  legitimate:
+    - "Is losing agent memory, sessions and configuration on every restart acceptable, or does the agent need a persistent volume?"
+    - "Which chat platforms does the gateway connect to, and where are their tokens stored?"
+  unnecessary:
+    - "Which Dockerfile? (the root Dockerfile)"
+    - "Is a database needed? (no, SQLite in HERMES_HOME)"
+traps:
+  - "docker-compose.yml uses network_mode host and runs gateway and dashboard as two services that mount the same ~/.hermes (docker-compose.yml:35)"
+  - "The dashboard binds 127.0.0.1 in docker-compose.yml but 0.0.0.0 in the image service script (docker/s6-rc.d/dashboard/run:28)"
+  - "HERMES_DASHBOARD_INSECURE is ignored; a public dashboard needs basic auth or OAuth (docker/s6-rc.d/dashboard/run:34)"
+  - "The image entrypoint needs s6-overlay /init as PID 1 and fails under an arbitrary --user (docker/main-wrapper.sh)"
+  - "The Dockerfile has many stages (sqlite_build, runtime_base, python_deps, icons, frontend_build, webapp_build, runtime); the last stage runtime is the application"
+openQuestions:
+  - "Whether the dashboard is useful without a persistent /opt/data was not tested; state would reset at each task start"
+  - "Whether the CLI default main program exits at once without a TTY when no gateway command is set was not checked"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: durable /opt/data state and two processes are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "21 citations checked against the pinned commit by script (path, line, quote)"}

@@ -1,0 +1,496 @@
+{
+  "id": "new-72",
+  "commit": "112e6dedd7b10e5818d31f7ce6302f85d9168e26",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/imagemagick/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/opt/imagick/bin/magick\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "PENPOT_MCP_REDIS_URI",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "NODE_TEST_CONTEXT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OUT_DIR",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in render-wasm/macros/src/lib.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PENPOT_ACCESS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PENPOT_ACCESS_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PENPOT_API_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PENPOT_API_URI"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PENPOT_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .opencode/plugins/penpot.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .opencode/plugins/penpot.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in .opencode/plugins/penpot.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .opencode/plugins/penpot.js"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_LOGGERS_LOKI_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts",
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_LOGGERS_LOKI_INSTANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts",
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_LOGGERS_LOKI_JOB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts",
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_LOGGERS_LOKI_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts",
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_LOG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/logger.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_REDIS_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PENPOT_MCP_REMOTE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_REPL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_REPL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_SERVER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_TOOL_TIMEOUT_S",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MCP_WEBSOCKET_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_FONT_PROCESS_CPU_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_FONT_PROCESS_MEM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_FONT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_IMAGE_MAX_HEIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_IMAGE_MAX_PIXELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_IMAGE_MAX_WIDTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_MAX_CONCURRENT_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_MAX_FILE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_MEMORY_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_REQUEST_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_MEDIA_PROCESSOR_SHARED_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in media-processor/src/config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PENPOT_TENANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp/packages/server/src/PenpotMcpServer.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker/images/docker-compose.yaml defines 5 application services (penpot-frontend, penpot-backend, penpot-admin-console, penpot-mcp, penpot-exporter). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker/images/docker-compose.yaml defines 5 application services (penpot-frontend, penpot-backend, penpot-admin-console, penpot-mcp, penpot-exporter). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: OUT_DIR. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

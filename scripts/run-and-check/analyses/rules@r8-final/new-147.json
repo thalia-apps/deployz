@@ -1,0 +1,314 @@
+{
+  "id": "new-147",
+  "commit": "47bde889f685dfaee46fe01d0fcd9b29a5447748",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "docker/Dockerfile"
+    },
+    "build": {
+      "command": "tsc -b && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/index.js\"]",
+      "port": 52345
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": "QUEUE_MODE=worker node ./dist/index.js"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "QUEUE_MODE=worker node ./dist/index.js",
+        "source": "package.json"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "CHECKMATE_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_CONFIG_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_CONFIG_CLIENT_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_CONFIG_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares DB_CONNECTION_STRING",
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "HEALTH_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/index.ts",
+            "read in server/src/config/envValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/index.ts",
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/index.ts",
+            "read in server/src/config/envValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "QUEUE_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_PRIMARY_PROCESSES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATUS_PAGE_THEMES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOKEN_TTL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/src/config/envValidation.ts",
+            "read in server/src/domain/app-settings/app-settings.service.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported database dependency: mongoose, and a mongodb service is defined in docker/docker-compose.yaml. Deployz does not support MongoDB. Use PostgreSQL."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database dependency: mongoose, and a mongodb service is defined in docker/docker-compose.yaml. Deployz does not support MongoDB. Use PostgreSQL."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE"
+}

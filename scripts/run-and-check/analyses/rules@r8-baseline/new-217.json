@@ -1,0 +1,456 @@
+{
+  "id": "new-217",
+  "commit": "11091f0bf62f93465c03aae211a3ae185cde88ae",
+  "analyser": "rules@r8-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "node --import ./scripts/tsx.mjs scripts/build-all.mts",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"openclaw.mjs\", \"gateway\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BUN_BE_BUN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli-invocation.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CI_RUNNER_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/android/build.gradle.kts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FNM_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FORCE_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/entry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GIT_COMMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GIT_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOMEBREW_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in runtime-process-scripts.generated.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_COMPILE_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs",
+            "read in src/entry.compile-cache.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_DISABLE_COMPILE_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs",
+            "read in src/entry.compile-cache.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli-invocation.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/entry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NVM_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_AUTH_STORE_READONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/entry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_BUNDLED_PLUGINS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_BUNDLED_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_CONFIG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_DISABLE_BUNDLED_PLUGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in openclaw.mjs",
+            "read in src/entry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_GATEWAY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENCLAW_GATEWAY_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENCLAW_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_LAUNCHD_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_NODE_UPDATE_RESPAWNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_PACKAGED_COMPILE_CACHE_RESPAWNED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-compile-cache.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_PROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_SQLITE_LIBRARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in runtime-process-scripts.generated.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_STATE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_SYSTEMD_UNIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_TASK_SCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENCLAW_TASK_SCRIPT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in docker-entrypoint.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USERPROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs",
+            "read in openclaw.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOLTA_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in node-runtime-recovery.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE"
+}

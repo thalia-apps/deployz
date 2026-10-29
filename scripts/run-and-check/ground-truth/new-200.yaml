@@ -1,0 +1,119 @@
+id: new-200
+repository: deuxfleurs-org/garage
+commit: 586726edb0170bb46f604e84fba09e5659610649
+summary: >
+  Garage is a Rust S3-compatible distributed object store. It is a datastore server, not a web application. The server
+  needs a garage.toml file (metadata_dir, data_dir, rpc_secret, replication_factor, db_engine lmdb or sqlite) and stores
+  metadata and object blocks on local disk. It listens on several ports: S3 API 3900, RPC 3901, web 3902, admin 3903. A
+  new node also needs a cluster layout assigned by CLI before it serves requests. The only Dockerfile copies a binary
+  built outside Docker by Nix (result/bin/garage) into an empty scratch image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Garage is an object-store server whose job is to hold data on durable local disk (metadata_dir and data_dir). Fargate
+    task storage is ephemeral and S3 or a SQL database is not a storage backend for Garage. It also uses an internal RPC
+    port between nodes, needs a cluster layout step, and needs a config file with a shared rpc_secret. The Dockerfile does
+    not build from source: it is FROM scratch and copies result/bin/garage, a Nix build output that is not in the
+    repository.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "FROM scratch; copies result/bin/garage, a Nix build output not in the repository; no build stage"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "FROM scratch"}
+    - {path: Dockerfile, line: 6, quote: "COPY result/bin/garage /"}
+    - {path: Dockerfile, line: 7, quote: "CMD [ \"/garage\", \"server\"]"}
+runtime: {accept: [rust]}
+port:
+  # 3900 is the S3 API; 3901 is RPC between nodes, 3902 website hosting, 3903 the admin API.
+  accept: [3900]
+  evidence:
+    - {path: doc/book/reference-manual/configuration.md, line: 77, quote: "api_bind_addr = \"[::]:3900\""}
+    - {path: doc/book/reference-manual/configuration.md, line: 34, quote: "rpc_bind_addr = \"[::]:3901\""}
+    - {path: doc/book/reference-manual/configuration.md, line: 89, quote: "api_bind_addr = \"0.0.0.0:3903\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: doc/book/reference-manual/configuration.md, line: 77, quote: "api_bind_addr = \"[::]:3900\""}
+startCommand:
+  # The image has CMD only; the config file path comes from /etc/garage.toml or GARAGE_CONFIG_FILE.
+  source: explicit
+  accept: ["/garage server"]
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "CMD [ \"/garage\", \"server\"]"}
+    - {path: doc/book/quick-start/_index.md, line: 94, quote: "By default, Garage looks for its configuration file in **`/etc/garage.toml`.**"}
+healthPath:
+  # The admin API port (3903) has GET /health, which is 200 only when a quorum is up; the S3 port has no unauthenticated health route.
+  accept: ["/health"]
+  evidence:
+    - {path: doc/book/reference-manual/admin-api.md, line: 197, quote: "### Health `GET /health`"}
+database:
+  # Garage embeds its metadata database (lmdb or sqlite) on local disk; it does not use PostgreSQL or MySQL.
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: doc/book/reference-manual/configuration.md, line: 23, quote: "db_engine = \"lmdb\""}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Metadata and object blocks live on local disk; there is no S3 or SQL backend option.
+  local: required
+  paths: [/var/lib/garage/meta, /var/lib/garage/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: doc/book/reference-manual/configuration.md, line: 14, quote: "metadata_dir = \"/var/lib/garage/meta\""}
+    - {path: doc/book/reference-manual/configuration.md, line: 15, quote: "data_dir = \"/var/lib/garage/data\""}
+    - {path: doc/book/reference-manual/configuration.md, line: 312, quote: "#### `data_dir` {#data_dir}"}
+env:
+  required:
+    - {name: GARAGE_RPC_SECRET, secret: true, buildTime: false, note: "rpc_secret is required in garage.toml; the environment form is GARAGE_RPC_SECRET"}
+  optional: [GARAGE_CONFIG_FILE, GARAGE_DEFAULT_ACCESS_KEY, GARAGE_DEFAULT_SECRET_KEY, GARAGE_DEFAULT_BUCKET, RUST_LOG]
+  buildTime: []
+  evidence:
+    - {path: doc/book/reference-manual/configuration.md, line: 616, quote: "#### `rpc_secret`, `rpc_secret_file` or `GARAGE_RPC_SECRET`, `GARAGE_RPC_SECRET_FILE` (env) {#rpc_secret}"}
+    - {path: doc/book/quick-start/_index.md, line: 158, quote: "-e GARAGE_DEFAULT_ACCESS_KEY \\"}
+blockers:
+  expected:
+    - "Garage is an object-store server (datastore), not a web application with a database behind it"
+    - "It needs durable local disk for metadata_dir and data_dir; Fargate task storage is ephemeral and no S3 or SQL backend exists"
+    - "The Dockerfile copies a Nix build output (result/bin/garage) into FROM scratch; no Dockerfile builds from the repository source"
+    - "It needs a garage.toml file and exposes several ports (S3 3900, RPC 3901, web 3902, admin 3903)"
+  mustNot:
+    - "S3 on AWS must not be offered as the storage for Garage: Garage is itself the S3 implementation"
+    - "A database must not be reported as required: metadata is an embedded lmdb or sqlite file"
+    - "Port 3903 must not be treated as the app port: it is the admin API; the S3 API is on 3900"
+vendorQuestions:
+  legitimate:
+    - "Is Garage being deployed as the S3 store for another application? A Garage node needs durable disk and is better replaced by Amazon S3"
+  unnecessary:
+    - "Which port? (3900 for S3)"
+    - "Is a database needed? (no, embedded lmdb or sqlite)"
+traps:
+  - "The Dockerfile is FROM scratch and has no shell, no config file and no build step (Dockerfile:1,6)"
+  - "The quick start runs the image with a mounted garage.toml and the --single-node --default-bucket flags (doc/book/quick-start/_index.md:157,162)"
+openQuestions:
+  - "The GARAGE_DEFAULT_* environment names come from the quick start example, not from the server source"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "16 citations checked against the pinned commit by script (path, line, quote)"}

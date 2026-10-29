@@ -11,7 +11,8 @@
  *   the vendor must set it: it becomes a required variable with the value.
  * - an open fact that passes: the AI value enters the analysis (`ai`). A
  *   repository kind other than "application" replaces the
- *   `no-buildable-dockerfile` rejection with `library-repository`.
+ *   `no-buildable-dockerfile` rejection with `library-repository`; a
+ *   datastore adds `datastore-server`.
  *
  * A dismissed rejection or an added engine re-runs `analyseRepo` with the
  * overrides, so everything derived from them comes from the same rules.
@@ -297,6 +298,14 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
         // A library, framework, SDK or CLI has no server to deploy: "add a Dockerfile" is the wrong fix.
         if (value === 'application') break;
         const cited = answer.evidence.map((item) => `${item.path}:${item.line}`).join(', ');
+        if (value === 'datastore') {
+          // A datastore server is the dependency of other apps, with or without a Dockerfile.
+          rejections = [
+            ...rejections.filter((rejection) => !(rejection.detected && rejection.dependency === 'no-buildable-dockerfile')),
+            { detected: true, dependency: 'datastore-server', reason: `Unsupported repository: it is a datastore server that other applications connect to (${cited}), not a web application.` },
+          ];
+          break;
+        }
         rejections = rejections.map((rejection) =>
           rejection.detected && rejection.dependency === 'no-buildable-dockerfile'
             ? { detected: true, dependency: 'library-repository', reason: `Unsupported repository: it is a ${value as string} that others install (${cited}), not an application with a web server to run.` }

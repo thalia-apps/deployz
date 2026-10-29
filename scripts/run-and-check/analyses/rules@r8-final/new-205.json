@@ -1,0 +1,1140 @@
+{
+  "id": "new-205",
+  "commit": "ef75bc708867e3884cb40a91363be6dc6fddc034",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "node ../scripts/build/tui.mjs",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ ]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mini_swe_runner.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSERBASE_ADVANCED_STEALTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BROWSERBASE_ADVANCED_STEALTH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BROWSERBASE_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BROWSERBASE_PROXIES"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BROWSER_INACTIVITY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BROWSER_INACTIVITY_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BROWSER_SESSION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BROWSER_SESSION_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CURSOR_TRACE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EDITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GATEWAY_MULTIPLEX_PROFILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gateway/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GATEWAY_ON_ALL_ADAPTERS_DOWN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gateway/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_API_CALL_STALE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in run_agent.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_DEV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_DEV_CREDITS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in tui_gateway/server.py",
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_DISABLE_FAST_CHAT_LAUNCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_DISABLE_FAST_SERVE_LAUNCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_FTS5_CJK_SO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_state_fts.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_GATEWAY_NO_SUPERVISE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_HOME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in hermes_bootstrap.py",
+            "read in hermes_constants.py",
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_HOME_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_IGNORE_USER_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_INFERENCE_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_KANBAN_TASK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in model_tools.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_MANAGED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_NIX_BUILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in setup.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_PET_REFERENCE_MAX_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tui_gateway/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_PYTHON_SRC_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_bootstrap.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_S6_SUPERVISED_CHILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_SESSION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in acp_adapter/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_SKIP_CHMOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_SUPERVISED_CHILD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TERMUX_DISABLE_FAST_CLI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TERMUX_FORCE_SKILLS_SYNC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TERMUX_PREFETCH_UPDATES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_time.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI_CWD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI_DASHBOARD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_DISABLE_MOUSE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_FPS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI_INLINE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_MOUSE_TRACKING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_NATIVE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_NO_CONFIRM",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HERMES_TUI_NO_EARLY_DISABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI_QUERY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_TUI_RESUME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/src/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HERMES_WEB_DIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_TOOLS_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_TOOLS_DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "INVOCATION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KITTY_WINDOW_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCALAPPDATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_state_guard.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MOA_TOOLS_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MOA_TOOLS_DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mini_swe_runner.py",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in mini_swe_runner.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_MAX_INLINE_ATTACHMENT_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_PROBE_SPACE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_PROJECT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "PHOTON_READ_RECEIPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_SIDECAR_BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_SIDECAR_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_SIDECAR_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_SIDECAR_WATCH_STDIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_STREAM_DEGRADED_RESTART_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_STREAM_INTERRUPTED_DEGRADE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_STREAM_PROBE_COOLDOWN_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_STREAM_PROBE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_STREAM_SILENCE_PROBE_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOTON_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/platforms/photon/sidecar/index.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYTEST_CURRENT_TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_state_guard.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYTEST_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_state_guard.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUDO_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_constants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_CWD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli.py",
+            "read in hermes_cli/main.py",
+            "read in tui_gateway/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in batch_runner.py",
+            "read in cli.py",
+            "read in run_agent.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_LIFETIME_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TERMINAL_LIFETIME_SECONDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TERMINAL_MODAL_IMAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TERMINAL_MODAL_IMAGE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TERMINAL_SSH_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_SSH_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_SSH_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMINAL_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TERMINAL_TIMEOUT",
+            "read in cli.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERM_PROGRAM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TMUX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VISION_TOOLS_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VISION_TOOLS_DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VISUAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in hermes_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_TOOLS_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEB_TOOLS_DEBUG"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WT_SESSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in ui-tui/packages/hermes-ink/src/utils/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported container setup: Dockerfile runs s6-overlay with 2 long-running services (dashboard, main-hermes) in one container. Deployz runs one web process and declared workers as separate services.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Dockerfile runs s6-overlay with 2 long-running services (dashboard, main-hermes) in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: HERMES_DEV_CREDITS, HERMES_HOME, HERMES_TUI_DASHBOARD, HERMES_TUI_DISABLE_MOUSE, HERMES_TUI_FPS, and 4 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 10,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

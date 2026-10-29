@@ -17,13 +17,14 @@
  * - the database variable is read on a cited production line, and its name
  *   says that it holds a whole connection URL or JDBC URL;
  * - a repository kind other than "application" has high confidence and a
- *   cited manifest line that packages the code for others to install;
+ *   cited manifest line that packages the code for others to install, or for
+ *   a datastore a cited production line that names its role or its protocol port;
  * - a low-confidence answer never passes.
  */
 import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
-import { isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
 
 export interface AnswerCheck {
@@ -464,18 +465,23 @@ function checkDatabaseVariable(ctx: CheckContext, id: string, name: string, answ
 
 // ── Repository kind ────────────────────────────────────────────────────────
 
-export const REPOSITORY_KINDS = ['application', 'library', 'framework', 'sdk', 'cli'] as const;
+export const REPOSITORY_KINDS = ['application', 'datastore', 'library', 'framework', 'sdk', 'cli'] as const;
 export type RepositoryKind = (typeof REPOSITORY_KINDS)[number];
 
 /**
  * A repository that is not an application changes the outcome to "not
  * deployable", the costliest wrong answer: it needs a cited packaging line
- * of a manifest. "application" changes nothing.
+ * of a manifest, or for a datastore a cited production line that names its
+ * role or the client port of its protocol. "application" changes nothing.
  */
 function checkRepositoryKind(ctx: CheckContext, id: string, kind: RepositoryKind, answer: FactAnswer): AnswerCheck {
   if (kind === 'application') return result(id, []);
   const reasons = confidenceReasons(answer.confidence);
-  reasons.push(...checkEvidence(ctx.pack, answer.evidence, (line, path) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line)));
+  const supports =
+    kind === 'datastore'
+      ? (line: string, path: string) => isProductionFile(path) && DATASTORE_ROLE.test(line)
+      : (line: string, path: string) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line);
+  reasons.push(...checkEvidence(ctx.pack, answer.evidence, supports));
   return result(id, reasons);
 }
 

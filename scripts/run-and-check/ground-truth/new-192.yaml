@@ -1,0 +1,151 @@
+id: new-192
+repository: apache/airflow
+commit: 24f3370758227ce1bb13e5df251d26a9271ceeee
+summary: >
+  Apache Airflow is a Python workflow orchestrator, a monorepo of airflow-core plus 100+ provider packages. It runs as
+  several long-lived processes: api-server (HTTP, 8080), scheduler, dag-processor, triggerer, and optionally Celery
+  workers. The root Dockerfile is the official production image, but with its default build arguments it installs the
+  released apache-airflow package from PyPI (AIRFLOW_INSTALLATION_METHOD="apache-airflow") and does not copy the
+  repository source (AIRFLOW_SOURCES_FROM defaults to the Dockerfile itself). A build from repo source needs non-default
+  build arguments and a prior build of the packages. Airflow needs PostgreSQL or MySQL (SQLite is development only) and a
+  shared JWT secret across components.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The repository is the Airflow platform itself, not a customer web application. No Dockerfile builds the server from
+    the repository source with default settings: the root Dockerfile downloads the released distribution from PyPI, and
+    the other Dockerfiles are CI, extension-example or sidecar images. A working site needs at least four cooperating
+    processes (api-server, scheduler, dag-processor, triggerer) that share the same DAG files, logs and JWT secret.
+    Task logs and DAG bundles are local files, and a repository build of the UI and packages is not a small safe
+    Dockerfile change. DEPLOYABLE_WITH_CHANGES is not accepted because the change is a custom source build, not a small
+    edit.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "official production image; with default arguments it installs apache-airflow from PyPI and copies no repo source; repo-source install needs AIRFLOW_INSTALLATION_METHOD, AIRFLOW_SOURCES_FROM and AIRFLOW_SOURCES_TO overrides"}
+    - {path: Dockerfile.ci, reason: "CI and development image for tests and Breeze"}
+    - {path: providers/amazon/src/airflow/providers/amazon/aws/executors/Dockerfile, reason: "example image for the AWS ECS executor; starts FROM apache/airflow:latest"}
+    - {path: providers/amazon/src/airflow/providers/amazon/aws/executors/aws_lambda/docker/Dockerfile, reason: "image for the AWS Lambda executor"}
+    - {path: chart/dockerfiles/pgbouncer/Dockerfile, reason: "PgBouncer sidecar image for the Helm chart"}
+    - {path: chart/dockerfiles/pgbouncer-exporter/Dockerfile, reason: "PgBouncer metrics exporter image for the Helm chart"}
+    - {path: providers/informatica/dev/informatica_simulator/Dockerfile, reason: "development simulator for a provider"}
+    - {path: scripts/ci/dockerfiles/apache-rat/Dockerfile, reason: "CI license check tool"}
+    - {path: scripts/ci/dockerfiles/krb5-kdc-server/Dockerfile, reason: "CI test server"}
+    - {path: scripts/ci/dockerfiles/stress/Dockerfile, reason: "CI test tool"}
+    - {path: scripts/ci/dockerfiles/trino/Dockerfile, reason: "CI test server"}
+    - {path: docker-stack-docs/docker-examples/extending/add-providers/Dockerfile, reason: "documentation example that extends the published image (all docker-stack-docs/** Dockerfiles are examples)"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 2197, quote: "ARG AIRFLOW_INSTALLATION_METHOD=\"apache-airflow\""}
+    - {path: Dockerfile, line: 87, quote: "ARG AIRFLOW_SOURCES_FROM=\"Dockerfile\""}
+    - {path: Dockerfile, line: 51, quote: "ARG AIRFLOW_VERSION=\"3.3.2\""}
+    - {path: Dockerfile, line: 2339, quote: "FROM ${BASE_IMAGE} as main"}
+    - {path: Dockerfile, line: 2489, quote: "EXPOSE 8080"}
+runtime: {accept: [python]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: airflow-core/src/airflow/config_templates/config.yml, line: 1822, quote: "default: \"8080\""}
+    - {path: Dockerfile, line: 2489, quote: "EXPOSE 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: airflow-core/src/airflow/config_templates/config.yml, line: 1815, quote: "default: \"0.0.0.0\""}
+startCommand:
+  # ENTRYPOINT is dumb-init plus /entrypoint and CMD is empty; the role is the first argument.
+  source: explicit
+  accept: ["api-server", "airflow api-server"]
+  evidence:
+    - {path: Dockerfile, line: 2525, quote: "ENTRYPOINT [\"/usr/bin/dumb-init\", \"--\", \"/entrypoint\"]"}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 124, quote: "command: api-server"}
+healthPath:
+  accept: ["/api/v2/monitor/health"]
+  evidence:
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 128, quote: "http://localhost:8080/api/v2/monitor/health"}
+    - {path: airflow-core/src/airflow/api_fastapi/core_api/routes/public/monitor.py, line: 27, quote: "@monitor_router.get(\"/health\""}
+    - {path: airflow-core/src/airflow/api_fastapi/core_api/routes/public/__init__.py, line: 104, quote: "public_router.include_router(monitor_router)"}
+database:
+  status: required
+  engines: [postgres, mysql]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: url}
+  connectionVars: [AIRFLOW__DATABASE__SQL_ALCHEMY_CONN]
+  # The built-in default is SQLite on local disk, which is development only and cannot be shared by several processes.
+  evidence:
+    - {path: airflow-core/src/airflow/config_templates/config.yml, line: 622, quote: "default: \"sqlite:///{AIRFLOW_HOME}/airflow.db\""}
+    - {path: airflow-core/docs/howto/set-up-database.rst, line: 31, quote: "By default, Airflow uses **SQLite**"}
+    - {path: airflow-core/docs/howto/set-up-database.rst, line: 35, quote: "* PostgreSQL: 14, 15, 16, 17, 18"}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 60, quote: "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg://airflow:airflow@postgres/airflow"}
+migrations:
+  mode: command
+  accept: ["airflow db migrate"]
+  evidence:
+    - {path: Dockerfile, line: 1873, quote: "airflow db migrate || true"}
+redis:
+  # Redis is only the Celery broker; the default LocalExecutor does not need it.
+  status: conditional
+  selectBy: {AIRFLOW__CORE__EXECUTOR: CeleryExecutor}
+  evidence:
+    - {path: airflow-core/src/airflow/config_templates/config.yml, line: 78, quote: "default: \"LocalExecutor\""}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 62, quote: "AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0"}
+workers:
+  status: independent
+  commands: ["scheduler", "dag-processor", "triggerer", "celery worker"]
+  evidence:
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 141, quote: "command: scheduler"}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 156, quote: "command: dag-processor"}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 194, quote: "command: triggerer"}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 171, quote: "command: celery worker"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # DAG files, task logs and plugins are read and written on the local filesystem and shared between processes.
+  local: required
+  paths: [/opt/airflow/dags, /opt/airflow/logs]
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: airflow-core/src/airflow/config_templates/config.yml, line: 30, quote: "default: \"{AIRFLOW_HOME}/dags\""}
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 79, quote: "volumes:"}
+env:
+  required:
+    - {name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN, secret: true, buildTime: false, note: "metadata database URL; the default is SQLite"}
+    - {name: AIRFLOW__API_AUTH__JWT_SECRET, secret: true, buildTime: false, note: "must be the same in api-server and scheduler"}
+  optional: [AIRFLOW__CORE__EXECUTOR, AIRFLOW__CELERY__BROKER_URL, AIRFLOW__CORE__LOAD_EXAMPLES, _AIRFLOW_DB_MIGRATE, _AIRFLOW_WWW_USER_CREATE]
+  buildTime: [AIRFLOW_VERSION, AIRFLOW_INSTALLATION_METHOD, AIRFLOW_SOURCES_FROM, AIRFLOW_SOURCES_TO]
+  evidence:
+    - {path: airflow-core/docs/howto/docker-compose/docker-compose.yaml, line: 67, quote: "AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-airflow_jwt_secret}"}
+blockers:
+  expected:
+    - "No Dockerfile builds Airflow from the repository source: the root Dockerfile installs the released apache-airflow package from PyPI with default arguments"
+    - "Airflow is several processes (api-server, scheduler, dag-processor, triggerer, optional Celery workers) that share DAG files, logs and a JWT secret; a single web service and one start command do not describe it"
+    - "The repository is the orchestrator platform, not a customer web application; DAGs and task logs live on local disk"
+  mustNot:
+    - "Port 8080 and /api/v2/monitor/health must not be treated as the blocker; the blocker is the source build and the multi-process layout"
+    - "Redis must not be reported as required: it is only the Celery broker, and the default executor is LocalExecutor"
+    - "SQLite must not be accepted as the production database"
+    - "Dockerfile.ci and the docker-stack-docs examples must not be treated as the application image"
+vendorQuestions:
+  legitimate:
+    - "Is the goal to run the Airflow platform from this repository source, or to run a customer DAG project on the released Airflow image?"
+    - "Where do DAG files come from (baked into the image, a Git bundle, or a shared volume)?"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Which health path? (/api/v2/monitor/health)"
+    - "Which database engine? (PostgreSQL or MySQL; SQLite is development only)"
+traps:
+  - "The root Dockerfile looks like a source build but installs from PyPI by default (Dockerfile:2197); AIRFLOW_VERSION is a fixed released version (Dockerfile:51)"
+  - "The Dockerfile has CMD [] and the entrypoint runs the airflow CLI; with no argument nothing serves HTTP (Dockerfile:2525)"
+  - "The old /health path is a 404 in Airflow 3; the health route is /api/v2/monitor/health (api_fastapi/core_api/app.py:200)"
+  - "The docker-compose.yaml is documentation for the released apache/airflow image (docker-compose.yaml:52), not a repo-source stack"
+  - "providers/amazon .../executors/Dockerfile starts FROM apache/airflow:latest and is an executor example"
+openQuestions:
+  - "Whether a repo-source build with AIRFLOW_INSTALLATION_METHOD=. works without a separate package and UI build step was not checked"
+  - "Whether a LocalExecutor layout (api-server plus scheduler plus dag-processor with DAGs baked into the image) would run correctly on Fargate was not tested"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: the blockers (PyPI-install Dockerfile, separate scheduler, dag-processor and triggerer processes) are a repository change and multi-service items, CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "27 citations checked against the pinned commit by script (path, line, quote)"}

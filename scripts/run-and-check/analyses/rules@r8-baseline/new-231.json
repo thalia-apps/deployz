@@ -1,0 +1,230 @@
+{
+  "id": "new-231",
+  "commit": "dc56f5bc624c71b8c6ae703cde6819870b79a40f",
+  "analyser": "rules@r8-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.make"
+    },
+    "build": {
+      "command": "vite build --base=/BASE_PATH",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [ \"/bin/sh\" ]",
+      "port": null
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "WOODPECKER_AGENT_SECRET_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_BITBUCKET_DC_GIT_PASSWORD_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_BITBUCKET_DC_GIT_USERNAME_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_DATABASE_DATASOURCE_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_DATABASE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: the default was not found — set a PostgreSQL value to use the managed PostgreSQL database",
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "WOODPECKER_ENCRYPTION_KEY_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_GRPC_SECRET_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_IN_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WOODPECKER_PROMETHEUS_AUTH_TOKEN_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/server/flags.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: WOODPECKER_DATABASE_DRIVER. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE"
+}

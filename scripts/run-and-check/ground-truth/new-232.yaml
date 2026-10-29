@@ -1,0 +1,118 @@
+id: new-232
+repository: WordPress/WordPress
+commit: f93b53f1c9f5e62bb864bd48ed58dd02ff4cfc1b
+summary: >
+  WordPress here is the plain release tree: PHP (7.4 minimum, 8.3 recommended) with MySQL 8.0 or MariaDB 10.11 or
+  newer, served from the repository root. There is no Dockerfile and no wp-config.php. wp-config-sample.php holds fixed
+  placeholders and reads no environment variables; without wp-config.php every request goes to the web installer
+  (wp-admin/setup-config.php), which writes wp-config.php to disk. Media uploads are written to wp-content/uploads, and
+  the core has no S3 option (only plugins add one). WP-Cron runs on page visits unless DISABLE_WP_CRON is set.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    A normal PHP and MySQL web app that needs a small repository change: a Dockerfile (php:apache with mysqli, gd,
+    and so on, document root at the repository root) and a wp-config.php that reads the database settings and eight
+    salts from environment variables. Media uploads, plugin and theme installs from the admin, and updates go to local
+    disk and are lost on restart; keeping uploads needs an object-storage plugin that this repository does not contain.
+    DEPLOYABLE alone is wrong because no Dockerfile or env config exists. NOT_DEPLOYABLE is also acceptable
+    when media uploads are required.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: wp-config-sample.php, line: 23, quote: "define( 'DB_NAME', 'database_name_here' );"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: readme.html, line: 63, quote: 'mod_rewrite</a> Apache module.'}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  # No image exists; a php:apache Dockerfile uses its default apache2-foreground.
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: readme.html, line: 63, quote: 'mod_rewrite</a> Apache module.'}
+healthPath:
+  # "/" redirects to the installer when wp-config.php is missing; wp-login.php answers 200 on a configured site.
+  accept: ["/wp-login.php", "/readme.html"]
+  evidence:
+    - {path: wp-load.php, line: 75, quote: "$path = wp_guess_url() . '/wp-admin/setup-config.php';"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DB_NAME, DB_USER, DB_PASSWORD, DB_HOST]
+  # MariaDB 10.11 or newer works too; PostgreSQL is not supported.
+  evidence:
+    - {path: wp-config-sample.php, line: 32, quote: "define( 'DB_HOST', 'localhost' );"}
+    - {path: readme.html, line: 62, quote: "OR <a href=\"https://mariadb.org/\">MariaDB</a> version <strong>10.11</strong> or greater."}
+migrations:
+  mode: none
+  accept: []
+  # Tables are created by the web installer (wp-admin/install.php); later core upgrades run on the first admin visit.
+  evidence:
+    - {path: wp-admin/includes/upgrade.php, line: 49, quote: "function wp_install("}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: optional
+  items: ["wp-cron.php (WP-Cron; runs on page visits unless DISABLE_WP_CRON is set)"]
+  evidence:
+    - {path: wp-includes/cron.php, line: 1064, quote: "|| ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON )"}
+storage:
+  local: conditional
+  paths: [wp-content/uploads, wp-content/plugins, wp-content/themes, wp-config.php]
+  s3: none
+  s3SelectBy: {}
+  # The site runs without uploads; media, plugin installs, and automatic updates write to disk and are lost on restart.
+  evidence:
+    - {path: wp-includes/functions.php, line: 2395, quote: "'WP_CONTENT_DIR/uploads'. If the 'UPLOADS' constant is defined, then it will"}
+    - {path: wp-load.php, line: 47, quote: "if ( file_exists( ABSPATH . 'wp-config.php' ) ) {"}
+env:
+  required: []
+  optional: [WP_ENVIRONMENT_TYPE]
+  buildTime: []
+  evidence:
+    - {path: wp-includes/load.php, line: 282, quote: "$has_env = getenv( 'WP_ENVIRONMENT_TYPE' );"}
+    - {path: wp-config-sample.php, line: 51, quote: "define( 'AUTH_KEY',         'put your unique phrase here' );"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository"
+    - "No wp-config.php and no environment-variable configuration: the sample file has fixed placeholders for the database settings and eight authentication keys and salts, so a changed wp-config.php must read them from the environment"
+    - "Uploads, plugins, themes, and updates are written to local disk; the core has no S3 option"
+  mustNot:
+    - "PostgreSQL must not be offered; WordPress core needs MySQL or MariaDB"
+    - "Redis or an object cache must not be reported as required"
+    - "A worker must not be reported as required: WP-Cron runs inside web requests"
+vendorQuestions:
+  legitimate:
+    - "Do editors upload media? Uploads need an object-storage plugin or they are lost on restart"
+    - "Where are the eight keys and salts stored? They must be the same in all tasks"
+  unnecessary:
+    - "Which database? (MySQL or MariaDB)"
+    - "Which port? (80)"
+traps:
+  - "wp-config-sample.php reads no environment variables, unlike the docker-library image wrapper (wp-config-sample.php:23)"
+  - "The first request without wp-config.php redirects to /wp-admin/setup-config.php, so '/' is not a stable health path (wp-load.php:75)"
+  - "wp-load.php also accepts wp-config.php in the parent folder (wp-load.php:52)"
+  - "Different salts per task log users out when a request lands on another task"
+  - "The behind-ALB HTTPS flag needs a wp-config.php check of X-Forwarded-Proto; core does not set it"
+openQuestions:
+  - "Whether the installer path alone (setup-config.php, install.php) is enough, given that it writes wp-config.php to a non-durable disk, was treated as not deployable; only the env-reading wp-config.php route is accepted"
+  - "Exact PHP extension list was not read"
+crossReview:
+  - {field: outcome.accept, change: "none: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "12 citations checked against the pinned commit by script (path, line, quote)"}

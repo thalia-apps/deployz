@@ -30,6 +30,7 @@ import { buildReadinessReport, rejectionFindingId } from '../src/readiness-repor
 import {
   assessMysql,
   checkDockerComposeMultiService,
+  checkDatastoreServerImage,
   checkElasticsearch,
   checkExplicitPersistentDataDir,
   checkGpu,
@@ -1277,5 +1278,57 @@ describe('declared services that the rules did not explain (Huly, zammad, mem0)'
     expect(checkUnexplainedDeclaredServices({ '.env.example': sample }, context).reason).toBe(
       'Unconfirmed service: the repository declares KAFKA_BROKERS in .env.example. Deployz did not find how the application uses it.',
     );
+  });
+});
+
+describe('Round 8 OneDeploy catalog (database, broker and storage servers)', () => {
+  const withPaths = (files: FileTree, extra: string[] = []): FileTree =>
+    Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+  const app = 'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nRUN npm ci\nEXPOSE 3000\nCMD ["node", "server.js"]\n';
+
+  it('rejects an image that exposes a database or broker client port (EMQX, NATS)', () => {
+    const emqx = 'FROM debian:12 AS builder\nCOPY . /emqx\nRUN make emqx-tgz\nFROM debian:12-slim\nCOPY --from=builder /emqx/_build /opt/emqx\nEXPOSE 1883 8083 8084 8883 18083\nCMD ["/opt/emqx/bin/emqx", "foreground"]\n';
+    const finding = checkDatastoreServerImage({ 'deploy/docker/Dockerfile': emqx });
+    expect(finding.dependency).toBe('datastore-server');
+    expect(finding.reason).toContain('exposes port 1883 (MQTT)');
+    expect(rejectionFindingId('datastore-server')).toBe('unsupported-datastore-server');
+    expect(buildReadinessReport(analyseRepo(withPaths({ 'deploy/docker/Dockerfile': emqx }))).outcome).toBe('NOT_DEPLOYABLE');
+    // A web app that exposes only its HTTP port, or whose dev Compose file names a database port, is not a server of that protocol.
+    expect(checkDatastoreServerImage({ Dockerfile: app, 'docker-compose.yml': 'services:\n  db:\n    image: postgres:16\n    ports:\n      - 5432:5432\n' }).detected).toBe(false);
+    // A metrics port after the web port (focalboard) or an all-in-one image that bundles its database (Helicone) is still an app.
+    expect(checkDatastoreServerImage({ 'docker/Dockerfile': 'FROM debian:12-slim\nCOPY bin /opt/app/bin\nEXPOSE 8000/tcp\nEXPOSE 8000/tcp 9092/tcp\nCMD ["/opt/app/bin/server"]\n' }).detected).toBe(false);
+    expect(checkDatastoreServerImage({ Dockerfile: 'FROM node:22\nCOPY . .\nCMD ["supervisord"]\nEXPOSE 3000 8585 5432\n' }).detected).toBe(false);
+  });
+
+  it('builds no vendored image-pin file, Windows image, toolchain shell or template FROM (MySQL, Chroma, MongoDB, OpenSearch)', () => {
+    const pins = 'FROM davidanson/markdownlint-cli2:v0.21.0 AS markdownlint\nFROM lycheeverse/lychee:sha-3a09227-alpine AS lychee\n';
+    const windows = 'FROM python:3.11.9\nWORKDIR C:\\chroma\nCOPY ./ C:\\chroma\nEXPOSE 8000\nENTRYPOINT ["powershell", "C:\\docker_entrypoint.ps1"]\n';
+    const toolchain = 'FROM amazonlinux:2\nRUN yum install -y gcc make\nCMD ["/bin/bash"]\n';
+    const assets = 'FROM scratch\nCOPY public/assets /assets/\nCMD /bin/true\n';
+    const template = 'FROM ${base_image} AS builder\nRUN tar zxf /opt/opensearch.tar.gz\nEXPOSE 9200\nCMD ["/usr/share/opensearch/bin/opensearch"]\n';
+    const browserTests = 'FROM node:24 AS base\nCOPY package.json package.json\nFROM base AS test\nRUN npm install\nENTRYPOINT ["npm"]\n';
+    for (const [path, content] of [
+      ['extra/otel/dependencies.Dockerfile', pins],
+      ['Dockerfile.windows', windows],
+      ['bazel/remote_execution_container/dockerfile', toolchain],
+      ['Dockerfile.assets', assets],
+      ['distribution/docker/src/docker/Dockerfile', template],
+      ['selenium/Dockerfile', browserTests],
+    ] as const) {
+      expect(selectedDockerfile({ [path]: content }), path).toBeNull();
+    }
+    // One FROM is a runnable image; the BuildKit platform variables need no ARG.
+    expect(selectedDockerfile({ Dockerfile: 'FROM ghost:5\n' })?.path).toBe('Dockerfile');
+    expect(selectedDockerfile({ Dockerfile: `FROM --platform=$BUILDPLATFORM node:22 AS build\n${app}` })?.path).toBe('Dockerfile');
+    // A shell command next to an exposed port still starts an app the base image or a script serves.
+    expect(selectedDockerfile({ Dockerfile: 'FROM php:8-apache\nCOPY . /var/www/html\nEXPOSE 80\nCMD ["/bin/sh"]\n' })?.path).toBe('Dockerfile');
+  });
+
+  it('finds no application source in a meta-repository of git submodules (ONLYOFFICE DocumentServer)', () => {
+    const tree = withPaths({}, ['.gitmodules', '.mrconfig', '.markdownlint.json', 'mr-update.sh', 'Readme.md', 'ROADMAP.md', 'LICENSE', 'screenshots/editor.png', '.github/workflows/check.yml']);
+    expect(checkNoBuildableDockerfile(tree).dependency).toBe('no-application-source');
+    // A source file outside the root, or a nested script, is application source.
+    expect(checkNoBuildableDockerfile(withPaths({}, ['.gitmodules', 'Readme.md', 'server/index.js'])).dependency).not.toBe('no-application-source');
+    expect(checkNoBuildableDockerfile(withPaths({}, ['.gitmodules', 'Readme.md', 'bin/start.sh'])).dependency).not.toBe('no-application-source');
   });
 });

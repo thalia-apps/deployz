@@ -1,0 +1,1602 @@
+{
+  "id": "new-175",
+  "commit": "aaebfe1bb8d55deb6a4304d357a3bf4c92fcd40a",
+  "analyser": "recheck",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"python\", \"-m\", \"lightrag.api.lightrag_server\"]",
+      "port": 9621
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "MILVUS_DB_NAME",
+          "kind": "database"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCESS_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/gunicorn_config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/anthropic.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_EMBEDDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_EMBEDDING_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_EMBEDDING_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_EMBEDDING_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/api/lightrag_server.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/config.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_P_DROP_REFERENCES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_P_REFERENCES_HEADINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/chunker/paragraph_semantic.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_P_REFERENCES_TAIL_N",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/chunker/paragraph_semantic.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_R_SEPARATORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/multimodal_context.py",
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_V_BREAKPOINT_THRESHOLD_AMOUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_V_BREAKPOINT_THRESHOLD_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_V_SENTENCE_SPLIT_REGEX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COHERE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/rerank.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DASHSCOPE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/rerank.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DASHSCOPE_WORKSPACE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCLING_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCLING_OCR_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCLING_OCR_LANG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCX_SMART_HEADING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_BINDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_BINDING_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_USE_BASE64",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ERROR_LOG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/gunicorn_config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/gemini.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLOUD_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/gemini.py",
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLOUD_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/gemini.py",
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_GENAI_USE_VERTEXAI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/gemini.py",
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_VERTEX_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INPUT_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/utils_pipeline.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JINA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/rerank.py",
+            "read in lightrag/llm/jina.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFUSE_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFUSE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LIGHTRAG_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LIGHTRAG_GUNICORN_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIGHTRAG_PARSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/routing.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLM_BINDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/gemini.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LLM_BINDING_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/config.py",
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LLM_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/gunicorn_config.py",
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_GRAPH_NODES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_PARALLEL_PARSE_MYENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/registry.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMGRAPH_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMGRAPH_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMGRAPH_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMGRAPH_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEMGRAPH_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/memgraph_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "MILVUS_DELETE_MAX_RECORDS_PER_BATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_HNSW_SQ_REFINE_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_HNSW_SQ_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_INDEX_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_METRIC_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_MIGRATION_BATCH_SLEEP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_MIGRATION_RETRY_BACKOFF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_MIGRATION_RETRY_MAX_BACKOFF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_UPSERT_MAX_PAYLOAD_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_UPSERT_MAX_RECORDS_PER_BATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILVUS_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/milvus_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINERU_API_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py",
+            "read in lightrag/parser/param_schema.py",
+            "read in lightrag/parser/registry.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINERU_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/parser/registry.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINERU_LOCAL_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py",
+            "read in lightrag/parser/registry.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINERU_OFFICIAL_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NATIVE_MD_IMAGE_ALLOWED_NON_PUBLIC_CIDRS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/markdown/parser.py",
+            "read in lightrag/parser/markdown/raw_cache.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NATIVE_MD_IMAGE_MAX_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/markdown/raw_cache.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NATIVE_MD_IMAGE_MAX_SVG_PIXELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/markdown/raw_cache.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_CONNECTION_ACQUISITION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_CONNECTION_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_LIVENESS_CHECK_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_MAX_CONNECTION_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_MAX_CONNECTION_POOL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_MAX_TRANSACTION_RETRY_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/neo4j_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OBJC_DISABLE_INITIALIZE_FORK_SAFETY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/ollama.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_EMULATING_MODEL_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_EMULATING_MODEL_TAG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_BASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/openai.py",
+            "read in lightrag/parser/docx/utils.py",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/openai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/docx/utils.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_LLM_REASONING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in lightrag/llm/binding_options.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PARSER_RESULT_BUNDLE_DOWNLOAD_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/parser/external/_common.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PDF_DECRYPT_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/parser/legacy/parser.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMPT_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/prompt.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_DELETE_MAX_POINTS_PER_BATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_UPSERT_MAX_PAYLOAD_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_UPSERT_MAX_POINTS_PER_BATCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QDRANT_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/qdrant_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_ALLOW_EVICTION_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CONNECT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_MAX_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_RETRY_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SOCKET_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/kg/redis_impl.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RERANK_BINDING_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/rerank.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RERANK_BY_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RERANK_ENABLE_CHUNKING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RERANK_MAX_TOKENS_PER_DOC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CERTFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_KEYFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/run_with_gunicorn.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPSTAGE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in reproduce/Step_1_openai_compatible.py",
+            "read in reproduce/Step_3_openai_compatible.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_PROMPT_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/prompt.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_PROMPT_PREFIX_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/prompt.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOYAGEAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/voyageai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VOYAGE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/voyageai.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBUI_DESCRIPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBUI_TITLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lightrag/api/lightrag_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ZHIPUAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in lightrag/llm/zhipu.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "k8s-deploy/lightrag/Chart.yaml"
+    ],
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: OPENAI_API_KEY, OPENAI_LLM_REASONING, ZHIPUAI_API_KEY. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (k8s-deploy/lightrag/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

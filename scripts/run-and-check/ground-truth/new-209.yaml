@@ -1,0 +1,102 @@
+id: new-209
+repository: MariaDB/server
+commit: 825a9ba9f7b8e1ece7250bfd1617a0044faa0c9c
+summary: >
+  MariaDB Server is a C and C++ relational database server (mariadbd, CMake build). It is a datastore, not a web
+  application. It speaks the MySQL wire protocol on TCP 3306 (not HTTP) and keeps all data in a data directory on
+  durable disk. The repository has no Dockerfile at all.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a database server. Its clients use the SQL wire protocol on port 3306, which is not HTTP and
+    cannot sit behind the ALB. It needs a durable data directory (datadir) that Fargate does not provide. The tree has
+    no Dockerfile, so nothing builds a runnable image, and the product is the database that other apps depend on.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence: []
+runtime: {accept: [cpp]}
+port:
+  accept: [3306]
+  evidence:
+    - {path: cmake/mysql_version.cmake, line: 83, quote: "SET_IF_UNSET(MYSQL_TCP_PORT 3306)"}
+    - {path: sql/mysqld.cc, line: 2369, quote: "mysqld_port= MYSQL_PORT;"}
+bindAllInterfaces:
+  # No bind_address means the server listens on all addresses; the option restricts it.
+  value: true
+  evidence:
+    - {path: sql/sys_vars.cc, line: 541, quote: "\"bind_address\", \"IP address to bind to. Several addresses may be \""}
+startCommand:
+  source: explicit
+  accept: ["mariadbd --datadir=/var/lib/mysql"]
+  evidence:
+    - {path: sql/sys_vars.cc, line: 1101, quote: "\"datadir\", \"Path to the database root directory\","}
+    - {path: scripts/mysql_install_db.sh, line: 78, quote: "--datadir=path       The path to the MariaDB data directory."}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # The server is the database; it has no external database dependency.
+  evidence:
+    - {path: README.md, line: 1, quote: "# MariaDB Server"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/mysql]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: sql/sys_vars.cc, line: 1101, quote: "\"datadir\", \"Path to the database root directory\","}
+    - {path: scripts/mysql_install_db.sh, line: 160, quote: "--ldata=*|--datadir=*|--data=*) ldata=`parse_arg \"$arg\"` ;;"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is a relational database server; its clients use the MySQL wire protocol on 3306, not HTTP"
+    - "The server needs a durable data directory (datadir); Fargate task storage is ephemeral"
+    - "The tree has no Dockerfile"
+  mustNot:
+    - "RDS MySQL must not be offered as a way to deploy this repository: the repository is the database engine itself"
+    - "A Dockerfile must not be invented as a safe change: building a server that needs durable disk does not fix the outcome"
+vendorQuestions:
+  legitimate:
+    - "Is MariaDB being deployed as a database for another app? A database server needs durable disk and is better run as a managed database"
+  unnecessary:
+    - "Which port? (3306)"
+    - "Which health path? (the server has no HTTP endpoint)"
+    - "Is a database needed? (this is the database)"
+traps:
+  - "The README describes a database server with replication and clustering; it is not a web application (README.md:3)"
+  - "MYSQL_TCP_PORT_DEFAULT is 0 in the version cmake, but the default MYSQL_TCP_PORT is 3306 (cmake/mysql_version.cmake:82-83)"
+  - "Files with 'container' in the name (storage/perfschema/pfs_buffer_container.h) are C++ containers, not Docker"
+openQuestions:
+  - "The wildcard bind behaviour when bind_address is unset was read from the option text, not from the listener code"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "8 citations checked against the pinned commit by script (path, line, quote)"}

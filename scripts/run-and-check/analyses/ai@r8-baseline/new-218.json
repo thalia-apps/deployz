@@ -1,0 +1,97 @@
+{
+  "id": "new-218",
+  "commit": "ca1a3adaa616a8fe513762b7886bce72ac16bdf3",
+  "analyser": "ai@r8-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "distribution/docker/src/docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"opensearchwrapper\"]",
+      "port": 9200
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05046228,
+        "promptTokens": 12153,
+        "completionTokens": 118
+      },
+      "latencyMs": 3031
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "healthPath",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 3032,
+    "questions": 1,
+    "generatedAt": "2026-10-29T08:06:34.436Z",
+    "failedChecks": 0,
+    "promptVersion": 18
+  }
+}

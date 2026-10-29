@@ -1,0 +1,185 @@
+{
+  "id": "new-208",
+  "commit": "ef10c1db1c401fc952e0dbd31bae46353cd516df",
+  "analyser": "ai@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "quarkus/container/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [ \"/opt/keycloak/bin/kc.sh\" ]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "RELATED_IMAGE_KEYCLOAK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in operator/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_QUARTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in operator/src/main/resources/application-rhbk.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_VER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in operator/src/main/resources/application-rhbk.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06804072,
+        "promptTokens": 13767,
+        "completionTokens": 683
+      },
+      "latencyMs": 10345
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10349,
+    "questions": 2,
+    "generatedAt": "2026-10-29T09:22:35.163Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

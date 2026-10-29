@@ -1,0 +1,123 @@
+id: new-196
+repository: coder/code-server
+commit: ee31cdbe02c07b3ba718007f221d14c890696c61
+summary: >
+  code-server runs VS Code in the browser: a Node.js (TypeScript, Express) server on port 8080 that wraps a patched VS Code
+  taken from the lib/vscode git submodule. It has no database or Redis. It serves an editor over HTTP and WebSocket, with
+  password authentication, and works on files in a workspace directory. Settings, extensions and sessions are stored in the
+  user data directory and the config file under the home directory. All three Dockerfiles in ci/release-image install a
+  pre-built code-server .deb or .rpm package from release-packages/; none builds the application from source.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    code-server is a single-user remote IDE whose job is to edit files on a durable disk: the workspace (WORKDIR
+    /home/coder), the user data directory with settings, extensions and sessions, and ~/.config/code-server/config.yaml.
+    Fargate storage is ephemeral and no EFS is provided, so every restart or task replacement loses the work. Also no
+    Dockerfile builds the product from source: the release images only install a package that CI builds first, and a source
+    build needs the full VS Code submodule build.
+dockerfile:
+  accept: []
+  reject:
+    - {path: ci/release-image/Dockerfile, reason: "release image on debian:13; installs a pre-built release-packages/code-server*.deb, no source build"}
+    - {path: ci/release-image/Dockerfile.fedora, reason: "release image on fedora; installs a pre-built .rpm, no source build"}
+    - {path: ci/release-image/Dockerfile.opensuse, reason: "release image on opensuse; installs a pre-built .rpm, no source build"}
+  target: null
+  context: .
+  evidence:
+    - {path: ci/release-image/Dockerfile, line: 5, quote: "COPY release-packages/code-server*.deb /tmp/"}
+    - {path: ci/release-image/Dockerfile, line: 48, quote: "dpkg -i /tmp/packages/code-server*$(dpkg --print-architecture).deb"}
+    - {path: ci/release-image/Dockerfile.fedora, line: 5, quote: "COPY release-packages/code-server*.rpm /tmp/"}
+    - {path: .gitmodules, line: 2, quote: "path = lib/vscode"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: ci/release-image/Dockerfile, line: 54, quote: "EXPOSE 8080"}
+    - {path: src/node/cli.ts, line: 882, quote: "port: 8080,"}
+bindAllInterfaces:
+  # The program default is localhost; the release image passes --bind-addr 0.0.0.0:8080 on the command line.
+  value: true
+  evidence:
+    - {path: ci/release-image/Dockerfile, line: 61, quote: "ENTRYPOINT [\"/usr/bin/entrypoint.sh\", \"--bind-addr\", \"0.0.0.0:8080\", \".\"]"}
+    - {path: src/node/cli.ts, line: 881, quote: "host: \"localhost\","}
+startCommand:
+  source: explicit
+  accept: ["code-server --bind-addr 0.0.0.0:8080 ."]
+  evidence:
+    - {path: ci/release-image/entrypoint.sh, line: 27, quote: "exec dumb-init /usr/bin/code-server \"$@\""}
+    - {path: ci/release-image/Dockerfile, line: 61, quote: "ENTRYPOINT [\"/usr/bin/entrypoint.sh\", \"--bind-addr\", \"0.0.0.0:8080\", \".\"]"}
+healthPath:
+  # No authentication is needed; the route returns JSON with status alive or expired.
+  accept: ["/healthz"]
+  evidence:
+    - {path: src/node/routes/index.ts, line: 156, quote: "app.router.use(\"/healthz\", health.router)"}
+    - {path: src/node/routes/health.ts, line: 8, quote: "status: req.heart.alive() ? \"alive\" : \"expired\","}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: src/node/cli.ts, line: 566, quote: "args[\"user-data-dir\"] = paths.data"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/home/coder, "~/.local/share/code-server", "~/.config/code-server"]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: ci/release-image/Dockerfile, line: 60, quote: "WORKDIR /home/coder"}
+    - {path: src/node/cli.ts, line: 566, quote: "args[\"user-data-dir\"] = paths.data"}
+    - {path: src/node/cli.ts, line: 570, quote: "args[\"extensions-dir\"] = path.join(args[\"user-data-dir\"], \"extensions\")"}
+env:
+  required:
+    - {name: PASSWORD, secret: true, buildTime: false, note: "password for the login page; without it the config file generates a random password on disk; HASHED_PASSWORD is the argon2 alternative"}
+  optional: [HASHED_PASSWORD, PORT, DOCKER_USER, ENTRYPOINTD, CS_DISABLE_FILE_DOWNLOADS]
+  buildTime: []
+  evidence:
+    - {path: src/node/cli.ts, line: 153, quote: "(can only be passed in via $PASSWORD or the config file)"}
+    - {path: src/node/cli.ts, line: 229, quote: "You can also use $PORT to override the port."}
+    - {path: ci/release-image/entrypoint.sh, line: 8, quote: "if [ \"${DOCKER_USER-}\" ]; then"}
+blockers:
+  expected:
+    - "The product is a remote IDE on a durable workspace and user data directory; Fargate storage is ephemeral and no EFS is provided"
+    - "No Dockerfile builds code-server from source: the release images install a pre-built .deb or .rpm, and the source needs the lib/vscode submodule build"
+  mustNot:
+    - "A database or Redis must not be reported as required: code-server has neither"
+    - "The default bind address (localhost) must not be treated as final: the release image passes 0.0.0.0:8080"
+    - "WebSocket support must not be treated as a blocker: an ALB passes WebSocket upgrades"
+vendorQuestions:
+  legitimate:
+    - "Is an IDE whose workspace and extensions are lost at every restart acceptable?"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Which health path? (/healthz)"
+    - "Is a database needed? (no)"
+traps:
+  - "The Dockerfiles in ci/release-image need release-packages/ from an earlier CI build, so a plain docker build of the repository fails (ci/release-image/Dockerfile:5)"
+  - "The image entrypoint uses fixuid (setuid) and sudo without a password for user coder (Dockerfile:38, :43)"
+  - "The default config file binds 127.0.0.1:8080 and generates a random password (src/node/cli.ts:758-760)"
+  - "Dockerfile.fedora and Dockerfile.opensuse are the same image on other bases, not other applications"
+openQuestions:
+  - "A single-user ephemeral demo of the IDE would work with PASSWORD set and an image that installs the released package; the outcome treats lost workspace data as the blocker"
+  - "The patched VS Code build steps in ci/build were not traced in detail"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: durable workspace and a Dockerfile that installs a prebuilt package are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "19 citations checked against the pinned commit by script (path, line, quote)"}

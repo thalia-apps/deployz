@@ -1,0 +1,103 @@
+id: new-229
+repository: valkey-io/valkey
+commit: ffbd8481a90ca0786d1d1b63c55df695be6d08e0
+summary: >
+  Valkey is a C in-memory key-value server (valkey-server), a fork of Redis. It is a datastore, not a web application.
+  It speaks the RESP protocol on TCP 6379 and, with the default valkey.conf, binds to loopback with protected mode on.
+  The repository has no Dockerfile or compose file; the official container images are built in a separate repository.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a key-value server. Clients use RESP on 6379, which is not HTTP and cannot sit behind the ALB.
+    The tree has no Dockerfile, so nothing builds a runnable image. Deployz already provides ElastiCache Valkey for
+    apps that need Redis or Valkey; it does not host the Valkey server. Local disk (RDB and AOF) is optional, but the
+    protocol decides the outcome.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence: []
+runtime: {accept: [c]}
+port:
+  accept: [6379]
+  evidence:
+    - {path: valkey.conf, line: 139, quote: "port 6379"}
+    - {path: src/config.c, line: 3565, quote: "createIntConfig(\"port\", NULL, MODIFIABLE_CONFIG, 0, 65535, server.port, 6379,"}
+bindAllInterfaces:
+  # valkey.conf binds loopback; protected-mode is on.
+  value: false
+  evidence:
+    - {path: valkey.conf, line: 88, quote: "bind 127.0.0.1 -::1"}
+    - {path: valkey.conf, line: 112, quote: "protected-mode yes"}
+startCommand:
+  source: explicit
+  accept: ["valkey-server /path/to/valkey.conf"]
+  evidence:
+    - {path: src/Makefile, line: 771, quote: "# valkey-server"}
+    - {path: src/server.c, line: 8165, quote: "serverLog(LL_NOTICE, \"oO0OoO0OoO0Oo Valkey is starting oO0OoO0OoO0Oo\");"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Valkey is the datastore; the data set is in memory.
+  evidence:
+    - {path: README.md, line: 10, quote: "Valkey is a high-performance data structure server that primarily serves key/value workloads."}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  # The repository is Valkey, not a client of it.
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Persistence is optional (RDB snapshots by default, AOF off); the data set is in memory.
+  local: conditional
+  paths: ["./"]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: valkey.conf, line: 697, quote: "dir ./"}
+    - {path: valkey.conf, line: 1684, quote: "appendonly no"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is the Valkey server; clients use RESP on 6379, not HTTP"
+    - "The tree has no Dockerfile, so no image can be built from it"
+  mustNot:
+    - "ElastiCache Valkey must not be offered as a way to deploy this repository: the repository is the Valkey engine itself"
+    - "Local disk must not be reported as the blocker: persistence is optional"
+vendorQuestions:
+  legitimate:
+    - "Is Valkey being deployed as the cache for another app? Use the managed ElastiCache Valkey in Deployz instead"
+  unnecessary:
+    - "Which port? (6379)"
+    - "Which health path? (valkey-server has no HTTP endpoint)"
+traps:
+  - "A Valkey repository can be mistaken for a Redis client because Deployz uses ElastiCache Valkey; here Valkey is the product"
+  - "The README is a make-based build guide with no container instructions (README.md:13)"
+openQuestions:
+  - "None that change the outcome"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "9 citations checked against the pinned commit by script (path, line, quote)"}

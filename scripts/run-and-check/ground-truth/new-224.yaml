@@ -1,0 +1,122 @@
+id: new-224
+repository: rabbitmq/rabbitmq-server
+commit: dd987095cd9b8f07097e978fdeec1b55f2e06a9e
+summary: >
+  RabbitMQ is an Erlang message broker. Clients connect with AMQP 0-9-1 and 1.0 on 5672, MQTT, STOMP and the stream
+  protocol; an optional management plugin gives an HTTP UI and API on 15672. The broker keeps queues and metadata in a
+  data directory (/var/lib/rabbitmq, declared as a volume). The only product Dockerfile, packaging/docker-image/Dockerfile,
+  copies a pre-built generic-unix tarball and does not build from the repository source.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    RabbitMQ is a message broker server. Its clients use AMQP (5672), MQTT and STOMP over raw TCP, which the ALB cannot
+    serve, and it needs a durable data directory (queues, Mnesia/Khepri metadata, Erlang cookie), which Fargate does not
+    give a task. RabbitMQ is named as unsupported in the Deployz MVP. The management UI on 15672 is an admin console, not
+    the product. No Dockerfile builds from source.
+dockerfile:
+  accept: []
+  reject:
+    - {path: packaging/docker-image/Dockerfile, reason: "copies a pre-built package-generic-unix.tar.xz made by the Makefile; does not build from repository source"}
+    - {path: .oss-scanner/Dockerfile, reason: "build-and-scan image for dependency scanning (elixir base, make), not a runtime image"}
+    - {path: .oss-scanner/Dockerfile.dockerignore, reason: "ignore file for the scanner image, not a Dockerfile"}
+    - {path: selenium/Dockerfile, reason: "browser test runner image (node)"}
+    - {path: selenium/Dockerfile.local, reason: "browser test runner image (node)"}
+    - {path: selenium/authorization-server/dockerfile, reason: "test authorization server fixture (maven)"}
+    - {path: deps/rabbitmq_auth_backend_http/examples/docker/nodered/Dockerfile, reason: "example Node-RED image for the HTTP auth backend"}
+    - {path: deps/rabbitmq_auth_backend_http/examples/rabbitmq_auth_backend_django/Dockerfile, reason: "example Django auth service"}
+  target: null
+  context: packaging/docker-image
+  evidence:
+    - {path: packaging/docker-image/Dockerfile, line: 40, quote: "COPY package-generic-unix.tar.xz /usr/local/src/rabbitmq-$RABBITMQ_VERSION.tar.xz"}
+    - {path: packaging/docker-image/Makefile, line: 42, quote: "cp -f $(GENERIC_UNIX_ARCHIVE) package-generic-unix.tar.xz"}
+    - {path: packaging/docker-image/Dockerfile, line: 56, quote: "VOLUME $RABBITMQ_DATA_DIR"}
+runtime: {accept: [erlang]}
+port:
+  # 5672 is the AMQP client port; 15672 is the HTTP management API (plugin).
+  accept: [5672, 15672]
+  evidence:
+    - {path: deps/rabbit/Makefile, line: 12, quote: "{tcp_listeners, [5672]},"}
+    - {path: deps/rabbitmq_management/src/rabbit_mgmt_app.erl, line: 23, quote: "-define(DEFAULT_PORT, 15672)."}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: deps/rabbit/Makefile, line: 12, quote: "{tcp_listeners, [5672]},"}
+startCommand:
+  source: image
+  accept: ["rabbitmq-server"]
+  evidence:
+    - {path: packaging/docker-image/Dockerfile, line: 67, quote: "ENTRYPOINT [\"docker-entrypoint.sh\"]"}
+    - {path: packaging/docker-image/Dockerfile, line: 69, quote: "CMD [\"rabbitmq-server\"]"}
+healthPath:
+  # Needs the management plugin and HTTP basic auth; the AMQP port has no HTTP health endpoint.
+  accept: ["/api/health/checks/alarms"]
+  evidence:
+    - {path: deps/rabbitmq_management/src/rabbit_mgmt_dispatcher.erl, line: 204, quote: "{\"/health/checks/alarms\","}
+    - {path: deps/rabbitmq_management/src/rabbit_mgmt_wm_health_check_alarms.erl, line: 60, quote: "rabbit_mgmt_util:is_authorized(ReqData, Context)."}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # RabbitMQ is the broker; it keeps metadata in its own data directory and needs no external database.
+  evidence:
+    - {path: packaging/docker-image/Dockerfile, line: 21, quote: "ENV RABBITMQ_DATA_DIR=/var/lib/rabbitmq"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/rabbitmq]
+  s3: none
+  s3SelectBy: {}
+  # The data dir holds queues, metadata and the Erlang cookie; the Dockerfile marks it as a separate volume.
+  evidence:
+    - {path: packaging/docker-image/Dockerfile, line: 21, quote: "ENV RABBITMQ_DATA_DIR=/var/lib/rabbitmq"}
+    - {path: packaging/docker-image/Dockerfile, line: 55, quote: "# Hint that the data (a.k.a. home dir) dir should be separate volume"}
+env:
+  required: []
+  optional: [RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS, RABBITMQ_ERLANG_COOKIE]
+  buildTime: [OTP_VERSION, RABBITMQ_VERSION]
+  evidence:
+    - {path: packaging/docker-image/Dockerfile, line: 33, quote: "ARG RABBITMQ_VERSION=4.0.0"}
+blockers:
+  expected:
+    - "RabbitMQ is a message broker: clients use AMQP, MQTT and STOMP over TCP, which an HTTPS-only ALB cannot serve"
+    - "The broker needs a durable data directory (/var/lib/rabbitmq); Fargate task storage is ephemeral"
+    - "No Dockerfile builds from repository source; the image Dockerfile needs a pre-built generic-unix tarball"
+  mustNot:
+    - "The management port 15672 must not be treated as the product web port: it is an admin console, the product is AMQP"
+    - "A database or Redis must not be reported as required: RabbitMQ is the broker"
+    - "selenium, .oss-scanner and example Dockerfiles must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is RabbitMQ the message broker for another application? It is better run as Amazon MQ for RabbitMQ, outside this deployment"
+  unnecessary:
+    - "Which port? (5672 for AMQP, 15672 for management)"
+    - "Is a database needed? (no)"
+    - "Which Dockerfile? (none builds from source)"
+traps:
+  - "packaging/docker-image/Dockerfile looks like the production Dockerfile but its COPY needs a tarball that the Makefile builds first (Dockerfile:40, Makefile:42)"
+  - "10-defaults.conf allows the default guest user from any host (packaging/docker-image/10-defaults.conf:8)"
+  - "The health endpoint needs the management plugin enabled and a user login (rabbit_mgmt_wm_health_check_alarms.erl:60)"
+  - "selenium/ and .oss-scanner/ Dockerfiles are test and scanning images"
+openQuestions:
+  - "The RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS and RABBITMQ_ERLANG_COOKIE names follow the documented image convention and were not read in the entrypoint"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "14 citations checked against the pinned commit by script (path, line, quote)"}

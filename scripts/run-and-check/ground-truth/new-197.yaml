@@ -1,0 +1,132 @@
+id: new-197
+repository: distribution/distribution
+commit: e548d3a7cf5061f08af4aaa6cc005d6cf85f4c37
+summary: >
+  Distribution is the CNCF Docker Registry, a Go HTTP server (OCI registry API under /v2/) on port 5000. The root
+  Dockerfile builds the registry binary from source (golang stage, xx-go build ./cmd/registry) and the default image
+  runs "registry serve /etc/distribution/config.yml" with the dev config baked in. That config stores blobs on the local
+  filesystem (/var/lib/registry), which is ephemeral on Fargate. The registry has an S3 storage driver, so with S3 storage
+  it needs no durable disk and no database. It is a stateless HTTP service when S3 is selected.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    The image builds from source and serves HTTP on 5000. The baked config uses the filesystem driver, so the deployment
+    must select the S3 storage driver (REGISTRY_STORAGE=s3 with bucket and region, task role credentials) or supply a
+    config file with storage.s3. With S3 there is no durable local disk. No auth is configured in the baked config, so the
+    registry would be open until an auth section (htpasswd or token) is added. Both outcomes are accepted: environment
+    overrides alone may be enough, but the documentation advises a config file for whole-section changes.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: dockerfiles/authors.Dockerfile, reason: "tooling image that generates the AUTHORS file"}
+    - {path: dockerfiles/docs.Dockerfile, reason: "documentation site build image"}
+    - {path: dockerfiles/git.Dockerfile, reason: "tooling image for git checks"}
+    - {path: dockerfiles/lint.Dockerfile, reason: "lint tooling image"}
+    - {path: dockerfiles/vendor.Dockerfile, reason: "go mod vendor tooling image"}
+    - {path: project/dev-image/Dockerfile, reason: "obsolete ubuntu 14.04 and Go 1.4 development image"}
+    - {path: vendor/go.opentelemetry.io/otel/dependencies.Dockerfile, reason: "vendored third-party file, not part of the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 39, quote: "xx-go build -tags \"${BUILDTAGS}\" -trimpath"}
+    - {path: Dockerfile, line: 62, quote: "FROM alpine:${ALPINE_VERSION}"}
+    - {path: Dockerfile, line: 68, quote: "EXPOSE 5000"}
+runtime: {accept: [go]}
+port:
+  accept: [5000]
+  evidence:
+    - {path: Dockerfile, line: 68, quote: "EXPOSE 5000"}
+    - {path: cmd/registry/config-dev.yml, line: 20, quote: "addr: :5000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: cmd/registry/config-dev.yml, line: 20, quote: "addr: :5000"}
+startCommand:
+  source: image
+  accept: ["registry serve /etc/distribution/config.yml"]
+  evidence:
+    - {path: Dockerfile, line: 69, quote: "ENTRYPOINT [\"registry\"]"}
+    - {path: Dockerfile, line: 70, quote: "CMD [\"serve\", \"/etc/distribution/config.yml\"]"}
+healthPath:
+  # /v2/ is the base API route: 200 without auth, 401 when auth is on. /debug/health is on the debug port 5001, not the public port.
+  accept: ["/v2/"]
+  evidence:
+    - {path: registry/api/v2/descriptors.go, line: 400, quote: "Path:        \"/v2/\","}
+    - {path: health/health.go, line: 19, quote: "http.HandleFunc(\"/debug/health\", StatusHandler)"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  # Optional blob descriptor cache backend; the baked config uses an in-memory cache.
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: configuration/configuration.go, line: 57, quote: "// Redis configures the redis pool available to the registry webapp."}
+    - {path: cmd/registry/config-dev.yml, line: 11, quote: "blobdescriptor: inmemory"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/var/lib/registry]
+  s3: native
+  s3SelectBy: {REGISTRY_STORAGE: s3}
+  # The default image config writes blobs to /var/lib/registry (ephemeral). The s3 driver needs bucket and region;
+  # access keys are optional and fall back to IAM credentials.
+  evidence:
+    - {path: cmd/registry/config-dev.yml, line: 13, quote: "rootdirectory: /var/lib/registry"}
+    - {path: registry/storage/driver/s3-aws/s3.go, line: 145, quote: "factory.Register(\"s3\", &s3DriverFactory{})"}
+    - {path: registry/storage/driver/s3-aws/s3.go, line: 229, quote: "no bucket parameter provided"}
+    - {path: registry/storage/driver/s3-aws/s3.go, line: 192, quote: "// Providing no values for these is valid in case the user is authenticating"}
+env:
+  required:
+    - {name: REGISTRY_STORAGE, secret: false, buildTime: false, note: "set to s3 to replace the baked filesystem driver"}
+    - {name: REGISTRY_STORAGE_S3_BUCKET, secret: false, buildTime: false, note: "the s3 driver fails without a bucket"}
+    - {name: REGISTRY_STORAGE_S3_REGION, secret: false, buildTime: false, note: "region is a required s3 driver parameter"}
+  optional: [REGISTRY_STORAGE_S3_ACCESSKEY, REGISTRY_STORAGE_S3_SECRETKEY, REGISTRY_AUTH_HTPASSWD_REALM, REGISTRY_AUTH_HTPASSWD_PATH, REGISTRY_HTTP_SECRET, REGISTRY_LOG_LEVEL]
+  buildTime: []
+  evidence:
+    - {path: configuration/parser.go, line: 136, quote: "if strings.HasPrefix(pathStr, strings.ToUpper(p.prefix)+\"_\") {"}
+    - {path: registry/storage/driver/s3-aws/s3.go, line: 188, quote: "// - region"}
+blockers:
+  expected:
+    - "The baked config stores blobs on the local filesystem; S3 storage must be selected or images are lost on task restart"
+    - "No authentication in the baked config: anyone who reaches the ALB can push and pull"
+  mustNot:
+    - "A database must not be reported as required: the registry keeps all state in the storage driver"
+    - "Redis must not be required: the cache is in memory by default"
+    - "Port 5001 (debug and metrics) must not be treated as the app port"
+    - "The Dockerfile must not be reported as a prebuilt-binary copy: it builds from source"
+vendorQuestions:
+  legitimate:
+    - "Which S3 bucket and region hold the registry data, and which authentication (htpasswd or token) should protect it?"
+  unnecessary:
+    - "Which port? (5000)"
+    - "Which Dockerfile? (the root Dockerfile)"
+    - "Is a database needed? (no)"
+traps:
+  - "The default storage is the filesystem driver at /var/lib/registry with a VOLUME declaration (Dockerfile:66, config-dev.yml:13)"
+  - "config-dev.yml enables debug logging and a debug server on :5001 with Prometheus metrics (config-dev.yml:21)"
+  - "The Dockerfile has many stages (binary, releaser, artifact); the last stage is the runtime image, so no build target is needed"
+  - "The health check section (health.storagedriver) is a registry feature that reports on /debug/health, a different port from 5000"
+  - "Garbage collection is a separate registry command, not a background worker of serve"
+openQuestions:
+  - "Whether REGISTRY_STORAGE=s3 alone replaces the filesystem section in the baked config; the docs advise a config file for whole-section changes (docs/content/about/configuration.md:55)"
+  - "Whether REGISTRY_HTTP_SECRET is needed when more than one task runs; not read in detail"
+crossReview:
+  - {field: outcome.accept, change: "none: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "18 citations checked against the pinned commit by script (path, line, quote)"}
