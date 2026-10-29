@@ -458,11 +458,13 @@ describe('billing entitlements — free evaluation (Paddle migration Phase 7)', 
     const second = await create('PRODUCTION');
     expect(second.statusCode, second.body).toBe(201);
 
-    const firstBody = first.json() as { id: string; installLinkId: string; enrollmentCode: string; customerId: string };
-    const secondBody = second.json() as { id: string; installLinkId: string; enrollmentCode: string; customerId: string };
+    const firstBody = first.json() as { id: string; installLinkId: string; customerId: string };
+    const secondBody = second.json() as { id: string; installLinkId: string; customerId: string };
     expect(secondBody.id).not.toBe(firstBody.id);
     expect(secondBody.installLinkId).not.toBe(firstBody.installLinkId);
-    expect(secondBody.enrollmentCode).not.toBe(firstBody.enrollmentCode);
+    const [firstRow] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, firstBody.id));
+    const [secondRow] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, secondBody.id));
+    expect(secondRow!.enrollmentCode).not.toBe(firstRow!.enrollmentCode);
     expect(firstBody.customerId).toBe(customer.id);
     expect(secondBody.customerId).toBe(customer.id);
 

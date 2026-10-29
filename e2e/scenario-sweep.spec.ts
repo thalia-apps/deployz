@@ -185,9 +185,8 @@ test.describe('lifecycle-sweep', () => {
     const deployment = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
-    const { id: deploymentId, installLinkId, enrollmentCode } = deployment;
+    const { id: deploymentId, installLinkId } = deployment;
 
     const launch = await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
     expect(launch.ok()).toBeTruthy();
@@ -200,6 +199,7 @@ test.describe('lifecycle-sweep', () => {
       quickCreateUrl: string | null;
     };
     expect(installA.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installA.quickCreateUrl!, 'EnrollmentCode');
     const relayCredentialA = extractQuickCreateParam(installA.quickCreateUrl!, 'RelayCredential');
     const installationId = `inst-${suffix}`;
     const relayA = startSimulatedRelay({

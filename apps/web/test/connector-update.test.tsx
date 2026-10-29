@@ -53,6 +53,13 @@ describe('ConnectorUpdateAlert', () => {
     expect(view.textContent).toBe('');
   });
 
+  it('hides the update offer while the connector is offline', () => {
+    const view = render(
+      <ConnectorUpdateAlert connector={connector({ updateAvailable: true })} customerName="Acme" offline />,
+    );
+    expect(view.textContent).toBe('');
+  });
+
   it('says the update is required to verify releases, with the stack link and the keep-values instruction', () => {
     const view = render(
       <ConnectorUpdateAlert

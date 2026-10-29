@@ -73,7 +73,7 @@ async function seedDeployment(
   page: Page,
   applicationId: string,
   customerId: string,
-): Promise<{ id: string; installLinkId: string; installLinkToken: string; enrollmentCode: string }> {
+): Promise<{ id: string; installLinkId: string; installLinkToken: string }> {
   const response = await page.request.post(`${API_URL}/api/deployments`, {
     data: { applicationId, customerId, region: 'us-east-1' },
   });
@@ -82,7 +82,6 @@ async function seedDeployment(
     id: string;
     installLinkId: string;
     installLinkToken: string;
-    enrollmentCode: string;
   };
 }
 

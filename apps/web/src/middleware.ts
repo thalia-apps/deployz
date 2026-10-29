@@ -83,6 +83,8 @@ export const config = {
     '/pricing',
     '/sign-in',
     '/sign-up',
+    '/forgot-password',
+    '/reset-password',
     '/dashboard/:path*',
     '/admin/:path*',
     '/organizations/:path*',

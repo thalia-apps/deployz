@@ -54,3 +54,29 @@ test('signin via the web form honors an existing account', async ({ page, reques
   await page.locator('[data-sidebar="footer"]').getByTestId('user-menu-trigger').click();
   await expect(page.getByTestId('user-menu-email')).toHaveText(email);
 });
+
+// The reset e-mail is not readable from the browser suite, so the token step is
+// covered by the API test (apps/api/src/auth.test.ts). This journey proves the
+// pages, the link on the sign-in page and the answer that never reveals whether
+// an address has an account.
+test('forgot password answers the same for an unknown address and links to the reset page', async ({
+  page,
+}) => {
+  await page.goto('/sign-in');
+  await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await page.waitForURL('/forgot-password');
+
+  await page.getByLabel('Email').fill(`nobody-${crypto.randomUUID().slice(0, 8)}@example.com`);
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await expect(page.getByRole('status')).toContainText(
+    'If an account uses this email address, we sent a link to reset the password.',
+  );
+
+  await page.goto('/reset-password');
+  await expect(page.getByText('This reset link is not valid.')).toBeVisible();
+
+  await page.goto('/reset-password?token=not-a-real-token');
+  await page.getByLabel('New password').fill('another-secret-1');
+  await page.getByRole('button', { name: 'Reset password' }).click();
+  await expect(page.getByText('Invalid token')).toBeVisible();
+});

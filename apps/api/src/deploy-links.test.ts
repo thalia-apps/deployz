@@ -152,6 +152,7 @@ describe('deploy links', () => {
     expect(body.deployment.state).toBe('NOT_INSTALLED');
     expect(body.link.status).toBe('active');
     expect(body.link.deploymentId).toBe(body.deployment.id);
+    expect(response.body).not.toMatch(/enrollmentCode|relayCredential|relayTokenHash/);
     return {
       publicId: body.link.id,
       token: body.token,

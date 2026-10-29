@@ -567,8 +567,21 @@ still roll, and would hide a crash loop.
   and `relayCredential`, so the token stops working. Registration needs an install
   link that is neither revoked nor expired. The relay
   reports `awsAccountId` as 12 digits only; the ECR pull grant uses it as the
-  principal, and a re-enrollment with a new installation id revokes the grant
-  of `previousInstallationId`.
+  principal.
+- **One ECR pull statement.** The `deployz-images` repository policy holds one
+  statement (`deployz-pull`). Its principals are the account root ARNs, without
+  duplicates, of the accounts that have a live (not `DELETED`) deployment.
+  Every grant and revoke rebuilds the statement from the deployments table
+  under one Postgres advisory transaction lock, so two enrollments at the same
+  time cannot lose an account. The same write absorbs the older
+  `deployz-pull-<installation id>` statements. A revoke (DESTROY or PURGE
+  success, a re-enrollment) removes an account only when no other live
+  deployment uses it. A grant that cannot be written fails the request with
+  `503 ECR_GRANT_FAILED`: `POST /api/relay/register` then registers nothing
+  more and the relay registers again on its next poll (a replayed register
+  grants again before it answers 200), and retry-install fails before it
+  changes anything. A revoke that fails is only logged and leaves a grant that
+  is too wide, never a broken caller.
 - **Relay input is bounded.** A heartbeat `observedState` larger than 256 KiB
   gets `413`; stack-event rows are kept for at most 2,000 per job; a
   configuration value is at most 64 KiB.
@@ -668,10 +681,13 @@ active mutating job:
   `reconcileCount`, `operation.requeued` event); the describe-first
   executors then resolve the true state — a stack that completed is adopted
   and verified into success, a rolled-back one fails honestly. Only
-  exhausted re-offers fail (`UNKNOWN`). One edge case: a REQUESTED job that
-  a CONNECTED relay never claims within its staleness window also fails
-  `UNKNOWN` without a re-offer (rare, because heartbeats refresh REQUESTED
-  jobs too).
+  exhausted re-offers fail (`UNKNOWN`).
+  Heartbeats refresh REQUESTED jobs too, so the watchdog never
+  times out a REQUESTED job while its relay sends heartbeats. This is on
+  purpose: a CONFIG_UPDATE waits REQUESTED behind a running install, and a
+  relay that updates its connector stack polls with `claim=0`. A time limit
+  from `createdAt` would fail those jobs. When the relay goes quiet, a
+  REQUESTED job is parked `WAITING` like any other active job.
 - **DESTROY never fails from the watchdog.** A dead-relay teardown is
   settled by the vendor's force-complete escape hatch
   (`POST /api/deployments/:id/disconnect/force-complete`, also a Team Admin
@@ -692,10 +708,18 @@ active mutating job:
 | PURGE | 60 min | 90 min |
 | CONFIGURE_DOMAIN, REMOVE_DOMAIN | 60 min | 90 min |
 
-Re-offers are bounded at three per job. The same schedule also runs the
+Re-offers are bounded at three per job. A job that throws during its sweep is
+logged (`watchdog:job-sweep-failed`) and skipped; the other jobs are still
+swept. Each sweep of a scheduled run also stands alone, so one failing sweep
+does not skip the sweeps after it. The same schedule also runs the
 relay-liveness sweep: a relay with no heartbeat for 15 minutes
-(`RELAY_STALE_AFTER_MS`) is marked `DISCONNECTED`, which the UI shows and
-which retry eligibility respects.
+(`RELAY_STALE_AFTER_MS`) is marked `DISCONNECTED`, which the UI shows, which
+retry eligibility respects, and which pauses billing. If several relays are
+overdue and no relay at all sent a heartbeat in the window, the control plane
+was down and not the relays. The sweep then marks nothing and logs
+`watchdog:relay-liveness-skipped`. One overdue relay is still marked, because
+a small fleet cannot tell the two cases apart and a dead relay must be able to
+reach force-complete.
 
 The uncertain-result rule: nothing ever assumes a timed-out external call
 failed. The relay's resumers re-describe AWS before acting; the control

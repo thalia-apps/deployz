@@ -674,8 +674,8 @@ test.describe('two-apps-1.0.0', () => {
         data: { applicationId: appId, customerId: customer.id, region: 'us-east-1' },
       });
       expect(depResp.ok()).toBeTruthy();
-      const dep = (await depResp.json()) as { id: string; installLinkId: string; enrollmentCode: string };
-      const { id: deploymentId, installLinkId, enrollmentCode } = dep;
+      const dep = (await depResp.json()) as { id: string; installLinkId: string };
+      const { id: deploymentId, installLinkId } = dep;
 
       const launch = await request.post(`${API_URL}/api/install/${installLinkId}/launched`, { data: {} });
       expect(launch.ok()).toBeTruthy();
@@ -689,6 +689,7 @@ test.describe('two-apps-1.0.0', () => {
       const { extractQuickCreateParam: eqcp, startSimulatedRelay: ssr } = await import('./simulation/relay-harness.js');
       const { getScenario } = await import('./simulation/scenarios/index.js');
 
+      const enrollmentCode = eqcp(installInfo.quickCreateUrl!, 'EnrollmentCode');
       const relayCred = eqcp(installInfo.quickCreateUrl!, 'RelayCredential');
       const instId = `inst-${suffix}-${label}`;
       const relay = ssr({

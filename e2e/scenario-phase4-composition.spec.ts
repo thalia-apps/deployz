@@ -136,9 +136,8 @@ test.describe('phase4-composition', () => {
     const deployment = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
-    const { id: deploymentId, installLinkId, enrollmentCode } = deployment;
+    const { id: deploymentId, installLinkId } = deployment;
 
     // ── The frozen plan proves the COMPOSITION: four workloads (web, two
     // workers, the one-shot migration), an rds-mysql database and a cache. ──
@@ -164,6 +163,7 @@ test.describe('phase4-composition', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installInfo.quickCreateUrl!, 'RelayCredential');
     const installationId = `inst-${suffix}`;
     const relay = startSimulatedRelay({

@@ -132,9 +132,8 @@ test.describe('mysql-sweep', () => {
     const deployment = (await created.json()) as {
       id: string;
       installLinkId: string;
-      enrollmentCode: string;
     };
-    const { id: deploymentId, installLinkId, enrollmentCode } = deployment;
+    const { id: deploymentId, installLinkId } = deployment;
 
     // ── The plan freezes an rds-mysql database row. The plan endpoint embeds
     // the COMPILED spec's footprint verbatim when the deployment has one, so
@@ -154,6 +153,7 @@ test.describe('mysql-sweep', () => {
       quickCreateUrl: string | null;
     };
     expect(installInfo.quickCreateUrl).not.toBeNull();
+    const enrollmentCode = extractQuickCreateParam(installInfo.quickCreateUrl!, 'EnrollmentCode');
     const relayCredential = extractQuickCreateParam(installInfo.quickCreateUrl!, 'RelayCredential');
     const installationId = `inst-${suffix}`;
     const relay = startSimulatedRelay({

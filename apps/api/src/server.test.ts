@@ -27,7 +27,7 @@ import { createAuth, type Auth } from './auth.js';
 import { compileDeploymentIntent } from './compiler-artifact.js';
 import { primaryServiceLogicalIds } from './deployment-status.js';
 import { readStoredDeploymentSpec, readStoredManifest } from './manifest.js';
-import { buildPullStatement, type EcrClient, type EcrGrantStatement } from './ecr-grants.js';
+import type { EcrClient, EcrGrantStatement } from './ecr-grants.js';
 import { env } from './env.js';
 import { ApiError } from './errors.js';
 import { GITHUB_FIXTURE_FILE_TREES } from './github.js';
@@ -641,6 +641,51 @@ describe('server — organization identity comes from the session, not the clien
     );
     expect(response.statusCode).toBe(201);
     expect((response.json() as { organizationId: string }).organizationId).toBe(orgA.organizationId);
+  });
+
+  it('never returns relay enrollment material in create, list or detail responses', async () => {
+    const application = await insertApplication(db, orgA.organizationId, {
+      detectedMetadata: {
+        hasDockerfile: true,
+        dockerfilePath: 'Dockerfile',
+        port: '3000',
+        startupCommands: ['node dist/index.js'],
+        usesPostgresql: false,
+        postgres: { required: false },
+        usesRedis: false,
+        redis: { required: false },
+        usesS3: false,
+        usesLocalFilesystem: false,
+        databaseState: 'none',
+      },
+    });
+    await insertDeployableRelease(db, application.id);
+    const customer = await insertCustomer(db, orgA.organizationId);
+    const created = await postJson(
+      app,
+      '/api/deployments',
+      { applicationId: application.id, customerId: customer.id, region: 'us-east-1' },
+      { cookie: orgA.cookie },
+    );
+    expect(created.statusCode).toBe(201);
+    const { id } = created.json() as { id: string };
+    const [stored] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, id));
+    expect(stored!.enrollmentCode).toBeTruthy();
+    expect(stored!.relayCredential).toBeTruthy();
+    expect(stored!.relayTokenHash).toBeTruthy();
+
+    const list = await app.inject({ method: 'GET', url: '/api/deployments', headers: { cookie: orgA.cookie } });
+    const detail = await app.inject({ method: 'GET', url: `/api/deployments/${id}`, headers: { cookie: orgA.cookie } });
+    expect(list.statusCode).toBe(200);
+    expect(detail.statusCode).toBe(200);
+    for (const body of [created.body, list.body, detail.body]) {
+      expect(body).not.toContain(stored!.enrollmentCode);
+      expect(body).not.toContain(stored!.relayCredential!);
+      expect(body).not.toContain(stored!.relayTokenHash!);
+      expect(body).not.toContain('"enrollmentCode"');
+      expect(body).not.toContain('"relayCredential"');
+      expect(body).not.toContain('"relayTokenHash"');
+    }
   });
 
   it('POST /api/deployments 404s for a well-formed but non-existent applicationId (not a 500)', async () => {
@@ -4068,11 +4113,23 @@ describe('server — GitHub installation binding', () => {
 
   // GitHub's own view of the installation. The setup route reads the account
   // from the API rather than trusting the browser for anything but the id.
-  const githubFetch = (async (url: string) => ({
-    status: url.includes('/app/installations/4242') ? 200 : 404,
-    headers: { get: () => null },
-    json: async () => ({ account: { login: 'acme-inc', type: 'Organization' } }),
-  })) as unknown as Parameters<typeof buildServer>[0]['githubFetch'];
+  let installationCreatedAt = new Date().toISOString();
+  const githubFetch = (async (url: string, init?: { headers?: Record<string, string>; body?: string }) => {
+    const reply = (status: number, body: unknown) => ({ status, headers: { get: () => null }, json: async () => body });
+    // The OAuth exchange: only `good-code` belongs to a user who can see 4242.
+    if (url.endsWith('/login/oauth/access_token')) {
+      const { code } = JSON.parse(init!.body!) as { code: string };
+      return reply(200, code === 'good-code' ? { access_token: 'ghu_owner' } : { access_token: 'ghu_stranger' });
+    }
+    if (url.includes('/user/installations')) {
+      const owner = init?.headers?.['Authorization'] === 'Bearer ghu_owner';
+      return reply(200, { installations: owner ? [{ id: 4242 }] : [{ id: 1 }] });
+    }
+    return reply(url.includes('/app/installations/4242') ? 200 : 404, {
+      account: { login: 'acme-inc', type: 'Organization' },
+      created_at: installationCreatedAt,
+    });
+  }) as unknown as Parameters<typeof buildServer>[0]['githubFetch'];
 
   beforeAll(async () => {
     client = new PGlite();
@@ -4086,6 +4143,8 @@ describe('server — GitHub installation binding', () => {
       githubFetch,
       githubAppInstallUrl: 'https://github.com/apps/deployz-test/installations/new',
       githubAppId: 'test-app-id',
+      githubClientId: 'test-client-id',
+      githubClientSecret: 'test-client-secret',
       // A real key: the setup route signs an RS256 App JWT, so a placeholder
       // string fails inside node:crypto rather than in the route.
       githubAppPrivateKey: generateKeyPairSync('rsa', {
@@ -4158,6 +4217,67 @@ describe('server — GitHub installation binding', () => {
     expect(forged.headers['location']).toContain('/dashboard/applications?github=failed');
 
     expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+  });
+
+  it('refuses to bind an unbound installation GitHub created long ago', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
+      expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+    }
+  });
+
+  it('refuses a code whose user cannot see an older installation', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=bad-code`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
+      expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+    }
+  });
+
+  // A failed code exchange (for example, client credentials of another OAuth
+  // App) must not block the install that just happened.
+  it('binds a new installation even when the code check fails', async () => {
+    const state = await startInstall(org.cookie);
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=bad-code`,
+      headers: { cookie: org.cookie },
+    });
+    expect(response.headers['location']).toContain('/dashboard/applications?github=connected');
+  });
+
+  it('binds an older installation when the code user can see it', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=good-code`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=connected');
+      expect(await db.select().from(schema.githubInstallations)).toHaveLength(1);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+      await db.delete(schema.githubInstallations);
+    }
   });
 
   it('binds an installation to the caller organization and redirects to the dashboard', async () => {
@@ -4364,6 +4484,7 @@ describe('server — GitHub disconnect and reconnect', () => {
       return json(200, {
         account: { login: found.login, type: 'Organization', id: found.id },
         suspended_at: found.suspended ? '2026-10-01T00:00:00Z' : null,
+        created_at: new Date().toISOString(),
       });
     }
     const repo = /\/repos\/([^/]+\/[^/]+)$/.exec(url);
@@ -6915,11 +7036,13 @@ const body = (await getInfrastructure(deployment.id, { cookie: org.cookie })).js
 // would.
 function createRecorderEcrClient(): EcrClient & {
   seed(statement: EcrGrantStatement): void;
-  statements(): Array<{ Sid: string; Principal: { AWS: string } }>;
-  statementFor(sid: string): { Sid: string; Principal: { AWS: string } } | undefined;
+  statements(): Array<{ Sid: string; Principal: { AWS: string | string[] } }>;
+  principals(): string[];
+  failWrites: boolean;
 } {
   let policy: { Statement?: unknown[] } | null = null;
   return {
+    failWrites: false,
     async getRepositoryPolicy(): Promise<{ policyText: Record<string, unknown> } | null> {
       return policy ? { policyText: policy as unknown as Record<string, unknown> } : null;
     },
@@ -6927,6 +7050,7 @@ function createRecorderEcrClient(): EcrClient & {
       _repositoryName: string,
       policyText: Record<string, unknown>,
     ): Promise<void> {
+      if (this.failWrites) throw new Error('AccessDenied');
       policy = policyText as unknown as { Statement?: unknown[] };
     },
     async deleteRepositoryPolicy(_repositoryName: string): Promise<void> {
@@ -6938,12 +7062,22 @@ function createRecorderEcrClient(): EcrClient & {
     },
     statements() {
       return (
-        (policy?.Statement as Array<{ Sid: string; Principal: { AWS: string } }> | undefined) ?? []
+        (policy?.Statement as Array<{ Sid: string; Principal: { AWS: string | string[] } }> | undefined) ??
+        []
       );
     },
-    statementFor(sid: string) {
-      return this.statements().find((s) => s.Sid === sid);
+    principals() {
+      return this.statements().flatMap((s) => [s.Principal.AWS].flat());
     },
+  };
+}
+
+function legacyPullStatement(installationId: string, accountId: string): EcrGrantStatement {
+  return {
+    Sid: `deployz-pull-${installationId}`,
+    Effect: 'Allow',
+    Principal: { AWS: `arn:aws:iam::${accountId}:root` },
+    Action: ['ecr:BatchGetImage'],
   };
 }
 
@@ -7010,10 +7144,37 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(response.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${installationId}`)).toMatchObject({
-      Sid: `deployz-pull-${installationId}`,
-      Principal: { AWS: 'arn:aws:iam::123456789012:root' },
+    expect(fakeEcr.statements()).toHaveLength(1);
+    expect(fakeEcr.principals()).toContain('arn:aws:iam::123456789012:root');
+  });
+
+  it('a failed grant answers 503 and the relay registers again; the replay grants', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    await seedReadyRelease(application.id);
+    const customer = await insertCustomer(db, org.organizationId);
+    const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'NOT_INSTALLED',
+      installationId: null,
     });
+    const installationId = `inst-grant-retry-${crypto.randomUUID()}`;
+    const register = () =>
+      postJson(
+        app,
+        '/api/relay/register',
+        { enrollmentCode: deployment.enrollmentCode, installationId, awsAccountId: '210987654300' },
+        { authorization: `Bearer ${RELAY_TOKEN}` },
+      );
+
+    fakeEcr.failWrites = true;
+    const failed = await register();
+    fakeEcr.failWrites = false;
+    expect(failed.statusCode).toBe(503);
+    expect(failed.json()).toMatchObject({ error: { code: 'ECR_GRANT_FAILED' } });
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654300:root');
+
+    const replay = await register();
+    expect(replay.statusCode).toBe(200);
+    expect(fakeEcr.principals()).toContain('arn:aws:iam::210987654300:root');
   });
 
   it('INSTALL success auto-enqueues a digest-pinned DEPLOY_RELEASE for the newest READY release', async () => {
@@ -7389,11 +7550,11 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     const deployment = await insertDeployment(db, org.organizationId, application.id, customer.id, {
       state: 'HEALTHY',
       installationId: `inst-destroy-${crypto.randomUUID()}`,
-      awsAccountId: '123456789012',
+      awsAccountId: '210987654301',
       relayTokenHash: hashRelayToken(RELAY_TOKEN),
     });
     // The grant the install would have made.
-    fakeEcr.seed(buildPullStatement(deployment.installationId!, '123456789012'));
+    fakeEcr.seed(legacyPullStatement(deployment.installationId!, '210987654301'));
 
     const destroy = await postJson(
       app,
@@ -7413,7 +7574,45 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(result.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${deployment.installationId}`)).toBeUndefined();
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654301:root');
+  });
+
+  it('keeps the account grant while another live deployment uses the account', async () => {
+    const application = await insertApplication(db, org.organizationId);
+    const customer = await insertCustomer(db, org.organizationId);
+    const account = '210987654303';
+    const destroyed = await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-shared-a-${crypto.randomUUID()}`,
+      awsAccountId: account,
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    await insertDeployment(db, org.organizationId, application.id, customer.id, {
+      state: 'HEALTHY',
+      installationId: `inst-shared-b-${crypto.randomUUID()}`,
+      awsAccountId: account,
+      relayTokenHash: hashRelayToken(RELAY_TOKEN),
+    });
+    fakeEcr.seed(legacyPullStatement(destroyed.installationId!, account));
+
+    const destroy = await postJson(
+      app,
+      `/api/deployments/${destroyed.id}/destroy`,
+      {},
+      { cookie: org.cookie },
+    );
+    expect(destroy.statusCode).toBe(202);
+    const commands = await claimCommands(destroyed.installationId!);
+    const destroyJob = commands.find((c) => c.type === 'DESTROY')!;
+    const result = await postJson(
+      app,
+      `/api/relay/commands/${destroyJob.id}/result`,
+      { success: true },
+      { authorization: `Bearer ${RELAY_TOKEN}` },
+    );
+    expect(result.statusCode).toBe(200);
+
+    expect(fakeEcr.principals()).toContain(`arn:aws:iam::${account}:root`);
   });
 
   it('revokes the pull grant when a PURGE succeeds', async () => {
@@ -7423,10 +7622,10 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
       state: 'DELETED',
       cleanupState: 'SKIPPED_RELAY_OFFLINE',
       installationId: `inst-purge-${crypto.randomUUID()}`,
-      awsAccountId: '123456789012',
+      awsAccountId: '210987654302',
       relayTokenHash: hashRelayToken(RELAY_TOKEN),
     });
-    fakeEcr.seed(buildPullStatement(deployment.installationId!, '123456789012'));
+    fakeEcr.seed(legacyPullStatement(deployment.installationId!, '210987654302'));
 
     const purge = await postJson(
       app,
@@ -7446,7 +7645,7 @@ describe('server — Phase 1.1 ECR pull grants and auto-deploy on install', () =
     );
     expect(result.statusCode).toBe(200);
 
-    expect(fakeEcr.statementFor(`deployz-pull-${deployment.installationId}`)).toBeUndefined();
+    expect(fakeEcr.principals()).not.toContain('arn:aws:iam::210987654302:root');
   });
 });
 

@@ -97,15 +97,20 @@ async function seedDeployment(
   const deployment = (await deploymentResponse.json()) as {
     id: string;
     installLinkId: string;
-    enrollmentCode: string;
   };
+
+  const { enrollmentCode } = await fetchInstallCredentials(
+    API_URL,
+    deployment.installLinkId,
+    await sessionCookieHeader(page.request),
+  );
 
   return {
     deploymentId: deployment.id,
     installLinkId: deployment.installLinkId,
     applicationName: application.name,
     installationId: `inst-${suffix}`,
-    enrollmentCode: deployment.enrollmentCode,
+    enrollmentCode,
     customerEmail: `progress-customer-${suffix}@example.com`,
   };
 }

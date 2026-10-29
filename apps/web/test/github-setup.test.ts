@@ -43,6 +43,21 @@ describe('resolveGithubSetupRoute', () => {
     });
   });
 
+  it('carries the OAuth code through sign-in and to the API route', () => {
+    expect(
+      resolveGithubSetupRoute({ installationId: '4242', state: 'a.b.c', code: 'c0de', signedIn: false, apiUrl }),
+    ).toEqual({
+      kind: 'sign-in',
+      href: '/sign-in?callbackUrl=%2Fgithub%2Fsetup%3Finstallation_id%3D4242%26state%3Da.b.c%26code%3Dc0de',
+    });
+    expect(
+      resolveGithubSetupRoute({ installationId: '4242', state: 'a.b.c', code: 'c0de', signedIn: true, apiUrl }),
+    ).toEqual({
+      kind: 'bind',
+      href: 'https://api.example.test/api/github/setup?installation_id=4242&state=a.b.c&code=c0de',
+    });
+  });
+
   // The id reaches us straight from a query string, so it lands in both a
   // relative callback and an API URL without ever being trusted verbatim.
   it('escapes an installation id that carries query syntax', () => {
