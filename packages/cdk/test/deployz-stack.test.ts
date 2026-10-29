@@ -109,10 +109,10 @@ describe('DeployzStack', () => {
     });
   });
 
-  // Phase 4 — DZ-AUDIT-012: SSE-SQS on both queues, DLQ retention 3 days.
+  // Phase 4 — DZ-AUDIT-012: SSE-SQS on both queues, DLQ retention 14 days.
   // SQS_MANAGED encryption synthesises to SqsManagedSseEnabled: true on each
   // queue resource (the CDK default is unencrypted, which omits the key).
-  it('enables SSE-SQS on both queues and shortens DLQ retention to 3 days', () => {
+  it('enables SSE-SQS on both queues and keeps DLQ retention at 14 days', () => {
     const app = new App();
     const stack = new DeployzStack(app, 'DeployzTest');
     const template = Template.fromStack(stack);
@@ -129,8 +129,8 @@ describe('DeployzStack', () => {
     // DLQ has no RedrivePolicy; the main queue does
     const dlq = entries.find((q) => !q.Properties.RedrivePolicy);
     expect(dlq).toBeDefined();
-    // DLQ retention: 3 days = 259200 seconds
-    expect(dlq!.Properties).toMatchObject({ MessageRetentionPeriod: 259200 });
+    // DLQ retention: 14 days = 1209600 seconds
+    expect(dlq!.Properties).toMatchObject({ MessageRetentionPeriod: 1209600 });
   });
 
   // A queue with no consumer is the failure this wiring exists to prevent:
@@ -717,6 +717,92 @@ describe('DeployzStack', () => {
         if (previous === undefined) delete process.env[KEY];
         else process.env[KEY] = previous;
       }
+    });
+  });
+
+  describe('alarms', () => {
+    const alarmFor = (
+      metricName: string,
+      namespace: string,
+      period = 300,
+    ): Record<string, unknown> => {
+      const found = Object.values(baseline.findResources('AWS::CloudWatch::Alarm')).filter(
+        (alarm) =>
+          alarm.Properties.MetricName === metricName &&
+          alarm.Properties.Namespace === namespace &&
+          alarm.Properties.Period === period,
+      );
+      expect(found).toHaveLength(1);
+      return found[0]!.Properties as Record<string, unknown>;
+    };
+    const notifies = {
+      AlarmActions: [{ Ref: Match.stringLikeRegexp('AlarmTopic') }],
+      OKActions: [{ Ref: Match.stringLikeRegexp('AlarmTopic') }],
+      TreatMissingData: 'notBreaching',
+    };
+
+    it('creates one alarm topic and six alarms that notify it', () => {
+      baseline.resourceCountIs('AWS::SNS::Topic', 1);
+      baseline.resourceCountIs('AWS::CloudWatch::Alarm', 6);
+      baseline.allResourcesProperties('AWS::CloudWatch::Alarm', notifies);
+    });
+
+    it('alarms on API Lambda errors: 5 in 5 minutes', () => {
+      expect(alarmFor('Errors', 'AWS/Lambda')).toMatchObject({ Threshold: 5, Period: 300, Statistic: 'Sum' });
+    });
+
+    it('alarms on worker Lambda errors: 3 in 15 minutes', () => {
+      expect(alarmFor('Errors', 'AWS/Lambda', 900)).toMatchObject({ Threshold: 3, Statistic: 'Sum' });
+    });
+
+    it('alarms on a message in the job dead-letter queue', () => {
+      expect(alarmFor('ApproximateNumberOfMessagesVisible', 'AWS/SQS')).toMatchObject({
+        Threshold: 1,
+        ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+      });
+    });
+
+    it('alarms on HTTP API 5xx: 10 in 5 minutes', () => {
+      expect(alarmFor('5xx', 'AWS/ApiGateway')).toMatchObject({ Threshold: 10, Period: 300, Statistic: 'Sum' });
+    });
+
+    it('alarms on low database memory and storage', () => {
+      expect(alarmFor('FreeableMemory', 'AWS/RDS')).toMatchObject({
+        Threshold: 64 * 1024 * 1024,
+        ComparisonOperator: 'LessThanThreshold',
+        EvaluationPeriods: 3,
+      });
+      expect(alarmFor('FreeStorageSpace', 'AWS/RDS')).toMatchObject({
+        Threshold: 2 * 1024 * 1024 * 1024,
+        ComparisonOperator: 'LessThanThreshold',
+      });
+    });
+
+    it('has no email subscription when no address is set', () => {
+      baseline.resourceCountIs('AWS::SNS::Subscription', 0);
+    });
+
+    it('subscribes the alert email when one is given', () => {
+      const app = new App({ context: { alertEmail: 'ops@example.com' } });
+      const template = Template.fromStack(new DeployzStack(app, 'DeployzTest'));
+      template.hasResourceProperties('AWS::SNS::Subscription', {
+        Protocol: 'email',
+        Endpoint: 'ops@example.com',
+      });
+    });
+
+    it('treats a blank alert email as unset', () => {
+      const app = new App({ context: { alertEmail: '  ' } });
+      Template.fromStack(new DeployzStack(app, 'DeployzTest')).resourceCountIs('AWS::SNS::Subscription', 0);
+    });
+  });
+
+  describe('termination protection', () => {
+    it('is on for production and off for staging', () => {
+      expect(new DeployzStack(new App(), 'DeployzTest').terminationProtection).toBe(true);
+      expect(
+        new DeployzStack(new App(), 'DeployzStagingTest', { stage: 'staging' }).terminationProtection,
+      ).toBe(false);
     });
   });
 });
