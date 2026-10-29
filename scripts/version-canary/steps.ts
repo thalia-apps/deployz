@@ -10,6 +10,9 @@
  */
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   allowedSizeTiers,
@@ -123,17 +126,22 @@ export function resolveFixtureTags(repo: string): Record<string, { sha: string; 
     const match = /^refs\/tags\/(.+?)(\^\{\})?$/.exec(ref);
     if (match?.[1]) shaByTag.set(match[1], sha);
   }
-  for (const release of FIXTURE_RELEASES) {
-    const sha = shaByTag.get(release.tag);
-    if (!sha) continue;
-    const parent = gh<{ parents: { sha: string }[] }>(`repos/${repo}/commits/${sha}`).parents[0]?.sha ?? '';
-    out[release.tag] = { sha, contentSha: parent };
+  // Git, not the GitHub API: the Actions token's API budget is shared with
+  // every workflow in the repository and runs out during long campaigns.
+  const dir = mkdtempSync(join(tmpdir(), 'canary-fixture-'));
+  try {
+    execFileSync('git', ['init', '--bare', '-q', dir]);
+    for (const release of FIXTURE_RELEASES) {
+      const sha = shaByTag.get(release.tag);
+      if (!sha) continue;
+      execFileSync('git', ['-C', dir, 'fetch', '-q', '--depth=2', `https://github.com/${repo}.git`, sha]);
+      const parent = execFileSync('git', ['-C', dir, 'rev-parse', `${sha}^`], { encoding: 'utf8' }).trim();
+      out[release.tag] = { sha, contentSha: parent };
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
   return out;
-}
-
-function gh<T>(path: string): T {
-  return JSON.parse(execFileSync('gh', ['api', path], { encoding: 'utf8' })) as T;
 }
 
 // ── Vendor + application ───────────────────────────────────────────────────

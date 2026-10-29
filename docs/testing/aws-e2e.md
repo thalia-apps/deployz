@@ -563,13 +563,11 @@ green manual `profile --profile stateless --production` runs.
   provisions a full application stack (VPC, NAT gateway, ALB, ECS Fargate
   service, an RDS instance and, for the `redis` profile, an ElastiCache
   replication group) for the run's duration, plus one CodeBuild image build
-  per release unless `--existing-image` is used — in practice 60-90 minutes
-  end to end; the GitHub Actions job budgets 240 minutes total (120 for the
-  canary step itself, the rest reserved so cleanup — up to 110 minutes —
-  and the leak audit can still finish after a timeout). A `profile` run
-  (including the scheduled production canary) provisions one install plus
-  its retained-RDS teardown, budgeted 300 minutes total (180 for the canary
-  step). `fresh`
+  per release unless `--existing-image` is used — a `core` run took 128
+  minutes before its Disconnect on 2026-10-29; every scenario's GitHub
+  Actions job budgets 300 minutes total (180 for the canary step itself, the
+  rest reserved so cleanup — up to 110 minutes — and the leak audit can
+  still finish after a timeout). `fresh`
   provisions only the bootstrap stack (a Lambda, its IAM role, a Secrets
   Manager secret, an EventBridge schedule) — negligible cost, a few minutes
   of runtime. A leak (a run whose teardown never completed) keeps billing
