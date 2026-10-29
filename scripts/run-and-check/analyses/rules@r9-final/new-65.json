@@ -1,0 +1,3030 @@
+{
+  "id": "new-65",
+  "commit": "7e1eca2ea879a32bdd5e4e75134f35d9b6e476d4",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "heroku.Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: []",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required",
+      "hostChecked": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "celery-worker"
+    },
+    "workers": [
+      {
+        "id": "celery",
+        "command": "celery-worker",
+        "source": "docker-compose.yml celery"
+      },
+      {
+        "id": "celery-export-worker",
+        "command": "celery-exportworker",
+        "source": "docker-compose.yml celery-export-worker"
+      },
+      {
+        "id": "celery-beat-worker",
+        "command": "celery-beat",
+        "source": "docker-compose.yml celery-beat-worker"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "ADDITIONAL_APPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ADDITIONAL_MODULES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_STORAGE_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_ACCOUNT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ABUSE_REPORT_NOTIFICATION_COOLDOWN_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ABUSE_REPORT_THROTTLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ACCESS_TOKEN_LIFETIME_MINUTES",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AMOUNT_OF_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/heroku.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ANONYMOUS_EMAIL_IP_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ANTHROPIC_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ASGI_HTTP_MAX_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ASGI_HTTP_MAX_CONCURRENT_STREAMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_HISTORY_PAGE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_MAX_NODE_DISPATCHES_PER_RUN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_ERROR_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_HISTORY_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_HISTORY_MAX_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_HISTORY_MAX_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_HISTORY_MIN_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_HISTORY_RATE_LIMIT_CACHE_EXPIRY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_MAX_CONSECUTIVE_ERRORS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_RATE_LIMIT_CACHE_EXPIRY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_RATE_LIMIT_MAX_RUNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_RESPONSE_TIMEOUT_MAX_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTOMATION_WORKFLOW_TIMEOUT_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTO_INDEX_LOCK_EXPIRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_AUTO_INDEX_VIEW_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BACKEND_DATABASE_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BACKEND_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BACKEND_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BUILDER_DISPATCH_ACTION_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BUILDER_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BUILDER_PREVIEW_GRANT_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BUILDER_PREVIEW_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_BUILDER_PUBLICLY_USED_PROPERTIES_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHALOT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHALOT_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHALOT_ONLY_CACHABLE_TABLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHALOT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHALOT_UNCACHABLE_TABLES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CACHE_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CAPTCHA_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CELERY_SEARCH_UPDATE_HARD_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CLOUDFLARE_TURNSTILE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CLOUDFLARE_TURNSTILE_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CONCURRENT_USER_REQUESTS_THROTTLE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_CONN_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DANGEROUS_SILKY_ANALYZE_QUERIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DATABASE_BUTTON_DISPATCH_LOCK_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DATABASE_BUTTON_DISPATCH_USER_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DATABASE_BUTTON_DISPATCH_WORKSPACE_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DATABASE_BUTTON_SAMPLE_DATA_MAX_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DATA_SYNC_ALLOW_PRIVATE_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DEADLOCK_INITIAL_BACKOFF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DEADLOCK_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DEFAULT_SEARCH_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DEPENDANT_ROWS_REALTIME_UPDATE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DISABLE_MODEL_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_DJANGO_REQUEST_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_AUTO_RETRY_IF_LIMIT_REACHED_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_DAILY_HOUR_OF_DAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_LIMIT_DAILY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_LIMIT_INSTANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_LIMIT_WEEKLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMAIL_NOTIFICATIONS_WEEKLY_DAY_OF_WEEK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMBEDDED_SHARE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EMBEDDINGS_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ENABLE_CAPTCHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ENABLE_SECURE_PROXY_SSL_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ENABLE_SILK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EXTRA_ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_EXTRA_PUBLIC_URLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_FILE_UPLOAD_ACTIVE_CONTENT_POLICY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_FILE_UPLOAD_SIZE_LIMIT_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_FORMULA_RANGE_MAX_ITEMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_FRONTEND_COOKIE_PREFIX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BASEROW_GROUP_STORAGE_USAGE_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ICAL_VIEW_MAX_EVENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_IMPORT_EXPORT_RESOURCE_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_IMPORT_EXPORT_RESOURCE_REMOVAL_AFTER_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_IMPORT_EXPORT_TABLE_ROWS_COUNT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INBOUND_EMAIL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INBOUND_EMAIL_MAX_MESSAGE_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INBOUND_EMAIL_RECEIVER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INBOUND_EMAIL_RECEIVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INBOUND_EMAIL_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INITIAL_CREATE_SYNC_TABLE_DATA_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATIONS_ALLOW_PRIVATE_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATIONS_HTTP_MAX_RESPONSE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATIONS_PERIODIC_MINUTE_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATIONS_SLACK_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATION_ALLOW_SMTP_SERVICE_TO_USE_INSTANCE_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATION_LOCAL_BASEROW_BATCH_OPERATION_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_INTEGRATION_LOCAL_BASEROW_PAGE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_JOB_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_JOB_EXPIRATION_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_JOB_SOFT_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_JWT_SIGNING_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py",
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BASEROW_LAST_VIEWED_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_LAST_VIEWED_DEBOUNCE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_LAST_VIEWED_UPDATE_INTERVAL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_LOGIN_ACTION_LOG_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_LOG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_CONCURRENT_USER_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_EMAILS_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_FIELD_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_FIELD_TEXT_LENGTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_HEALTHY_CELERY_QUEUE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_NOTIFICATIONS_LISTED_PER_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_ROW_REPORT_ERROR_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_SNAPSHOTS_PER_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MAX_WEBHOOK_CALLS_IN_QUEUE_PER_WEBHOOK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_AUTHORIZE_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_CIMD_ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_CIMD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_DCR_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_REGISTRATION_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OAUTH_TOKEN_RATE_LIMITS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MCP_OPENAI_APPS_CHALLENGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MIGRATION_LOCK_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MISTRAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_MISTRAL_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OAUTH_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OLLAMA_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OLLAMA_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENAI_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENAI_ORGANIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENAI_UPLOADED_FILE_SIZE_LIMIT_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENROUTER_MODELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OPENROUTER_ORGANIZATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OSS_ONLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OTEL_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OTEL_SLOW_CELERY_TASK_THRESHOLD_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_OTEL_SLOW_REQUEST_THRESHOLD_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PERIODIC_FIELD_UPDATE_BATCH_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PERIODIC_FIELD_UPDATE_QUEUE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PERIODIC_FIELD_UPDATE_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PERIODIC_FIELD_UPDATE_UNUSED_WORKSPACE_INTERVAL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PERSONAL_VIEW_LOWEST_ROLE_ALLOWED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PG_FULLTEXT_SEARCH_UPDATE_DATA_THROTTLE_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PG_SEARCH_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PLUGIN_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_POSTGRESQL_DATA_SYNC_BLACKLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_POSTGRESQL_DATA_SYNC_STATEMENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PRESENCE_VISIBLE_USERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PREVENT_POSTGRESQL_DATA_SYNC_CONNECTION_TO_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_PUBLIC_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BASEROW_PUBLIC_URL",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_REALTIME_REPLAY_MAX_EVENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_REALTIME_REPLAY_RETENTION_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_REFRESH_TOKEN_LIFETIME_HOURS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_REQUEST_BODY_SIZE_LIMIT_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ROW_HISTORY_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ROW_HISTORY_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_ROW_PAGE_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SEARCH_UPDATE_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SEND_RESET_PASSWORD_EMAIL_RATE_LIMIT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SEND_VERIFY_EMAIL_RATE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SNAPSHOT_EXPIRATION_TIME_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_STALE_MENTIONS_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SYNC_TEMPLATES_PATTERN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_SYNC_TEMPLATES_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_TESTS_SETUP_DB_FIXTURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/test.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_THROTTLE_BLACKLIST_TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_THROTTLE_IP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_TOTP_ISSUER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_TRIGGER_SYNC_TEMPLATES_AFTER_MIGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_TWO_WAY_SYNC_MAX_CONSECUTIVE_FAILURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_TWO_WAY_SYNC_MAX_RETRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_UNIQUE_ROW_VALUES_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_USER_LOG_ENTRY_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_USER_LOG_ENTRY_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_USE_LOCAL_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_USE_PG_FULLTEXT_SEARCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WAIT_INSTEAD_OF_409_CONFLICT_ERROR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_ALLOW_PRIVATE_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_BATCH_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_IP_BLACKLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_IP_WHITELIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_MAX_CALL_LOG_ENTRIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_MAX_CONSECUTIVE_TRIGGER_FAILURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_MAX_PER_TABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_MAX_RETRIES_PER_CALL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_REQUEST_TIMEOUT_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_URL_CHECK_TIMEOUT_SECS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOKS_URL_REGEX_BLACKLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WEBHOOK_ROWS_ENTER_VIEW_BATCH_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASEROW_WORKSPACE_INVITATION_RATE_LIMITS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BATCH_ROWS_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHALOT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/test.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_BEAT_MAX_LOOP_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_EMAIL_CHUNK_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_REDBEAT_LOCK_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_RESULT_EXPIRES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CELERY_TASK_SOFT_TIME_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_NAME",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DATABASE_PASSWORD",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_USER",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISABLE_ANONYMOUS_PUBLIC_VIEW_WS_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DONT_UPDATE_FORMULAS_AFTER_MIGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMPT_USE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_SSL_CERTFILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_SSL_KEYFILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_USE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SMTP_USE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDINGS_MODEL_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in embeddings/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDINGS_NUM_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in embeddings/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEATURE_FLAGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIELD_RULE_ROWS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GS_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOURS_UNTIL_TRASH_PERMANENTLY_DELETED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INITIAL_TABLE_DATA_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINUTES_UNTIL_ACTION_CLEANED_UP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NUXT_BUILD_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NUXT_PUBLIC_BASEROW_FRONTEND_COOKIE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web-frontend/config/nuxt.config.base.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLD_ACTION_CLEANUP_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_PROJECT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PRIVATE_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUBLIC_WEB_FRONTEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares REDIS_PASSWORD",
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SSL_CA_CERTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SSL_CERT_REQS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_TLS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/heroku.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SECRET_KEY",
+            "read in backend/src/baserow/config/settings/base.py",
+            "read in backend/src/baserow/config/settings/dev.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SENTRY_BACKEND_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py",
+            "sentry requires SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_EXCLUDE_BEAT_TASKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_MONITOR_BEAT_TASKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_TRACES_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNC_TEMPLATES_ON_STARTUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_ENV_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/baserow/config/settings/test.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 3 application services (backend, web-frontend, volume-permissions-fixer). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unconfirmed service: the repository declares redis (redis:6) in docker-compose.yml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 3 application services (backend, web-frontend, volume-permissions-fixer). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares redis (redis:6) in docker-compose.yml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BASEROW_FRONTEND_COOKIE_PREFIX. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

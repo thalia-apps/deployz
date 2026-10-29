@@ -1,0 +1,2000 @@
+{
+  "id": "new-74",
+  "commit": "ba727f1d0bfde4bbfec61c84393cb6a5e88111d5",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_PASS",
+          "kind": "password"
+        },
+        {
+          "name": "OTHER_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "PGHERO_STATS_DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REPLICA_DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REPLICA_DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "REPLICA_DB_PASS",
+          "kind": "password"
+        },
+        {
+          "name": "REPLICA_DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "REPLICA_DB_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "bundle exec sidekiq"
+    },
+    "workers": [
+      {
+        "id": "worker",
+        "command": "bundle exec sidekiq",
+        "source": "Procfile"
+      },
+      {
+        "id": "sidekiq",
+        "command": "bundle exec sidekiq",
+        "source": "docker-compose.yml sidekiq"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
+            ".env.test declares ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY",
+            "read in config/initializers/active_record_encryption.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.development declares ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT",
+            ".env.test declares ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT",
+            "read in config/initializers/active_record_encryption.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.development declares ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY",
+            ".env.test declares ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY",
+            "read in config/initializers/active_record_encryption.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALTERNATE_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/1_hosts.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_CONTAINER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_STORAGE_ACCOUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BIND",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares BIND",
+            "read in config/puma.rb",
+            "read in streaming/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_AUTH_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_CA_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_ENABLE_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_ENABLE_STARTTLS_AUTO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_OPENSSL_VERIFY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BULK_SMTP_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_BUSTER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache_buster.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_BUSTER_HTTP_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/cache_buster.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_BUSTER_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/cache_buster.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CACHE_BUSTER_SECRET_HEADER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/cache_buster.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAS_DISPLAY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/3_omniauth.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/omniauth.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pghero.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares DB_HOST",
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_SSLMODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEEPL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/translation.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DEEPL_PLAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/translation.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_ANNOUNCEMENT_REACTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DONATION_CAMPAIGNS_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DONATION_CAMPAIGNS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_DOMAIN_ALLOWLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/email_domains_lists.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_DOMAIN_BLACKLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/email_domains_lists.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_DOMAIN_DENYLIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/email_domains_lists.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_DOMAIN_WHITELIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/email_domains_lists.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_CA_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/chewy.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares ES_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares ES_HOST",
+            "read in config/initializers/chewy.rb",
+            "read in config/initializers/deprecations.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/chewy.rb",
+            "read in config/initializers/deprecations.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares ES_PORT",
+            "read in config/initializers/chewy.rb",
+            "read in config/initializers/deprecations.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/chewy.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/chewy.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXPERIMENTAL_FEATURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FFMPEG_BINARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/ffmpeg.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FFPROBE_BINARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/ffmpeg.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_REPOSITORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HCAPTCHA_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/captcha.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HCAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/captcha.yml"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_BASE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LDAP_BIND_DN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LDAP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_MAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "LDAP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_SEARCH_FILTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_UID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_UID_CONVERSION_REPLACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_UID_CONVERSION_SEARCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIBRE_TRANSLATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/translation.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LIBRE_TRANSLATE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/translation.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LIMITED_FEDERATION_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.test declares LOCAL_DOMAIN",
+            ".env.vagrant declares LOCAL_DOMAIN",
+            "read in config/email.yml",
+            "read in config/initializers/1_hosts.rb",
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.test declares LOCAL_HTTPS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MASTODON_PROMETHEUS_EXPORTER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/prometheus_exporter.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MASTODON_PROMETHEUS_EXPORTER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/prometheus_exporter.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MASTODON_SIDEKIQ_READY_FILENAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MASTODON_VERSION_METADATA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MASTODON_VERSION_PRERELEASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml",
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MIN_THREADS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.test declares NODE_ENV",
+            "read in app/javascript/mastodon/utils/environment.ts",
+            "read in streaming/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_DISPLAY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/3_omniauth.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/omniauth.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/opentelemetry.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME_SEPARATOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/opentelemetry.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTHER_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pghero.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PAM_CONTROLLED_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAM_DEFAULT_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAM_EMAIL_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/devise.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAPERCLIP_ROOT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PAPERCLIP_ROOT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PERSISTENT_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PGHERO_STATS_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/pghero.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb",
+            "read in streaming/index.js",
+            "read in config/initializers/1_hosts.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PREPARED_STATEMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUERY_LOG_TAGS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/application.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/production.rb",
+            "read in config/initializers/sidekiq.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_NAMESPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/deprecations.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPLICA_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REPLICA_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REPLICA_DB_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REPLICA_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REPLICA_DB_TASKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REPLICA_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REPLICA_PREPARED_STATEMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_CLOUDFRONT_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_KEY_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_MULTIPART_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_OPEN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_PERMISSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_PROTOCOL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_READ_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_RETRY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_SIGNATURE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_DISPLAY_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/3_omniauth.rb"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SAML_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/omniauth.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SELF_DESTRUCT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIDEKIQ_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/sidekiq.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_AUTH_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_CA_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DELIVERY_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_ENABLE_STARTTLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_ENABLE_STARTTLS_AUTO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_OPENSSL_VERIFY_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_REPLY_TO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_RETURN_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/email.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in streaming/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOURCE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOURCE_TAG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STREAMING_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/1_hosts.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_AUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_CACHE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_CONTAINER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_DOMAIN_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_OBJECT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_TEMP_URL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_TENANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWIFT_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/paperclip.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_ENV_NUMBER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXY_IP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in streaming/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPDATE_CHECK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VAGRANT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.vagrant declares VAGRANT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VAPID_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/vapid.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "VAPID_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/vapid.yml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_CONCURRENCY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEB_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/initializers/1_hosts.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHITELIST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mastodon.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 2 application services (web, streaming). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 2 application services (web, streaming). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: LDAP_BASE, LDAP_BIND_DN, LDAP_PASSWORD. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}
