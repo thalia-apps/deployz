@@ -1,0 +1,113 @@
+id: new-193
+repository: apache/kafka
+commit: 601492157a7e563b5cd4cdea8c9382302a1ea5f4
+summary: >
+  Apache Kafka is a distributed event streaming broker written in Java and Scala, built with Gradle. It is a datastore
+  and message broker, not a web application. Clients talk to it over the Kafka binary protocol on TCP port 9092 (and a
+  controller listener on 9093), not HTTP. A broker keeps its log segments in log.dirs on durable disk. The Dockerfiles
+  in docker/ package an already-released kafka.tgz; none builds the broker from the repository source.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Kafka is a message broker server. Its clients use the Kafka binary protocol on 9092 (not HTTP), which the ALB cannot
+    route, and the broker needs a durable data directory (log.dirs, /var/lib/kafka/data in the image) that Fargate does
+    not give a task. Kafka is also named as unsupported in the Deployz MVP. No Dockerfile builds the broker from source:
+    docker/jvm/Dockerfile copies or downloads a release kafka.tgz.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/jvm/Dockerfile, reason: "packages a released kafka.tgz (COPY *kafka.tgz or wget of kafka_url); does not build from repository source"}
+    - {path: docker/native/Dockerfile, reason: "builds a GraalVM native image from a released kafka.tgz, not from repository source"}
+    - {path: docker/docker_official_images/3.7.0/jvm/Dockerfile, reason: "frozen Docker Official Image recipe for release 3.7.0; downloads kafka.tgz"}
+    - {path: tests/docker/Dockerfile, reason: "ducktape system-test node image (ssh server, test tools), not a production image"}
+  target: null
+  context: docker/jvm
+  evidence:
+    - {path: docker/jvm/Dockerfile, line: 31, quote: "COPY *kafka.tgz kafka.tgz"}
+    - {path: docker/jvm/Dockerfile, line: 58, quote: "EXPOSE 9092"}
+    - {path: docker/jvm/Dockerfile, line: 111, quote: "VOLUME [\"/etc/kafka/secrets\", \"/var/lib/kafka/data\", \"/mnt/shared/config\"]"}
+runtime: {accept: [java]}
+port:
+  accept: [9092]
+  evidence:
+    - {path: config/server.properties, line: 37, quote: "listeners=PLAINTEXT://:9092,CONTROLLER://:9093"}
+    - {path: docker/jvm/Dockerfile, line: 58, quote: "EXPOSE 9092"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config/server.properties, line: 37, quote: "listeners=PLAINTEXT://:9092,CONTROLLER://:9093"}
+startCommand:
+  source: explicit
+  accept: ["./bin/kafka-server-start.sh config/server.properties"]
+  evidence:
+    - {path: README.md, line: 148, quote: "./bin/kafka-server-start.sh config/server.properties"}
+    - {path: docker/jvm/Dockerfile, line: 113, quote: "CMD [\"/etc/kafka/docker/run\"]"}
+healthPath:
+  # Kafka has no HTTP endpoint; the listener speaks the Kafka protocol.
+  accept: []
+  evidence:
+    - {path: config/server.properties, line: 37, quote: "listeners=PLAINTEXT://:9092,CONTROLLER://:9093"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Kafka is itself the datastore. KRaft mode keeps metadata in its own log; no SQL database.
+  evidence:
+    - {path: config/server.properties, line: 19, quote: "process.roles=broker,controller"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/kafka/data]
+  s3: none
+  s3SelectBy: {}
+  # Topic data is stored as log segments under log.dirs; the sample config uses /tmp, the image uses /var/lib/kafka/data.
+  evidence:
+    - {path: config/server.properties, line: 73, quote: "log.dirs=/tmp/kraft-combined-logs"}
+    - {path: docker/jvm/Dockerfile, line: 111, quote: "VOLUME [\"/etc/kafka/secrets\", \"/var/lib/kafka/data\", \"/mnt/shared/config\"]"}
+env:
+  required: []
+  optional: [KAFKA_NODE_ID, KAFKA_PROCESS_ROLES, KAFKA_LISTENERS, KAFKA_ADVERTISED_LISTENERS, KAFKA_CONTROLLER_QUORUM_VOTERS, KAFKA_LOG_DIRS, CLUSTER_ID]
+  buildTime: []
+  evidence:
+    - {path: config/server.properties, line: 44, quote: "advertised.listeners=PLAINTEXT://localhost:9092,CONTROLLER://localhost:9093"}
+blockers:
+  expected:
+    - "Kafka is a message broker; clients use the Kafka binary protocol on TCP 9092, not HTTP, so an ALB cannot serve it"
+    - "The broker needs a durable log directory (log.dirs); Fargate task storage is ephemeral"
+    - "No Dockerfile builds the broker from repository source; docker/jvm/Dockerfile needs a released kafka.tgz"
+  mustNot:
+    - "Port 9092 must not be treated as a web port to expose on the ALB"
+    - "A database or Redis must not be reported as required: Kafka is the datastore"
+    - "tests/docker/Dockerfile must not be treated as the application image"
+vendorQuestions:
+  legitimate:
+    - "Is Kafka the message backbone for another application? A Kafka cluster is better run as a managed service (for example Amazon MSK), outside this deployment"
+  unnecessary:
+    - "Which port? (9092)"
+    - "Is a database needed? (no)"
+    - "Which Dockerfile? (none builds from source)"
+traps:
+  - "docker/jvm/Dockerfile looks like a production Dockerfile but needs a kafka.tgz release archive or a kafka_url build argument (docker/jvm/Dockerfile:31)"
+  - "config/server.properties advertises localhost:9092, which is unreachable from other hosts (config/server.properties:44)"
+  - "The default log.dirs is under /tmp, which is lost when the task stops (config/server.properties:73)"
+  - "tests/docker/Dockerfile is a ducktape test image with sshd, not a broker image"
+openQuestions:
+  - "The KAFKA_* environment names of the official image were not read in detail"

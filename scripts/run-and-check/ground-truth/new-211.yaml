@@ -1,0 +1,110 @@
+id: new-211
+repository: mongodb/mongo
+commit: d644650f61270ba375e0725cfe630a33f682c428
+summary: >
+  The MongoDB server repository (mongod, mongos) is a C++ document database built with Bazel. It is a datastore, not a
+  web application. Clients use the MongoDB wire protocol on TCP 27017 and the data lives in a dbpath directory
+  (/data/db). The tree has many Dockerfiles, but all are build-environment, Bazel remote-execution, test (Antithesis),
+  or third-party example images; none builds a production mongod image from the source.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a database server. Its protocol is the MongoDB wire protocol on 27017, not HTTP, and MongoDB is
+    outside the supported datastores. It needs a durable dbpath that Fargate does not provide. No Dockerfile builds
+    a production image of the server from the repo.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "developer container image"}
+    - {path: "bazel/remote_execution_container/*/dockerfile", reason: "Bazel remote-execution build images for amazon_linux_2, amazon_linux_2023, amazon_linux_2023_3, debian12, rhel10, rhel89, rhel93, suse, ubuntu18, ubuntu20, ubuntu22, ubuntu24 and ubuntu26; toolchains, not the app"}
+    - {path: bazel/hermetic_container/Dockerfile.hermetic_container, reason: "hermetic build toolchain image"}
+    - {path: buildscripts/antithesis/base_images/mongo_binaries/Dockerfile, reason: "Antithesis test image; installs gdb and llvm, expects test binaries; exposes the 20000-20100 resmoke ports"}
+    - {path: buildscripts/antithesis/base_images/workload/Dockerfile, reason: "Antithesis workload test image"}
+    - {path: src/third_party/wiredtiger/.devcontainer/Dockerfile, reason: "WiredTiger developer container"}
+    - {path: src/third_party/wiredtiger/tools/antithesis/test_format.dockerfile, reason: "WiredTiger test image"}
+    - {path: "src/third_party/grpc/dist/**", reason: "third-party gRPC examples (examples/cpp/csm, examples/cpp/xds), rake-compiler-dock images and an RBE toolchain image"}
+    - {path: src/third_party/zstandard/zstd/contrib/docker/Dockerfile, reason: "third-party zstd example image"}
+  target: null
+  context: .
+  evidence:
+    - {path: buildscripts/antithesis/base_images/mongo_binaries/Dockerfile, line: 1, quote: "FROM ubuntu:22.04"}
+    - {path: buildscripts/antithesis/base_images/mongo_binaries/Dockerfile, line: 7, quote: "EXPOSE 20000-20100"}
+runtime: {accept: [cpp]}
+port:
+  accept: [27017]
+  evidence:
+    - {path: src/mongo/db/server_options.h, line: 52, quote: "DefaultDBPort = 27017,"}
+    - {path: src/mongo/db/server_options.h, line: 49, quote: "int port = DefaultDBPort;            // --port"}
+bindAllInterfaces:
+  # mongod binds localhost unless net.bindIp is set.
+  value: false
+  evidence:
+    - {path: src/mongo/db/server_options.h, line: 66, quote: "std::vector<std::string> bind_ips;  // --bind_ip"}
+startCommand:
+  source: explicit
+  accept: ["mongod --bind_ip 0.0.0.0 --dbpath /data/db"]
+  evidence:
+    - {path: README.md, line: 37, quote: "$ ./mongod"}
+    - {path: src/mongo/db/storage/storage_options.h, line: 45, quote: "std::string dbpath;"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # The server is the database (WiredTiger storage engine).
+  evidence:
+    - {path: README.md, line: 7, quote: "- `mongod` - The database server."}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data/db]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: README.md, line: 36, quote: "$ sudo mkdir -p /data/db"}
+    - {path: src/mongo/db/storage/storage_options.h, line: 45, quote: "std::string dbpath;"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is the MongoDB database server; clients use the MongoDB wire protocol on 27017, not HTTP"
+    - "MongoDB is not a supported datastore and the server needs a durable dbpath (/data/db)"
+    - "No Dockerfile builds a production server image; all Dockerfiles are build, test or third-party images"
+  mustNot:
+    - "buildscripts/antithesis/base_images/mongo_binaries/Dockerfile must not be accepted as the app image: it is a test image with gdb and llvm that EXPOSEs 20000-20100"
+    - "A bazel/remote_execution_container Dockerfile must not be accepted: they are compiler toolchains"
+vendorQuestions:
+  legitimate:
+    - "Is MongoDB being deployed as the database for another application? MongoDB is not a supported Deployz datastore"
+  unnecessary:
+    - "Which Dockerfile? (none builds the server)"
+    - "Which health path? (mongod has no HTTP health route)"
+traps:
+  - "Many Dockerfiles exist (about 40), almost all in bazel/remote_execution_container and src/third_party; none is an application image"
+  - "README says to create /data/db before starting mongod (README.md:36)"
+  - "The Antithesis image creates /data/db and /data/configdb, which looks like a server image but only prepares a test environment (mongo_binaries/Dockerfile:10)"
+openQuestions:
+  - "The loopback default for bind_ip was taken from MongoDB's documented behaviour, not read from the option default in this tree"

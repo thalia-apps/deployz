@@ -1,0 +1,144 @@
+id: new-231
+repository: woodpecker-ci/woodpecker
+commit: dc56f5bc624c71b8c6ae703cde6819870b79a40f
+summary: >
+  Woodpecker is a Go CI/CD system with a server (HTTP API and Vue web UI on 8000, gRPC for agents on 9000) and separate
+  agents that pull jobs from the server over gRPC and run each pipeline step in a container (Docker backend through the
+  Docker socket, or a Kubernetes backend). The server needs a forge (GitHub, Gitea, Forgejo, GitLab, Bitbucket) set up
+  with OAuth. The database is sqlite by default (a file) and PostgreSQL or MySQL are supported by one driver setting;
+  schema migrations run at server start. The server Dockerfiles copy a pre-built woodpecker-server binary from dist/ and
+  do not build it; only the agent and CLI Dockerfiles compile Go inside the image.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The web service alone is deployable in shape (one image, HTTP on 8000, PostgreSQL), but the product is a CI system
+    that does nothing without agents. Agents connect to the server on a second non-HTTP port (gRPC 9000) and run pipeline
+    steps through a Docker socket (or Kubernetes), which Fargate cannot give (no Docker socket, no privileged containers,
+    no Docker-in-Docker). The server Dockerfiles copy a pre-built binary, so no repository Dockerfile builds the server
+    from source. The default sqlite file is lost with the task unless PostgreSQL or MySQL is used.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile.server.multiarch.rootless, reason: "server image; copies a pre-built dist/server binary (scratch base), no build stage"}
+    - {path: docker/Dockerfile.server.alpine.multiarch.rootless, reason: "server image; copies a pre-built dist/server binary, no build stage"}
+    - {path: docker/Dockerfile.agent.multiarch, reason: "builds the agent (CI runner), not the web application"}
+    - {path: docker/Dockerfile.agent.alpine.multiarch, reason: "builds the agent (CI runner), not the web application"}
+    - {path: docker/Dockerfile.cli.multiarch.rootless, reason: "builds the command-line client, not a server"}
+    - {path: docker/Dockerfile.cli.alpine.multiarch.rootless, reason: "builds the command-line client, not a server"}
+    - {path: docker/Dockerfile.make, reason: "build toolchain image (go, node, pnpm, make); no application"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile.server.multiarch.rootless, line: 34, quote: "COPY dist/server/${TARGETOS}_${TARGETARCH}/woodpecker-server /bin/"}
+    - {path: docker/Dockerfile.server.alpine.multiarch.rootless, line: 17, quote: "COPY dist/server/${TARGETOS}_${TARGETARCH}/woodpecker-server /bin/"}
+    - {path: docker/Dockerfile.agent.multiarch, line: 17, quote: "make build-agent"}
+    - {path: Makefile, line: 241, quote: "build-server: build-ui generate-openapi ## Build server"}
+runtime: {accept: [go]}
+port:
+  # 8000 is the HTTP listener; 9000 is gRPC for agents; 80 and 443 are optional built-in TLS listeners.
+  accept: [8000]
+  evidence:
+    - {path: cmd/server/flags.go, line: 75, quote: "Value:   \":8000\","}
+    - {path: cmd/server/flags.go, line: 123, quote: "Value:   \":9000\","}
+    - {path: docker/Dockerfile.server.multiarch.rootless, line: 29, quote: "EXPOSE 8000 9000 80 443"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: cmd/server/flags.go, line: 75, quote: "Value:   \":8000\","}
+startCommand:
+  source: image
+  accept: ["/bin/woodpecker-server"]
+  evidence:
+    - {path: docker/Dockerfile.server.multiarch.rootless, line: 39, quote: "ENTRYPOINT [\"/bin/woodpecker-server\"]"}
+healthPath:
+  # 204 when the database ping works, 500 otherwise; the image HEALTHCHECK uses /api/healthz through "woodpecker-server ping".
+  accept: ["/healthz", "/api/healthz"]
+  evidence:
+    - {path: server/router/router.go, line: 70, quote: "base.GET(\"/healthz\", api.Health)"}
+    - {path: server/api/z.go, line: 38, quote: "if err := store.FromContext(c).Ping(); err != nil {"}
+    - {path: cmd/server/health.go, line: 47, quote: "healthURL := fmt.Sprintf(\"%s://%s/api/healthz\", scheme, serverAddr)"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {WOODPECKER_DATABASE_DRIVER: "postgres | mysql"}
+  connectionVars: [WOODPECKER_DATABASE_DRIVER, WOODPECKER_DATABASE_DATASOURCE]
+  evidence:
+    - {path: cmd/server/flags.go, line: 365, quote: "Value:   \"sqlite3\","}
+    - {path: cmd/server/flags.go, line: 370, quote: "cli.EnvVar(\"WOODPECKER_DATABASE_DATASOURCE\"),"}
+    - {path: server/store/datastore/init.go, line: 26, quote: "DriverMysql    = \"mysql\""}
+    - {path: server/store/datastore/init.go, line: 27, quote: "DriverPostgres = \"postgres\""}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: cmd/server/setup.go, line: 93, quote: "if err := store.Migrate(ctx, c.Bool(\"migrations-allow-long\")); err != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: ["woodpecker-agent"]
+  # Agents are a separate image and role; they dial the server on gRPC 9000 and run steps through a Docker socket or Kubernetes.
+  evidence:
+    - {path: cmd/agent/core/flags.go, line: 30, quote: "Sources: cli.EnvVars(\"WOODPECKER_SERVER\"),"}
+    - {path: cmd/agent/core/flags.go, line: 140, quote: "Sources: cli.EnvVars(\"WOODPECKER_BACKEND\"),"}
+    - {path: pipeline/backend/docker/docker.go, line: 81, quote: "_, err := os.Stat(\"/var/run/docker.sock\")"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/var/lib/woodpecker]
+  s3: none
+  s3SelectBy: {}
+  # Only the default sqlite file lives on disk; with PostgreSQL or MySQL the server keeps no durable local data.
+  evidence:
+    - {path: cmd/server/flags.go, line: 693, quote: "return \"/var/lib/woodpecker/woodpecker.sqlite\""}
+    - {path: docker/Dockerfile.server.multiarch.rootless, line: 27, quote: "ENV XDG_DATA_HOME=/var/lib/woodpecker"}
+env:
+  required:
+    - {name: WOODPECKER_HOST, secret: false, buildTime: false, note: "public server URL, used for OAuth callbacks and agent webhooks"}
+    - {name: WOODPECKER_AGENT_SECRET, secret: true, buildTime: false, note: "shared secret between server and agents"}
+    - {name: WOODPECKER_DATABASE_DRIVER, secret: false, buildTime: false, note: "postgres or mysql; the default sqlite file is lost with the task"}
+    - {name: WOODPECKER_DATABASE_DATASOURCE, secret: true, buildTime: false, note: "connection string"}
+    - {name: WOODPECKER_GITHUB_CLIENT, secret: false, buildTime: false, note: "OAuth client of the chosen forge; the GITLAB, GITEA and FORGEJO forms exist"}
+    - {name: WOODPECKER_GITHUB_SECRET, secret: true, buildTime: false, note: "OAuth secret of the chosen forge"}
+  optional: [WOODPECKER_ADMIN, WOODPECKER_OPEN, WOODPECKER_SERVER_ADDR, WOODPECKER_GRPC_ADDR, WOODPECKER_FORGE_URL, WOODPECKER_SESSION_EXPIRES]
+  buildTime: []
+  evidence:
+    - {path: cmd/server/flags.go, line: 67, quote: "Sources: cli.EnvVars(\"WOODPECKER_HOST\"),"}
+    - {path: cmd/server/flags.go, line: 282, quote: "cli.EnvVar(\"WOODPECKER_AGENT_SECRET\"),"}
+    - {path: cmd/server/flags.go, line: 495, quote: "cli.EnvVar(\"WOODPECKER_GITHUB_CLIENT\"),"}
+    - {path: cmd/server/flags.go, line: 520, quote: "cli.EnvVar(\"WOODPECKER_GITHUB_SECRET\"),"}
+blockers:
+  expected:
+    - "Agents are required to run any pipeline; they connect on gRPC port 9000 (a second, non-HTTP port) and run steps through a Docker socket or Kubernetes, which Fargate does not give"
+    - "No Dockerfile builds the server from source: both server Dockerfiles copy a pre-built dist/server binary, and the web UI is built by make build-ui (pnpm)"
+    - "A forge OAuth application is required before a user can log in"
+  mustNot:
+    - "Port 9000 must not be treated as the web port: the HTTP port is 8000"
+    - "Redis must not be expected: Woodpecker has no Redis"
+    - "The agent or CLI Dockerfiles must not be selected as the application image"
+    - "MySQL or PostgreSQL must not be required: sqlite is the default driver"
+vendorQuestions:
+  legitimate:
+    - "Which forge (GitHub, Gitea, GitLab) and which OAuth client will the server use?"
+    - "Where will the agents run, given they need a Docker socket or Kubernetes?"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Which health path? (/healthz)"
+    - "Which database engines are supported? (sqlite, postgres, mysql)"
+traps:
+  - "The server Dockerfiles look like production Dockerfiles but have no build step (docker/Dockerfile.server.multiarch.rootless:34); the build is make build-server on the CI host"
+  - "The agent and CLI Dockerfiles do compile Go inside the image, so a reader may pick them by mistake"
+  - "The image HEALTHCHECK runs the binary with the ping command, not an HTTP path (docker/Dockerfile.server.multiarch.rootless:38)"
+  - "The server image runs as user woodpecker (uid 1000) on a scratch base with no shell"
+openQuestions:
+  - "Whether the server alone, with PostgreSQL and agents hosted elsewhere, is an acceptable deployment for the customer; the outcome treats the agent requirement as a blocker"
+  - "The WOODPECKER_GITHUB boolean that enables the GitHub forge was not traced to its flag line"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: the server Dockerfiles copy a prebuilt binary and the agents are a separate service: CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}

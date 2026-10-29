@@ -1,0 +1,137 @@
+id: new-206
+repository: Infisical/infisical
+commit: f943528f8f51d469fa6ef4ccb62d84d14b291cb8
+summary: >
+  Infisical is a secrets management platform: a Fastify and TypeScript backend plus a Vite React frontend. The root
+  Dockerfile.standalone-infisical builds both from source into one image where the backend serves the built frontend on
+  port 8080. PostgreSQL and Redis are required. The backend runs database migrations at startup and runs background
+  queues (BullMQ) in the same process by default. Docker Compose, Kubernetes and an ECS guide are in docs/.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One image from a repository Dockerfile serves the whole product (API and UI) on one HTTP port, with a health route
+    that needs no login. It needs only PostgreSQL, Redis and four secrets (ENCRYPTION_KEY, AUTH_SECRET,
+    DB_CONNECTION_URI, REDIS_URL). Migrations and queue workers run inside the web process. No durable local disk is
+    used. Docs include an AWS ECS guide that uses the same image and /api/status.
+dockerfile:
+  accept: [Dockerfile.standalone-infisical]
+  reject:
+    - {path: backend/Dockerfile, reason: "backend API only: no frontend, listens on 4000; the standalone image is the full product"}
+    - {path: Dockerfile.fips.standalone-infisical, reason: "FIPS variant of the standalone image with a different crypto stack; the plain standalone image is the default"}
+    - {path: backend/Dockerfile.dev, reason: "development image"}
+    - {path: backend/Dockerfile.dev.fips, reason: "FIPS development image"}
+    - {path: backend/Dockerfile.fips-toolchain, reason: "build toolchain image for FIPS"}
+    - {path: backend-go/Dockerfile.dev, reason: "development image for the Go helper service"}
+    - {path: backend-go/Dockerfile.dev.fips, reason: "FIPS development image for the Go helper service"}
+    - {path: backend-go/docker-test/Dockerfile, reason: "test image"}
+    - {path: frontend/Dockerfile.dev, reason: "development image"}
+    - {path: docs/Dockerfile, reason: "documentation site image"}
+    - {path: tests/cmd/fakenet/Dockerfile, reason: "test helper image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile.standalone-infisical, line: 189, quote: "FROM base AS production"}
+    - {path: Dockerfile.standalone-infisical, line: 276, quote: "COPY --from=frontend-runner /app ./backend/frontend-build"}
+    - {path: .github/workflows/release-standalone-docker-img-postgres-offical.yml, line: 85, quote: "file: Dockerfile.standalone-infisical"}
+    - {path: backend/Dockerfile, line: 112, quote: "EXPOSE 4000"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile.standalone-infisical, line: 305, quote: "ENV PORT 8080"}
+    - {path: Dockerfile.standalone-infisical, line: 318, quote: "EXPOSE 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile.standalone-infisical, line: 306, quote: "ENV HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["./standalone-entrypoint.sh", "node --enable-source-maps dist/main.mjs"]
+  evidence:
+    - {path: Dockerfile.standalone-infisical, line: 324, quote: "CMD [\"./standalone-entrypoint.sh\"]"}
+    - {path: standalone-entrypoint.sh, line: 5, quote: "exec node --enable-source-maps dist/main.mjs"}
+healthPath:
+  accept: ["/api/status"]
+  evidence:
+    - {path: backend/src/server/routes/index.ts, line: 5098, quote: "url: \"/api/status\","}
+    - {path: docs/self-hosting/deployment-options/aws-native.mdx, line: 404, quote: "--health-check-path /api/status \\"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DB_CONNECTION_URI, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME]
+  evidence:
+    - {path: backend/src/lib/config/env.ts, line: 259, quote: "DB_CONNECTION_URI: zpStr(z.string().describe(\"Postgres database connection string\")).default("}
+    - {path: docker-compose.prod.yml, line: 36, quote: "image: postgres:14-alpine"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/src/main.ts, line: 85, quote: "await runMigrations({"}
+redis:
+  status: required
+  selectBy: {REDIS_URL: url}
+  evidence:
+    - {path: backend/src/lib/config/env.ts, line: 743, quote: "(data) => Boolean(data.REDIS_URL) || Boolean(data.REDIS_SENTINEL_HOSTS) || Boolean(data.REDIS_CLUSTER_HOSTS),"}
+    - {path: backend/src/lib/config/env.ts, line: 744, quote: "\"Either REDIS_URL, REDIS_SENTINEL_HOSTS or REDIS_CLUSTER_HOSTS  must be defined.\""}
+workers:
+  status: embedded
+  commands: []
+  # INFISICAL_RUN_MODES defaults to all modes in one process; it can split API and worker pods from the same image, which a minimal deployment does not need.
+  evidence:
+    - {path: backend/src/lib/config/env.ts, line: 50, quote: "(val ?? Object.values(RunMode).join(\",\"))"}
+    - {path: backend/src/main.ts, line: 94, quote: "const queue = queueServiceFactory(envConfig);"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {OBJECT_STORAGE_S3_BUCKET: bucket name}
+  # The instance bucket is optional and offers default storage only when set; secrets live in PostgreSQL.
+  evidence:
+    - {path: backend/src/lib/config/env.ts, line: 164, quote: "OBJECT_STORAGE_S3_BUCKET: zpStr("}
+env:
+  required:
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "root encryption key; documented as 16-byte hex (openssl rand -hex 16); losing it makes stored secrets unreadable"}
+    - {name: AUTH_SECRET, secret: true, buildTime: false, note: "JWT signing secret"}
+    - {name: DB_CONNECTION_URI, secret: true, buildTime: false, note: "PostgreSQL connection string"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "Redis or Valkey URL"}
+    - {name: SITE_URL, secret: false, buildTime: false, note: "public https URL; used for links in email and redirects"}
+  optional: [PORT, HOST, DB_READ_REPLICAS, SMTP_HOST, SMTP_PORT, TELEMETRY_ENABLED, INFISICAL_RUN_MODES, OBJECT_STORAGE_S3_BUCKET, OBJECT_STORAGE_S3_REGION, REDIS_SENTINEL_HOSTS]
+  buildTime: [INFISICAL_CLI_VERSION, INFISICAL_PLATFORM_VERSION, POSTHOG_API_KEY]
+  evidence:
+    - {path: docs/self-hosting/configuration/envars.mdx, line: 7, quote: "at least `ENCRYPTION_KEY`, `AUTH_SECRET`, `DB_CONNECTION_URI`, and `REDIS_URL` must be defined."}
+    - {path: backend/src/lib/config/env.ts, line: 414, quote: "SITE_URL: zpStr(z.string().transform((val) => (val ? removeTrailingSlash(val) : val))).optional(),"}
+    - {path: Dockerfile.standalone-infisical, line: 5, quote: "ARG INFISICAL_CLI_VERSION=0.44.6"}
+blockers:
+  expected:
+    - "PostgreSQL and Redis are both required; the process exits at start when REDIS_URL (or sentinel or cluster hosts) is missing"
+    - "ENCRYPTION_KEY and AUTH_SECRET must be set once and kept; no safe default exists"
+  mustNot:
+    - "Port must not be reported as 4000: that is backend/Dockerfile (API only); the standalone image uses 8080"
+    - "The FIPS Dockerfile must not be the default image"
+    - "MySQL must not be expected: PostgreSQL only"
+    - "A separate worker service must not be required: queues run in the web process by default"
+    - "Durable local disk must not be reported: no volume is needed"
+vendorQuestions:
+  legitimate:
+    - "Which public URL (SITE_URL) will the site use, and who sets the first admin account?"
+    - "Where are ENCRYPTION_KEY and AUTH_SECRET stored so they survive redeploys?"
+  unnecessary:
+    - "Which Dockerfile? (Dockerfile.standalone-infisical)"
+    - "Is Redis needed? (yes)"
+    - "Is a worker service needed? (no, embedded by default)"
+traps:
+  - "backend/Dockerfile looks like the production backend image but has no frontend and listens on 4000 (backend/Dockerfile:112)"
+  - "The standalone build sets NODE_OPTIONS --max-old-space-size=8192 for the frontend and backend builds, so the build host needs several GB of memory (Dockerfile.standalone-infisical:41)"
+  - "The build downloads the Oracle Instant Client and installs the infisical CLI from artifacts-cli.infisical.com, so it needs outbound internet (Dockerfile.standalone-infisical:74, :207)"
+  - "The entrypoint runs update-ca-certificates; the image runs as UID 1001 and chowns /etc/ssl/certs for that reason (standalone-entrypoint.sh:3)"
+  - "DB_CONNECTION_URI defaults to a string built from DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (env.ts:259)"
+  - "docker-compose.prod.yml maps host port 80 to 8080 and uses postgres:14 (docker-compose.prod.yml:16)"
+openQuestions:
+  - "Whether the Deployz build host has enough memory for the 8 GB Node heap setting of the standalone build"

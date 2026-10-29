@@ -1,0 +1,139 @@
+id: new-208
+repository: keycloak/keycloak
+commit: ef10c1db1c401fc952e0dbd31bae46353cd516df
+summary: >
+  Keycloak is a Java (Quarkus) identity and access management server built with Maven. It is a normal HTTP web
+  application: it listens on 8080 (HTTP) and 8443 (HTTPS), has a separate management port 9000 for health and metrics,
+  and stores all data in a relational database (PostgreSQL, MySQL, MariaDB and others). The repository has no Dockerfile
+  that builds the server from source. quarkus/container/Dockerfile downloads a prebuilt keycloak tar.gz from GitHub
+  releases (default version 999.0.0-SNAPSHOT, which is not a release), and operator/Dockerfile copies a
+  pre-built target/quarkus-app directory.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The server itself fits the MVP: one HTTP service, PostgreSQL or MySQL, no durable local disk when an external
+    database is used (the default dev-file database is development only), and sessions use the database through the
+    jdbc-ping cache stack. A deployable Dockerfile does not exist: both Dockerfiles in the repository take a prebuilt
+    distribution. The needed change is a new multi-stage Dockerfile that runs the Maven wrapper (-Pdistribution, JDK 21)
+    and then runs kc.sh build for the chosen database. That is a heavy source build, so NOT_DEPLOYABLE is also
+    accepted. The preferred answer is DEPLOYABLE_WITH_CHANGES.
+dockerfile:
+  accept: []
+  reject:
+    - {path: quarkus/container/Dockerfile, reason: "does not build from the repo source: ADD of a keycloak tar.gz from GitHub releases (KEYCLOAK_DIST), default version 999.0.0-SNAPSHOT is not a release; local use needs a tar.gz built by Maven first"}
+    - {path: operator/Dockerfile, reason: "Kubernetes operator image; copies a pre-built target/quarkus-app directory and is not the server"}
+    - {path: operator/scripts/Dockerfile-custom-image, reason: "example that runs kc.sh build on top of an existing keycloak image ($IMAGE:$VERSION)"}
+  target: null
+  context: .
+  evidence:
+    - {path: quarkus/container/Dockerfile, line: 3, quote: "ARG KEYCLOAK_VERSION=999.0.0-SNAPSHOT"}
+    - {path: quarkus/container/Dockerfile, line: 4, quote: "ARG KEYCLOAK_DIST=https://github.com/keycloak/keycloak/releases/download/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.tar.gz"}
+    - {path: quarkus/container/Dockerfile, line: 8, quote: "ADD $KEYCLOAK_DIST /tmp/keycloak/"}
+    - {path: operator/Dockerfile, line: 11, quote: "ADD --chown=1000:0 target/quarkus-app/ /opt/keycloak"}
+    - {path: docs/building.md, line: 34, quote: "./mvnw clean install -DskipTests -Pdistribution"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/HttpOptions.java, line: 35, quote: ".defaultValue(8080)"}
+    - {path: quarkus/container/Dockerfile, line: 36, quote: "EXPOSE 8080"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/HttpOptions.java, line: 22, quote: "In prod mode or when running on Windows Subsystem For Linux the default is to bind to all network addresses (0.0.0.0)"}
+startCommand:
+  # ENTRYPOINT is kc.sh and the arguments are the command. `start` is the production mode; `start-dev` is development.
+  source: explicit
+  accept: ["/opt/keycloak/bin/kc.sh start --optimized", "/opt/keycloak/bin/kc.sh start"]
+  evidence:
+    - {path: quarkus/container/Dockerfile, line: 40, quote: "ENTRYPOINT [ \"/opt/keycloak/bin/kc.sh\" ]"}
+    - {path: docs/guides/server/containers.adoc, line: 194, quote: "start --optimized --hostname=localhost"}
+healthPath:
+  # /health/* is on the management port 9000 unless http-management-health-enabled=false. It also needs the build option
+  # health-enabled. The realm discovery page on 8080 needs no option and no login.
+  accept: ["/realms/master", "/health/ready"]
+  evidence:
+    - {path: docs/guides/observability/health.adoc, line: 12, quote: "The {project_name} health checks are exposed on the management port `9000` by default."}
+    - {path: docs/guides/observability/health.adoc, line: 14, quote: "the health endpoints will remain on the main HTTP(S) ports"}
+database:
+  status: required
+  engines: [postgres, mysql]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {KC_DB: vendor}
+  connectionVars: [KC_DB, KC_DB_URL, KC_DB_USERNAME, KC_DB_PASSWORD]
+  # The vendor is a build-time option: kc.sh build --db=postgres. The default dev-file (H2 on local disk) is development only.
+  evidence:
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/DatabaseOptions.java, line: 35, quote: ".defaultValue(\"dev-file\")"}
+    - {path: docs/guides/server/db.adoc, line: 21, quote: "only exists for development use-cases"}
+    - {path: docs/guides/server/containers.adoc, line: 191, quote: "podman|docker run --name mykeycloak -p 8443:8443 -p 9000:9000 \\"}
+migrations:
+  # Not read in detail: the server is assumed to create and update its schema at start.
+  mode: startup
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/CachingOptions.java, line: 74, quote: "Defaults to 'jdbc-ping' if not set."}
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: quarkus/container/Dockerfile, line: 16, quote: "mkdir -p /opt/keycloak/data"}
+    - {path: docs/guides/server/db.adoc, line: 20, quote: "By default, the server uses the `dev-file` database."}
+env:
+  required:
+    - {name: KC_DB, secret: false, buildTime: true, note: "postgres or mysql; build option, so it must be set when kc.sh build runs"}
+    - {name: KC_DB_URL, secret: false, buildTime: false, note: "JDBC URL of the RDS database"}
+    - {name: KC_DB_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: KC_DB_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: KC_HOSTNAME, secret: false, buildTime: false, note: "public URL of the server"}
+    - {name: KC_HTTP_ENABLED, secret: false, buildTime: false, note: "true, because the ALB ends TLS and forwards plain HTTP"}
+    - {name: KC_PROXY_HEADERS, secret: false, buildTime: false, note: "xforwarded behind the ALB"}
+    - {name: KC_BOOTSTRAP_ADMIN_USERNAME, secret: false, buildTime: false, note: "first admin user"}
+    - {name: KC_BOOTSTRAP_ADMIN_PASSWORD, secret: true, buildTime: false, note: "first admin password"}
+  optional: [KC_HEALTH_ENABLED, KC_METRICS_ENABLED, KC_HTTP_PORT, KC_HTTP_MANAGEMENT_HEALTH_ENABLED, KC_CACHE_STACK]
+  buildTime: [KC_DB, KC_HEALTH_ENABLED, KC_METRICS_ENABLED, KC_FEATURES]
+  evidence:
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/BootstrapAdminOptions.java, line: 11, quote: "\"bootstrap-admin-password\""}
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/ProxyOptions.java, line: 12, quote: "\"proxy-headers\""}
+    - {path: quarkus/config-api/src/main/java/org/keycloak/config/HttpOptions.java, line: 14, quote: "\"http-enabled\""}
+    - {path: docs/guides/server/reverseproxy.adoc, line: 23, quote: "Configure `--proxy-headers`"}
+blockers:
+  expected:
+    - "No Dockerfile builds Keycloak from the repository source: quarkus/container/Dockerfile downloads a release tar.gz and operator/Dockerfile copies a pre-built directory"
+    - "A new Dockerfile must run the Maven wrapper with the distribution profile (JDK 17, 21 or 25) and then kc.sh build with --db for PostgreSQL or MySQL"
+  mustNot:
+    - "Port 9000 must not be reported as a second public port; it is the management port and can stay private"
+    - "A database must not be called optional for production; dev-file is development only"
+    - "Redis must not be reported as required: clustering uses Infinispan with the jdbc-ping stack on the database"
+    - "quarkus/container/Dockerfile must not be accepted as a source-build Dockerfile; its default version 999.0.0-SNAPSHOT has no release to download"
+vendorQuestions:
+  legitimate:
+    - "Which public hostname (KC_HOSTNAME) will users use?"
+    - "Which initial admin user and password should be created?"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Which database engine? (PostgreSQL or MySQL, set at build time)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The container Dockerfile looks official but ADDs a release tarball; with the default 999.0.0-SNAPSHOT the URL does not exist (quarkus/container/Dockerfile:4)"
+  - "KC_DB is a build option (DatabaseOptions.buildTime); the documented optimized image runs kc.sh build with KC_DB set (docs/guides/server/containers.adoc:60)"
+  - "Behind the ALB the server gets plain HTTP: it needs the http-enabled and proxy-headers options and a hostname (docs/guides/server/reverseproxy.adoc:23)"
+  - "Health endpoints live on port 9000 and need KC_HEALTH_ENABLED=true at build time (docs/guides/observability/health.adoc:12)"
+  - "operator/Dockerfile is the Kubernetes operator, not the server"
+openQuestions:
+  - "How long and how large the Maven source build is on a standard builder was not measured"
+  - "That the server creates its own schema at first start was assumed, not read in code"

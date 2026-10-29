@@ -1,0 +1,125 @@
+id: new-204
+repository: hashicorp/vault
+commit: 352089582444ea84feb03bc97eda97b35729e8ec
+summary: >
+  HashiCorp Vault is a Go secrets-management server with an HTTP API on 8200 (and a cluster port 8201). It is an
+  infrastructure server, not a customer web application. The root Dockerfile does not build Vault: its builder stage is a
+  CGO cross-compile toolchain, and the default and ubi images copy a prebuilt binary from dist/. The image default is
+  "server -dev", an in-memory server with a dev root token. A real server needs an HCL configuration (listener and storage),
+  a one-time operator init, and an unseal on every start. Storage backends include raft (local disk), postgresql, mysql,
+  s3 and dynamodb. scripts/docker/Dockerfile does build a dev binary from source (make bootstrap, scripts/build.sh).
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Vault is a secrets server that must be initialised and unsealed by an operator through its own API. Without a KMS
+    auto-unseal, every task restart leaves it sealed and /v1/sys/health returns 503 (sealed) or 501 (uninitialised). Its
+    default container command is the in-memory dev server. The root Dockerfile copies a prebuilt binary, so only
+    scripts/docker/Dockerfile builds from the repository, and only as a dev build. With a postgresql storage backend and a
+    config passed through VAULT_LOCAL_CONFIG, no durable disk is needed, so DEPLOYABLE_WITH_CHANGES is accepted as an
+    edge case. NOT_DEPLOYABLE is the main answer because of the init and unseal ceremony and the server role.
+dockerfile:
+  accept: [scripts/docker/Dockerfile]
+  reject:
+    - {path: Dockerfile, reason: "builder stage is a CGO cross-compile toolchain; default and ubi stages copy a prebuilt binary from dist/"}
+    - {path: scripts/cross/Dockerfile, reason: "debian buster cross-compile toolchain image with Go 1.13"}
+    - {path: scripts/docker/Dockerfile.ui, reason: "builder-only UI variant for linux/amd64 on debian buster"}
+    - {path: vault/testdata/Dockerfile, reason: "test plugin container image"}
+  target: null
+  context: .
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 8, quote: "FROM golang:${VERSION} AS builder"}
+    - {path: scripts/docker/Dockerfile, line: 16, quote: "RUN make bootstrap \\"}
+    - {path: scripts/docker/Dockerfile, line: 32, quote: "COPY --from=builder /go/src/github.com/hashicorp/vault/bin/vault /bin/vault"}
+    - {path: Dockerfile, line: 99, quote: "COPY dist/$TARGETOS/$TARGETARCH/${BIN_NAME} /bin/${BIN_NAME}"}
+runtime: {accept: [go]}
+port:
+  accept: [8200]
+  evidence:
+    - {path: Dockerfile, line: 121, quote: "EXPOSE 8200"}
+    - {path: .release/docker/docker-entrypoint.sh, line: 61, quote: "-dev-listen-address=\"${VAULT_DEV_LISTEN_ADDRESS:-\"0.0.0.0:8200\"}\" \\"}
+bindAllInterfaces:
+  # Only the dev listen address is set by the entrypoint; a real listener comes from the HCL config.
+  value: true
+  evidence:
+    - {path: .release/docker/docker-entrypoint.sh, line: 61, quote: "-dev-listen-address=\"${VAULT_DEV_LISTEN_ADDRESS:-\"0.0.0.0:8200\"}\" \\"}
+startCommand:
+  source: image
+  accept: ["server -dev", "vault server -config=/vault/config"]
+  evidence:
+    - {path: scripts/docker/Dockerfile, line: 69, quote: "CMD [\"server\", \"-dev\"]"}
+    - {path: .release/docker/docker-entrypoint.sh, line: 46, quote: "echo \"$VAULT_LOCAL_CONFIG\" > \"$VAULT_CONFIG_DIR/local.json\""}
+healthPath:
+  # Default codes: 503 sealed, 501 uninitialised; the query parameters sealedcode and uninitcode change them.
+  accept: ["/v1/sys/health"]
+  evidence:
+    - {path: http/sys_health.go, line: 129, quote: "sealedCode := http.StatusServiceUnavailable"}
+    - {path: http/sys_health.go, line: 122, quote: "uninitCode := http.StatusNotImplemented"}
+database:
+  status: conditional
+  engines: [postgres, mysql]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [VAULT_PG_CONNECTION_URL]
+  # Optional storage backend. The default image runs in memory (dev) and raft would need local disk.
+  # The postgresql backend does not create its table: the code has no CREATE TABLE statement.
+  evidence:
+    - {path: physical/postgresql/postgresql.go, line: 101, quote: "unquoted_table = \"vault_kv_store\""}
+    - {path: physical/postgresql/postgresql.go, line: 215, quote: "if envURL := os.Getenv(\"VAULT_PG_CONNECTION_URL\"); envURL != \"\" {"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/vault/file, /vault/logs]
+  s3: native
+  s3SelectBy: {}
+  # Dev mode is in memory. The file and raft backends use local disk; postgresql, mysql, dynamodb and s3 backends do not.
+  evidence:
+    - {path: Dockerfile, line: 102, quote: "# desired; /vault/file is made available to use as a location with the file"}
+    - {path: Dockerfile, line: 134, quote: "# # By default you'll get a single-node development server that stores everything"}
+env:
+  required:
+    - {name: VAULT_LOCAL_CONFIG, secret: false, buildTime: false, note: "HCL or JSON with listener and storage; written to /vault/config/local.json by the entrypoint"}
+  optional: [VAULT_PG_CONNECTION_URL, VAULT_API_ADDR, VAULT_CLUSTER_ADDR, VAULT_DEV_ROOT_TOKEN_ID, VAULT_DEV_LISTEN_ADDRESS]
+  buildTime: [VERSION]
+  evidence:
+    - {path: .release/docker/docker-entrypoint.sh, line: 45, quote: "if [ -n \"$VAULT_LOCAL_CONFIG\" ]; then"}
+    - {path: scripts/docker/Dockerfile, line: 6, quote: "ARG VERSION"}
+blockers:
+  expected:
+    - "Vault is a secrets server that needs a one-time init and an unseal after every start; a sealed Vault fails the ALB health check with 503"
+    - "The root Dockerfile does not build Vault: it copies a prebuilt binary from dist/"
+    - "The default command is server -dev, an in-memory dev server that loses all secrets on restart"
+    - "A real deployment needs an HCL configuration for the listener and the storage backend"
+  mustNot:
+    - "Port 8201 (cluster) must not be treated as the app port"
+    - "A database must not be reported as required in all cases: dev mode has none, and raft or file storage use local disk"
+    - "scripts/cross/Dockerfile and the root builder stage must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is Vault being deployed as a secrets backend for other applications? It needs init and unseal steps that Deployz does not run, and a storage backend (for example PostgreSQL with a manually created table)"
+  unnecessary:
+    - "Which port? (8200)"
+    - "Which health path? (/v1/sys/health)"
+traps:
+  - "The root Dockerfile looks production-ready but copies dist/ binaries and has a CGO builder stage as stage one (Dockerfile:24,99)"
+  - "scripts/docker/Dockerfile requires the build argument VERSION as a Go image tag (scripts/docker/Dockerfile:8)"
+  - "The entrypoint adds -dev-root-token-id and -dev-listen-address to every server command, so only the dev listener is set by default (docker-entrypoint.sh:61)"
+  - "The container recommends the IPC_LOCK capability and the entrypoint runs setcap on the binary (docker-entrypoint.sh:97)"
+  - "The postgresql backend expects a table created by the operator; the backend code has no CREATE statement (physical/postgresql/postgresql.go:101)"
+openQuestions:
+  - "Whether a KMS auto-unseal (awskms seal) could remove the manual unseal; not read in detail, and Deployz does not create a KMS key"

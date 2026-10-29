@@ -1,0 +1,156 @@
+id: new-226
+repository: seaweedfs/seaweedfs
+commit: ec43f4ca00c5d295ba6058aa3d178a53aa848d69
+summary: >
+  SeaweedFS is a Go distributed file and object store (master, volume server, filer, S3 gateway, WebDAV, admin). It is a
+  datastore, not a web application. The official image runs "weed mini -dir=/data", one process that starts master, volume,
+  filer, S3 and admin on several ports (master 9333, volume 8080, filer 8888, S3 8333, plus gRPC ports at +10000). File
+  data lives in volume files under /data, which must be durable. The filer metadata can use an external store (for
+  example MySQL), but the volume data cannot. Docker/Dockerfile.go_build, the production image file, clones SeaweedFS from
+  GitHub during the build and needs CI-prebuilt Rust binary directories, so it does not build the checked-out source.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    SeaweedFS is a storage server. Object data is written to volume files in a local data directory (mini -dir=/data),
+    which is durable-disk state that Fargate does not provide. The server exposes many ports (master, volume, filer, S3,
+    WebDAV, gRPC) and uses internal gRPC between its roles, so one HTTP port does not describe it. No Dockerfile builds the
+    app from the repository source with a simple context: go_build clones upstream over the network, the local and e2e
+    files copy a prebuilt weed binary, and the rest are test or toolchain images.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile.go_build, reason: "official image; clones SeaweedFS from GitHub (git clone) instead of using the context, and COPYs weed-volume-prebuilt/ and weed-worker-prebuilt/ directories made by CI"}
+    - {path: docker/Dockerfile.local, reason: "copies a prebuilt ./weed binary"}
+    - {path: docker/Dockerfile.e2e, reason: "end-to-end test image; copies a prebuilt ./weed"}
+    - {path: docker/Dockerfile.rocksdb_large, reason: "RocksDB variant; clones SeaweedFS and RocksDB from GitHub"}
+    - {path: docker/Dockerfile.rocksdb_large_local, reason: "RocksDB variant built on the chrislusf/rocksdb_dev_env image"}
+    - {path: docker/Dockerfile.rocksdb_dev_env, reason: "RocksDB build environment image"}
+    - {path: docker/Dockerfile.foundationdb_large, reason: "FoundationDB variant that needs the FoundationDB client libraries"}
+    - {path: docker/Dockerfile.s3tests, reason: "Ceph s3-tests test runner image"}
+    - {path: docker/Dockerfile.tarantool.dev_env, reason: "Tarantool development environment image"}
+    - {path: docker/admin_integration/Dockerfile.local, reason: "integration test image that copies weed-local"}
+    - {path: telemetry/server/Dockerfile, reason: "separate telemetry collector service, not the SeaweedFS server"}
+    - {path: test/foundationdb/Dockerfile.build, reason: "FoundationDB test build image"}
+    - {path: test/foundationdb/Dockerfile.build.arm64, reason: "FoundationDB test build image"}
+    - {path: test/foundationdb/Dockerfile.fdb-arm64, reason: "FoundationDB test image"}
+    - {path: test/foundationdb/Dockerfile.test, reason: "FoundationDB test image"}
+    - {path: test/kafka/Dockerfile.kafka-gateway, reason: "Kafka gateway test image"}
+    - {path: test/kafka/Dockerfile.seaweedfs, reason: "Kafka test image"}
+    - {path: test/kafka/Dockerfile.test-setup, reason: "Kafka test image"}
+    - {path: test/kafka/kafka-client-loadtest/Dockerfile.loadtest, reason: "load test image"}
+    - {path: test/kafka/kafka-client-loadtest/Dockerfile.seaweedfs, reason: "load test image"}
+    - {path: test/kafka/kafka-client-loadtest/Dockerfile.seektest, reason: "load test image"}
+    - {path: test/pjdfstest/Dockerfile, reason: "POSIX file system test image"}
+    - {path: test/postgres/Dockerfile.client, reason: "test client image"}
+    - {path: test/postgres/Dockerfile.producer, reason: "test producer image"}
+    - {path: test/postgres/Dockerfile.seaweedfs, reason: "test image"}
+    - {path: test/s3/compatibility/Dockerfile, reason: "S3 compatibility test image"}
+    - {path: test/s3/iam/Dockerfile.s3, reason: "S3 IAM test image"}
+    - {path: test/s3/proxy_signature/Dockerfile, reason: "S3 proxy signature test image"}
+    - {path: test/s3tables/catalog/Dockerfile.lance, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog/Dockerfile.pyiceberg, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_clickhouse/Dockerfile.writer, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_doris/Dockerfile.writer, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_dremio/Dockerfile.writer, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_duckdb_lance/Dockerfile.seed, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_lancedb/Dockerfile.client, reason: "S3 Tables test image"}
+    - {path: test/s3tables/catalog_olake/Dockerfile.reader, reason: "S3 Tables test image"}
+    - {path: test/s3tables/lifecycle/Dockerfile.lance, reason: "S3 Tables test image"}
+    - {path: test/s3tables/lifecycle/Dockerfile.pyiceberg, reason: "S3 Tables test image"}
+    - {path: test/s3tables/unity_catalog/Dockerfile.delta-rs, reason: "S3 Tables test image"}
+    - {path: test/samba/Dockerfile, reason: "Samba test image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile.go_build, line: 8, quote: "RUN git clone --no-single-branch --tags https://github.com/seaweedfs/seaweedfs /go/src/github.com/seaweedfs/seaweedfs"}
+    - {path: docker/Dockerfile.go_build, line: 34, quote: "COPY weed-volume-prebuilt/ /prebuilt/"}
+    - {path: docker/Dockerfile.local, line: 3, quote: "COPY  ./weed /usr/bin/weed"}
+runtime: {accept: [go]}
+port:
+  # master 9333, volume 8080, filer 8888, S3 8333, WebDAV 7333, plus gRPC ports.
+  accept: [8333, 9333]
+  evidence:
+    - {path: docker/Dockerfile.go_build, line: 107, quote: "EXPOSE 8333"}
+    - {path: docker/Dockerfile.go_build, line: 105, quote: "EXPOSE 9333"}
+    - {path: docker/Dockerfile.go_build, line: 101, quote: "EXPOSE 8888"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: weed/command/mini.go, line: 402, quote: "miniBindIp                      = cmdMini.Flag.String(\"ip.bind\", \"0.0.0.0\","}
+startCommand:
+  source: image
+  accept: ["weed mini -dir=/data"]
+  evidence:
+    - {path: docker/Dockerfile.go_build, line: 121, quote: "ENTRYPOINT [\"/entrypoint.sh\"]"}
+    - {path: docker/Dockerfile.go_build, line: 126, quote: "CMD [\"mini\", \"-dir=/data\"]"}
+healthPath:
+  # The master (9333) and the volume server (8080) both answer /healthz.
+  accept: ["/healthz"]
+  evidence:
+    - {path: weed/server/master_server.go, line: 238, quote: "r.HandleFunc(\"/healthz\", requestIDMiddleware(ms.healthzHandler))"}
+    - {path: weed/server/volume_server.go, line: 162, quote: "adminMux.HandleFunc(\"/healthz\", requestIDMiddleware(vs.healthzHandler))"}
+database:
+  # Filer metadata defaults to an embedded leveldb2 store on disk. External SQL stores (for example MySQL) exist for the filer only.
+  status: optional
+  engines: [mysql, postgres]
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: docker/filer.toml, line: 1, quote: "[leveldb2]"}
+    - {path: docker/filer.toml, line: 3, quote: "dir = \"/data/filerldb2\""}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Volume files hold the object data and must be on durable disk; S3 is only a gateway API and a tiering target here.
+  local: required
+  paths: [/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: docker/Dockerfile.go_build, line: 117, quote: "VOLUME /data"}
+    - {path: docker/Dockerfile.go_build, line: 112, quote: "RUN mkdir -p /data/filerldb2 && \\"}
+    - {path: weed/command/mini.go, line: 364, quote: "weed mini -dir=/data        # Custom data directory"}
+env:
+  required: []
+  optional: []
+  buildTime: [BRANCH, TAGS]
+  evidence:
+    - {path: docker/Dockerfile.go_build, line: 6, quote: "ARG BRANCH=${BRANCH:-master}"}
+blockers:
+  expected:
+    - "SeaweedFS is a storage server (datastore); volume data needs durable local disk and Fargate storage is ephemeral"
+    - "No Dockerfile builds the checked-out source: docker/Dockerfile.go_build clones upstream and needs CI-prebuilt directories; the others copy a prebuilt weed or are test images"
+    - "Several roles and ports (master, volume, filer, S3, WebDAV, gRPC) run in one process and are reached by each other and by clients"
+  mustNot:
+    - "A database must not be reported as required: the default filer metadata store is embedded leveldb on disk"
+    - "Port 8333 alone must not be treated as sufficient: the S3 gateway needs the master and volume roles to store data"
+    - "Test, FoundationDB, RocksDB and Kafka Dockerfiles must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is SeaweedFS being deployed as the object store for another application? It needs durable disk and several ports and is better replaced by Amazon S3"
+  unnecessary:
+    - "Which port? (S3 is 8333)"
+    - "Which Dockerfile? (none builds the source cleanly)"
+traps:
+  - "docker/Dockerfile.go_build looks like the production Dockerfile but builds a clone of upstream from GitHub, not the repository checkout (docker/Dockerfile.go_build:8)"
+  - "The image default command is mini, a single-process cluster for small and dev use (weed/command/mini.go:344)"
+  - "The EXPOSE list has eight ports; gRPC ports are the HTTP port plus 10000 (weed/command/mini.go:57)"
+  - "The repository has more than 40 Dockerfiles, almost all under test/ and docker/ for tests"
+openQuestions:
+  - "Whether weed s3 alone with an external filer would match a Deployz service; the filer and volume servers would still be separate durable services"

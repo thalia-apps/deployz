@@ -1,0 +1,106 @@
+id: new-225
+repository: redis/redis
+commit: a76a3689a0706dcec7955051e09bdba8dc7cefd8
+summary: >
+  Redis is a C in-memory data-structure server (redis-server). It is a datastore, not a web application. It speaks the
+  RESP protocol on TCP 6379 and, with the default redis.conf, binds to loopback with protected mode on. The only
+  Dockerfile is docker/Dockerfile.noble, a build environment (compilers and module prerequisites) that does not copy
+  the Redis source or build redis-server; the README tells users to run the prebuilt official image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a key-value server. Clients use RESP on 6379, which is not HTTP and cannot sit behind the ALB.
+    The only Dockerfile is a build-environment image with no server build or start. Deployz already provides
+    ElastiCache Valkey for apps that need Redis; it does not host the Redis server. Local disk (dump.rdb, AOF) is
+    optional, but the protocol and the missing production image decide the outcome.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile.noble, reason: "Ubuntu 24.04 build environment: installs compilers and module prerequisites; the Redis source is mounted at run time with -v, nothing is built; no CMD or ENTRYPOINT"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile.noble, line: 1, quote: "# OSNICK=noble — Ubuntu 24.04 Redis build environment."}
+    - {path: docker/Dockerfile.noble, line: 50, quote: "# Only the manifest + module helper scripts are baked into the image — the"}
+    - {path: docker/Dockerfile.noble, line: 51, quote: "# Redis source tree, Makefile, redis.conf, and the per-module clones are"}
+runtime: {accept: [c]}
+port:
+  accept: [6379]
+  evidence:
+    - {path: redis.conf, line: 139, quote: "port 6379"}
+    - {path: src/config.c, line: 3642, quote: "createIntConfig(\"port\", NULL, MODIFIABLE_CONFIG, 0, 65535, server.port, 6379,"}
+bindAllInterfaces:
+  # redis.conf binds loopback; protected-mode is on.
+  value: false
+  evidence:
+    - {path: redis.conf, line: 88, quote: "bind 127.0.0.1 -::1"}
+    - {path: redis.conf, line: 112, quote: "protected-mode yes"}
+startCommand:
+  source: explicit
+  accept: ["./src/redis-server redis.conf"]
+  evidence:
+    - {path: README.md, line: 207, quote: "> `./src/redis-server redis.conf`. Release tarballs bake the bundled modules'"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Redis is the datastore; the data set is in memory.
+  evidence:
+    - {path: redis.conf, line: 1545, quote: "appendonly no"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  # The repository is Redis, not a client of it.
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Persistence is optional (RDB snapshots by default, AOF off); the data set is in memory.
+  local: conditional
+  paths: ["./"]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: redis.conf, line: 604, quote: "dir ./"}
+    - {path: redis.conf, line: 581, quote: "dbfilename dump.rdb"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is the Redis server; clients use RESP on 6379, not HTTP"
+    - "The only Dockerfile (docker/Dockerfile.noble) is a build environment that does not build or start redis-server"
+  mustNot:
+    - "docker/Dockerfile.noble must not be accepted as the app Dockerfile, even though the README recommends it for building"
+    - "ElastiCache Valkey must not be offered as a way to deploy this repository: the repository is the Redis engine itself"
+    - "Local disk must not be reported as the blocker: persistence is optional"
+vendorQuestions:
+  legitimate:
+    - "Is Redis being deployed as the cache for another app? Use the managed ElastiCache Valkey in Deployz instead"
+  unnecessary:
+    - "Which port? (6379)"
+    - "Which health path? (redis-server has no HTTP endpoint)"
+traps:
+  - "README recommends docker/Dockerfile.noble as the build environment (README.md:248); it is a toolchain, not a runtime image"
+  - "README quick start uses the official redis:latest image from Docker Hub, not this repository (README.md:93)"
+  - "A git checkout needs redis-full.conf for bundled modules; redis.conf alone omits loadmodule lines (README.md:207-212)"
+openQuestions:
+  - "None that change the outcome"

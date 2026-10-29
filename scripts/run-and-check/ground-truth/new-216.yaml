@@ -1,0 +1,118 @@
+id: new-216
+repository: openbao/openbao
+commit: aa6c08db956753b1b8b2e6d46a6b504f69fc5786
+summary: >
+  OpenBao is the open-source Vault fork: a Go secrets-management server with an HTTP API on 8200. It is an
+  infrastructure server, not a customer web application. The only application Dockerfile has three runtime stages
+  (default alpine, ubi, distroless) that copy a prebuilt binary from bin/${TARGETARCH}/bao; nothing builds Bao from source.
+  The default command is "server -dev -dev-no-store-token", an in-memory server. A real server needs an HCL
+  configuration, a one-time init and an unseal. Storage backends in this version are raft and pebbledb (local disk),
+  postgresql and inmem. The PostgreSQL backend creates its tables itself, and a static seal can auto-unseal from an
+  environment key.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    OpenBao is a secrets server that must be initialised once through its own API and holds a root token and unseal
+    material. No Dockerfile builds it from the repository (the Dockerfile copies bin/${TARGETARCH}/bao), the default
+    command is the in-memory dev server, and the real configuration is an HCL file for listener and storage. With the
+    postgresql backend and a static seal no durable disk is needed, so DEPLOYABLE_WITH_CHANGES (a new Dockerfile plus a
+    config) is accepted as an edge case. NOT_DEPLOYABLE is the main answer because of the server role and the init step.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "copies a prebuilt binary from bin/${TARGETARCH}/bao into alpine, ubi and distroless stages; no build stage"}
+    - {path: website/Dockerfile, reason: "documentation site (Docusaurus) development server image, not the OpenBao server"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 18, quote: "COPY --chmod=555 bin/${TARGETARCH}/bao /usr/bin/bao"}
+    - {path: Dockerfile, line: 21, quote: "AS default"}
+    - {path: Dockerfile, line: 128, quote: "ENTRYPOINT [\"/usr/bin/bao\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [8200]
+  evidence:
+    - {path: Dockerfile, line: 46, quote: "EXPOSE 8200"}
+bindAllInterfaces:
+  # The entrypoint dev listener defaults to 0.0.0.0:8200; the Go dev flag default is 127.0.0.1:8200.
+  value: true
+  evidence:
+    - {path: .release/docker/docker-entrypoint.sh, line: 30, quote: "export BAO_REDIRECT_ADDR=$(get_addr $BAO_REDIRECT_INTERFACE ${BAO_REDIRECT_ADDR:-\"http://0.0.0.0:8200\"})"}
+    - {path: internal/command/server.go, line: 243, quote: "Default: \"127.0.0.1:8200\","}
+startCommand:
+  source: image
+  accept: ["server -dev -dev-no-store-token", "bao server -config=/openbao/config"]
+  evidence:
+    - {path: Dockerfile, line: 58, quote: "CMD [\"server\", \"-dev\", \"-dev-no-store-token\"]"}
+    - {path: .release/docker/docker-entrypoint.sh, line: 46, quote: "echo \"$BAO_LOCAL_CONFIG\" > \"$BAO_CONFIG_DIR/local.json\""}
+healthPath:
+  # Default codes: 503 sealed, 501 uninitialised; the query parameters sealedcode and uninitcode change them.
+  accept: ["/v1/sys/health"]
+  evidence:
+    - {path: internal/http/sys_health.go, line: 96, quote: "sealedCode := http.StatusServiceUnavailable"}
+database:
+  status: conditional
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # Optional storage backend; the default image is in memory (dev). The backend creates its own tables unless skip_create_table is set.
+  evidence:
+    - {path: internal/physical/postgresql/postgresql.go, line: 117, quote: "unquotedTable = \"openbao_kv_store\""}
+    - {path: internal/physical/postgresql/postgresql.go, line: 266, quote: "rawSkipCreateTable, ok := conf[\"skip_create_table\"]"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/openbao/file, /openbao/logs]
+  s3: none
+  s3SelectBy: {}
+  # Dev mode is in memory. The raft and pebbledb backends use local disk; the postgresql backend does not.
+  evidence:
+    - {path: Dockerfile, line: 35, quote: "# desired; /openbao/file is made available to use as a location with the file"}
+    - {path: .release/linux/package/etc/openbao/openbao.hcl, line: 6, quote: "storage \"pebbledb\" {"}
+env:
+  required:
+    - {name: BAO_LOCAL_CONFIG, secret: false, buildTime: false, note: "HCL or JSON with listener and storage; written to /openbao/config/local.json by the entrypoint"}
+  optional: [BAO_REDIRECT_ADDR, BAO_API_ADDR]
+  buildTime: [TARGETARCH]
+  evidence:
+    - {path: .release/docker/docker-entrypoint.sh, line: 45, quote: "if [ -n \"$BAO_LOCAL_CONFIG\" ]; then"}
+blockers:
+  expected:
+    - "No Dockerfile builds OpenBao: the Dockerfile copies a prebuilt bin/${TARGETARCH}/bao"
+    - "OpenBao is a secrets server that needs a one-time init through its own API and an unseal (or a static seal) on every start; a sealed server fails the ALB health check with 503"
+    - "The default command is server -dev, an in-memory server that loses all data on restart"
+    - "A real deployment needs an HCL configuration for listener and storage"
+  mustNot:
+    - "A database must not be reported as required in all cases: dev mode has none, and raft or pebbledb use local disk"
+    - "website/Dockerfile must not be treated as the application image"
+    - "MySQL must not be reported as a storage backend: internal/physical has only inmem, pebbledb, postgresql and raft"
+vendorQuestions:
+  legitimate:
+    - "Is OpenBao being deployed as a secrets backend for other applications? It needs init and unseal steps that Deployz does not run, and a PostgreSQL or local-disk storage backend"
+  unnecessary:
+    - "Which port? (8200)"
+    - "Which health path? (/v1/sys/health)"
+traps:
+  - "The Dockerfile has three runtime stages (default, ubi, distroless) and all copy a prebuilt binary from the helper stage bin (Dockerfile:16,31,80,120)"
+  - "The default command is the dev server with an in-memory store (Dockerfile:56-58)"
+  - ".release/linux/package/etc/openbao/openbao.hcl is the deb package config with the pebbledb storage on /opt/openbao/data, not a container config (openbao.hcl:6)"
+  - "website/Dockerfile is a documentation development server that looks like a web app image (website/Dockerfile:15)"
+openQuestions:
+  - "Whether the static seal (seal \"static\" with an environment key) works end to end for auto-unseal in this version; seen only in a test fixture and an RFC page"

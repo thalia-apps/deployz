@@ -1,0 +1,128 @@
+id: new-219
+repository: passbolt/passbolt_api
+commit: 5de65b8491b925fdf500e1b06e1f6fafa3b7bc29
+summary: >
+  Passbolt API is the CakePHP 5 (PHP >= 8.2, ext-gnupg required) back end of the Passbolt password manager. It reads
+  its database, URL, and mail settings from environment variables (MySQL by default, PostgreSQL supported). It also needs
+  an OpenPGP server key pair (paths or fingerprint from PASSBOLT_GPG_SERVER_KEY_* variables) and JWT signing keys that
+  are only read from fixed files in config/jwt. The repository has no Dockerfile (the official image is a separate
+  project); its only Dockerfile-like files are DDEV development snippets. Emails are queued in the database and sent by
+  a cron script.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The app is a normal stateless PHP web app (database, optional Redis, no local data that must be kept except avatars
+    in tmp/avatars). It can only be deployed after a repository change: add a Dockerfile (PHP with gnupg, Apache or
+    nginx with PHP-FPM, composer install) and an entrypoint that writes the GPG server key and the JWT key pair from
+    secrets into files and runs "cake passbolt install". That is a larger change than a plain Dockerfile, so
+    NOT_DEPLOYABLE is also defensible. DEPLOYABLE alone is wrong: no Dockerfile exists.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .ddev/web-build/Dockerfile.claude-code, reason: "DDEV development web image snippet that installs a coding tool"}
+    - {path: .ddev/web-build/Dockerfile.ddev-cron, reason: "DDEV development web image snippet for cron"}
+    - {path: .ddev/web-build/pre.Dockerfile.spx, reason: "DDEV development web image snippet for the SPX profiler"}
+  target: null
+  context: .
+  evidence:
+    - {path: CLAUDE.md, line: 15, quote: "- Start DDEV: `ddev start`"}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8080]
+  evidence:
+    - {path: webroot/index.php, line: 1, quote: "<?php"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  # No image exists; the new Dockerfile runs a web server with PHP-FPM and webroot/ as document root.
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: webroot/index.php, line: 1, quote: "<?php"}
+healthPath:
+  accept: ["/healthcheck/status.json", "/healthcheck/status"]
+  evidence:
+    - {path: config/routes.php, line: 163, quote: "$routes->scope('/healthcheck', function ($routes) {"}
+    - {path: src/Controller/Healthcheck/HealthcheckStatusController.php, line: 49, quote: "throw new ServiceUnavailableException();"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DATASOURCES_DEFAULT_DRIVER: driver class}
+  connectionVars: [DATASOURCES_DEFAULT_HOST, DATASOURCES_DEFAULT_PORT, DATASOURCES_DEFAULT_USERNAME, DATASOURCES_DEFAULT_PASSWORD, DATASOURCES_DEFAULT_DATABASE]
+  evidence:
+    - {path: config/app.default.php, line: 301, quote: "'driver' => env('DATASOURCES_DEFAULT_DRIVER', Mysql::class),"}
+    - {path: config/passbolt.default.php, line: 60, quote: "'host' => env('DATASOURCES_DEFAULT_HOST', 'localhost'),"}
+    - {path: CLAUDE.md, line: 11, quote: "MySQL 5.7 & 8, MariaDB >= 10.4, and Postgres > 14"}
+migrations:
+  mode: command
+  accept: ["bin/cake passbolt install --no-admin", "bin/cake passbolt migrate"]
+  evidence:
+    - {path: src/Command/InstallCommand.php, line: 118, quote: "->addOption('no-admin', ["}
+    - {path: src/Command/MigrateCommand.php, line: 1, quote: "<?php"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: config/app.default.php, line: 104, quote: "'className' => env('CACHE_DEFAULT_CLASSNAME', FileEngine::class),"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: required
+  items: ["bin/cron (email digest send, every minute)"]
+  evidence:
+    - {path: bin/cron, line: 9, quote: '"$DIR"/cake passbolt email_digest send'}
+storage:
+  local: conditional
+  paths: [tmp/avatars, config/jwt, config/gpg]
+  s3: none
+  s3SelectBy: {}
+  # Avatars use a local Flysystem adapter in tmp/avatars (lost on restart, rebuilt as default images); keys are config files.
+  evidence:
+    - {path: src/Model/Table/AvatarsTable.php, line: 320, quote: "return new LocalFilesystemAdapter(TMP . 'avatars');"}
+    - {path: plugins/PassboltCe/JwtAuthentication/src/Service/AccessToken/JwtAbstractService.php, line: 24, quote: "public const JWT_CONFIG_DIR = CONFIG . 'jwt' . DS;"}
+    - {path: config/default.php, line: 233, quote: "'public' => env('PASSBOLT_GPG_SERVER_KEY_PUBLIC', CONFIG . 'gpg' . DS . 'serverkey.asc'),"}
+env:
+  required:
+    - {name: APP_FULL_BASE_URL, secret: false, buildTime: false, note: "public https URL"}
+    - {name: DATASOURCES_DEFAULT_HOST, secret: false, buildTime: false, note: ""}
+    - {name: DATASOURCES_DEFAULT_USERNAME, secret: false, buildTime: false, note: ""}
+    - {name: DATASOURCES_DEFAULT_PASSWORD, secret: true, buildTime: false, note: ""}
+    - {name: DATASOURCES_DEFAULT_DATABASE, secret: false, buildTime: false, note: ""}
+    - {name: SECURITY_SALT, secret: true, buildTime: false, note: "default is the placeholder __SALT__; also used as an encryption key"}
+    - {name: PASSBOLT_GPG_SERVER_KEY_FINGERPRINT, secret: false, buildTime: false, note: "fingerprint of a generated server key; public and private key files must exist at the PASSBOLT_GPG_SERVER_KEY_PUBLIC and PASSBOLT_GPG_SERVER_KEY_PRIVATE paths (config/gpg/serverkey*.asc by default, which are not in the repository; only unsecure.key test keys are)"}
+  optional: [DATASOURCES_DEFAULT_PORT, DATASOURCES_DEFAULT_DRIVER, EMAIL_TRANSPORT_DEFAULT_HOST, EMAIL_TRANSPORT_DEFAULT_PORT, EMAIL_TRANSPORT_DEFAULT_USERNAME, EMAIL_TRANSPORT_DEFAULT_PASSWORD, EMAIL_DEFAULT_FROM, PASSBOLT_SSL_FORCE, SESSION_DEFAULTS, PASSBOLT_PLUGINS_JWT_AUTHENTICATION_ENABLED]
+  buildTime: []
+  evidence:
+    - {path: config/app.default.php, line: 83, quote: "'salt' => env('SECURITY_SALT', '__SALT__'),"}
+    - {path: config/app.default.php, line: 60, quote: "'fullBaseUrl' => env('APP_FULL_BASE_URL', false),"}
+    - {path: config/default.php, line: 232, quote: "'fingerprint' => env('PASSBOLT_GPG_SERVER_KEY_FINGERPRINT', null),"}
+    - {path: plugins/PassboltCe/JwtAuthentication/src/Service/AccessToken/JwtTokenCreateService.php, line: 29, quote: "public const JWT_SECRET_KEY_PATH = self::JWT_CONFIG_DIR . 'jwt.key';"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository; the official image is a separate project"
+    - "JWT signing keys are read only from fixed files config/jwt/jwt.key and jwt.pem, and the OpenPGP server key pair must exist as files; an entrypoint must write them from secrets so all tasks share the same keys"
+    - "ext-gnupg and the gpg binary must be in the image"
+  mustNot:
+    - "The DDEV snippets under .ddev/web-build must not be chosen as the Dockerfile"
+    - "Redis must not be reported as required"
+    - "The test keys config/gpg/unsecure.key must not be used as production keys"
+vendorQuestions:
+  legitimate:
+    - "Who generates and stores the OpenPGP server key and the JWT key pair? Every task must use the same keys"
+  unnecessary:
+    - "Which database? (MySQL default, PostgreSQL supported)"
+    - "Is Redis needed? (no)"
+traps:
+  - "config/gpg/unsecure.key and unsecure_private.key are development keys, not production keys"
+  - "Sessions default to PHP files (app.default.php:454); with more than one task set SESSION_DEFAULTS to database"
+  - "Email is queued in the database and only sent when bin/cron runs"
+  - "The web installer plugin (plugins/PassboltCe/WebInstaller) exists, but its choices are written to local files"
+  - "The default cache engine is FileEngine on local tmp/cache, which is fine as a rebuildable cache"
+openQuestions:
+  - "The web server port is not fixed by the repository; 80 is assumed for a php:apache image"
+  - "Whether the WebInstaller plugin writes passbolt.php to local disk was not checked in detail; the CLI install path is assumed"

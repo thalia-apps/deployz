@@ -1,0 +1,138 @@
+id: new-194
+repository: BookStackApp/BookStack
+commit: 045c6a98cac21ea86906674bb91d01f375460db6
+summary: >
+  BookStack is a Laravel (PHP 8.3) documentation wiki. It needs MySQL (or MariaDB), an APP_KEY, and an APP_URL. The
+  repository has no production Dockerfile: dev/docker/Dockerfile is a development image (php:8.5-apache with xdebug and
+  composer) that expects the source to be mounted at /app, and the compose file says it is for development only. A
+  production image must run composer install, build the front end with npm (the "production" script) and serve
+  public/ with Apache or nginx plus PHP-FPM. Sessions and cache default to files, the queue is sync, and images and
+  attachments default to local disk, but STORAGE_TYPE=s3 moves uploads to S3 and the session, cache, and queue drivers can
+  use the database or Redis, so the app can run stateless.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    A normal PHP web app with MySQL. It only lacks a production Dockerfile (the only one is a dev image that mounts the
+    source and runs composer install at start), so a small safe repository change adds one. Uploads can go to S3
+    (STORAGE_TYPE=s3) and sessions to the database, so no durable local disk is needed. No Redis, worker, or scheduler is
+    required.
+dockerfile:
+  accept: []
+  reject:
+    - {path: dev/docker/Dockerfile, reason: "development image: php:8.5-apache with xdebug, git and composer; no COPY of the source (the compose file mounts ./ at /app); composer install runs at container start"}
+    - {path: dev/docker/db-testing/Containerfile, reason: "ubuntu image for database test runs, not the application"}
+  target: null
+  context: .
+  evidence:
+    - {path: dev/docker/Dockerfile, line: 1, quote: "FROM php:8.5-apache"}
+    - {path: dev/docker/Dockerfile, line: 24, quote: "pecl install xdebug && \\"}
+    - {path: dev/docker/Dockerfile, line: 39, quote: 'ENV APACHE_DOCUMENT_ROOT="/app/public"'}
+    - {path: docker-compose.yml, line: 2, quote: "# intended for development purposes only"}
+    - {path: docker-compose.yml, line: 37, quote: "- ./:/app"}
+runtime: {accept: [php]}
+port:
+  # A new Dockerfile on php:apache listens on 80; nothing in the repository fixes another port.
+  accept: [80]
+  evidence:
+    - {path: docker-compose.yml, line: 35, quote: "- ${DEV_PORT:-8080}:80"}
+    - {path: dev/docker/Dockerfile, line: 1, quote: "FROM php:8.5-apache"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: dev/docker/Dockerfile, line: 1, quote: "FROM php:8.5-apache"}
+startCommand:
+  # No image of the app exists, so the new Dockerfile decides. The dev entrypoint ends with apache2-foreground.
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: dev/docker/entrypoint.app.sh, line: 14, quote: "exec apache2-foreground"}
+healthPath:
+  # /status returns JSON for database, cache, and session; the home page needs a login or redirects.
+  accept: ["/status"]
+  evidence:
+    - {path: routes/web.php, line: 26, quote: "Route::get('/status', [SettingControllers\\StatusController::class, 'show']);"}
+    - {path: app/Settings/StatusController.php, line: 20, quote: "return DB::table('migrations')->count() > 0;"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DB_CONNECTION: mysql}
+  connectionVars: [DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD]
+  evidence:
+    - {path: app/Config/database.php, line: 59, quote: "'default' => env('DB_CONNECTION', 'mysql'),"}
+    - {path: app/Config/database.php, line: 58, quote: "// Options: mysql, mysql_testing"}
+    - {path: .env.example.complete, line: 64, quote: "DB_HOST=localhost"}
+migrations:
+  mode: command
+  accept: ["php artisan migrate --force"]
+  evidence:
+    - {path: dev/docker/entrypoint.app.sh, line: 12, quote: "php artisan migrate --database=mysql --force"}
+redis:
+  status: optional
+  selectBy: {REDIS_SERVERS: host}
+  evidence:
+    - {path: .env.example.complete, line: 116, quote: "REDIS_SERVERS=127.0.0.1:6379:0"}
+    - {path: .env.example.complete, line: 94, quote: "CACHE_DRIVER=file"}
+workers:
+  status: none
+  commands: []
+  # QUEUE_CONNECTION defaults to sync, so jobs run inside the web request.
+  evidence:
+    - {path: app/Config/queue.php, line: 15, quote: "'default' => env('QUEUE_CONNECTION', 'sync'),"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence:
+    - {path: app/Console/Kernel.php, line: 17, quote: "protected function schedule(Schedule $schedule)"}
+storage:
+  local: conditional
+  paths: [public/uploads, storage/uploads]
+  s3: native
+  s3SelectBy: {STORAGE_TYPE: s3}
+  # Images default to public/uploads/images and attachments to storage/uploads/files; STORAGE_TYPE=s3 sends both to S3.
+  evidence:
+    - {path: app/Config/filesystems.php, line: 15, quote: "'default' => env('STORAGE_TYPE', 'local'),"}
+    - {path: app/Config/filesystems.php, line: 21, quote: "'attachments' => env('STORAGE_ATTACHMENT_TYPE', env('STORAGE_TYPE', 'local')),"}
+    - {path: app/Config/filesystems.php, line: 59, quote: "'bucket'                  => env('STORAGE_S3_BUCKET', 'your-bucket'),"}
+    - {path: .env.example.complete, line: 124, quote: "STORAGE_TYPE=local"}
+env:
+  required:
+    - {name: APP_KEY, secret: true, buildTime: false, note: "generate with php artisan key:generate; the config reads env APP_KEY with no default"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "root URL; all generated URLs use it"}
+    - {name: DB_HOST, secret: false, buildTime: false, note: "default localhost"}
+    - {name: DB_DATABASE, secret: false, buildTime: false, note: ""}
+    - {name: DB_USERNAME, secret: false, buildTime: false, note: ""}
+    - {name: DB_PASSWORD, secret: true, buildTime: false, note: ""}
+  optional: [STORAGE_TYPE, STORAGE_S3_KEY, STORAGE_S3_SECRET, STORAGE_S3_BUCKET, STORAGE_S3_REGION, SESSION_DRIVER, CACHE_DRIVER, QUEUE_CONNECTION, REDIS_SERVERS, APP_PROXIES, MAIL_HOST, MAIL_PORT, MAIL_FROM]
+  buildTime: []
+  evidence:
+    - {path: app/Config/app.php, line: 123, quote: "'key' => env('APP_KEY'),"}
+    - {path: .env.example, line: 21, quote: "APP_URL=https://example.com"}
+    - {path: app/Config/session.php, line: 17, quote: "'driver' => env('SESSION_DRIVER', 'file'),"}
+    - {path: .env.example.complete, line: 59, quote: "APP_PROXIES=null"}
+blockers:
+  expected:
+    - "No production Dockerfile: dev/docker/Dockerfile is a dev image that mounts the source and runs composer install at start; a new Dockerfile must install PHP dependencies, run the npm production build, and serve public/"
+  mustNot:
+    - "dev/docker/Dockerfile must not be chosen as the production Dockerfile"
+    - "Redis, a queue worker, or a scheduler must not be reported as required: the defaults are file cache, file session, and the sync queue"
+    - "Local upload disk must not block the deployment: STORAGE_TYPE=s3 is supported"
+    - "PostgreSQL must not be offered: only MySQL or MariaDB are supported"
+vendorQuestions:
+  legitimate:
+    - "Which public URL (APP_URL) will be used? It must match the ALB host name"
+  unnecessary:
+    - "Which database? (MySQL)"
+    - "Is Redis needed? (no, optional)"
+    - "Which port? (80 for Apache)"
+traps:
+  - "dev/docker/Dockerfile looks like the only Dockerfile but the compose file marks it for development only (docker-compose.yml:2)"
+  - "The dev entrypoint runs composer install and migrate at every start, and runs chown on mounted folders (dev/docker/entrypoint.app.sh:11)"
+  - "SESSION_DRIVER and CACHE_DRIVER default to file; with more than one task, use the database or Redis session driver"
+  - "With STORAGE_TYPE=local, images are written into public/uploads and are lost on task restart"
+  - "The front-end assets in public/dist are not committed; npm run production must run in the image build (package.json:11)"
+  - "S3 settings in app/Config/filesystems.php need STORAGE_S3_KEY and STORAGE_S3_SECRET; no instance-role path is shown"
+openQuestions:
+  - "Whether the S3 disk works with the ECS task role without STORAGE_S3_KEY and STORAGE_S3_SECRET was not checked"
+  - "Redis is optional; only the REDIS_SERVERS names were read"

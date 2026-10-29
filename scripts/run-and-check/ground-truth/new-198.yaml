@@ -1,0 +1,119 @@
+id: new-198
+repository: elastic/elasticsearch
+commit: 4b3e63dcc68d6311b69a30a26ea71b906f645996
+summary: >
+  Elasticsearch is a Java distributed search and analytics engine built with Gradle. It is a datastore server: it serves
+  a REST API on 9200 and a transport protocol on 9300, and keeps its indices in a data directory on durable disk. The
+  Dockerfiles in distribution/docker are Groovy templates that need a distribution archive made by the Gradle build, so
+  no Dockerfile builds the server from the repository source with a plain docker build.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a search-engine datastore server. It needs a durable data directory (indices under data/), which
+    Fargate does not give a task, and Elasticsearch is named as unsupported in the Deployz MVP. Nodes also talk over a
+    transport protocol on 9300. The Dockerfiles are templates (${base_image} and Groovy placeholders) that depend on a
+    Gradle-built distribution archive, so there is no buildable Dockerfile.
+dockerfile:
+  accept: []
+  reject:
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, reason: "Groovy template with placeholders; needs the Gradle-built distribution archive and a base_image value"}
+    - {path: distribution/docker/src/docker/dockerfiles/wolfi/Dockerfile, reason: "Wolfi variant of the same template"}
+    - {path: distribution/docker/src/docker/dockerfiles/ironbank/Dockerfile, reason: "Iron Bank variant of the same template"}
+    - {path: distribution/docker/src/docker/dockerfiles/cloud_ess_fips/Dockerfile, reason: "Elastic Cloud FIPS variant of the same template"}
+    - {path: distribution/docker/src/docker/Dockerfile.ess, reason: "Elastic Cloud image layer that adds filebeat, metricbeat and plugin archives"}
+    - {path: libs/native-toolchain/Dockerfile.cross-toolchain, reason: "cross-compile toolchain for native libraries"}
+    - {path: test/fixtures/krb5kdc-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/old-elasticsearch/src/main/resources/docker/Dockerfile, reason: "test fixture"}
+    - {path: x-pack/test/idp-fixture/src/main/resources/idp/Dockerfile, reason: "test fixture"}
+    - {path: x-pack/test/idp-fixture/src/main/resources/nginx/Dockerfile, reason: "test fixture"}
+    - {path: x-pack/test/idp-fixture/src/main/resources/oidc/Dockerfile, reason: "test fixture"}
+    - {path: x-pack/test/idp-fixture/src/main/resources/openldap/Dockerfile, reason: "test fixture"}
+    - {path: x-pack/test/smb-fixture/src/main/resources/Dockerfile, reason: "test fixture"}
+  target: null
+  context: .
+  evidence:
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, line: 22, quote: "FROM ${base_image} AS builder"}
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, line: 117, quote: "EXPOSE 9200 9300"}
+    - {path: distribution/docker/src/docker/Dockerfile.ess, line: 9, quote: "COPY filebeat-${version}.tar.gz metricbeat-${version}.tar.gz /tmp/"}
+runtime: {accept: [java]}
+port:
+  accept: [9200]
+  evidence:
+    - {path: server/src/main/java/org/elasticsearch/http/HttpTransportSettings.java, line: 91, quote: "\"9200-9300\","}
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, line: 117, quote: "EXPOSE 9200 9300"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: distribution/docker/src/docker/config/elasticsearch.yml, line: 2, quote: "network.host: 0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["eswrapper"]
+  evidence:
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, line: 153, quote: "CMD [\"eswrapper\"]"}
+healthPath:
+  accept: ["/_cluster/health"]
+  evidence:
+    - {path: server/src/main/java/org/elasticsearch/rest/action/admin/cluster/RestClusterHealthAction.java, line: 43, quote: "new Route(GET, \"/_cluster/health\")"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Elasticsearch is the datastore; it needs no external database.
+  evidence:
+    - {path: server/src/main/java/org/elasticsearch/env/NodeEnvironment.java, line: 353, quote: "path.resolve(\"nodes\")"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/usr/share/elasticsearch/data]
+  s3: none
+  s3SelectBy: {}
+  # Indices live in the data path; snapshots to S3 are an optional feature, not a replacement for the data path.
+  evidence:
+    - {path: distribution/docker/src/docker/dockerfiles/default/Dockerfile, line: 115, quote: "chown elasticsearch bin config config/jvm.options.d data logs plugins"}
+    - {path: server/src/main/java/org/elasticsearch/env/NodeEnvironment.java, line: 353, quote: "path.resolve(\"nodes\")"}
+env:
+  required: []
+  optional: [ES_JAVA_OPTS, ELASTIC_PASSWORD]
+  buildTime: []
+  evidence:
+    - {path: distribution/docker/src/docker/config/elasticsearch.yml, line: 1, quote: "cluster.name: \"docker-cluster\""}
+blockers:
+  expected:
+    - "Elasticsearch is a search datastore server and is outside the Deployz MVP support list"
+    - "The node needs a durable data directory for indices; Fargate task storage is ephemeral"
+    - "No Dockerfile builds from repository source: the image templates need a Gradle-built distribution archive"
+  mustNot:
+    - "Port 9200 must not be treated as a failure: it is the REST API port; the datastore role and the storage decide the outcome"
+    - "A database or Redis must not be reported as required: Elasticsearch is the datastore"
+    - "Test fixture Dockerfiles must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is Elasticsearch the search backend for another application? It is better run as a managed search service (Elastic Cloud or Amazon OpenSearch Service), outside this deployment"
+  unnecessary:
+    - "Which port? (9200)"
+    - "Which health path? (/_cluster/health)"
+    - "Is a database needed? (no)"
+traps:
+  - "distribution/docker/src/docker/dockerfiles/default/Dockerfile contains template placeholders and is not valid Dockerfile syntax by itself (Dockerfile:22)"
+  - "Port 9300 is the node-to-node transport protocol, not HTTP (Dockerfile:117)"
+  - "The image sets network.host 0.0.0.0, so the bind address is not a problem (config/elasticsearch.yml:2)"
+openQuestions:
+  - "The ES_JAVA_OPTS and ELASTIC_PASSWORD names come from documented container usage and were not read in the source"

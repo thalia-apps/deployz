@@ -1,0 +1,113 @@
+id: new-218
+repository: opensearch-project/OpenSearch
+commit: ca1a3adaa616a8fe513762b7886bce72ac16bdf3
+summary: >
+  OpenSearch is a Java distributed search and analytics engine (an Elasticsearch fork), built with Gradle. It is a
+  datastore server that serves a REST API on 9200 and a transport protocol on 9300, and keeps its indices in a data
+  directory on durable disk. The only product Dockerfile, distribution/docker/src/docker/Dockerfile, is a Groovy
+  template that needs a Gradle-built opensearch tar.gz, so no Dockerfile builds the server from source with docker build.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a search-engine datastore server. It needs a durable data directory (indices under data/), which
+    Fargate does not give a task, and OpenSearch is named as unsupported in the Deployz MVP. The Dockerfile is a template
+    with placeholders and depends on a Gradle-built archive.
+dockerfile:
+  accept: []
+  reject:
+    - {path: distribution/docker/src/docker/Dockerfile, reason: "Groovy template (${base_image}, ${source_opensearch}); needs the Gradle-built opensearch tar.gz"}
+    - {path: test/fixtures/azure-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/gcs-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/krb5kdc-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/minio-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/s3-fixture/Dockerfile, reason: "test fixture"}
+    - {path: test/fixtures/s3-fixture/Dockerfile.eks, reason: "test fixture"}
+  target: null
+  context: .
+  evidence:
+    - {path: distribution/docker/src/docker/Dockerfile, line: 22, quote: "FROM ${base_image} AS builder"}
+    - {path: distribution/docker/src/docker/Dockerfile, line: 49, quote: "${source_opensearch}"}
+    - {path: distribution/docker/src/docker/Dockerfile, line: 103, quote: "EXPOSE 9200 9300"}
+    - {path: distribution/docker/build.gradle, line: 76, quote: "sourceOpenSearch = \"COPY $opensearch /opt/opensearch.tar.gz\""}
+runtime: {accept: [java]}
+port:
+  accept: [9200]
+  evidence:
+    - {path: server/src/main/java/org/opensearch/http/HttpTransportSettings.java, line: 115, quote: "\"9200-9300\","}
+    - {path: distribution/docker/src/docker/Dockerfile, line: 103, quote: "EXPOSE 9200 9300"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: distribution/docker/src/docker/config/opensearch.yml, line: 2, quote: "network.host: 0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["opensearchwrapper"]
+  evidence:
+    - {path: distribution/docker/src/docker/Dockerfile, line: 127, quote: "CMD [\"opensearchwrapper\"]"}
+healthPath:
+  accept: ["/_cluster/health"]
+  evidence:
+    - {path: server/src/main/java/org/opensearch/rest/action/admin/cluster/RestClusterHealthAction.java, line: 69, quote: "new Route(GET, \"/_cluster/health\")"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # OpenSearch is the datastore; it needs no external database.
+  evidence:
+    - {path: server/src/main/java/org/opensearch/env/NodeEnvironment.java, line: 231, quote: "public static final String NODES_FOLDER = \"nodes\";"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/usr/share/opensearch/data]
+  s3: none
+  s3SelectBy: {}
+  # Indices live in the data path; S3 snapshots are an optional repository feature, not a replacement for the data path.
+  evidence:
+    - {path: distribution/docker/src/docker/Dockerfile, line: 53, quote: "RUN mkdir -p config config/jvm.options.d data logs"}
+    - {path: server/src/main/java/org/opensearch/env/NodeEnvironment.java, line: 231, quote: "public static final String NODES_FOLDER = \"nodes\";"}
+env:
+  required: []
+  optional: [OPENSEARCH_JAVA_OPTS]
+  buildTime: []
+  evidence:
+    - {path: distribution/docker/src/docker/config/opensearch.yml, line: 1, quote: "cluster.name: \"docker-cluster\""}
+blockers:
+  expected:
+    - "OpenSearch is a search datastore server and is outside the Deployz MVP support list"
+    - "The node needs a durable data directory for indices; Fargate task storage is ephemeral"
+    - "The only product Dockerfile is a template that needs a Gradle-built opensearch tar.gz, not repository source"
+  mustNot:
+    - "Port 9200 must not be treated as a failure: it is the REST API port; the datastore role and the storage decide the outcome"
+    - "A database or Redis must not be reported as required: OpenSearch is the datastore"
+    - "Test fixture Dockerfiles must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is OpenSearch the search backend for another application? It is better run as Amazon OpenSearch Service, outside this deployment"
+  unnecessary:
+    - "Which port? (9200)"
+    - "Which health path? (/_cluster/health)"
+    - "Is a database needed? (no)"
+traps:
+  - "distribution/docker/src/docker/Dockerfile has template placeholders and is not valid Dockerfile syntax by itself (Dockerfile:22, :49)"
+  - "Port 9300 is the node-to-node transport protocol, not HTTP (Dockerfile:103)"
+  - "The image sets network.host 0.0.0.0, so the bind address is not a problem (config/opensearch.yml:2)"
+openQuestions:
+  - "The OPENSEARCH_JAVA_OPTS name comes from documented container usage and was not read in the source"

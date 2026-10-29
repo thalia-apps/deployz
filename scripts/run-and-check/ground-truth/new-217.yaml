@@ -1,0 +1,158 @@
+id: new-217
+repository: openclaw/openclaw
+commit: 11091f0bf62f93465c03aae211a3ae185cde88ae
+summary: >
+  OpenClaw is a personal AI assistant: a Node.js (TypeScript, pnpm) Gateway process that is the control plane for agent
+  sessions, tools and chat channels (WhatsApp, Telegram, Slack, Discord, Teams, Signal, iMessage and 20+ more). It
+  serves a Control UI and a WebSocket API on port 18789, a bridge on 18790 and an optional Teams webhook on 3978. The
+  root Dockerfile builds the Gateway from source in several stages into one runtime image (node:24 trixie-slim, user
+  node, tini). State is SQLite plus files in /home/node/.openclaw on a persistent local disk. PostgreSQL is a supported
+  alternative for the five store families, but small SQLite anchor files, channel credentials, the workspace and
+  config stay local by design. Only one active Gateway per state is supported.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The Gateway is a single-owner, stateful, always-on personal assistant, not a stateless web service. Its state
+    (shared state and agent SQLite databases, openclaw.json, channel credentials such as WhatsApp sessions, the agent
+    workspace, plugin packages) lives in a state directory that the docs require on a persistent local filesystem, and
+    they warn against network mounts. Fargate task storage is ephemeral and Deployz gives no EFS. The PostgreSQL option
+    does not remove this: each PostgreSQL store keeps a local SQLite anchor that must match the server data ("Missing
+    PostgreSQL anchor" is an error), and credentials, workspace and config stay local. Only one Gateway may use a
+    store, so no stateless scale-out exists. The product also opens extra ports (18790 bridge, 3978 Teams webhook) and
+    runs agent tools (shell, browser) on the host, which an MVP web service does not support. S3 does not replace the
+    state directory.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: scripts/cloudflare/Dockerfile, reason: "wraps a published official OpenClaw image (placeholder digest) with Litestream for Cloudflare Containers; not a build from source"}
+    - {path: scripts/docker/sandbox/Dockerfile, reason: "agent tool sandbox image (debian with tools); started by the Gateway through the Docker socket, not the application"}
+    - {path: scripts/docker/sandbox/Dockerfile.browser, reason: "agent sandbox browser image"}
+    - {path: scripts/docker/sandbox/Dockerfile.common, reason: "agent sandbox image layer"}
+    - {path: scripts/e2e/Dockerfile, reason: "shared Docker end-to-end test image"}
+    - {path: scripts/e2e/Dockerfile.qr-import, reason: "end-to-end test image"}
+    - {path: scripts/docker/install-sh-e2e/Dockerfile, reason: "installer script test image"}
+    - {path: scripts/docker/install-sh-nonroot/Dockerfile, reason: "installer script test image"}
+    - {path: scripts/docker/install-sh-smoke/Dockerfile, reason: "installer script smoke-test image"}
+    - {path: scripts/docker/cleanup-smoke/Dockerfile, reason: "cleanup smoke-test image"}
+    - {path: .github/images/live-media-runner/Dockerfile, reason: "CI runner image for live media tests"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 119, quote: "FROM dependency-inputs AS build"}
+    - {path: Dockerfile, line: 236, quote: "FROM base-runtime"}
+    - {path: Dockerfile, line: 476, quote: "CMD [\"node\", \"openclaw.mjs\", \"gateway\"]"}
+    - {path: docker-compose.yml, line: 4, quote: "build: ."}
+runtime: {accept: [node]}
+port:
+  # 18789 is the Gateway HTTP and WebSocket port; 18790 is the bridge; 3978 is the Microsoft Teams webhook port.
+  accept: [18789]
+  evidence:
+    - {path: docker-compose.yml, line: 23, quote: "OPENCLAW_GATEWAY_PORT: \"18789\""}
+    - {path: docker-compose.yml, line: 69, quote: "- \"${OPENCLAW_GATEWAY_PORT:-18789}:18789\""}
+    - {path: docker-compose.yml, line: 70, quote: "- \"${OPENCLAW_BRIDGE_PORT:-18790}:18790\""}
+    - {path: docker-compose.yml, line: 71, quote: "- \"${OPENCLAW_MSTEAMS_PORT:-3978}:3978\""}
+bindAllInterfaces:
+  # In a detected container an unset gateway.bind defaults to auto (0.0.0.0); a non-loopback bind needs gateway authentication.
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 460, quote: "# In a detected container, an unset gateway.bind defaults to auto (0.0.0.0)"}
+    - {path: Dockerfile, line: 463, quote: "# configured authentication."}
+startCommand:
+  source: image
+  accept: ["node openclaw.mjs gateway", "node dist/index.js gateway --bind lan --port 18789"]
+  evidence:
+    - {path: Dockerfile, line: 475, quote: "ENTRYPOINT [\"tini\", \"-s\", \"--\", \"node\", \"/app/docker-entrypoint.mjs\"]"}
+    - {path: Dockerfile, line: 476, quote: "CMD [\"node\", \"openclaw.mjs\", \"gateway\"]"}
+    - {path: docker-compose.yml, line: 77, quote: "\"dist/index.js\","}
+healthPath:
+  accept: ["/healthz", "/readyz", "/startupz"]
+  evidence:
+    - {path: Dockerfile, line: 470, quote: "#   - GET /healthz (liveness), GET /startupz (startup/traffic admission),"}
+    - {path: docs/gateway/health.md, line: 129, quote: "| `/health`, `/healthz`   | The HTTP server is live."}
+database:
+  status: conditional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {"database.engine in openclaw.json": postgres}
+  connectionVars: [OPENCLAW_DATABASE_DSN]
+  # SQLite is the default. PostgreSQL 16 to 18 is supported for the state, agent, workboard, logbook and team-reports families; extensions unaccent and pg_trgm (and pgvector for semantic memory search) must exist. The DSN is set by a SecretRef in openclaw.json, not by a plain env variable.
+  evidence:
+    - {path: package.json, line: 6, quote: "\"databaseEngines\": ["}
+    - {path: docs/gateway/postgresql.md, line: 14, quote: "PostgreSQL is a **supported alternative**"}
+    - {path: docs/gateway/postgresql.md, line: 227, quote: "Use a qualified **PostgreSQL 16–18** runtime with **UTF8 server and client encoding**."}
+    - {path: docs/gateway/postgresql.md, line: 294, quote: "connection: { source: \"env\", provider: \"default\", id: \"OPENCLAW_DATABASE_DSN\" },"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: docs/gateway/postgresql.md, line: 460, quote: "store's local anchor, a UUID-qualified PostgreSQL schema, and the current"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Channels, agents, tools and the job logic run inside the Gateway process.
+  evidence:
+    - {path: README.md, line: 70, quote: "- The [Gateway](https://docs.openclaw.ai/gateway) is the local control plane for sessions, tools, events, and channel connections."}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/home/node/.openclaw, /home/node/.openclaw/workspace, /home/node/.config/openclaw]
+  s3: none
+  s3SelectBy: {}
+  # No S3 backend exists for state. PostgreSQL moves the application rows only; anchors, client credentials, workspace, media and config stay on local disk.
+  evidence:
+    - {path: docker-compose.yml, line: 18, quote: "OPENCLAW_STATE_DIR: /home/node/.openclaw"}
+    - {path: docker-compose.yml, line: 47, quote: "- \"${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw\""}
+    - {path: docs/install/docker/networking-and-storage.md, line: 116, quote: "Keep SQLite state on a persistent local filesystem on the Docker host, including"}
+    - {path: docs/install/docker/networking-and-storage.md, line: 128, quote: "Gateway replica per state volume and follow the"}
+    - {path: docs/install/docker-vm-runtime.md, line: 174, quote: "| Channel credentials  | `/home/node/.openclaw/credentials/` | Config mount"}
+    - {path: docs/gateway/postgresql.md, line: 175, quote: "store still has a small SQLite **anchor** at its usual database path. It records"}
+    - {path: docs/gateway/postgresql.md, line: 1093, quote: "`Missing PostgreSQL anchor; restore the matching PostgreSQL schema and anchor.`"}
+env:
+  required:
+    - {name: OPENCLAW_GATEWAY_TOKEN, secret: true, buildTime: false, note: "gateway authentication token; a non-loopback bind needs configured authentication"}
+    - {name: OPENCLAW_STATE_DIR, secret: false, buildTime: false, note: "state directory; the compose file pins /home/node/.openclaw"}
+  optional: [OPENCLAW_CONFIG_PATH, OPENCLAW_WORKSPACE_DIR, OPENCLAW_GATEWAY_BIND, OPENCLAW_ALLOW_INSECURE_PRIVATE_WS, OPENCLAW_DISABLE_BONJOUR, OPENCLAW_DATABASE_DSN, OTEL_EXPORTER_OTLP_ENDPOINT, OPENCLAW_TZ]
+  buildTime: [OPENCLAW_EXTENSIONS, OPENCLAW_INSTALL_DOCKER_CLI, OPENCLAW_DOCKER_BUILD_NODE_OPTIONS]
+  evidence:
+    - {path: docker-compose.yml, line: 24, quote: "OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}"}
+    - {path: Dockerfile, line: 11, quote: "ARG OPENCLAW_EXTENSIONS=\"\""}
+    - {path: Dockerfile, line: 394, quote: "ARG OPENCLAW_INSTALL_DOCKER_CLI=\"\""}
+blockers:
+  expected:
+    - "State (SQLite databases, openclaw.json, channel credentials, workspace, plugin packages) needs a persistent local filesystem; Fargate disk is ephemeral and EFS is not provided"
+    - "PostgreSQL does not remove the local disk need: local SQLite anchors must match the server data, and credentials, workspace and config stay local"
+    - "One Gateway per state only; there is no shared-store scale-out or failover"
+    - "The product is a personal assistant that runs agent tools on the host and keeps long-lived channel sessions (for example WhatsApp); the extra ports 18790 and 3978 are not served by a single HTTPS ALB listener"
+  mustNot:
+    - "Redis must not be reported: the repository does not use it"
+    - "S3 must not be reported as a replacement for the state directory: there is no object-storage state backend"
+    - "Dockerfiles under scripts/ (sandbox, e2e, install smoke) must not be treated as the application image"
+    - "The port must not be reported as 3000 or 8080: the Gateway listens on 18789"
+vendorQuestions:
+  legitimate:
+    - "Is this a single-person or single-team assistant that needs a persistent disk? Deployz cannot give it durable local storage"
+    - "Which chat channels are needed? Some need long-lived sessions or inbound webhooks on extra ports"
+  unnecessary:
+    - "Which Dockerfile? (the root Dockerfile)"
+    - "Is Redis needed? (no)"
+    - "Which health path? (/healthz)"
+traps:
+  - "The README and docs say the Gateway runs on your own computer and that state lives on your hardware (README.md:20); it is not a hosted multi-tenant web app"
+  - "docker-compose.yml also runs an openclaw-cli service that shares the Gateway network namespace; it is a helper, not a second app (docker-compose.yml:96)"
+  - "docs show a PostgreSQL option, which can look like a full move to a managed database; anchors and client credentials still need local disk (docs/gateway/postgresql.md:61)"
+  - "The Docker socket mount in docker-compose.yml is commented out and only needed for agent sandboxes (docker-compose.yml:55)"
+  - "The build uses a large Node heap (OPENCLAW_DOCKER_BUILD_NODE_OPTIONS 8192 MB) and pnpm install, so the build is heavy (Dockerfile:13)"
+  - "The Gateway answers /healthz as soon as the HTTP server is live; /readyz also waits for channel health, so a missing channel can keep it not ready"
+openQuestions:
+  - "Whether a stateless start with PostgreSQL and a fresh local state directory could work after each task restart was not tested; the docs treat a missing anchor as an error"
+  - "Which channels open inbound connections was not checked per channel; only the Microsoft Teams port (3978) appears in the compose file"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: durable state directory is CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}

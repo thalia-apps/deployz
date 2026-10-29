@@ -1,0 +1,150 @@
+id: new-220
+repository: Chocobozzz/PeerTube
+commit: 6b3fcdcf8a704ea1215fd106435eaa63e881dde1
+summary: >
+  PeerTube is a federated video platform: a Node.js (TypeScript, Express) server plus an Angular client, with ffmpeg
+  transcoding inside the server process. support/docker/production/Dockerfile builds the whole application from the
+  repository source into one image that serves the API, the client and video files on port 9000. PostgreSQL (with the
+  pg_trgm and unaccent extensions) and Redis are required. By default all video files are written to the local /data
+  volume; object storage (S3) can hold videos, captions, images and torrents when enabled by environment variables. The
+  RTMP live-streaming server on port 1935 is off by default.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The production Dockerfile, PostgreSQL, Redis and the web port all fit the MVP, and migrations run at start. The open
+    point is storage. Without object storage, every video, thumbnail and avatar is written to /data, which Fargate does
+    not keep, so S3 must be enabled (PEERTUBE_OBJECT_STORAGE_*). The upstream default expects public-read object ACLs and
+    a publicly readable bucket (or a CDN base_url) for public videos, which the single private Deployz bucket may not
+    give. Uploads and transcoding also use /data/tmp on local disk, so a task stop loses jobs in progress. RTMP live
+    streaming (raw TCP 1935) cannot run behind the HTTPS-only ALB; it is disabled unless live.enabled is set, so it is
+    a disabled feature and not a blocker. DEPLOYABLE_WITH_CHANGES applies when S3 is used with settings only;
+    NOT_DEPLOYABLE applies if the private bucket cannot serve public video files.
+dockerfile:
+  accept: [support/docker/production/Dockerfile]
+  reject:
+    - {path: support/docker/production/Dockerfile.nginx, reason: "optional nginx reverse proxy image (nginx:alpine plus an entrypoint); not the application"}
+    - {path: support/docker/gitpod/Dockerfile, reason: "Gitpod development environment image"}
+  target: null
+  context: .
+  evidence:
+    - {path: support/docker/production/Dockerfile, line: 1, quote: "FROM node:22-trixie-slim"}
+    - {path: support/docker/production/Dockerfile, line: 27, quote: "COPY --chown=peertube:peertube . /app"}
+    - {path: support/docker/production/Dockerfile, line: 35, quote: "&& npm run build; \\"}
+    - {path: support/docker/production/Dockerfile.nginx, line: 1, quote: "FROM nginx:alpine"}
+runtime: {accept: [node]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: support/docker/production/Dockerfile, line: 59, quote: "EXPOSE 9000 1935 1936"}
+    - {path: support/docker/production/config/production.yaml, line: 5, quote: "port: 9000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: support/docker/production/config/production.yaml, line: 4, quote: "hostname: '0.0.0.0'"}
+startCommand:
+  source: image
+  accept: ["node dist/server"]
+  evidence:
+    - {path: support/docker/production/Dockerfile, line: 62, quote: "CMD [ \"node\", \"dist/server\" ]"}
+    - {path: support/docker/production/Dockerfile, line: 56, quote: "ENTRYPOINT [ \"/usr/local/bin/entrypoint.sh\" ]"}
+healthPath:
+  accept: ["/api/v1/ping"]
+  evidence:
+    - {path: server/core/controllers/api/index.ts, line: 64, quote: "apiRouter.use('/ping', pong)"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [PEERTUBE_DB_HOSTNAME, PEERTUBE_DB_PORT, PEERTUBE_DB_NAME, PEERTUBE_DB_USERNAME, PEERTUBE_DB_PASSWORD, PEERTUBE_DB_SSL]
+  # The server checks the pg_trgm and unaccent extensions at start and creates them when the database user may.
+  evidence:
+    - {path: support/docker/production/config/custom-environment-variables.yaml, line: 162, quote: "hostname: PEERTUBE_DB_HOSTNAME"}
+    - {path: support/docker/production/config/production.yaml, line: 26, quote: "hostname: 'postgres'"}
+    - {path: server/core/initializers/database.ts, line: 253, quote: "checkPostgresExtension('pg_trgm'),"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: server/server.ts, line: 106, quote: "// Only the primary process migrates: two processes booting at the same time would race on the schema"}
+    - {path: server/core/initializers/migrator.ts, line: 13, quote: "async function migrate () {"}
+redis:
+  status: required
+  selectBy: {PEERTUBE_REDIS_HOSTNAME: host}
+  evidence:
+    - {path: support/docker/production/config/custom-environment-variables.yaml, line: 197, quote: "hostname: PEERTUBE_REDIS_HOSTNAME"}
+    - {path: support/docker/production/config/production.yaml, line: 34, quote: "hostname: 'redis'"}
+    - {path: package.json, line: 136, quote: "\"bullmq\": \"^6.3.4\","}
+workers:
+  status: embedded
+  commands: []
+  # Job queues (BullMQ) and ffmpeg transcoding run inside the server process. Remote runners are an optional extra.
+  evidence:
+    - {path: package.json, line: 136, quote: "\"bullmq\": \"^6.3.4\","}
+    - {path: config/default.yaml, line: 606, quote: "remote_runners:"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data, /config]
+  s3: native
+  s3SelectBy: {PEERTUBE_OBJECT_STORAGE_ENABLED: "true"}
+  # With object storage on, videos, original files, captions, avatars, thumbnails, storyboards and torrents go to the bucket (all default to bucket 'peertube' with one prefix each). /data/tmp still holds uploads and transcoding work in progress. Credentials are optional: with no access key the AWS SDK default chain (task role) is used. Virtual-hosted bucket URLs only.
+  evidence:
+    - {path: support/docker/production/Dockerfile, line: 52, quote: "VOLUME /data"}
+    - {path: support/docker/production/config/production.yaml, line: 40, quote: "tmp: '../data/tmp/'"}
+    - {path: config/default.yaml, line: 226, quote: "enabled: false"}
+    - {path: support/docker/production/config/custom-environment-variables.yaml, line: 298, quote: "__name: PEERTUBE_OBJECT_STORAGE_ENABLED"}
+    - {path: server/core/lib/object-storage/shared/client.ts, line: 41, quote: "credentials: OBJECT_STORAGE.CREDENTIALS.ACCESS_KEY_ID"}
+env:
+  required:
+    - {name: PEERTUBE_WEBSERVER_HOSTNAME, secret: false, buildTime: false, note: "public domain name; startup fails without it (webserver.hostname is checked)"}
+    - {name: PEERTUBE_SECRET, secret: true, buildTime: false, note: "signing secret; generate with openssl rand -hex 32"}
+    - {name: PEERTUBE_DB_HOSTNAME, secret: false, buildTime: false, note: "image default config uses the host name postgres; PEERTUBE_DB_USERNAME, PEERTUBE_DB_PASSWORD, PEERTUBE_DB_NAME also set"}
+    - {name: PEERTUBE_REDIS_HOSTNAME, secret: false, buildTime: false, note: "image default config uses the host name redis"}
+    - {name: PEERTUBE_TRUST_PROXY, secret: false, buildTime: false, note: "JSON array that includes the ALB subnet range, so client IP and https are read from the proxy headers"}
+    - {name: PEERTUBE_OBJECT_STORAGE_ENABLED, secret: false, buildTime: false, note: "set true with PEERTUBE_OBJECT_STORAGE_ENDPOINT, REGION and the bucket names; needed to keep videos"}
+    - {name: PEERTUBE_ADMIN_EMAIL, secret: false, buildTime: false, note: "admin email of the root account"}
+  optional: [PT_INITIAL_ROOT_PASSWORD, PEERTUBE_WEBSERVER_HTTPS, PEERTUBE_WEBSERVER_PORT, PEERTUBE_SMTP_HOSTNAME, PEERTUBE_SMTP_PORT, PEERTUBE_SMTP_USERNAME, PEERTUBE_SMTP_PASSWORD, PEERTUBE_SMTP_FROM, PEERTUBE_REDIS_AUTH, PEERTUBE_LIVE_ENABLED, PEERTUBE_OBJECT_STORAGE_UPLOAD_ACL_PUBLIC, PEERTUBE_OBJECT_STORAGE_UPLOAD_ACL_PRIVATE]
+  buildTime: [ALREADY_BUILT]
+  evidence:
+    - {path: server/core/initializers/checker-before-init.ts, line: 18, quote: "'webserver.hostname',"}
+    - {path: support/docker/production/.env, line: 39, quote: "PEERTUBE_SECRET=<MY PEERTUBE SECRET>"}
+    - {path: support/docker/production/.env, line: 36, quote: "PEERTUBE_TRUST_PROXY=[\"127.0.0.1\", \"loopback\", \"172.18.0.0/16\"]"}
+    - {path: server/core/initializers/installer.ts, line: 134, quote: "} else if (process.env.PT_INITIAL_ROOT_PASSWORD) {"}
+    - {path: support/docker/production/Dockerfile, line: 3, quote: "ARG ALREADY_BUILT=0"}
+blockers:
+  expected:
+    - "Videos and images default to the local /data volume; object storage must be enabled (PEERTUBE_OBJECT_STORAGE_*) because Fargate disk is ephemeral"
+    - "Object storage defaults to public-read ACLs for public files; a private-only bucket needs the ACL variables removed and another way to serve public files (bucket policy or CDN base_url)"
+    - "PostgreSQL and Redis are both required"
+    - "Uploads and ffmpeg transcoding work in /data/tmp on local disk; in-progress jobs are lost when the task stops"
+  mustNot:
+    - "RTMP port 1935 and RTMPS 1936 must not block the deployment: live.enabled is false by default; the Dockerfile only EXPOSEs them"
+    - "support/docker/production/Dockerfile.nginx must not be chosen as the application image"
+    - "MySQL must not be expected: PostgreSQL only"
+    - "nginx must not be required: the server serves the client, API and static files on 9000 itself"
+    - "A separate worker service must not be required: jobs and transcoding run in the server process"
+vendorQuestions:
+  legitimate:
+    - "Will live streaming (RTMP) be used? It needs a raw TCP port that the HTTPS load balancer does not provide"
+    - "Which public domain name (PEERTUBE_WEBSERVER_HOSTNAME) and which S3 bucket and prefix layout for videos?"
+    - "How are public video files served: public-read objects, a bucket policy or a CDN base_url?"
+  unnecessary:
+    - "Which Dockerfile? (support/docker/production/Dockerfile)"
+    - "Which port? (9000)"
+    - "Is Redis needed? (yes)"
+traps:
+  - "The Dockerfile EXPOSEs 9000, 1935 and 1936; only 9000 is HTTP (support/docker/production/Dockerfile:59)"
+  - "The Docker config sets webserver.hostname to undefined and database host to postgres and redis host to redis; these are docker-compose names (production.yaml:9, :26, :34)"
+  - "webserver.https is true and port 443 by default; PeerTube builds public URLs from these values, so they must match the ALB host name (production.yaml:8)"
+  - "The image build compiles the Angular client (npm run build) and needs a large amount of memory and time; ALREADY_BUILT=1 skips it (Dockerfile:33)"
+  - "The entrypoint chowns /config and /data to the peertube user and drops root with gosu (entrypoint.sh:5, :16)"
+  - "object_storage.upload_acl is null in the Docker production.yaml and set by the .env variables to public-read and private (production.yaml:62, .env:101)"
+  - "The docker-compose.yml also runs nginx, certbot and postfix; they are optional helpers and not part of the application image"
+openQuestions:
+  - "Whether a private Deployz bucket can serve public videos; PeerTube redirects public files to the bucket URL, which needs public read access or a base_url"
+  - "Whether PeerTube runs without an SMTP host: the default points to the postfix compose service"

@@ -1,0 +1,129 @@
+id: new-201
+repository: gitlabhq/gitlabhq
+commit: d7b9a6176ab4e279465ba3ee09922cde2b74de47
+summary: >
+  GitLab (the FOSS mirror) is a very large Ruby on Rails monolith with a Go front proxy (Workhorse). A running GitLab is
+  a set of separate services: Puma (Rails), Workhorse, Sidekiq, Gitaly (Go gRPC Git storage), GitLab Shell (Git over
+  SSH), PostgreSQL and Redis. The repository ships no Dockerfile that builds the application. The official container
+  image gitlab/gitlab-ce is built from the separate Omnibus packaging project, and the repository docs say Omnibus
+  packages are the recommended install.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile builds GitLab from this repository: Dockerfile.assets only copies precompiled assets into a scratch
+    image, qa/Dockerfile is the test-runner image, and docker-compose.yml pulls the published gitlab/gitlab-ce image.
+    A working instance needs many cooperating services (Puma, Workhorse, Sidekiq, Gitaly, GitLab Shell) that talk over
+    Unix sockets and gRPC, durable Git repository storage on disk (Gitaly), Git over SSH on a second protocol and port,
+    plus PostgreSQL and Redis. This is outside one image with one HTTP port, and Gitaly repository data cannot live on
+    ephemeral Fargate storage.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile.assets, reason: "scratch image that only copies precompiled public/assets; contains no application"}
+    - {path: qa/Dockerfile, reason: "end-to-end test runner image (ENTRYPOINT bin/test) built on a GitLab CI build image"}
+    - {path: qa/perf/ai/Dockerfile.ab, reason: "performance test tool image"}
+    - {path: vendor/Dockerfile/Ruby.Dockerfile, reason: "GitLab template for users' Dockerfiles (all vendor/Dockerfile/*.Dockerfile are templates), not an image of GitLab"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile.assets, line: 2, quote: "FROM scratch"}
+    - {path: Dockerfile.assets, line: 3, quote: "COPY public/assets /assets/"}
+    - {path: qa/Dockerfile, line: 66, quote: "ENTRYPOINT [\"bin/test\"]"}
+    - {path: docker-compose.yml, line: 2, quote: "image: gitlab/gitlab-ce:latest"}
+    - {path: README.md, line: 58, quote: "The recommended way to install GitLab is with the [Omnibus packages]"}
+runtime: {accept: [ruby]}
+port:
+  # Workhorse is the HTTP entry point; the Omnibus image serves nginx on 80 and 443 and SSH on 22.
+  accept: [8181, 80]
+  evidence:
+    - {path: workhorse/cmd/gitlab-workhorse/main.go, line: 96, quote: "\"listenAddr\", \"localhost:8181\""}
+    - {path: doc/install/docker/installation.md, line: 167, quote: "- '22:22'"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: workhorse/cmd/gitlab-workhorse/main.go, line: 96, quote: "\"listenAddr\", \"localhost:8181\""}
+    - {path: config/puma.rb.example, line: 34, quote: "bind 'unix:///home/git/gitlab/tmp/sockets/gitlab.socket'"}
+startCommand:
+  # No image exists in the repository. Components are started by Omnibus (runit) or lib/support/init.d/gitlab.
+  source: explicit
+  accept: []
+  evidence:
+    - {path: config/puma.rb.example, line: 34, quote: "bind 'unix:///home/git/gitlab/tmp/sockets/gitlab.socket'"}
+healthPath:
+  accept: ["/-/health", "/-/readiness", "/-/liveness"]
+  evidence:
+    - {path: config/routes.rb, line: 157, quote: "'/-/health' implemented by BasicHealthCheck middleware"}
+    - {path: config/routes.rb, line: 159, quote: "get 'readiness' => 'health#readiness'"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # Configured in config/database.yml, not by environment variables.
+  evidence:
+    - {path: config/database.yml.postgresql, line: 6, quote: "adapter: postgresql"}
+    - {path: Gemfile, line: 74, quote: "gem 'pg', '~> 1.6.1'"}
+    - {path: config/initializers/1_postgresql_only.rb, line: 3, quote: "PostgreSQL is the only supported database from GitLab 12.1"}
+migrations:
+  mode: command
+  accept: ["bundle exec rake db:migrate"]
+  evidence: []
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: Gemfile, line: 346, quote: "gem 'redis', '~> 5.4.1'"}
+    - {path: config/resque.yml.example, line: 5, quote: "url: redis://localhost:6379"}
+workers:
+  status: independent
+  commands: ["sidekiq"]
+  evidence:
+    - {path: Gemfile, line: 308, quote: "gem 'sidekiq', path: 'vendor/gems/sidekiq'"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Git repositories are stored by Gitaly on its own disk; uploads, artifacts and LFS have object storage options.
+  local: required
+  paths: [/var/opt/gitlab, /home/git/repositories]
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: doc/install/docker/installation.md, line: 106, quote: "| `$GITLAB_HOME/data`  | `/var/opt/gitlab`  | Stores application data."}
+    - {path: config/gitlab.yml.example, line: 1450, quote: "gitaly_address: unix:/home/git/gitlab/tmp/sockets/private/gitaly.socket"}
+    - {path: Gemfile, line: 686, quote: "gem 'gitaly', '~> 19.4.0'"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "No Dockerfile builds GitLab from the repository; the only container for the product is the Omnibus-built gitlab/gitlab-ce image referenced by docker-compose.yml"
+    - "Gitaly stores Git repositories on durable local disk and is a separate gRPC service; Fargate task storage is ephemeral"
+    - "GitLab is many processes (Puma, Workhorse, Sidekiq, Gitaly, GitLab Shell) that communicate over Unix sockets; this is not one web service from one image"
+    - "Git over SSH (port 22) is a second, non-HTTP client protocol"
+  mustNot:
+    - "Dockerfile.assets, qa/Dockerfile and vendor/Dockerfile/* must not be treated as the application image"
+    - "MySQL must not be offered: GitLab supports PostgreSQL only"
+    - "Redis must not be called optional"
+vendorQuestions:
+  legitimate:
+    - "Is GitLab being deployed as a self-managed Git forge? That needs the Omnibus or Helm distribution and durable Gitaly storage, which Deployz does not provide"
+  unnecessary:
+    - "Which Dockerfile? (none builds the application)"
+    - "Which database engine? (PostgreSQL only)"
+    - "Is Redis needed? (yes)"
+traps:
+  - "docker-compose.yml is two lines and pulls gitlab/gitlab-ce:latest instead of building (docker-compose.yml:2)"
+  - "Dockerfile.assets looks like an application Dockerfile but only copies assets into FROM scratch (Dockerfile.assets:2)"
+  - "vendor/Dockerfile/*.Dockerfile are templates GitLab offers to its users for new projects, not GitLab images"
+  - "config/puma.rb.example binds a Unix socket, not a TCP port (config/puma.rb.example:34)"
+  - "The Gemfile lists the gitaly gem, which is only the gRPC client; the Gitaly server is a separate Go program"
+openQuestions:
+  - "None that change the outcome; the repository ships no image and its docs direct users to Omnibus packages"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: no application Dockerfile and a multi-service layout (Puma, Workhorse, Sidekiq, Gitaly) are CODE_CHANGE by policy; Gitaly durable repositories make it not deployable in practice (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}

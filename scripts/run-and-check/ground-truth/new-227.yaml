@@ -1,0 +1,134 @@
+id: new-227
+repository: drakkan/sftpgo
+commit: 9712163e617744ed244da6d4d2a84cdbd25d8888
+summary: >
+  SFTPGo is a Go file-transfer server. Its main protocol is SFTP over SSH (port 2022); FTP/S and WebDAV are optional
+  bindings that are off by default. It also serves an HTTP service on 8080 with the web admin, the web client and a REST
+  API, and a /healthz endpoint. Metadata (users, admins, folders) is stored in a data provider: sqlite by default, with
+  postgresql, mysql, cockroachdb, bolt and memory as other drivers. File data is stored on the local filesystem of each
+  user by default, or in S3, GCS or Azure Blob when the user is set up with that backend. The root Dockerfile builds the
+  server from source with Go; the image runs "sftpgo serve" and the data provider is initialised and migrated at startup.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    SFTPGo is a file-transfer server whose core client protocol is SFTP over SSH (default port 2022), and an ALB serves
+    HTTPS only, so the main function cannot be reached. The default storage is the local disk (sqlite file, user home
+    directories under /srv/sftpgo/data), which Fargate does not keep. Only the HTTP web client, REST API and WebDAV (when
+    enabled) can run on one HTTP port, with PostgreSQL for metadata and S3 for file data; that is a reduced product, not
+    the application as built. The Dockerfile itself is a normal source build.
+dockerfile:
+  accept: [Dockerfile, Dockerfile.alpine, Dockerfile.distroless]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "FROM golang:1.27-trixie AS builder"}
+    - {path: Dockerfile, line: 26, quote: "-trimpath -ldflags"}
+    - {path: Dockerfile, line: 67, quote: "CMD [\"sftpgo\", \"serve\"]"}
+    - {path: Dockerfile.alpine, line: 1, quote: "FROM golang:1.27-alpine3.24 AS builder"}
+    - {path: Dockerfile.distroless, line: 31, quote: "sed -i 's|\"sqlite\"|\"bolt\"|' sftpgo.json"}
+runtime: {accept: [go]}
+port:
+  # 8080 is the HTTP service (web admin, web client, REST API, /healthz); 2022 is SFTP (SSH), not HTTP. No EXPOSE in any Dockerfile.
+  accept: [8080]
+  evidence:
+    - {path: sftpgo.json, line: 268, quote: "\"port\": 8080,"}
+    - {path: sftpgo.json, line: 89, quote: "\"port\": 2022,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: sftpgo.json, line: 269, quote: "\"address\": \"\","}
+startCommand:
+  source: image
+  accept: ["sftpgo serve"]
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "CMD [\"sftpgo\", \"serve\"]"}
+    - {path: internal/cmd/serve.go, line: 36, quote: "Use:   \"serve\","}
+healthPath:
+  accept: ["/healthz"]
+  evidence:
+    - {path: internal/httpd/httpd.go, line: 97, quote: "healthzPath                           = \"/healthz\""}
+    - {path: internal/httpd/server.go, line: 1326, quote: "render.PlainText(w, r, \"ok\")"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql, cockroachdb, bolt, memory]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {SFTPGO_DATA_PROVIDER__DRIVER: "postgresql | mysql"}
+  connectionVars: [SFTPGO_DATA_PROVIDER__DRIVER, SFTPGO_DATA_PROVIDER__NAME, SFTPGO_DATA_PROVIDER__HOST, SFTPGO_DATA_PROVIDER__PORT, SFTPGO_DATA_PROVIDER__USERNAME, SFTPGO_DATA_PROVIDER__PASSWORD, SFTPGO_DATA_PROVIDER__SSLMODE]
+  # Any data_provider key can be set by an SFTPGO_DATA_PROVIDER__<KEY> variable (viper env prefix "sftpgo", "__" separator).
+  evidence:
+    - {path: sftpgo.json, line: 203, quote: "\"driver\": \"sqlite\","}
+    - {path: internal/dataprovider/dataprovider.go, line: 82, quote: "PGSQLDataProviderName = \"postgresql\""}
+    - {path: internal/dataprovider/dataprovider.go, line: 84, quote: "MySQLDataProviderName = \"mysql\""}
+    - {path: internal/config/config.go, line: 488, quote: "viper.SetEnvPrefix(configEnvPrefix)"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/dataprovider/dataprovider.go, line: 965, quote: "err := provider.initializeDatabase()"}
+    - {path: internal/dataprovider/dataprovider.go, line: 975, quote: "err = provider.migrateDatabase()"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: internal/dataprovider/dataprovider.go, line: 960, quote: "return startScheduler()"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/srv/sftpgo/data, /srv/sftpgo/backups, /var/lib/sftpgo]
+  s3: native
+  s3SelectBy: {}
+  # With the default sqlite driver the database file is under the working directory /var/lib/sftpgo. User files are local
+  # unless the user has an S3, GCS or Azure backend.
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "RUN mkdir -p /etc/sftpgo /var/lib/sftpgo /usr/share/sftpgo /srv/sftpgo/data /srv/sftpgo/backups"}
+    - {path: Dockerfile, line: 59, quote: "\"users_base_dir\": \"/srv/sftpgo/data\","}
+    - {path: sftpgo.json, line: 204, quote: "\"name\": \"sftpgo.db\","}
+    - {path: internal/vfs/s3fs.go, line: 15, quote: "//go:build !nos3"}
+env:
+  required:
+    - {name: SFTPGO_DEFAULT_ADMIN_USERNAME, secret: false, buildTime: false, note: "creates the first admin at start; otherwise the web admin asks for setup"}
+    - {name: SFTPGO_DEFAULT_ADMIN_PASSWORD, secret: true, buildTime: false, note: "first admin password"}
+    - {name: SFTPGO_DATA_PROVIDER__DRIVER, secret: false, buildTime: false, note: "set to postgresql or mysql; the default sqlite file is lost with the task"}
+    - {name: SFTPGO_DATA_PROVIDER__HOST, secret: false, buildTime: false, note: "database host"}
+    - {name: SFTPGO_DATA_PROVIDER__PASSWORD, secret: true, buildTime: false, note: "database password"}
+  optional: [SFTPGO_DATA_PROVIDER__NAME, SFTPGO_DATA_PROVIDER__PORT, SFTPGO_DATA_PROVIDER__USERNAME, SFTPGO_DATA_PROVIDER__SSLMODE, SFTPGO_HTTPD__BINDINGS__0__PORT, SFTPGO_SFTPD__BINDINGS__0__PORT, SFTPGO_LOG_FILE_PATH]
+  buildTime: [COMMIT_SHA, FEATURES]
+  evidence:
+    - {path: internal/dataprovider/admin.go, line: 651, quote: "envUsername := strings.TrimSpace(os.Getenv(\"SFTPGO_DEFAULT_ADMIN_USERNAME\"))"}
+    - {path: internal/dataprovider/admin.go, line: 652, quote: "envPassword := strings.TrimSpace(os.Getenv(\"SFTPGO_DEFAULT_ADMIN_PASSWORD\"))"}
+    - {path: Dockerfile, line: 15, quote: "ARG COMMIT_SHA"}
+blockers:
+  expected:
+    - "The main protocol is SFTP over SSH on port 2022, which an HTTPS-only ALB cannot carry; only the HTTP service on 8080 is reachable"
+    - "Default storage is local disk (sqlite file and user directories); Fargate storage is ephemeral, so metadata needs PostgreSQL or MySQL and user files need an S3 backend"
+  mustNot:
+    - "Port 2022 must not be reported as the web port: the HTTP port is 8080"
+    - "A database must not be reported as required: sqlite is the default; PostgreSQL or MySQL is an option"
+    - "Redis must not be expected: SFTPGo has no Redis dependency"
+    - "Dockerfile.distroless must not be assumed to support sqlite: it switches the default driver to bolt"
+vendorQuestions:
+  legitimate:
+    - "Is a web-client-only (HTTP) deployment with PostgreSQL and S3 storage acceptable, without SFTP access?"
+  unnecessary:
+    - "Which port is the web UI on? (8080)"
+    - "Which health path? (/healthz)"
+    - "Which database engines are supported? (sqlite, postgresql, mysql, cockroachdb, bolt)"
+traps:
+  - "The Dockerfiles have no EXPOSE line and no HEALTHCHECK; ports come from sftpgo.json (Dockerfile:59 edits only users_base_dir and backups)"
+  - "FTP and WebDAV bindings are port 0, which means disabled (sftpgo.json:122, :157)"
+  - "Dockerfile.distroless builds without CGO, so it cannot use sqlite and edits the config to use bolt (Dockerfile.distroless:31)"
+  - "Dockerfile.alpine and Dockerfile are the same build; the Debian image also copies optional sftpgo-plugin-* binaries (Dockerfile:53)"
+openQuestions:
+  - "Whether a user with an S3 backend plus the WebClient is enough product value for a customer; the outcome treats SFTP as the core function"
+  - "Env names follow the SFTPGO_<SECTION>__<KEY> viper mapping; each name was not checked against docs"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: the HTTP web client and WebDAV run with PostgreSQL and S3; SFTP is the part Deployz cannot route, and the default SQLite and local storage are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}

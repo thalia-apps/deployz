@@ -1,0 +1,95 @@
+id: new-215
+repository: ONLYOFFICE/DocumentServer
+commit: c4ad98db9f0dd84a9949566de399fc79698acd46
+summary: >
+  ONLYOFFICE/DocumentServer is a meta-repository. The tree holds only a Readme, a changelog, a roadmap, an .mrconfig
+  helper and git submodule pointers (core, core-fonts, dictionaries, document-formats, document-templates, sdkjs,
+  server, web-apps). It has no application source, no Dockerfile, no package manifest and no start command. The real
+  source is in the submodule repositories, and the Readme points to a separate repository (Docker-DocumentServer) for
+  the Docker image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository contains no buildable code. All components are git submodules (.gitmodules) that a plain clone or
+    GitHub archive does not include, and there is no Dockerfile. The Readme says the Docker image comes from another
+    repository (ONLYOFFICE/Docker-DocumentServer) and that building from source follows a separate Help Center guide
+    (C++ core, Node.js server, many components). Deployz needs a Dockerfile in the repository.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: .gitmodules, line: 1, quote: "[submodule \"core\"]"}
+    - {path: Readme.md, line: 54, quote: "[server](https://github.com/ONLYOFFICE/server) - the backend server software layer"}
+    - {path: Readme.md, line: 163, quote: "The easiest way to install ONLYOFFICE Docs is to use **the Docker image**"}
+runtime: {accept: []}
+port:
+  accept: []
+  evidence: []
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: explicit
+  accept: []
+  evidence: []
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # No database configuration exists in this repository; it lives in the server submodule, which is not present.
+  evidence: []
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is a meta-repository: core, server, sdkjs, web-apps and the other components are git submodules, not files in the tree"
+    - "No Dockerfile exists in the repository; the Docker image is built from a different repository"
+    - "No application source, package manifest or start command is present to build"
+  mustNot:
+    - "A port, database, Redis or start command must not be invented: nothing in this tree defines them"
+    - "The Docker-DocumentServer repository must not be treated as part of this repository"
+    - "The result must not be DEPLOYABLE or DEPLOYABLE_WITH_CHANGES: adding a Dockerfile cannot supply the missing submodule source"
+vendorQuestions:
+  legitimate:
+    - "Which repository holds the Dockerfile for ONLYOFFICE Docs? (ONLYOFFICE/Docker-DocumentServer) Is that the repository to deploy?"
+  unnecessary:
+    - "Which port, health path or database engine? (the repository has none of these files)"
+traps:
+  - ".gitmodules lists core, core-fonts, dictionaries, sdkjs, server, web-apps and the plugin repositories with relative URLs (../core.git); the tree entries are gitlinks (mode 160000) with no files"
+  - "The Readme describes a rich product (editors, collaboration, plugins) and a Docker install, which can look like a deployable web app, but the Docker image source is another repository (Readme.md:163)"
+  - ".mrconfig and mr-update.sh are helper files for the mr (myrepos) tool to check out the sub-repositories"
+openQuestions:
+  - "Whether the customer wants the Docker-DocumentServer repository analysed instead; it was not read here"

@@ -1,0 +1,117 @@
+id: new-199
+repository: emqx/emqx
+commit: d12fb1d61eaced6463bb129b93b09fd202507a9b
+summary: >
+  EMQX is an Erlang/OTP MQTT broker for IoT. Devices connect with MQTT (1883, 8883), MQTT over WebSocket (8083, 8084)
+  and other non-HTTP protocols; an HTTP dashboard and REST API run on 18083. The broker keeps its data and logs in
+  /opt/emqx/data and /opt/emqx/log (declared as volumes). deploy/docker/Dockerfile does build the broker from the
+  repository source (make emqx-enterprise-tgz in an emqx-builder image) into one image, but the product is a message
+  broker, not a web application.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    EMQX is an MQTT broker server. Its main job is MQTT over raw TCP on 1883 (and TLS on 8883), which the ALB cannot
+    serve; it also exposes several ports (1883, 8083, 8084, 8883, 18083, 4370, 5369) where Deployz allows one public HTTP
+    port. The broker keeps durable state in /opt/emqx/data, which Fargate does not give a task. The dashboard on 18083 is
+    only an admin UI, not the product.
+dockerfile:
+  accept: [deploy/docker/Dockerfile]
+  reject:
+    - {path: deploy/docker/Dockerfile.msodbc, reason: "optional extension of a published emqx-enterprise image with the MS SQL ODBC driver; the file says it is run manually"}
+    - {path: .ci/docker-compose-file/databricks/Dockerfile, reason: "CI test fixture (flask mock of Databricks)"}
+    - {path: .ci/docker-compose-file/influxdb/v3.Dockerfile, reason: "CI test fixture (InfluxDB image)"}
+    - {path: .ci/docker-compose-file/openldap/Dockerfile, reason: "CI test fixture (OpenLDAP image)"}
+    - {path: .ci/docker-compose-file/pgsql/Dockerfile, reason: "CI test fixture (PostgreSQL image with TLS config)"}
+    - {path: plugins/emqx_bridge_mqtt_dq/Dockerfile, reason: "plugin packaging on top of the published emqx/emqx image"}
+  target: null
+  context: .
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 1, quote: "ARG BUILD_FROM=ghcr.io/emqx/emqx-builder/6.2-3:1.19.1-28.5.0.7-3-debian13"}
+    - {path: deploy/docker/Dockerfile, line: 63, quote: "make ${PROFILE}-tgz && \\"}
+    - {path: deploy/docker/Dockerfile, line: 126, quote: "EXPOSE 1883 8083 8084 8883 18083 4370 5369"}
+runtime: {accept: [erlang]}
+port:
+  # 1883 is the MQTT client port; 18083 is the HTTP dashboard and API.
+  accept: [1883, 18083]
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 126, quote: "EXPOSE 1883 8083 8084 8883 18083 4370 5369"}
+    - {path: apps/emqx_dashboard/src/emqx_dashboard_schema.erl, line: 147, quote: "bind(18083)"}
+    - {path: apps/emqx/src/emqx_schema.erl, line: 704, quote: "mqtt_listener(1883) ++"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: apps/emqx/src/emqx_schema.erl, line: 704, quote: "mqtt_listener(1883) ++"}
+startCommand:
+  source: image
+  accept: ["/opt/emqx/bin/emqx foreground"]
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 128, quote: "ENTRYPOINT [\"/usr/bin/docker-entrypoint.sh\"]"}
+    - {path: deploy/docker/Dockerfile, line: 130, quote: "CMD [\"/opt/emqx/bin/emqx\", \"foreground\"]"}
+healthPath:
+  # /status is on the dashboard HTTP listener (18083), not on the MQTT port.
+  accept: ["/status"]
+  evidence:
+    - {path: apps/emqx_management/src/emqx_mgmt_api_status.erl, line: 73, quote: "\"/status\"."}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # EMQX stores sessions, routes and config in embedded Mnesia (data dir); external databases are optional integrations.
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 116, quote: "VOLUME [\"/opt/emqx/log\", \"/opt/emqx/data\"]"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/opt/emqx/data, /opt/emqx/log]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 116, quote: "VOLUME [\"/opt/emqx/log\", \"/opt/emqx/data\"]"}
+env:
+  required: []
+  optional: [EMQX_NODE__NAME, EMQX_DASHBOARD__DEFAULT_PASSWORD]
+  buildTime: [PROFILE, PKG_VSN, BUILD_FROM, RUN_FROM, DEPS_FROM, SOURCE_TYPE]
+  evidence:
+    - {path: deploy/docker/Dockerfile, line: 43, quote: "ARG PROFILE=emqx-enterprise"}
+    - {path: deploy/docker/Dockerfile, line: 4, quote: "ARG SOURCE_TYPE=src # tgz"}
+blockers:
+  expected:
+    - "EMQX is an MQTT broker: clients use MQTT over TCP (1883, 8883), which an HTTPS-only ALB cannot serve"
+    - "The image exposes seven ports; Deployz allows one public HTTP port"
+    - "The broker needs a durable data directory (/opt/emqx/data); Fargate task storage is ephemeral"
+  mustNot:
+    - "The dashboard port 18083 must not be treated as the product web port: it is an admin UI, the product is MQTT"
+    - "A database or Redis must not be reported as required: EMQX embeds its storage"
+    - "CI fixture Dockerfiles under .ci/ must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is EMQX the MQTT broker for another application? It is better run as a managed MQTT service (AWS IoT Core or EMQX Cloud), outside this deployment"
+  unnecessary:
+    - "Which port? (1883 for MQTT, 18083 for the dashboard)"
+    - "Which Dockerfile? (deploy/docker/Dockerfile)"
+    - "Is a database needed? (no, embedded)"
+traps:
+  - "deploy/docker/Dockerfile builds from source but its default base images come from ghcr.io and dhi.io, and the build needs the full Erlang toolchain (deploy/docker/Dockerfile:1-3)"
+  - "SOURCE_TYPE=tgz switches the build to a pre-built tarball; the default is src (deploy/docker/Dockerfile:4)"
+  - "Port 4370 (Erlang distribution) and 5369 (gen_rpc) are cluster ports, not client ports (deploy/docker/Dockerfile:124)"
+  - "The CI Dockerfiles under .ci/docker-compose-file are databases and mocks for tests"
+openQuestions:
+  - "The EMQX_* environment variable names follow the documented EMQX convention and were not read in the source"
