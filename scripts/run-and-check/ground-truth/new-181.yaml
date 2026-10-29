@@ -1,0 +1,135 @@
+id: new-181
+repository: toeverything/AFFiNE
+commit: 8cef09e1dd62b47a3cbc9f352aa10b3a90c75d34
+summary: >
+  AFFiNE is a Yarn monorepo (TypeScript, NestJS) for a collaborative workspace: web, mobile and admin front ends plus a
+  NestJS server (packages/backend/server) with a Rust native module. The default SERVER_FLAVOR is allinone, so one Node
+  process serves the web app, GraphQL, websocket sync and background jobs on port 3010 (GET /info is the status route).
+  It needs PostgreSQL with the pgvector extension and Redis (the self-host compose file has both). Migrations run in a
+  separate one-shot step (self-host-predeploy.js). Blobs default to local disk (~/.affine/storage); an aws-s3 storage
+  provider is supported in the configuration. Search uses the embedded provider by default (Elasticsearch and
+  Manticore are optional). No Dockerfile builds from source: .github/deployment/node/Dockerfile copies pre-built
+  dist folders, and .render/Dockerfile starts from the published image.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The runtime fits Deployz (one Node image, port 3010, /info, PostgreSQL 16, Redis, one-shot migration, S3 for blobs).
+    But no Dockerfile builds from the repository: the node Dockerfile copies the CI-built web, admin and mobile dist
+    folders and a built server, and .render/Dockerfile only wraps ghcr.io/toeverything/affine:stable. A vendor change adds
+    a multi-stage Dockerfile (yarn workspace build, Rust native module, front ends, server). A strict read of "no CI-built
+    artefacts" gives NOT_DEPLOYABLE. The database also needs the pgvector extension (RDS PostgreSQL 16 supports it).
+dockerfile:
+  accept: []
+  reject:
+    - {path: .github/deployment/node/Dockerfile, reason: "copies pre-built packages/frontend/*/dist and a built server (dist/main.js); no build stage"}
+    - {path: .render/Dockerfile, reason: "FROM the published ghcr.io/toeverything/affine:stable image; nothing is compiled"}
+  target: null
+  context: .
+  evidence:
+    - {path: .github/deployment/node/Dockerfile, line: 7, quote: "COPY ./packages/frontend/apps/web/dist /app/static"}
+    - {path: .github/deployment/node/Dockerfile, line: 35, quote: "CMD [\"sh\", \"-c\", \"node ./scripts/upgrade-config.js && exec node ./dist/main.js\"]"}
+    - {path: .render/Dockerfile, line: 4, quote: "FROM ghcr.io/toeverything/affine:stable"}
+runtime: {accept: [node]}
+port:
+  accept: [3010]
+  evidence:
+    - {path: packages/backend/server/src/core/config/config.ts, line: 69, quote: "default: 3010,"}
+    - {path: .github/deployment/node/Dockerfile, line: 33, quote: "EXPOSE 3010"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/backend/server/src/core/config/config.ts, line: 64, quote: "default: '0.0.0.0',"}
+    - {path: packages/backend/server/src/server.ts, line: 157, quote: "await app.listen(config.server.port, config.server.listenAddr);"}
+startCommand:
+  source: explicit
+  accept: ["node ./dist/main.js", "node ./scripts/upgrade-config.js && exec node ./dist/main.js"]
+  evidence:
+    - {path: .github/deployment/node/Dockerfile, line: 35, quote: "CMD [\"sh\", \"-c\", \"node ./scripts/upgrade-config.js && exec node ./dist/main.js\"]"}
+healthPath:
+  accept: ["/info"]
+  evidence:
+    - {path: packages/backend/server/src/app.controller.ts, line: 8, quote: "@Controller('/info')"}
+    - {path: packages/backend/server/src/__tests__/app/selfhost.e2e.ts, line: 141, quote: ".get('/info')"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  # The self-host database image is pgvector/pgvector:pg16; the migrations create the vector extension.
+  evidence:
+    - {path: .docker/selfhost/compose.yml, line: 52, quote: "image: pgvector/pgvector:pg16"}
+    - {path: packages/backend/server/schema.prisma, line: 10, quote: "url        = env(\"DATABASE_URL\")"}
+    - {path: packages/backend/server/migrations/20250210090228_ai_context_embedding/migration.sql, line: 7, quote: "CREATE EXTENSION IF NOT EXISTS \"vector\";"}
+migrations:
+  mode: command
+  accept: ["node ./scripts/self-host-predeploy.js"]
+  evidence:
+    - {path: .docker/selfhost/compose.yml, line: 30, quote: "command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']"}
+    - {path: packages/backend/server/scripts/self-host-predeploy.js, line: 47, quote: "execSync('yarn prisma migrate deploy', {"}
+    - {path: packages/backend/server/scripts/self-host-predeploy.js, line: 56, quote: "execSync('yarn cli run', {"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: .docker/selfhost/compose.yml, line: 19, quote: "- REDIS_SERVER_HOST=redis"}
+workers:
+  status: embedded
+  commands: []
+  # SERVER_FLAVOR defaults to allinone; other flavors split roles but are not needed.
+  evidence:
+    - {path: packages/backend/server/src/env.ts, line: 104, quote: "FLAVOR = readEnv('SERVER_FLAVOR', Flavor.AllInOne, Object.values(Flavor));"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/root/.affine/storage, /root/.affine/config]
+  s3: native
+  s3SelectBy: {}
+  # Blob storage defaults to the fs provider; the aws-s3 provider is set in the config file (storages.blob.storage).
+  evidence:
+    - {path: .docker/selfhost/compose.yml, line: 16, quote: "- ./data/storage:/root/.affine/storage"}
+    - {path: packages/backend/native/src/runtime/config/admin.rs, line: 582, quote: "json!({ \"provider\": \"fs\", \"bucket\": \"blobs\", \"config\": {} })"}
+    - {path: packages/backend/native/src/runtime/object_storage/config.rs, line: 125, quote: "storage(\"aws-s3\", s3),"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL connection string with the pgvector extension"}
+    - {name: REDIS_SERVER_HOST, secret: false, buildTime: false, note: "Redis host; REDIS_SERVER_PORT and REDIS_SERVER_PASSWORD are optional"}
+  optional: [AFFINE_SERVER_PORT, LISTEN_ADDR, AFFINE_SERVER_HOST, AFFINE_SERVER_SUB_PATH, DEPLOYMENT_TYPE, SERVER_FLAVOR, MAILER_HOST, COPILOT_OPENAI_API_KEY]
+  buildTime: []
+  evidence:
+    - {path: .docker/selfhost/compose.yml, line: 20, quote: "- DATABASE_URL=postgresql://affine@postgres:5432/affine"}
+    - {path: packages/backend/server/.env.example, line: 2, quote: "# REDIS_SERVER_HOST=localhost"}
+    - {path: packages/backend/server/src/core/config/config.ts, line: 70, quote: "env: ['AFFINE_SERVER_PORT', 'integer'],"}
+blockers:
+  expected:
+    - "No Dockerfile builds AFFiNE from the repository: .github/deployment/node/Dockerfile copies CI-built dist folders, .render/Dockerfile wraps the published image"
+    - "PostgreSQL needs the pgvector extension and the schema needs the one-shot self-host-predeploy.js step before the server starts"
+    - "Redis is required"
+    - "Blobs default to local disk; durable files need the aws-s3 provider in the config file"
+  mustNot:
+    - "Missing Elasticsearch or Manticore must not be a blocker: the default search provider is embedded"
+    - "The private.key and config files in ~/.affine/config must not count as a durable-disk requirement: the predeploy step generates them"
+    - "Separate worker services must not be required: the allinone flavor runs everything in one process"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile should Deployz use? The repo has none that builds from source"
+    - "Which S3 bucket holds blobs? (set storages.blob.storage to aws-s3 in the config file)"
+  unnecessary:
+    - "Which port? (3010)"
+    - "Health path? (/info)"
+    - "Which database engine? (PostgreSQL with pgvector)"
+traps:
+  - "The node Dockerfile looks like the production image but copies pre-built dist folders from packages/frontend (.github/deployment/node/Dockerfile:7)"
+  - "Server configuration lives in a Rust native module and a JSON config file (~/.affine/config), so a TypeScript-only search for env variables finds few names"
+  - "The compose file runs the migration as a second container from the same image (.docker/selfhost/compose.yml:30), not at server start"
+  - "Redis, pgvector and the one-shot migration are all in .docker/selfhost/compose.yml; manticore and elasticsearch only appear in e2e and optional indexer config"
+crossReview:
+  - {field: outcome.accept, change: "none: keep both. DEPLOYABLE_WITH_CHANGES is defensible: docs/ai-analysis.md treats an unbuildable Dockerfile (no-buildable-dockerfile) as CODE_CHANGE, and a multi-stage Dockerfile (yarn build, napi Rust module packages/backend/native, front ends) is a plain add-a-Dockerfile change with no missing capability. NOT_DEPLOYABLE stays only for a strict no-CI-built-artefacts reading; the runtime needs no unsupported service", evidence: "packages/backend/native/Cargo.toml and build.rs exist; .github/deployment/node/Dockerfile:7 copies dist"}
+  - {field: database/redis/workers/migrations, change: "none: PostgreSQL+pgvector, Redis, allinone flavor, one-shot predeploy confirmed", evidence: ".docker/selfhost/compose.yml:19-52; env.ts:104; self-host-predeploy.js:47,56"}
+  - {field: port/healthPath/bindAllInterfaces, change: "none", evidence: "config.ts:64,69; app.controller.ts:8; server.ts:157"}
+  - {field: storage/search blockers, change: "none: fs default with aws-s3 provider; indexer provider enum has embedded, elasticsearch, manticoresearch", evidence: "admin.rs:582; indexer/config.ts:6-9"}
+  - {field: all, change: verified, evidence: "14 citations checked"}

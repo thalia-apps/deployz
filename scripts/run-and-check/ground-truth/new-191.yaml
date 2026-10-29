@@ -1,0 +1,136 @@
+id: new-191
+repository: mautic/mautic
+commit: e22b635d68d0821b5256dd11bd3905f61b452247
+summary: >
+  Mautic is a PHP (Symfony, PHP 8.2+) marketing-automation platform. The repository root is the Composer project
+  skeleton (composer.json requires mautic/core-lib ^7.0); the code is installed by `composer install` and the web root is
+  the repository root (index.php, .htaccess). There is no Dockerfile at all: only DDEV and devcontainer files for
+  development. The app needs a PHP web server (Apache with mod_rewrite or nginx with php-fpm) on one HTTP port and MySQL
+  (db_driver is hard-coded to pdo_mysql). It writes config/local.php at install, uploads to media/ and caches to var/ on
+  local disk, and needs cron jobs (segments, campaigns, emails) to work. Redis is not required.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The stack fits Deployz (one PHP web service, MySQL 8, optional workers from the same image), but no Dockerfile
+    exists, so the vendor must add one (PHP with Apache, `composer install`, Mautic web root). Core features also depend
+    on cron/console commands and on local disk (config/local.php, media/, var/), which a strict read can treat as a durable
+    local disk requirement. The database settings can be given by the MAUTIC_CONFIG_PARAMETERS environment variable and
+    `bin/console mautic:install`, which avoids a persisted local.php. A missing Dockerfile and local-disk writes are
+    repository changes (no-buildable-dockerfile, local-file-storage), and the cron commands can run as workers or as a
+    scheduled job that the repository declares, so no required capability is outside the MVP.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .ddev/config.yaml, reason: "DDEV development environment, not a Dockerfile"}
+    - {path: .devcontainer/devcontainer.json, reason: "Codespaces and devcontainer config for contributors"}
+  target: null
+  context: .
+  evidence:
+    - {path: composer.json, line: 26, quote: "\"mautic/core-lib\": \"^7.0\""}
+    - {path: index.php, line: 9, quote: "require 'app/config/bootstrap.php';"}
+    - {path: .htaccess, line: 9, quote: "RewriteEngine On"}
+runtime: {accept: [php]}
+port:
+  accept: [80, 8080]
+  # No port is defined in the repository: the vendor Dockerfile and web server choose it.
+  evidence:
+    - {path: index.php, line: 9, quote: "require 'app/config/bootstrap.php';"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: index.php, line: 9, quote: "require 'app/config/bootstrap.php';"}
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground", "php-fpm"]
+  evidence:
+    - {path: index.php, line: 17, quote: "$kernel   = (new MiddlewareBuilder(new AppKernel($_SERVER['APP_ENV'], (bool) $_SERVER['APP_DEBUG'])))->resolve();"}
+healthPath:
+  # No health route exists. The login page answers 200 without a session.
+  accept: ["/s/login", "/"]
+  evidence:
+    - {path: app/bundles/UserBundle/Config/config.php, line: 31, quote: "'path'       => '/login',"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [MAUTIC_CONFIG_PARAMETERS, db_host, db_port, db_name, db_user, db_password]
+  # db_* keys live in config/local.php (written by the installer) or in the MAUTIC_CONFIG_PARAMETERS JSON environment variable.
+  evidence:
+    - {path: app/bundles/CoreBundle/Loader/ParameterLoader.php, line: 219, quote: "$compiledParameters['db_driver'] = 'pdo_mysql';"}
+    - {path: app/bundles/CoreBundle/Config/config.php, line: 267, quote: "'db_host'                         => '127.0.0.1',"}
+    - {path: app/bundles/CoreBundle/Loader/ParameterLoader.php, line: 212, quote: "$envParameters = getenv('MAUTIC_CONFIG_PARAMETERS');"}
+migrations:
+  mode: command
+  accept: ["bin/console mautic:install", "bin/console doctrine:migrations:migrate"]
+  evidence:
+    - {path: app/bundles/InstallBundle/Command/InstallCommand.php, line: 169, quote: "define('MAUTIC_INSTALLER', 1);"}
+    - {path: app/config/config.php, line: 232, quote: "'table_name' => '%env(MAUTIC_MIGRATIONS_TABLE_NAME)%',"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: ["bin/console mautic:segments:update", "bin/console mautic:campaigns:update", "bin/console mautic:campaigns:trigger"]
+  evidence:
+    - {path: UPGRADE-5.0.md, line: 55, quote: "The command `bin/console mautic:segments:update` will no longer update the campaign members"}
+    - {path: app/bundles/MessengerBundle/Config/config.php, line: 7, quote: "'messenger_dsn_email'                  => 'sync://', // sync means no queue"}
+scheduledJobs:
+  status: required
+  items: [mautic:segments:update, mautic:campaigns:update, mautic:campaigns:trigger]
+  evidence:
+    - {path: UPGRADE-5.0.md, line: 55, quote: "Both commands are recommended from Mautic 1"}
+storage:
+  local: required
+  paths: [media, var/cache, var/logs, var/tmp, config/local.php]
+  s3: none
+  s3SelectBy: {}
+  # Uploaded assets and images go to media/ on local disk. A MauticCloudStorageBundle plugin lists Amazon S3 for assets but was not verified, so S3 is not counted as native.
+  evidence:
+    - {path: app/config/paths.php, line: 7, quote: "'media'        => 'media',"}
+    - {path: app/config/paths.php, line: 11, quote: "'local_config' => '%kernel.project_dir%/config/local.php',"}
+    - {path: app/bundles/CoreBundle/Config/config.php, line: 253, quote: "'cache_path'                      => '%kernel.project_dir%/var/cache',"}
+    - {path: app/bundles/CoreBundle/Config/config.php, line: 257, quote: "'image_path'                      => 'media/images',"}
+env:
+  required:
+    - {name: MAUTIC_CONFIG_PARAMETERS, secret: true, note: "JSON with db_host, db_port, db_name, db_user, db_password, secret_key and site_url; without it the web installer writes config/local.php on local disk"}
+    - {name: MAUTIC_MAILER_DSN, secret: true, note: "mailer DSN for sending email"}
+  optional: [APP_ENV, APP_DEBUG, MAUTIC_TABLE_PREFIX, MAUTIC_MESSENGER_DSN_EMAIL, MAUTIC_MESSENGER_DSN_HIT, MAUTIC_MESSENGER_DSN_FAILED, IPS_ALLOWED]
+  buildTime: []
+  evidence:
+    - {path: .env, line: 15, quote: "APP_ENV=prod"}
+    - {path: app/config/config.php, line: 99, quote: "'main' => '%env(urlencoded-dsn:MAUTIC_MAILER_DSN)%',"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: the vendor must add one that runs `composer install` (mautic/core-lib ^7.0 plus assets build) and serves the repository root with Apache or nginx with php-fpm"
+    - "Core automation needs recurring console commands (segments update, campaigns update, campaigns trigger) as workers or scheduled tasks beside the web process"
+    - "Installation state lives in config/local.php, media/ and var/ on local disk unless configuration is given through MAUTIC_CONFIG_PARAMETERS and uploads go elsewhere"
+  mustNot:
+    - "Redis must not be reported as required: the Messenger queues default to sync:// (no queue)"
+    - "PostgreSQL must not be offered: db_driver is hard-coded to pdo_mysql"
+    - ".ddev/docker-compose.redis.yaml, phpmyadmin and selenium files must not be treated as production services"
+    - "Missing health route must not be a blocker: /s/login works as a health target"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile (PHP with Apache or php-fpm plus nginx) should Deployz build? The repository has none"
+    - "How are the cron commands (mautic:segments:update, mautic:campaigns:update, mautic:campaigns:trigger) run?"
+    - "Where do uploads persist? Mautic writes to media/ on local disk"
+  unnecessary:
+    - "Is Redis needed? (no)"
+    - "Which database? (MySQL only)"
+traps:
+  - ".ddev/ holds DDEV, Redis, phpMyAdmin and Selenium compose files for development only; there is no Dockerfile (.ddev/docker-compose.redis.yaml)"
+  - "composer.json requires mautic/core-lib ^7.0; the app code arrives through Composer, and post-install runs npm-ci and asset generation (composer.json:151-157)"
+  - "db_driver is forced to pdo_mysql, so PostgreSQL is not an option (ParameterLoader.php:217-219)"
+  - "The first request without config/local.php starts the web installer; use `bin/console mautic:install` or MAUTIC_CONFIG_PARAMETERS to avoid a manual step (app/bundles/InstallBundle/Install/InstallService.php:138)"
+  - "composer.json platform pins php 8.2.0 while core needs the extensions iconv, imap and pdo (app/composer.json:19-22)"
+crossReview:
+  - {field: "outcome.accept", change: "removed NOT_DEPLOYABLE: a missing Dockerfile is a CODE_CHANGE (no-buildable-dockerfile), local disk writes are a CODE_CHANGE, and cron runs as workers from the same image or a declared scheduled job, so no required capability is outside the MVP. Mautic is an application, not a library", evidence: "docs/ai-analysis.md FIX_CLASSES table; composer.json:151-157"}
+  - {field: "dockerfile", change: "none: confirmed no Dockerfile or compose outside .ddev and .devcontainer", evidence: "git ls-tree of the commit"}
+  - {field: "database", change: "none: MySQL only", evidence: "ParameterLoader.php:217-219"}
+  - {field: "redis", change: "none: confirmed none; Messenger defaults to sync://", evidence: "MessengerBundle/Config/config.php:7"}
+  - {field: "traps", change: "fixed file name .ddev/docker-compose.redis.yaml (was .yml)", evidence: "git ls-tree: .ddev/docker-compose.redis.yaml"}
+  - {field: "env.required", change: "none: MAUTIC_MAILER_DSN kept; no default found in loaders or .env", evidence: "app/config/config.php:99"}
+  - {field: "all", change: "verified", evidence: "15 citations checked"}

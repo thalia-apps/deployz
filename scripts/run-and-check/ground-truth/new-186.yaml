@@ -1,0 +1,116 @@
+id: new-186
+repository: medusajs/medusa
+commit: 5ac3fdcbf82e818337d424852c778ce2ffd5e8e9
+summary: >
+  The Medusa repository is the Yarn-workspaces source monorepo of the Medusa commerce framework (@medusajs/medusa,
+  core libraries, commerce modules, providers, admin dashboard, CLI, docs). It is not a store application: a
+  deployable Medusa store is generated with `npx create-medusa-app` into its own project. The repo root has no
+  Dockerfile for an application. The only Dockerfile is .oss-scanner/Dockerfile, a build and test environment (Node 22,
+  a local PostgreSQL and Redis started inside the same container) for a security scanner. The integration-tests
+  packages hold test fixtures with medusa-config files, not a product. A real Medusa store would run `medusa start`
+  on port 9000 with PostgreSQL required and Redis optional.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The root is a framework and library monorepo ("private": true workspace root, "Every Medusa package published to
+    npm lives under packages"). No directory is a store application with a Dockerfile; the only Dockerfile is a
+    scanner test environment that installs PostgreSQL and Redis into one container. A vendor who connects this repo has
+    nothing to deploy: the product is created from the npm packages in a separate project.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .oss-scanner/Dockerfile, reason: "scanner build and test environment: installs postgresql and redis-server in the same container and runs no server; not an application image"}
+  target: null
+  context: .
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 5, quote: "FROM node:22-bookworm"}
+    - {path: .oss-scanner/Dockerfile, line: 8, quote: "ca-certificates git python3 build-essential postgresql redis-server \\"}
+    - {path: package.json, line: 3, quote: "\"private\": true,"}
+runtime: {accept: [node]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: packages/medusa/src/commands/start.ts, line: 216, quote: "port = 9000,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/medusa/src/commands/start.ts, line: 216, quote: "port = 9000,"}
+startCommand:
+  # No application in the repo; a generated store runs `medusa start` (start.ts).
+  source: explicit
+  accept: ["medusa start"]
+  evidence:
+    - {path: packages/medusa/package.json, line: 3, quote: "\"version\": \"2.22.1\","}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: packages/core/framework/src/http/express-loader.ts, line: 21, quote: "const isHealthCheck = (req: MedusaRequest) => req.path === \"/health\""}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  # Applies to a generated store, not to the monorepo root.
+  evidence:
+    - {path: README.md, line: 43, quote: "To create a Medusa application locally, you need Node.js v22.22.0 or later and a running PostgreSQL database. Then run:"}
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  # A generated store runs without Redis (in-memory event bus, cache, locking); Redis modules are options.
+  evidence:
+    - {path: README.md, line: 59, quote: "| [`packages/modules/*`](./packages/modules) | Commerce Modules (product, cart, order, pricing, payment, and more) and Infrastructure Modules (event bus, caching, file, locking, workflow engine"}
+workers:
+  status: optional-independent
+  commands: ["medusa start"]
+  # MEDUSA_WORKER_MODE (shared, server, worker) splits the same build into a server and a worker.
+  evidence:
+    - {path: packages/core/framework/src/config/config.ts, line: 26, quote: ".MEDUSA_WORKER_MODE as ConfigModule[\"projectConfig\"][\"workerMode\"]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: README.md, line: 60, quote: "| [`packages/modules/providers/*`](./packages/modules/providers) | Module Providers, such as Stripe payments, S3 file storage, SendGrid notifications, Redis locking and caching, and auth provid"}
+env:
+  required: []
+  optional: [DATABASE_URL, REDIS_URL, MEDUSA_WORKER_MODE]
+  buildTime: []
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 15, quote: "REDIS_URL=redis://localhost:6379 \\"}
+blockers:
+  expected:
+    - "The repository is a framework and library monorepo, not an application: no Dockerfile or workspace builds a store; a store is generated into a separate project with create-medusa-app"
+    - "The only Dockerfile (.oss-scanner/Dockerfile) is a scanner test environment with PostgreSQL and Redis installed in the same container"
+  mustNot:
+    - "PostgreSQL and Redis installed in .oss-scanner/Dockerfile must not be read as a bundled-database application image"
+    - "integration-tests/* medusa-config fixtures must not be treated as deployable stores"
+    - "The root package.json (name root, private, turbo build) must not be treated as a start command for a server"
+vendorQuestions:
+  legitimate:
+    - "Is there a separate repository that holds the Medusa store project (medusa-config, src/) for deployment? This repo is the framework source"
+  unnecessary:
+    - "Which port? (9000 for a generated store)"
+    - "Is Redis needed? (optional)"
+traps:
+  - ".oss-scanner/Dockerfile looks like the only Dockerfile but is a test and audit environment (.oss-scanner/Dockerfile:1)"
+  - "integration-tests/http/medusa-config.js and package.json files look like an app but are test fixtures"
+  - "packages/medusa/src/commands/start.ts has port 9000 and a /health route, tempting a DEPLOYABLE answer, but they belong to the library a store imports"
+  - "The README calls Medusa an open-source commerce platform; the repo is the platform source, not an instance of it"
+openQuestions:
+  - "Whether a tool could scaffold a store project from create-medusa-app and treat that as DEPLOYABLE_WITH_CHANGES; the repo itself contains no project"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "README.md:53 says every Medusa package published to npm lives under packages; the tree has no starter or template folder, only integration-tests fixtures and www docs"}
+  - {field: dockerfile, change: "none: .oss-scanner/Dockerfile is the only Dockerfile and is a scanner environment", evidence: ".oss-scanner/Dockerfile:1 'Build environment for Anthropic's OSS Scanner'"}
+  - {field: "database, redis, port, health", change: "none: confirmed for a generated store", evidence: "start.ts:216 port = 9000; config.ts:152 a fake redis instance is used when redisUrl is missing"}
+  - {field: all, change: verified, evidence: "9 citations checked"}

@@ -1,0 +1,1216 @@
+{
+  "id": "new-66",
+  "commit": "5c05b728a819a9922d07609131015aca9e812d4b",
+  "analyser": "rules@r7-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "app/client/build",
+        "app/client/packages/rts/dist",
+        "app/client/packages/mcp/dist"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"/usr/bin/supervisord\", \"-n\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required",
+      "hostChecked": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "APPSMITH_DB_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "APPSMITH_REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACTIVE_PROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_ADMIN_EMAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_CLIENT_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_CLIENT_LOG_LEVEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_CLOUD_HOSTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_CLOUD_SERVICES_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_CLOUD_SERVICES_SIGNATURE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_CLOUD_SERVICES_TEMPLATE_UPLOAD_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_CODEC_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "APPSMITH_DEFAULT_HTML_LANG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_DISABLE_HELP_ICON",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_DISABLE_HELP_ICON",
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_DISABLE_IFRAME_WIDGET_SANDBOX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_DISABLE_PYLON",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_DISABLE_PYLON"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_DISABLE_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_ENVFILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_FORM_LOGIN_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_FORM_LOGIN_DISABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_GITHUB_REPO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_GIT_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-git/src/main/resources/application.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_INDEX_LOCK_FILE_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_INTERNAL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_ENABLED",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_HOST",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_PASSWORD",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_PORT",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_SMTP_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_SMTP_AUTH",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_SMTP_TLS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_SMTP_TLS_ENABLED",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_SUPPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_MAIL_USERNAME",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_DATA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_DISABLE_ELICITATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_ELICITATION_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_INTERNAL_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APPSMITH_MCP_JS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_PUBLIC_ORIGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_MCP_STRICT_ELICITATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_ALLOWED_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_GITHUB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_OAUTH2_GITHUB_CLIENT_ID",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_GITHUB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_OAUTH2_GITHUB_CLIENT_SECRET",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_OAUTH2_GOOGLE_CLIENT_ID",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_OAUTH2_GOOGLE_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_PLUGIN_MAX_RESPONSE_SIZE_MB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_PYLON_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_PYLON_APP_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_RECAPTCHA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_RECAPTCHA_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_RECAPTCHA_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_RECAPTCHA_SECRET_KEY",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_RECAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_RECAPTCHA_SITE_KEY",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_REDIS_GIT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "app/client/packages/mcp/.env.example declares APPSMITH_REDIS_URL",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties",
+            "read in app/client/packages/mcp/src/server.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "APPSMITH_REPLY_TO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_RTS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/packages/rts/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_RTS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties",
+            "read in app/client/packages/rts/src/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SEGMENT_CE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SEGMENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares APPSMITH_SEGMENT_KEY",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_SERVER_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SERVER_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SERVER_SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SIGNUP_ALLOWED_DOMAINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SIGNUP_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_SIGNUP_DISABLED",
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_SMART_LOOK_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APPSMITH_SMART_LOOK_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPSMITH_SUPPORT_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APPSMITH_VERBOSE_LOGGING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "Dockerfile build arg BASE selects the base image; the build fails without it"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BUILD_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/paths.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FAST_REFRESH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js",
+            "read in app/client/config/paths.js",
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/server/appsmith-server/src/main/resources/application-ce.properties"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PUBLIC_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/paths.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_BETTERBUGS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_CLIENT_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_CLOUD_HOSTING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_CUSTOMER_PORTAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_FUSIONCHARTS_LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_GOOGLE_RECAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_INTERCOM_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_MAIL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_MIXPANEL_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_PRICING_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_PYLON_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SEGMENT_CE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SEGMENT_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SENTRY_RELEASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_SMART_LOOK_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_VERSION_EDITION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/src/ce/configs/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WDS_SOCKET_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WDS_SOCKET_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WDS_SOCKET_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/client/config/env.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (Dockerfile copies app/client/build, app/client/packages/rts/dist, app/client/packages/mcp/dist). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (Dockerfile copies app/client/build, app/client/packages/rts/dist, app/client/packages/mcp/dist). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies app/client/build, app/client/packages/rts/dist, app/client/packages/mcp/dist, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BASE. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 3,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

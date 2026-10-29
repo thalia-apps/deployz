@@ -1,0 +1,116 @@
+id: new-187
+repository: vendure-ecommerce/vendure
+commit: 6cca401ac3efb9b714bf996fe261f278a1add3fb
+summary: >
+  The Vendure repository is the source monorepo of the Vendure headless commerce framework (@vendure/core, admin
+  dashboard, CLI, plugins, e2e testing harness), built with lerna and bun. It is not a store: a deployable Vendure
+  server is created with `npx @vendure/create` into its own project, whose Dockerfile comes from the template
+  packages/create/templates/Dockerfile.hbs. The root has no Dockerfile. The root docker-compose.yml starts development
+  and test services only (MariaDB, MySQL, PostgreSQL, Keycloak, Elasticsearch, Redis). The only real Dockerfile is
+  .oss-scanner/Dockerfile, a build and test environment. packages/dev-server is a private development harness.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The root is a framework and library monorepo ("This is the Vendure source monorepo"). No Dockerfile builds an
+    application: .oss-scanner/Dockerfile is a scanner environment, and packages/create/templates/Dockerfile.hbs is a
+    Handlebars template that the scaffolding tool renders into a new project. packages/dev-server is a private
+    development server with a MySQL default and a dev-only config, not a product. A vendor who connects this repo has
+    nothing to deploy.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .oss-scanner/Dockerfile, reason: "scanner build and test environment (Node 22, bun install, tests); not an application image"}
+    - {path: packages/create/templates/Dockerfile.hbs, reason: "Handlebars template rendered into a new project by @vendure/create; contains {{...}} placeholders and is not buildable as is"}
+  target: null
+  context: .
+  evidence:
+    - {path: .oss-scanner/Dockerfile, line: 4, quote: "FROM node:22-bookworm"}
+    - {path: packages/create/templates/Dockerfile.hbs, line: 1, quote: "{{#if isBun}}FROM oven/bun:1{{else}}FROM node:24{{/if}}"}
+    - {path: README.md, line: 89, quote: "This is the Vendure source monorepo: the `@vendure/core` framework, the React and TanStack admin dashboard, the CLI, the official plugins, and an e2e testing harness. To build with Vendure, run `npx @vendure/create"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: packages/core/src/config/default-config.ts, line: 83, quote: "port: 3000,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: packages/core/src/config/default-config.ts, line: 83, quote: "port: 3000,"}
+startCommand:
+  # No application in the repo. A generated Vendure project runs its own server and worker entry files.
+  source: explicit
+  accept: ["node ./dist/index.js"]
+  evidence:
+    - {path: packages/dev-server/package.json, line: 10, quote: "\"dev:server\": \"node ../cli/dist/cli.js dev server --server-entry ./index.ts\","}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: packages/core/src/worker/worker-health.service.ts, line: 45, quote: "const healthRoute = route || '/health';"}
+database:
+  status: required
+  engines: [postgres, mysql, mariadb, sqlite]
+  default: mysql
+  deployzEngine: postgres
+  selectBy: {DB: postgres}
+  connectionVars: [DB, DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD]
+  # Applies to the dev-server harness; a generated project picks its own TypeORM database.
+  evidence:
+    - {path: packages/dev-server/dev-config.ts, line: 159, quote: "const dbType = process.env.DB || 'mysql';"}
+    - {path: packages/dev-server/dev-config.ts, line: 165, quote: "type: 'postgres',"}
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  # Redis only backs the optional BullMQ job queue plugin; the default job queue is in-memory.
+  evidence:
+    - {path: docker-compose.yml, line: 105, quote: "image: redis:7.2-alpine"}
+workers:
+  status: optional-independent
+  commands: ["node ./dist/index-worker.js"]
+  evidence:
+    - {path: packages/dev-server/package.json, line: 12, quote: "\"dev:worker\": \"node ./scripts/run-worker.mjs\","}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 82, quote: "elasticsearch:"}
+env:
+  required: []
+  optional: [DB, DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD, PORT, API_PORT]
+  buildTime: []
+  evidence:
+    - {path: packages/dev-server/dev-config.ts, line: 75, quote: "port: Number(process.env.PORT) || Number(process.env.API_PORT) || API_PORT,"}
+blockers:
+  expected:
+    - "The repository is a framework and library monorepo, not an application: no Dockerfile or workspace builds a store; a project is generated with @vendure/create"
+    - "The root docker-compose.yml lists development and test services (several databases, Keycloak, Elasticsearch, Redis), not a production topology"
+  mustNot:
+    - "Elasticsearch and Keycloak in docker-compose.yml must not be reported as required services"
+    - "packages/create/templates/Dockerfile.hbs must not be selected as a Dockerfile: it is a template with placeholders"
+    - "packages/dev-server must not be treated as the deployable app: it is private, dev-only, and defaults to MySQL"
+vendorQuestions:
+  legitimate:
+    - "Is there a separate repository that holds the Vendure project (src/vendure-config.ts, server and worker entry files) for deployment? This repo is the framework source"
+  unnecessary:
+    - "Which port? (3000 default)"
+    - "Which database? (PostgreSQL or MySQL, set by the generated project)"
+traps:
+  - "docker-compose.yml starts MariaDB, two MySQL versions, two PostgreSQL versions, Keycloak, Elasticsearch and Redis for framework development and tests (docker-compose.yml:1)"
+  - "packages/create/templates/Dockerfile.hbs is a real-looking Dockerfile (node:24, build, standalone start) but is a template (Dockerfile.hbs:1)"
+  - "packages/dev-server has dev and worker scripts and a /health route, tempting a DEPLOYABLE answer"
+  - "The default HTTP port 3000 is a framework default (default-config.ts:83), not an app in the repo"
+openQuestions:
+  - "Whether a tool could render the create template and treat that as DEPLOYABLE_WITH_CHANGES; the repo contains no rendered project"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "README.md:89 says this is the Vendure source monorepo; packages/create/templates holds only .hbs Handlebars files (Dockerfile.hbs, vendure-config.hbs, index.hbs), no buildable project, so a template subfolder is not DEPLOYABLE_WITH_CHANGES"}
+  - {field: "dockerfile, redis, database", change: "none: confirmed", evidence: "only .oss-scanner/Dockerfile and the .hbs template exist; docker-compose.yml is a dev and test stack; dev-config.ts:159 MySQL default of the private dev-server"}
+  - {field: all, change: verified, evidence: "11 citations checked"}

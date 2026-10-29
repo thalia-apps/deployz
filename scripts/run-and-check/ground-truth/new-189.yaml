@@ -1,0 +1,126 @@
+id: new-189
+repository: typesense/typesense
+commit: f1cfbab919d63db8adbb350d1d097356ffbab6c2
+summary: >
+  Typesense is a C++ search engine server (RocksDB storage, Raft clustering) built with CMake and Bazel. It is a
+  datastore, not a web application. The server needs --data-dir and --api-key on the command line, listens on 8108, and
+  keeps all data in the data directory on durable disk. The only Dockerfile that packages the server is
+  docker/deployment.Dockerfile, which copies a pre-built typesense-server binary; the other Dockerfiles in docker/ are
+  build toolchains (bazel, development, packager, debugger).
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a search-engine database server, not a web application with a database behind it. It needs
+    durable local disk for --data-dir (RocksDB), which Fargate does not give a task, and no Dockerfile builds the server
+    from the repo source: deployment.Dockerfile copies a pre-built binary, and the others are build or dev environments.
+    A C++ build with Bazel or CMake is outside a simple one-image build. A Typesense server is a self-hosted search
+    backend that would itself be a required dependency of other apps.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/deployment.Dockerfile, reason: "copies a pre-built typesense-server binary into ubuntu:22.04; no build stage"}
+    - {path: docker/bazel.Dockerfile, reason: "build toolchain image (gcc, bazel)"}
+    - {path: docker/bazel_dev.Dockerfile, reason: "development toolchain image"}
+    - {path: docker/development.Dockerfile, reason: "development image"}
+    - {path: docker/packager.Dockerfile, reason: "release packaging image"}
+    - {path: docker/debugger.Dockerfile, reason: "debugging image"}
+    - {path: benchmark/Dockerfile, reason: "benchmark harness image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/deployment.Dockerfile, line: 6, quote: "COPY typesense-server /opt"}
+    - {path: docker/deployment.Dockerfile, line: 8, quote: "EXPOSE 8108"}
+    - {path: docker/bazel.Dockerfile, line: 1, quote: "FROM gcc:12.2.0"}
+runtime: {accept: [cpp]}
+port:
+  accept: [8108]
+  evidence:
+    - {path: src/typesense_server_utils.cpp, line: 94, quote: "options.add<uint32_t>(\"api-port\", '\\0', \"Port on which Typesense API service listens.\", false, 8108);"}
+    - {path: docker/deployment.Dockerfile, line: 8, quote: "EXPOSE 8108"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: README.md, line: 149, quote: "docker run -p 8108:8108 -v/tmp/data:/data typesense/typesense:29.0 --data-dir /data --api-key=Hu52dwsas2AdxdE"}
+startCommand:
+  source: image
+  accept: ["/opt/typesense-server --data-dir /data --api-key"]
+  evidence:
+    - {path: docker/deployment.Dockerfile, line: 10, quote: "ENTRYPOINT [\"/opt/typesense-server\"]"}
+    - {path: src/typesense_server_utils.cpp, line: 84, quote: "options.add<std::string>(\"data-dir\", 'd', \"Directory where data will be stored.\", true);"}
+    - {path: src/typesense_server_utils.cpp, line: 85, quote: "options.add<std::string>(\"api-key\", 'a', \"API key that allows all operations.\", true);"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: src/main/typesense_server.cpp, line: 111, quote: "server->get(\"/health\", get_health);"}
+    - {path: src/core_api.cpp, line: 104, quote: "// health endpoint requires no authentication"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Typesense is the datastore; it embeds RocksDB and needs no external database.
+  evidence:
+    - {path: src/typesense_server_utils.cpp, line: 84, quote: "options.add<std::string>(\"data-dir\", 'd', \"Directory where data will be stored.\", true);"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data]
+  s3: none
+  s3SelectBy: {}
+  # All indexed data lives in --data-dir; it is lost with the task and S3 is not a backing store.
+  evidence:
+    - {path: README.md, line: 149, quote: "docker run -p 8108:8108 -v/tmp/data:/data typesense/typesense:29.0 --data-dir /data --api-key=Hu52dwsas2AdxdE"}
+    - {path: src/typesense_server_utils.cpp, line: 84, quote: "options.add<std::string>(\"data-dir\", 'd', \"Directory where data will be stored.\", true);"}
+env:
+  required:
+    - {name: TYPESENSE_API_KEY, secret: true, buildTime: false, note: "the server option --api-key is required; the environment form is TYPESENSE_API_KEY"}
+    - {name: TYPESENSE_DATA_DIR, secret: false, buildTime: false, note: "the server option --data-dir is required; the environment form is TYPESENSE_DATA_DIR"}
+  optional: [TYPESENSE_API_PORT, TYPESENSE_API_ADDRESS, TYPESENSE_NODES, TYPESENSE_ENABLE_CORS]
+  buildTime: []
+  evidence:
+    - {path: src/typesense_server_utils.cpp, line: 85, quote: "options.add<std::string>(\"api-key\", 'a', \"API key that allows all operations.\", true);"}
+blockers:
+  expected:
+    - "No Dockerfile builds the server from source: docker/deployment.Dockerfile copies a pre-built typesense-server binary and the others are build toolchains"
+    - "The server needs a durable data directory (--data-dir, RocksDB); Fargate task storage is ephemeral"
+    - "The repository is a search engine (a datastore), not a web application; it is the kind of service that other apps depend on"
+  mustNot:
+    - "Port 8108 must not be treated as a failure: it is the server API port, only the build and storage block deployment"
+    - "A database or Redis must not be reported as required: Typesense embeds its storage"
+    - "docker/bazel.Dockerfile and docker/development.Dockerfile must not be treated as application images"
+vendorQuestions:
+  legitimate:
+    - "Is Typesense being deployed as the search backend for another application? A Typesense server needs durable disk and is better run as a managed search service"
+  unnecessary:
+    - "Which port? (8108)"
+    - "Which health path? (/health)"
+    - "Is a database needed? (no, embedded RocksDB)"
+traps:
+  - "docker/deployment.Dockerfile looks like the production Dockerfile but copies a pre-built binary (docker/deployment.Dockerfile:6)"
+  - "docker-build.sh and ci_build.sh build with CMake or Bazel inside dev images; none yields a one-stage application Dockerfile"
+  - "--data-dir and --api-key are required server options with no default, so a plain start fails (src/typesense_server_utils.cpp:84)"
+  - "The README docker run example mounts a host volume for data (README.md:149)"
+openQuestions:
+  - "The TYPESENSE_* environment names come from the server's option-to-environment mapping, not read in detail here"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "docker/deployment.Dockerfile:6 copies a pre-built binary; no Dockerfile builds from source; --data-dir is required (typesense_server_utils.cpp:84) and holds durable data"}
+  - {field: bindAllInterfaces, change: "none: true; stronger evidence", evidence: "src/typesense_server_utils.cpp:93 api-address default 0.0.0.0"}
+  - {field: env, change: "none: TYPESENSE_ prefix confirmed", evidence: "src/main/typesense_server.cpp:207 names TYPESENSE_DATA_DIR and TYPESENSE_API_KEY"}
+  - {field: all, change: verified, evidence: "10 citations checked"}

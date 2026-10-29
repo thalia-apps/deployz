@@ -1,0 +1,146 @@
+id: new-1
+repository: saleor/saleor
+commit: 3dd4bf79a46132ed2f8e6225a9863f5ef8dc243b
+summary: >
+  Saleor is a Python (Django, uvicorn ASGI) headless commerce API with a GraphQL endpoint at /graphql/. The root
+  Dockerfile builds from source with uv and runs uvicorn on port 8000. PostgreSQL is required (DATABASE_URL; the
+  default points to localhost). Migrations are not run by the image: `python manage.py migrate` must run as a separate
+  step. Redis (cache and Celery broker) and a Celery worker plus beat are optional: without CELERY_BROKER_URL tasks run
+  eagerly in the web process. Media files go to local disk by default or to S3 with AWS_MEDIA_BUCKET_NAME.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from the root Dockerfile (builds from source), port 8000, a /health/ route, PostgreSQL through
+    DATABASE_URL. Settings only: ALLOWED_HOSTS, SECRET_KEY, a migration command, and optionally Redis, a Celery worker
+    and an S3 media bucket. The Saleor dashboard is a separate project and is not required for the API.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "development container image"}
+    - {path: .worktree-container/docker-compose.yml, reason: "local development compose, not a deployment"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 18, quote: "uv sync --locked --no-install-project --no-editable"}
+    - {path: Dockerfile, line: 50, quote: "COPY . /app"}
+    - {path: Dockerfile, line: 55, quote: "RUN SECRET_KEY=dummy STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 57, quote: "EXPOSE 8000"}
+    - {path: Dockerfile, line: 67, quote: "--port=8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "--host=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["uvicorn saleor.asgi:application --host=0.0.0.0 --port=8000 --workers=2"]
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "CMD [\"uvicorn\", \"saleor.asgi:application\", \"--host=0.0.0.0\", \"--port=8000\", \"--workers=2\""}
+healthPath:
+  accept: ["/health/"]
+  evidence:
+    - {path: saleor/asgi/__init__.py, line: 40, quote: "application = health_check(application, \"/health/\")"}
+    - {path: saleor/asgi/health_check.py, line: 15, quote: "if scope.get(\"type\") != \"http\" or scope.get(\"path\") != health_url:"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_URL_REPLICA, DB_CONN_MAX_AGE]
+  # The default URL is postgres://saleor:saleor@localhost:5432/saleor, so DATABASE_URL must be set.
+  evidence:
+    - {path: saleor/settings.py, line: 137, quote: "DATABASE_CONNECTION_DEFAULT_NAME: dj_database_url.config("}
+    - {path: saleor/settings.py, line: 139, quote: "default=\"postgres://saleor:saleor@localhost:5432/saleor\","}
+    - {path: saleor/settings.py, line: 303, quote: "\"django.contrib.postgres\","}
+    - {path: saleor/product/migrations/0037_auto_20171124_0847.py, line: 10, quote: "operations = [TrigramExtension()]"}
+    - {path: Dockerfile, line: 35, quote: "libpq5 \\"}
+migrations:
+  mode: command
+  accept: ["python manage.py migrate"]
+  # The image CMD only starts uvicorn; no startup hook migrates the schema.
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "CMD [\"uvicorn\", \"saleor.asgi:application\""}
+    - {path: .devcontainer/devcontainer.json, line: 27, quote: "\"postCreateCommand\": \"python manage.py migrate\","}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379/0", CELERY_BROKER_URL: "redis://<host>:6379/1"}
+  # Without REDIS_URL or CACHE_URL the cache is local memory; without CELERY_BROKER_URL tasks run eagerly in the web process.
+  evidence:
+    - {path: saleor/settings.py, line: 983, quote: "REDIS_URL = os.environ.get(\"REDIS_URL\")"}
+    - {path: saleor/settings.py, line: 989, quote: "CACHES = {\"default\": django_cache_url.config()}"}
+    - {path: saleor/settings.py, line: 632, quote: "CELERY_BROKER_URL = ("}
+    - {path: saleor/settings.py, line: 643, quote: "CELERY_TASK_ALWAYS_EAGER = not CELERY_BROKER_URL"}
+workers:
+  status: optional-independent
+  commands: ["celery --app saleor.celeryconf:app worker -E", "celery --app saleor.celeryconf:app beat --scheduler saleor.schedulers.schedulers.DatabaseScheduler"]
+  evidence:
+    - {path: pyproject.toml, line: 184, quote: "worker.cmd = \"celery --app saleor.celeryconf:app worker -E\""}
+    - {path: pyproject.toml, line: 187, quote: "scheduler.cmd = \"celery --app saleor.celeryconf:app beat --scheduler saleor.schedulers.schedulers.DatabaseScheduler\""}
+    - {path: saleor/settings.py, line: 643, quote: "CELERY_TASK_ALWAYS_EAGER = not CELERY_BROKER_URL"}
+scheduledJobs:
+  status: optional
+  items: [Celery beat periodic tasks (DatabaseScheduler)]
+  evidence:
+    - {path: pyproject.toml, line: 187, quote: "scheduler.cmd = \"celery --app saleor.celeryconf:app beat --scheduler saleor.schedulers.schedulers.DatabaseScheduler\""}
+storage:
+  local: conditional
+  paths: [/app/media]
+  s3: native
+  s3SelectBy: {AWS_MEDIA_BUCKET_NAME: "<bucket>", AWS_STORAGE_BUCKET_NAME: "<bucket>", AWS_S3_REGION_NAME: "<region>"}
+  # Media files use FileSystemStorage under /app/media unless a bucket is set.
+  evidence:
+    - {path: saleor/settings.py, line: 218, quote: "MEDIA_ROOT: str = os.path.join(PROJECT_ROOT, \"media\")"}
+    - {path: saleor/settings.py, line: 582, quote: "if AWS_MEDIA_BUCKET_NAME:"}
+    - {path: saleor/settings.py, line: 583, quote: "STORAGES[\"default\"] = {\"BACKEND\": \"saleor.core.storages.S3MediaStorage\"}"}
+    - {path: Dockerfile, line: 45, quote: "RUN mkdir -p /app/media /app/static \\"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, note: "postgres URL; the default points to localhost"}
+    - {name: ALLOWED_HOSTS, secret: false, note: "defaults to localhost,127.0.0.1, so Django answers 400 to the ALB and public host name; * or the public host"}
+    - {name: RSA_PRIVATE_KEY, secret: true, note: "required when DEBUG is False: JWT signing raises ImproperlyConfigured without it; with DEBUG=True a temporary key is used"}
+    - {name: SECRET_KEY, secret: true, note: "unset with DEBUG=True gives a random key per process, so the 2 uvicorn workers disagree on signed tokens; required when DEBUG is False"}
+  optional: [REDIS_URL, CACHE_URL, CELERY_BROKER_URL, DEBUG, ALLOWED_CLIENT_HOSTS, ALLOWED_GRAPHQL_ORIGINS, PLAYGROUND_ENABLED, AWS_MEDIA_BUCKET_NAME, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME, DB_CONN_MAX_AGE, STATIC_URL]
+  buildTime: [STATIC_URL]
+  evidence:
+    - {path: saleor/settings.py, line: 516, quote: "ALLOWED_HOSTS = get_list(os.environ.get(\"ALLOWED_HOSTS\", \"localhost,127.0.0.1\"))"}
+    - {path: saleor/settings.py, line: 86, quote: "DEBUG = get_bool_from_env(\"DEBUG\", True)"}
+    - {path: saleor/settings.py, line: 269, quote: "if not SECRET_KEY and DEBUG:"}
+    - {path: saleor/settings.py, line: 108, quote: "raise ImproperlyConfigured("}
+    - {path: saleor/core/jwt_manager.py, line: 83, quote: "raise ImproperlyConfigured("}
+blockers:
+  expected: []
+  mustNot:
+    - "Redis must not be reported as required: cache falls back to local memory and Celery to eager mode"
+    - "A Celery worker must not be required: without CELERY_BROKER_URL tasks run in the web process"
+    - "Elasticsearch or OpenSearch must not be reported: Saleor search uses PostgreSQL"
+    - "The Saleor dashboard (separate repository) must not be required for the API"
+    - "GraphQL at /graphql/ must not make the app gRPC-only or non-HTTP"
+    - "Missing migration step must not make the app NOT_DEPLOYABLE: a one-shot migration task covers it"
+vendorQuestions:
+  legitimate:
+    - "Which public host name goes in ALLOWED_HOSTS (and ALLOWED_CLIENT_HOSTS when DEBUG is False)?"
+    - "Should media files use an S3 bucket (AWS_MEDIA_BUCKET_NAME)? The default is local disk"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Health path? (/health/)"
+    - "Is Redis needed? (optional, a cache and broker)"
+    - "Which database? (PostgreSQL)"
+traps:
+  - "Image CMD does not migrate the database; `python manage.py migrate` must run once per release (Dockerfile:67)"
+  - "ALLOWED_HOSTS defaults to localhost, so a request with the ALB or public host name gets HTTP 400 from Django; /health/ is answered before Django and is not affected (saleor/settings.py:516)"
+  - "/health/ is answered by an ASGI wrapper before Django, so it returns 200 even when the database is down (saleor/asgi/__init__.py:40, saleor/asgi/health_check.py:11-28)"
+  - "DEBUG defaults to True: with no SECRET_KEY each of the 2 uvicorn workers makes its own random key (saleor/settings.py:269-273)"
+  - "DEBUG=False requires ALLOWED_CLIENT_HOSTS or startup raises ImproperlyConfigured, and then / and /static/ are no longer served (saleor/settings.py:104-110, saleor/urls.py:55)"
+  - "Migrations create the pg_trgm and btree_gin extensions, so the migration user needs the right to create extensions (saleor/product/migrations/0037_auto_20171124_0847.py:10)"
+  - "pyproject poe tasks `start` (--reload) and `worker` are developer commands; the Dockerfile CMD is the production start (pyproject.toml:182-184)"
+  - "deployment/elasticbeanstalk/Dockerrun.aws.json is an Elastic Beanstalk sample, not Deployz input"
+crossReview:
+  - {field: "env.required", change: "added RSA_PRIVATE_KEY (required when DEBUG=False) and removed it from optional", evidence: "saleor/core/jwt_manager.py:79-85"}
+  - {field: "traps", change: "fixed: ALLOWED_HOSTS does not affect /health/ because the ASGI wrapper answers before Django", evidence: "saleor/asgi/__init__.py:40"}
+  - {field: "outcome.accept", change: "none: DEPLOYABLE confirmed; no missed datastore (Celery eager without broker, S3 or local media, PostgreSQL search)", evidence: "settings.py:643"}
+  - {field: "dockerfile, port, startCommand, healthPath, database, migrations", change: "none: confirmed", evidence: "Dockerfile:55,57,67; settings.py:137-139"}
+  - {field: "all", change: "verified", evidence: "19 citations checked"}

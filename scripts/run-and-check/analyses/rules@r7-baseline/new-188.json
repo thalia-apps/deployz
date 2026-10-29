@@ -1,0 +1,296 @@
+{
+  "id": "new-188",
+  "commit": "ae600cf5a6a8aa29a7f88ec6141cb755bf6c0bac",
+  "analyser": "rules@r7-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "templates/_template",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "templates/_template/Dockerfile"
+    },
+    "build": {
+      "command": "pnpm run build:core",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: HOSTNAME=\"0.0.0.0\" node server.js",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "templates/_template/.env.example declares DATABASE_URL",
+            "templates/blank-tanstack/.env.example declares DATABASE_URL",
+            "templates/blank/.env.example declares DATABASE_URL",
+            "templates/ecommerce/.env.example declares DATABASE_URL",
+            "templates/plugin/dev/.env.example declares DATABASE_URL",
+            "templates/with-postgres/.env.example declares DATABASE_URL",
+            "templates/website/.env.example declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/create-payload-app/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_PAYLOAD_HMR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/payload/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PHASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/payload/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in instrumentation.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/graphql/src/index.ts",
+            "read in packages/payload/src/index.ts",
+            "read in packages/richtext-lexical/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAYLOAD_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PAYLOAD_DATABASE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAYLOAD_DISABLE_DEPENDENCY_CHECKER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/payload/src/index.ts",
+            "read in packages/richtext-lexical/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "templates/with-vercel-postgres/.env.example declares POSTGRES_URL",
+            "templates/with-vercel-website/.env.example declares POSTGRES_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/kv-redis/src/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "STORAGE_VERCEL_BLOB_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in packages/storage-vercel-blob/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/payload/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,175 @@
+{
+  "id": "new-185",
+  "commit": "8f0bf00fe5e36af71a89a03bad6c82b7cf9186ae",
+  "analyser": "rules@r7-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "ruby",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/opt/zammad/bin/docker-entrypoint\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": "bundle exec script/websocket-server.rb -b ${ZAMMAD_BIND_IP:=127.0.0.1} -p ${ZAMMAD_WEBSOCKET_PORT:=6042} start"
+    },
+    "workers": [
+      {
+        "id": "websocket",
+        "command": "bundle exec script/websocket-server.rb -b ${ZAMMAD_BIND_IP:=127.0.0.1} -p ${ZAMMAD_WEBSOCKET_PORT:=6042} start",
+        "source": "Procfile"
+      },
+      {
+        "id": "worker",
+        "command": "bundle exec script/background-worker.rb start",
+        "source": "Procfile"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "POSTGRESQL_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "Dockerfile declares POSTGRESQL_PASS"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "POSTGRESQL_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "Dockerfile declares POSTGRESQL_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RAILS_DEVELOPMENT_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/environments/development.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILS_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/puma.rb"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "twilio"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE"
+}

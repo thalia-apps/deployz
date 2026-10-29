@@ -1,0 +1,1636 @@
+{
+  "id": "new-151",
+  "commit": "09f7e52c6d20b12408b9985e0cd6baa1597d26ae",
+  "analyser": "rules@r7-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "pnpm run clean && pnpm run copy-templates && pnpm run build:frontend && pnpm run build:backend",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"dist/server.js\"]",
+      "port": 4242
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DATABASE_USERNAME",
+          "kind": "username"
+        },
+        {
+          "name": "UNLEASH_DATABASE_NAME",
+          "kind": "database"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCESS_CONTROL_MAX_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ADMIN_API_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_NON_STANDARD_DB_DATES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHENTICATION_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_DEMO_ALLOW_ADMIN_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_ENABLE_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BASE_URI_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUILD_DATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CDN_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHECK_DB_ON_READY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHECK_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_FEATURE_CACHING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_FEATURE_CACHING_MAXAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_METRICS_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CREATE_USER_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_CONNECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_FONT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_FRAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_IMG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_MEDIA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_OBJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_SCRIPT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CSP_ALLOWED_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DAILY_METRICS_STORAGE_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_APPLICATION_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_DISABLE_MIGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_POOL_IDLE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_CA_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_CA_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_CERT_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_KEY_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_SSL_REJECT_UNAUTHORIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_STATEMENT_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/routes/ready-check.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/migrator.ts",
+            "read in src/server-dev.ts",
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_URL_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATABASE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EDGE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EDGE_MASTER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EDGE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_OPTIONAL_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SECURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SENDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLED_ENVIRONMENTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_HEAP_SNAPSHOT_ENPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_OAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_SCHEDULED_CREATED_BY_MIGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_STORIES_PAGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_PROMETHEUS_IMPACT_METRICS_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEEDBACK_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FEEDBACK_URI_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_API_REFRESH_INTERVAL_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_METRICS_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GRACEFUL_SHUTDOWN_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GRACEFUL_SHUTDOWN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HTTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HUBSPOT_PORTAL_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPORT_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INIT_ADMIN_API_TOKENS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "INIT_BACKEND_API_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INIT_CLIENT_API_TOKENS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "INIT_FRONTEND_API_TOKENS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOGROCKET_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_PARALLEL_SESSIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/app.ts",
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PASSWORD_RESET_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAYGROUND_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PROMETHEUS_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMETHEUS_IMPACT_METRICS_API",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTER_CLIENT_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTER_FRONTEND_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REQUEST_LOGGER_ENABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SDK_API_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECURE_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SEND_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_DISABLE_COMPRESSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER_KEEPALIVE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_CLEAR_SITE_DATA_ON_LOGOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_IDLE_TIMEOUT_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_TTL_HOURS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIGNAL_ENDPOINT_RATE_LIMIT_PER_SECOND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SIMPLE_LOGIN_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_DB_TEMPLATE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/test-setup.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOKEN_AUTHENTICATION_RATE_LIMIT_PER_MINUTE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TOKEN_EXPIRY_NOTIFICATION_DAYS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/test-setup.ts",
+            "read in frontend/src/setupTests.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ACTION_SETS_PER_PROJECT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ACTION_SET_ACTIONS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ACTION_SET_FILTERS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ACTION_SET_FILTER_VALUES_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ALLOW_LIST_INTEGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ALLOW_PRIVATE_URL_IN_INTEGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_API_TOKENS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_CONSTRAINTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_CONSTRAINT_VALUES_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_DATABASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/server-dev.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "UNLEASH_DATABASE_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/server-dev.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_DEFAULT_ADMIN_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "UNLEASH_DEFAULT_ADMIN_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_DISABLE_CUSTOM_STRATEGY_CREATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_DISABLE_CUSTOM_STRATEGY_EDITING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_ENVIRONMENTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_FEATURE_ENVIRONMENT_STRATEGIES_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_FEATURE_FLAGS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_FRONTEND_API_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_FRONTEND_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_PROJECTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_RELEASE_TEMPLATES_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "UNLEASH_SEGMENTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_SEGMENT_VALUES_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_SIGNAL_ENDPOINTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_SIGNAL_TOKENS_PER_ENDPOINT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_STRATEGY_SEGMENTS_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNLEASH_VERSION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USER_INACTIVITY_THRESHOLD_IN_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/lib/create-config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: INIT_ADMIN_API_TOKENS, INIT_CLIENT_API_TOKENS, INIT_FRONTEND_API_TOKENS, OPENAI_API_KEY, UNLEASH_DEFAULT_ADMIN_PASSWORD. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE"
+}

@@ -391,6 +391,14 @@ function databaseCorroboration(
   if (compose && service) return `a ${service.name} service is defined in ${compose.file}`;
   const key = brokerConnectionRequired(tree, envRegex);
   if (key) return `${key} is required`;
+  // A production image that sets the connection itself (Rocket.Chat `ENV MONGO_URL=mongodb://mongo:27017/rocketchat`),
+  // not an image of the database (cognee's `Dockerfile.neo4j-custom`) or a trailing dev all-in-one stage (twenty).
+  for (const path of listDockerfileCandidates(tree).filter((candidate) => isRuntimeSourcePath(candidate) && !imageRegex.test(candidate))) {
+    for (const [, line] of productionStageText((tree[path] ?? '').replace(/\\\r?\n/g, ' ')).matchAll(/^\s*ENV\s+(.+)$/gim)) {
+      const name = [...line!.matchAll(/(?:^|\s)(\w+)=["']?[^\s"'$]/g)].map((match) => match[1]!).find((variable) => envRegex.test(variable));
+      if (name) return `${path} sets ${name}`;
+    }
+  }
   if (modelRegex) {
     const model = Object.entries(tree).find(
       ([path, content]) => /\.(?:ts|js|mjs|cjs)$/.test(path) && isRuntimeSourcePath(path) && !!content && modelRegex.test(content),
@@ -460,6 +468,7 @@ export function checkElasticsearch(tree: FileTree): RejectionFinding {
 
 /** Other unsupported databases: cassandra-driver, neo4j-driver, the CouchDB client nano */
 const OTHER_UNSUPPORTED_DB_DEPS = ['cassandra-driver', 'neo4j-driver', 'nano', '@budibase/nano'] as const;
+const OTHER_UNSUPPORTED_DB_PYTHON_TOKENS = ['neo4j', 'cassandra-driver'] as const;
 const OTHER_DB_ENV_REGEX = /^(?:CASSANDRA_(?:HOSTS?|CONTACT_POINTS|URL)|NEO4J_(?:URI|URL|HOST)|COUCH_?DB_(?:URL|URI|HOST))$/;
 const CLICKHOUSE_TOKENS = [
   '@clickhouse/client',
@@ -482,8 +491,10 @@ const EMBEDDED_JVM_DB_TOKENS = ['com.h2database', 'org.hsqldb', 'org.apache.derb
  */
 export function checkOtherUnsupportedDatabases(tree: FileTree): RejectionFinding {
   const deps = collectDependencyNames(tree);
-  for (const dep of OTHER_UNSUPPORTED_DB_DEPS) {
-    if (!deps.includes(dep)) continue;
+  const python = OTHER_UNSUPPORTED_DB_PYTHON_TOKENS.filter((token) =>
+    findDependencyEvidence(tree, token).some((path) => PY_MANIFEST_REGEX.test(path) && isRuntimeSourcePath(path)),
+  );
+  for (const dep of [...OTHER_UNSUPPORTED_DB_DEPS.filter((name) => deps.includes(name)), ...python]) {
     const corroboration = databaseCorroboration(tree, /cassandra|scylla|neo4j|couchdb/i, OTHER_DB_ENV_REGEX, null);
     if (corroboration) {
       return {
@@ -1105,7 +1116,12 @@ const ENTRY_FIELD_ONLY_REGEX = /^\s*"(?:main|module|types|typings)"\s*:/;
  */
 function publishedPackageManifests(tree: FileTree): string[] {
   const manifests = Object.keys(tree).filter(
-    (path) => PACKAGE_MANIFEST.test(path) && isProductionFile(path) && !SCAFFOLD_PATH_REGEX.test(path) && !WORKSPACE_ROOT_MANIFEST_REGEX.test(tree[path] ?? ''),
+    (path) =>
+      PACKAGE_MANIFEST.test(path) &&
+      isProductionFile(path) &&
+      isRuntimeSourcePath(path) &&
+      !SCAFFOLD_PATH_REGEX.test(path) &&
+      !WORKSPACE_ROOT_MANIFEST_REGEX.test(tree[path] ?? ''),
   );
   const publishes = (path: string): boolean => (tree[path] ?? '').split('\n').some((line) => PACKAGE_MARKER.test(line) && !ENTRY_FIELD_ONLY_REGEX.test(line));
   return manifests.every(publishes) ? manifests.sort() : [];

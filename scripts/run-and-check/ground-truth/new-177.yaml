@@ -1,0 +1,121 @@
+id: new-177
+repository: getzep/graphiti
+commit: 72b5c59c06607e09ea855be61b6ff5a3446fc951
+summary: >
+  Graphiti is a Python library (graphiti-core) for temporal knowledge graphs. The repository also holds a FastAPI REST
+  service in server/ (graph_service) and an MCP server in mcp_server/. The root Dockerfile builds the FastAPI service on
+  port 8000. Every Graphiti deployment needs a graph database server: Neo4j (the default, db_backend=neo4j) or FalkorDB
+  (a separate Redis-protocol graph server). Neither runs on Deployz (RDS PostgreSQL/MySQL, Valkey, S3, SQS only). The
+  service also needs an OpenAI API key.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only application in the repo is a thin API in front of a graph database. All data is stored in Neo4j or
+    FalkorDB; both are separate datastore servers outside the MVP (no Neo4j, no graph database). The service cannot
+    start without one (db_backend defaults to neo4j and the compose file waits for neo4j to be healthy). The main
+    package is also a library (graphiti-core), which is not an application.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "builds the FastAPI service, but the service has no usable store without a Neo4j or FalkorDB server; also installs graphiti-core from PyPI, not from the repo"}
+    - {path: mcp_server/docker/Dockerfile, reason: "MCP server image; its compose files start FalkorDB or Neo4j beside it"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 56, quote: "COPY ./server/graph_service ./graph_service"}
+    - {path: Dockerfile, line: 119, quote: "CMD [\"uv\", \"run\", \"--no-sync\", \"uvicorn\", \"graph_service.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 115, quote: "ENV PORT=8000"}
+    - {path: Dockerfile, line: 116, quote: "EXPOSE $PORT"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 119, quote: "CMD [\"uv\", \"run\", \"--no-sync\", \"uvicorn\", \"graph_service.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]"}
+startCommand:
+  source: image
+  accept: ["uv run --no-sync uvicorn graph_service.main:app --host 0.0.0.0 --port 8000"]
+  evidence:
+    - {path: Dockerfile, line: 119, quote: "CMD [\"uv\", \"run\", \"--no-sync\", \"uvicorn\", \"graph_service.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]"}
+healthPath:
+  accept: ["/healthcheck"]
+  evidence:
+    - {path: server/graph_service/main.py, line: 27, quote: "@app.get('/healthcheck')"}
+    - {path: docker-compose.yml, line: 14, quote: "\"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthcheck')\","}
+database:
+  status: required
+  engines: [neo4j, falkordb]
+  default: neo4j
+  deployzEngine: null
+  selectBy: {db_backend: neo4j}
+  connectionVars: [NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, FALKORDB_HOST, FALKORDB_PORT, FALKORDB_DATABASE]
+  # A graph database server is required. Neither engine is a Deployz database.
+  evidence:
+    - {path: server/graph_service/config.py, line: 14, quote: "neo4j_uri: str | None = Field(None)"}
+    - {path: server/graph_service/config.py, line: 17, quote: "falkordb_host: str | None = Field(None)"}
+    - {path: server/graph_service/config.py, line: 20, quote: "db_backend: str = Field('neo4j')"}
+    - {path: docker-compose.yml, line: 30, quote: "image: neo4j:5.26.2"}
+    - {path: docker-compose.yml, line: 51, quote: "image: falkordb/falkordb:latest"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  # FalkorDB speaks the Redis protocol but is a graph database module, not Valkey.
+  evidence:
+    - {path: docker-compose.yml, line: 51, quote: "image: falkordb/falkordb:latest"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: OPENAI_API_KEY, secret: true, buildTime: false, note: "required setting of the service (openai_api_key has no default)"}
+    - {name: NEO4J_URI, secret: false, buildTime: false, note: "bolt URI of the Neo4j server (default backend)"}
+    - {name: NEO4J_PASSWORD, secret: true, buildTime: false, note: "Neo4j password"}
+  optional: [NEO4J_USER, OPENAI_BASE_URL, MODEL_NAME, EMBEDDING_MODEL_NAME, FALKORDB_HOST, FALKORDB_PORT, FALKORDB_DATABASE, db_backend, PORT]
+  buildTime: []
+  evidence:
+    - {path: server/graph_service/config.py, line: 10, quote: "openai_api_key: str"}
+    - {path: docker-compose.yml, line: 24, quote: "- NEO4J_URI=bolt://neo4j:${NEO4J_PORT:-7687}"}
+blockers:
+  expected:
+    - "Neo4j (default) or FalkorDB is required for all data; neither is a Deployz datastore"
+    - "The repository is mainly the graphiti-core library; the REST service in server/ is a thin wrapper around it"
+  mustNot:
+    - "OPENAI_API_KEY must not be a blocker: it is an external API key"
+    - "FalkorDB must not be mapped to Redis/Valkey: it is a graph database module"
+    - "Missing PostgreSQL must not be reported: the app does not use SQL"
+vendorQuestions:
+  legitimate:
+    - "Which Neo4j or FalkorDB server will hold the graph? (outside the supported datastores)"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Health path? (/healthcheck)"
+    - "Is a worker needed? (no)"
+traps:
+  - "docker-compose.yml lists neo4j and falkordb with profiles; the db_backend setting chooses one, but one of them is always required (docker-compose.yml:20, 50)"
+  - "The root Dockerfile installs graphiti-core from PyPI at build time, not from the repository source (Dockerfile:100)"
+  - "FalkorDB looks like Redis (redis-cli healthcheck, port 6379) but is a graph database (docker-compose.yml:60)"
+  - "mcp_server/ has its own Dockerfile and compose files; it is a second app (MCP over HTTP) with the same graph database need"
+  - "The repository root is a Python library (pyproject.toml); there is no web UI"
+openQuestions: []
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed. graph_service has only Neo4j and FalkorDB settings and db_backend defaults to neo4j; no embedded or SQL store", evidence: "server/graph_service/config.py:14-20; docker-compose.yml:20-21, 30, 51"}
+  - {field: dockerfile, change: "none: the root Dockerfile copies server/graph_service and installs graphiti-core from PyPI; mcp_server has its own Dockerfiles with FalkorDB or Neo4j compose files", evidence: "Dockerfile:56, 100"}
+  - {field: port/healthPath/startCommand, change: "none", evidence: "Dockerfile:115, 119; server/graph_service/main.py:27"}
+  - {field: all, change: verified, evidence: "14 citations checked"}

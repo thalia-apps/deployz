@@ -804,14 +804,16 @@ export function detectNoDefaultServerCommand(content: string): string | null {
   return null;
 }
 
-// Directories whose Dockerfiles build a test image, a dev container or an
-// example (`docker_example/`), never the application (a `dev/` build directory still can).
+// Directories whose Dockerfiles build a test image, a dev container, an
+// example (`docker_example/`) or a project template (payload `templates/blank/`),
+// never the application (a `dev/` build directory still can).
 const NON_APP_DOCKERFILE_DIR_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright)(?:\/|$)/i;
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright|templates?|starters?)(?:\/|$)/i;
 
-// A `dev/` build directory can hold the production Dockerfile; it counts only
-// when the image starts something (a tooling image has no CMD, ENTRYPOINT or EXPOSE).
-const DEV_DOCKERFILE_DIR_REGEX = /(?:^|\/)(?:dev|development)\//i;
+// A `dev/` build directory or a hidden directory can hold the production Dockerfile; it counts
+// only when the image starts something (a tooling image such as `.oss-scanner/` has no CMD,
+// ENTRYPOINT or EXPOSE).
+const DEV_DOCKERFILE_DIR_REGEX = /(?:^|\/)(?:dev|development|\.[\w-][\w.-]*)\//i;
 
 // A template (mustache or jinja block tag, or a templated FROM) is not a Dockerfile Docker can build.
 const DOCKERFILE_TEMPLATE_REGEX = /^\s*(?:\{\{[#^/>!]|\{%)|^\s*FROM\s[^\n]*\{\{/im;
@@ -6359,12 +6361,16 @@ function prebuiltArtefactSources(tree: FileTree, dockerfilePath: string): string
  * candidate with a CMD or ENTRYPOINT copies missing sources too. A generated
  * directory and `COPY --from=` never reject on their own.
  */
-/** A COPY or ADD from the build context (not `--from` another stage or image), or a bind mount of it. */
+/** A COPY or ADD from the build context (not `--from` another stage or image, not an `ADD <url>`), or a bind mount of it. */
 function copiesFromContext(dockerfile: string): boolean {
   return dockerfile
     .replace(/\\\r?\n/g, ' ')
     .split(/\r?\n/)
-    .some((line) => (/^\s*(?:COPY|ADD)\s/i.test(line) && !/--from=/i.test(line)) || (/--mount=type=bind/i.test(line) && !/\bfrom=/i.test(line)));
+    .some(
+      (line) =>
+        (/^\s*(?:COPY|ADD)\s/i.test(line) && !/--from=/i.test(line) && !/^\s*ADD\s+(?:--\S+\s+)*[a-z]+:\/\//i.test(line)) ||
+        (/--mount=type=bind/i.test(line) && !/\bfrom=/i.test(line)),
+    );
 }
 
 export function detectUnbuildableDockerfile(tree: FileTree): string | null {
@@ -6399,11 +6405,13 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   }
   // Another candidate with a command that copies only repository content is a Dockerfile
   // the vendor can select (n8n's every image copies a CI build output; its base image
-  // only EXPOSEs a port). A candidate that copies nothing runs a mounted checkout (shiori's Dockerfile.compose).
+  // only EXPOSEs a port). A candidate that copies nothing runs a mounted checkout (shiori's Dockerfile.compose),
+  // and one named for development is no production image (typesense's `development-macos.Dockerfile`).
   const selected = selectedDockerfile(tree)?.path;
   const alternative = buildable.some(
     (path) =>
       path !== selected &&
+      !DEV_ONLY_DOCKERFILE_REGEX.test(path) &&
       /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) &&
       copiesFromContext(tree[path] ?? '') &&
       detectDockerfileMissingCopySources(tree, path).length === 0 &&

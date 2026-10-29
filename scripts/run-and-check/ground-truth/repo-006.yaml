@@ -1,0 +1,147 @@
+id: repo-006
+repository: documenso/documenso
+commit: 3ec877a68bc423373220f9ee2fda3d93ba368680
+summary: >
+  Documenso is a TypeScript monorepo (Turborepo, npm workspaces) for document e-signing. The web app is apps/remix
+  (React Router 7 on a Hono server). The repository root has no Dockerfile; docker/Dockerfile is the production image and
+  builds apps/remix from source with the repository root as context. It listens on port 3000 and runs
+  `sh start.sh`, which applies Prisma migrations and then starts `node build/server/main.js`. PostgreSQL is required
+  (Prisma). Files are stored in the database by default (base64) and in S3 when NEXT_PUBLIC_UPLOAD_TRANSPORT=s3. Background
+  jobs run in the same process (local provider). No Redis is needed by default.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from docker/Dockerfile (the recipe build override docker/Dockerfile is the right file: the root has no
+    Dockerfile), port 3000, /api/health, migrations in the start script, PostgreSQL through NEXT_PRIVATE_DATABASE_URL, no
+    Redis, no separate worker. Only settings are needed. A signing certificate (.p12) is optional at start but needed to
+    sign documents.
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/Dockerfile.chromium, reason: "extends the published documenso/documenso image (FROM documenso/documenso:${TAG}) to add Chromium; not a source build"}
+    - {path: apps/remix/Dockerfile.pnpm, reason: "older app-level Dockerfile; not the production image built by docker/build.sh"}
+    - {path: apps/remix/Dockerfile.bun, reason: "older app-level Dockerfile; not the production image built by docker/build.sh"}
+    - {path: docker/development/Dockerfile.gotenberg, reason: "development helper for the Gotenberg converter, not the app"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 20, quote: "COPY . ."}
+    - {path: docker/Dockerfile, line: 90, quote: "RUN turbo run build --filter=@documenso/remix..."}
+    - {path: docker/Dockerfile, line: 141, quote: "CMD [\"sh\", \"start.sh\"]"}
+    - {path: docker/Dockerfile.chromium, line: 2, quote: "FROM documenso/documenso:${TAG}"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: apps/remix/server/main.js, line: 47, quote: "const port = parseInt(process.env.PORT || '3000', 10);"}
+    - {path: .env.example, line: 43, quote: "PORT=3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: docker/start.sh, line: 31, quote: "HOSTNAME=0.0.0.0 node build/server/main.js"}
+startCommand:
+  source: image
+  accept: ["sh start.sh"]
+  evidence:
+    - {path: docker/Dockerfile, line: 141, quote: "CMD [\"sh\", \"start.sh\"]"}
+    - {path: docker/start.sh, line: 31, quote: "HOSTNAME=0.0.0.0 node build/server/main.js"}
+healthPath:
+  accept: ["/api/health"]
+  # Returns 200 for ok and warning (no signing certificate) and 500 only when the database check fails.
+  evidence:
+    - {path: apps/remix/app/routes/api+/health.ts, line: 18, quote: "await prisma.$queryRaw`SELECT 1`;"}
+    - {path: apps/remix/app/routes/api+/health.ts, line: 47, quote: "{ status: overallStatus === 'error' ? 500 : 200 },"}
+    - {path: render.yaml, line: 8, quote: "healthCheckPath: /api/health"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [NEXT_PRIVATE_DATABASE_URL, NEXT_PRIVATE_DIRECT_DATABASE_URL]
+  evidence:
+    - {path: packages/prisma/schema.prisma, line: 22, quote: "provider  = \"postgresql\""}
+    - {path: packages/prisma/schema.prisma, line: 23, quote: "url       = env(\"NEXT_PRIVATE_DATABASE_URL\")"}
+    - {path: packages/prisma/schema.prisma, line: 24, quote: "directUrl = env(\"NEXT_PRIVATE_DIRECT_DATABASE_URL\")"}
+migrations:
+  mode: startup
+  accept: ["npx prisma migrate deploy --schema ../../packages/prisma/schema.prisma"]
+  evidence:
+    - {path: docker/start.sh, line: 28, quote: "npx prisma migrate deploy --schema ../../packages/prisma/schema.prisma"}
+redis:
+  status: none
+  selectBy: {}
+  # Redis is only used by the optional BullMQ jobs provider (NEXT_PRIVATE_JOBS_PROVIDER=bullmq); the default is local.
+  evidence:
+    - {path: .env.example, line: 156, quote: "# Available options: local (default) | inngest | bullmq"}
+    - {path: .env.example, line: 157, quote: "NEXT_PRIVATE_JOBS_PROVIDER=\"local\""}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: .env.example, line: 157, quote: "NEXT_PRIVATE_JOBS_PROVIDER=\"local\""}
+    - {path: packages/lib/jobs/client/local.ts, line: 365, quote: "const endpoint = `${NEXT_PRIVATE_INTERNAL_WEBAPP_URL()}/api/jobs/${jobDefinitionId}/${jobId}`;"}
+scheduledJobs:
+  status: embedded
+  items: [local jobs provider cron jobs in the web process]
+  evidence:
+    - {path: apps/remix/server/router.ts, line: 4, quote: "import { jobsClient } from '@documenso/lib/jobs/client';"}
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {NEXT_PUBLIC_UPLOAD_TRANSPORT: s3, NEXT_PRIVATE_UPLOAD_BUCKET: "<bucket>", NEXT_PRIVATE_UPLOAD_REGION: "<region>"}
+  # Default transport stores documents in PostgreSQL as base64, so no disk and no bucket are required.
+  evidence:
+    - {path: packages/lib/universal/upload/put-file.server.ts, line: 82, quote: ".otherwise(async () => putFileInDatabase(file));"}
+    - {path: .env.example, line: 89, quote: "# OPTIONAL: Defines the storage transport to use. Available options: database (default) | s3"}
+    - {path: .env.example, line: 99, quote: "NEXT_PRIVATE_UPLOAD_BUCKET=\"documenso\""}
+env:
+  required:
+    - {name: NEXT_PRIVATE_DATABASE_URL, secret: true, note: "PostgreSQL URL used by the app"}
+    - {name: NEXT_PRIVATE_DIRECT_DATABASE_URL, secret: true, note: "PostgreSQL URL used by prisma migrate deploy; the schema reads it as directUrl"}
+    - {name: NEXTAUTH_SECRET, secret: true, note: "session cookies throw 'NEXTAUTH_SECRET is not set' without it"}
+    - {name: NEXT_PRIVATE_ENCRYPTION_KEY, secret: true, note: "at least 32 characters; the image bakes the weak build default CAFEBABE"}
+    - {name: NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY, secret: true, note: "at least 32 characters; the image bakes the weak build default DEADBEEF"}
+    - {name: NEXT_PUBLIC_WEBAPP_URL, secret: false, note: "public https URL; the default is http://localhost:3000 and the auth origin check uses it"}
+  optional: [NEXT_PRIVATE_SMTP_TRANSPORT, NEXT_PRIVATE_SMTP_HOST, NEXT_PRIVATE_SMTP_PORT, NEXT_PRIVATE_SMTP_USERNAME, NEXT_PRIVATE_SMTP_PASSWORD, NEXT_PRIVATE_SMTP_FROM_NAME, NEXT_PRIVATE_SMTP_FROM_ADDRESS, NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS, NEXT_PRIVATE_SIGNING_PASSPHRASE, NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH, NEXT_PUBLIC_UPLOAD_TRANSPORT, NEXT_PRIVATE_UPLOAD_BUCKET, NEXT_PRIVATE_UPLOAD_REGION, NEXT_PRIVATE_INTERNAL_WEBAPP_URL, NEXT_PRIVATE_USE_PLAYWRIGHT_PDF, NEXT_PRIVATE_BROWSERLESS_URL, NEXT_PRIVATE_JOBS_PROVIDER, PORT]
+  buildTime: []
+  evidence:
+    - {path: packages/auth/server/lib/session/session-cookies.ts, line: 18, quote: "throw new Error('NEXTAUTH_SECRET is not set');"}
+    - {path: .env.example, line: 9, quote: "# REQUIRED: This should be a random string of at least 32 characters"}
+    - {path: packages/lib/constants/app.ts, line: 7, quote: "export const NEXT_PUBLIC_WEBAPP_URL = () => env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000';"}
+    - {path: packages/auth/server/index.ts, line: 24, quote: "const validOrigin = new URL(NEXT_PUBLIC_WEBAPP_URL()).origin;"}
+    - {path: docker/Dockerfile, line: 47, quote: "ARG NEXT_PRIVATE_ENCRYPTION_KEY=\"CAFEBABE\""}
+blockers:
+  expected: []
+  mustNot:
+    - "Missing root Dockerfile must not be a blocker: docker/Dockerfile builds from source and is the production image (the recipe build override)"
+    - "Redis must not be reported as required: it is only used by the optional BullMQ jobs provider"
+    - "A separate worker must not be required: the local jobs provider runs in the web process"
+    - "S3 must not be required: documents are stored in PostgreSQL by default"
+    - "A missing signing certificate must not block the deploy: the app starts and /api/health reports a warning with status 200"
+    - "Chromium or Browserless must not be reported as required: they are used only when NEXT_PRIVATE_USE_PLAYWRIGHT_PDF=true"
+    - "docker/Dockerfile.chromium must not be chosen: it layers on the published image"
+vendorQuestions:
+  legitimate:
+    - "Which signing certificate (.p12, base64 in NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS, with its passphrase) should sign documents? Without it, signing is unavailable"
+    - "Which SMTP server sends recipient emails? Defaults point to 127.0.0.1:2500"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Health path? (/api/health)"
+    - "Who runs migrations? (docker/start.sh runs prisma migrate deploy)"
+    - "Is Redis needed? (no, unless the BullMQ provider is chosen)"
+traps:
+  - "The repository root has no Dockerfile; the production one is docker/Dockerfile with the repository root as build context (docker/Dockerfile:20)"
+  - "docker/start.sh runs prisma migrate deploy before the server, so the schema needs NEXT_PRIVATE_DIRECT_DATABASE_URL at start (docker/start.sh:28, packages/prisma/schema.prisma:24)"
+  - "Encryption keys are baked into the image as CAFEBABE and DEADBEEF at build time; real values must be set at runtime (docker/Dockerfile:47-51)"
+  - "The default certificate and audit-log PDFs are made in-process (generateCertificatePdf); the Playwright/Chromium path runs only when NEXT_PRIVATE_USE_PLAYWRIGHT_PDF=true, so the missing Chromium in the image is not a default blocker (packages/lib/jobs/definitions/internal/seal-document.handler.ts:255-269, packages/lib/constants/app.ts:92)"
+  - "Document signing needs a .p12 at /opt/documenso/cert.p12 or NEXT_PRIVATE_SIGNING_LOCAL_FILE_CONTENTS; start.sh only warns when it is missing (docker/start.sh:13-16)"
+  - "The local jobs provider calls back to NEXT_PRIVATE_INTERNAL_WEBAPP_URL, which defaults to the public web URL (packages/lib/constants/app.ts:51-52)"
+  - ".env.example uses S3 and MinIO-style endpoints and a local Postgres on 54320 as development defaults only"
+crossReview:
+  - {field: "traps", change: "corrected a false trap: certificate and audit PDFs use generateCertificatePdf/generateAuditLogPdf by default; getCertificatePdf is deprecated and runs only when NEXT_PRIVATE_USE_PLAYWRIGHT_PDF is true", evidence: "seal-document.handler.ts:255-269; get-certificate-pdf.ts:2"}
+  - {field: "outcome.accept", change: "none: DEPLOYABLE confirmed; no missed datastore (PostgreSQL only, local jobs provider, database upload transport)", evidence: ".env.example:157; put-file.server.ts:82"}
+  - {field: "dockerfile", change: "none: docker/Dockerfile confirmed", evidence: "docker/Dockerfile:20,90,141"}
+  - {field: "port, healthPath, migrations, database", change: "none: confirmed", evidence: "main.js:47; health.ts:18,47; start.sh:28; schema.prisma:22-24"}
+  - {field: "all", change: "verified", evidence: "17 citations checked"}

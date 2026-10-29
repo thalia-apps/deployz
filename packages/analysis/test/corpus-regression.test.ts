@@ -35,6 +35,7 @@ import {
   checkGpu,
   checkKafka,
   checkKubernetes,
+  checkMongo,
   checkMultiProcessImage,
   checkNoBuildableDockerfile,
   checkOtherUnsupportedDatabases,
@@ -1076,5 +1077,57 @@ describe('Round 6 analysis gaps', () => {
     const goMod = (line: string): FileTree => ({ 'go.mod': `module example.com/app\n\nrequire (\n\t${line}\n)\n`, 'main.go': 'package main\nfunc main() {}\n' });
     expect(detectPostgresql(goMod('github.com/lib/pq v1.10.9 // indirect')).detected).toBe(false);
     expect(detectPostgresql(goMod('github.com/lib/pq v1.10.9')).detected).toBe(true);
+  });
+});
+
+describe('Round 7 analysis gaps', () => {
+  const withPaths = (files: FileTree, extra: string[] = []): FileTree =>
+    Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+
+  it('finds Neo4j from the Python driver and a Compose service, not from an optional extra or a database image (graphiti, cognee)', () => {
+    const pyproject = (dependency: string): string => `[project]\nname = "app"\ndependencies = [\n  ${dependency},\n]\n`;
+    const compose = 'services:\n  neo4j:\n    image: neo4j:5.26\n  graph:\n    build: .\n    ports:\n      - 8000:8000\n';
+    expect(checkOtherUnsupportedDatabases({ 'pyproject.toml': pyproject('"neo4j>=5.26.0"'), 'docker-compose.yml': compose }).dependency).toBe('neo4j');
+    expect(checkOtherUnsupportedDatabases({ 'pyproject.toml': pyproject('"neo4j>=5.26.0"') }).detected).toBe(false);
+    // An image of the database itself sets its own connection variable: no evidence that the app needs it.
+    const neo4jImage = 'FROM neo4j:5\nENV NEO4J_URI=bolt://localhost:7687\n';
+    expect(checkOtherUnsupportedDatabases({ 'pyproject.toml': pyproject('"neo4j>=5.26.0"'), 'evals/Dockerfile.neo4j-custom': neo4jImage }).detected).toBe(false);
+  });
+
+  it('finds MongoDB from a production image that sets the connection (Rocket.Chat)', () => {
+    const tree = (dockerfile: string): FileTree => ({
+      'package.json': '{\n  "name": "app",\n  "dependencies": {\n    "mongodb": "6.16.0"\n  }\n}\n',
+      'apps/meteor/.docker/Dockerfile': dockerfile,
+    });
+    const image = 'FROM node:22\nCOPY . /app\nENV NODE_ENV=production \\n    MONGO_URL=mongodb://mongo:27017/rocketchat \\n    PORT=3000\nCMD ["node", "main.js"]\n';
+    expect(checkMongo(tree(image)).dependency).toBe('mongodb');
+    expect(checkMongo(tree('FROM node:22\nCOPY . /app\nENV PORT=3000\nCMD ["node", "main.js"]\n')).detected).toBe(false);
+    // A trailing dev all-in-one stage runs its own database (twenty's ClickHouse): not the production image.
+    const allInOne = 'FROM node:22 AS app\nCOPY . /app\nCMD ["node", "main.js"]\nFROM app AS app-dev\nENV MONGO_URL=mongodb://localhost:27017/app\n';
+    expect(checkMongo(tree(allInOne)).detected).toBe(false);
+  });
+
+  it('builds no scanner image in a hidden directory and no project template (medusa, vendure, payload)', () => {
+    const scanner = 'FROM node:22-bookworm\nRUN apt-get update && apt-get install -y postgresql redis-server\nCOPY . /src\nRUN yarn install --immutable\nRUN yarn build\n';
+    const template = 'FROM node:22-alpine AS base\nCOPY . .\nRUN npm ci && npm run build\nEXPOSE 3000\nCMD ["node", "server.js"]\n';
+    const tree = withPaths({ '.oss-scanner/Dockerfile': scanner, 'templates/blank/Dockerfile': template }, ['package.json']);
+    expect(selectedDockerfile(tree)).toBeNull();
+    expect(checkNoBuildableDockerfile(tree).detected).toBe(true);
+    // A hidden directory still holds a production image when the image starts the app (Rocket.Chat `.docker/`).
+    expect(selectedDockerfile({ '.docker/Dockerfile': template })?.path).toBe('.docker/Dockerfile');
+  });
+
+  it('does not take a development image or a URL download for a buildable alternative to a prebuilt binary image (typesense)', () => {
+    const tree = withPaths(
+      {
+        'docker/deployment.Dockerfile': 'FROM ubuntu:22.04\nCOPY typesense-server /opt\nEXPOSE 8108\nENTRYPOINT ["/opt/typesense-server"]\n',
+        'docker/development-macos.Dockerfile': 'FROM ubuntu:20.04\nRUN apt-get update\nCOPY docker/development-macos-entrypoint.sh /usr/local/bin/\nENTRYPOINT ["/usr/local/bin/development-macos-entrypoint.sh"]\n',
+        'docker/clion-remote-cpp-env.Dockerfile': 'FROM gcc:12\nADD https://ftp.gnu.org/gnu/gdb/gdb-12.tar.gz /opt/gdb.tar.gz\nRUN cd /opt && make install\nCMD ["/usr/sbin/sshd", "-D"]\n',
+        // A test suite's package manifest does not make the repository a library.
+        'api_tests/package.json': '{\n  "name": "api-tests",\n  "bin": "run.js"\n}\n',
+      },
+      ['CMakeLists.txt', 'src/main.cpp', 'docker/development-macos-entrypoint.sh'],
+    );
+    expect(checkNoBuildableDockerfile(tree).dependency).toBe('no-buildable-dockerfile');
   });
 });

@@ -1,0 +1,147 @@
+{
+  "id": "new-186",
+  "commit": "5ac3fdcbf82e818337d424852c778ce2ffd5e8e9",
+  "analyser": "rules@r7-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".oss-scanner",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": ".oss-scanner/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build build:plugin --concurrency=100% --no-daemon",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "R2_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".oss-scanner/Dockerfile declares DB_HOST"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".oss-scanner/Dockerfile declares DB_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".oss-scanner/Dockerfile declares DB_USERNAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GATSBY_LOGGER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/medusa-cli/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "R2_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "www/apps/resources/.env.sample declares R2_BUCKET_NAME",
+            "www/apps/ui/.env.example declares R2_BUCKET_NAME",
+            "www/apps/api-reference/.env.sample declares R2_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".oss-scanner/Dockerfile declares REDIS_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "sendgrid",
+      "openai"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE"
+}

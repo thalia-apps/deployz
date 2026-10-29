@@ -1,0 +1,140 @@
+id: new-176
+repository: topoteretes/cognee
+commit: 37f788bd287750e10d7610173e5332b3843f6ebd
+summary: >
+  Cognee is a Python (FastAPI served by gunicorn with uvicorn workers) memory and knowledge-graph engine for AI agents.
+  The root Dockerfile builds the API from source (uv sync with the api, postgres, neo4j and aws extras) and its
+  entrypoint runs the migrations and then gunicorn on 8000. Defaults are all embedded and file based: SQLite for
+  relational data, Kuzu (Ladybug) for the graph, LanceDB for vectors, local directories under /cognee-storage. Env
+  settings move every store to services Deployz offers: DB_PROVIDER=postgres, VECTOR_DB_PROVIDER=pgvector,
+  GRAPH_DATABASE_PROVIDER=postgres (a Postgres graph adapter, named postgres_demo in code) and STORAGE_BACKEND=s3.
+  Neo4j is an optional alternative graph store. An LLM API key (LLM_API_KEY) is needed. Separate cognee-mcp and
+  cognee-frontend images exist but are optional.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One Dockerfile builds the API from source, one HTTP port (8000), /health, migrations in the entrypoint. A durable
+    deploy needs configuration that replaces the file defaults with RDS PostgreSQL (relational, pgvector, Postgres
+    graph) and S3 (STORAGE_BACKEND=s3). That is configuration only (DEPLOYABLE), but the Postgres graph adapter is
+    labelled as a demo in the code and the defaults are local disk, so DEPLOYABLE_WITH_CHANGES is also defensible. A
+    deploy with the default stores loses all data on a task restart (Kuzu and LanceDB files on local disk).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.ci, reason: "CI variant of the image"}
+    - {path: cognee-mcp/Dockerfile, reason: "MCP server image, a separate optional app"}
+    - {path: cognee-frontend/Dockerfile, reason: "Next.js UI image, a separate optional app"}
+    - {path: cognee/eval_framework/Dockerfile, reason: "evaluation tooling image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 66, quote: "uv sync \"$@\" --extra debug --extra api --extra postgres --extra neo4j --extra llama-index --extra aws --extra dlt --extra ollama --extra mistral --extra groq --extra anthropic --frozen --no-install-project --no-dev --no-editable"}
+    - {path: Dockerfile, line: 155, quote: "ENTRYPOINT [\"/app/entrypoint.sh\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: entrypoint.sh, line: 12, quote: "HTTP_PORT=${HTTP_PORT:-8000}"}
+    - {path: Dockerfile, line: 158, quote: "CMD curl -f http://localhost:8000/health || exit 1"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: entrypoint.sh, line: 13, quote: "BIND_ADDRESS=${BIND_ADDRESS:-\"0.0.0.0\"}"}
+startCommand:
+  source: image
+  accept: ["/app/entrypoint.sh", "entrypoint.sh"]
+  evidence:
+    - {path: Dockerfile, line: 155, quote: "ENTRYPOINT [\"/app/entrypoint.sh\"]"}
+    - {path: entrypoint.sh, line: 62, quote: "exec gunicorn -w 1 -k uvicorn.workers.UvicornWorker -t 30000 --bind=$BIND_ADDRESS:$HTTP_PORT --log-level error --access-logfile - --error-logfile - cognee.api.client:app"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: cognee/api/client.py, line: 457, quote: "prefix=\"/health\","}
+    - {path: cognee/api/v1/health/routers/get_health_router.py, line: 13, quote: "@health_router.get(\"\", response_model=dict)"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_PROVIDER: postgres, VECTOR_DB_PROVIDER: pgvector, GRAPH_DATABASE_PROVIDER: postgres}
+  connectionVars: [DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME]
+  # SQLite is the default; PostgreSQL (with pgvector for vectors and a Postgres graph adapter) is the way to keep data.
+  evidence:
+    - {path: .env.template, line: 164, quote: "DB_PROVIDER=\"sqlite\""}
+    - {path: .env.template, line: 44, quote: "#DB_PROVIDER=\"postgres\""}
+    - {path: .env.template, line: 201, quote: "GRAPH_DATABASE_PROVIDER=\"kuzu\""}
+    - {path: .env.template, line: 252, quote: "VECTOR_DB_PROVIDER=\"lancedb\""}
+    - {path: .env.template, line: 250, quote: "# Supported (built-in): pgvector | lancedb | turso"}
+    - {path: cognee/infrastructure/databases/graph/get_graph_engine.py, line: 387, quote: "elif graph_database_provider in (\"postgres\", \"postgres_demo\"):"}
+migrations:
+  mode: startup
+  accept: ["entrypoint.sh"]
+  evidence:
+    - {path: entrypoint.sh, line: 36, quote: "from cognee.modules.migrations.startup import run_migrations"}
+    - {path: entrypoint.sh, line: 38, quote: "failed = asyncio.run(run_migrations())"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/cognee-storage/system, /cognee-storage/data]
+  s3: native
+  s3SelectBy: {STORAGE_BACKEND: s3}
+  # Default SYSTEM_ROOT_DIRECTORY and DATA_ROOT_DIRECTORY are local directories (Kuzu and LanceDB files, uploaded data).
+  # STORAGE_BACKEND=s3 with s3:// roots moves data and system files to S3.
+  evidence:
+    - {path: Dockerfile, line: 141, quote: "ENV SYSTEM_ROOT_DIRECTORY=/cognee-storage/system"}
+    - {path: .env.template, line: 150, quote: "#STORAGE_BACKEND=\"s3\""}
+    - {path: .env.template, line: 155, quote: "#DATA_ROOT_DIRECTORY=\"s3://your-bucket/cognee/data\""}
+env:
+  required:
+    - {name: LLM_API_KEY, secret: true, buildTime: false, note: "API key of the LLM provider (OpenAI by default)"}
+  optional: [LLM_MODEL, LLM_ENDPOINT, DB_PROVIDER, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME, GRAPH_DATABASE_PROVIDER, VECTOR_DB_PROVIDER, STORAGE_BACKEND, STORAGE_BUCKET_NAME, AWS_REGION, DATA_ROOT_DIRECTORY, SYSTEM_ROOT_DIRECTORY, CACHE_ROOT_DIRECTORY, REQUIRE_AUTHENTICATION, ENV, HTTP_PORT, BIND_ADDRESS, ENABLE_BACKEND_ACCESS_CONTROL]
+  buildTime: []
+  evidence:
+    - {path: .env.template, line: 11, quote: "#LLM_API_KEY=\"your_api_key\""}
+    - {path: .env.template, line: 525, quote: "REQUIRE_AUTHENTICATION=False"}
+blockers:
+  expected:
+    - "Default stores (SQLite, Kuzu, LanceDB, local directories) are on local disk; a durable deploy must set DB_PROVIDER, VECTOR_DB_PROVIDER, GRAPH_DATABASE_PROVIDER and STORAGE_BACKEND to PostgreSQL, pgvector, the Postgres graph adapter and S3"
+    - "LLM_API_KEY is needed before the pipelines work"
+  mustNot:
+    - "Neo4j must not be reported as required: it is one optional graph provider (the image includes the neo4j extra)"
+    - "Redis must not be reported as required: it is an optional profile in docker-compose.yml"
+    - "cognee-mcp and cognee-frontend must not be counted as required services: they are optional separate images"
+    - "Qdrant, Weaviate, Milvus, Chroma must not be reported as required: they are community adapters, off by default"
+    - "Kuzu/Ladybug must not be reported as a server: it is an embedded file database"
+vendorQuestions:
+  legitimate:
+    - "Which LLM provider and key? (LLM_API_KEY)"
+    - "Should graph and vectors live in PostgreSQL (postgres graph, pgvector) so data survives restarts?"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Health path? (/health)"
+    - "Is a separate migration step needed? (the entrypoint runs the migrations)"
+traps:
+  - "Defaults are embedded file databases (SQLite, Kuzu, LanceDB); a rule that reads .env.template defaults reports no database and local disk (.env.template:164, 201, 252)"
+  - "The Dockerfile installs the neo4j extra and docker-compose.yml has a neo4j service profile; Neo4j is optional (docker-compose.yml:181)"
+  - "docker-compose.yml also starts cognee-mcp, a frontend, redis and redisinsight under profiles; they are not the required topology"
+  - "The Postgres graph provider is named postgres_demo in code, which may look like a test-only adapter (get_graph_engine.py:387)"
+  - "entrypoint.sh switches between a debug and a production gunicorn start with ENV; ENV unset gives the production command (entrypoint.sh:54, 62)"
+  - "The code labels the Postgres graph adapter as a demo that is not production-ready (get_graph_engine.py:383-384); the other code-supported durable path is the embedded Ladybug graph with STORAGE_BACKEND=s3, which pulls and pushes the graph file to S3 (ladybug/adapter.py:586-597). Both are env-only choices"
+  - "The image runs as a non-root user and HOME=/app; storage directories are owned by uid 1000 (Dockerfile:118-122)"
+openQuestions:
+  - "Whether the Postgres graph adapter (named postgres_demo) is mature enough to count as a supported durable graph store"
+crossReview:
+  - {field: outcome.accept, change: "none: both outcomes kept. The default stores (SQLite, Ladybug/Kuzu, LanceDB, local dirs) are embedded files, but DB_PROVIDER, VECTOR_DB_PROVIDER, GRAPH_DATABASE_PROVIDER and STORAGE_BACKEND are env-only switches to RDS PostgreSQL, pgvector, a Postgres graph and S3. Not a blocker; the durable-state risk is a vendor decision", evidence: ".env.template:44, 150-155, 164, 201, 252; get_graph_engine.py:387"}
+  - {field: traps, change: "added the demo label on the Postgres graph adapter and the S3-synced Ladybug alternative", evidence: "get_graph_engine.py:383-384; postgres_demo/adapter.py:3-4; ladybug/adapter.py:586-597"}
+  - {field: database, change: "none: the pgvector extension is created by the code, allowed on RDS", evidence: "cognee/infrastructure/databases/vector/pgvector/create_db_and_tables.py:15"}
+  - {field: migrations, change: "none: the entrypoint runs run_migrations before gunicorn; no separate task needed", evidence: "entrypoint.sh:32-46"}
+  - {field: startCommand, change: "none: ENV unset or not dev/local gives the production gunicorn line", evidence: "entrypoint.sh:54, 62"}
+  - {field: all, change: verified, evidence: "21 citations checked"}

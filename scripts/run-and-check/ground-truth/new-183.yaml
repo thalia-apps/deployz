@@ -1,0 +1,119 @@
+id: new-183
+repository: RocketChat/Rocket.Chat
+commit: 7a174fd05604dac39af95f76ea9db73db2b3ca5f
+summary: >
+  Rocket.Chat is a Meteor (Node.js, TypeScript) team-chat server in a Yarn monorepo (apps/meteor, ee/apps, packages). The
+  server listens on port 3000 and answers /livez, /readyz and the deprecated /health. It requires MongoDB (MONGO_URL,
+  a replica set with oplog tailing). The official images (apps/meteor/.docker/Dockerfile.debian and Dockerfile.alpine)
+  only copy a Meteor bundle that CI builds (meteor build), so no Dockerfile builds from source. Uploads default to GridFS
+  (inside MongoDB); an AmazonS3 storage type is available. Enterprise microservices (ee/apps) use NATS but are optional.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    MongoDB is a required datastore outside the MVP (PostgreSQL, MySQL, Redis, S3 only). The Rocket.Chat server cannot run
+    on PostgreSQL or MySQL. In addition, no Dockerfile builds the app from the repository: both official Dockerfiles copy a
+    pre-built Meteor bundle (/app/bundle).
+dockerfile:
+  accept: []
+  reject:
+    - {path: apps/meteor/.docker/Dockerfile.debian, reason: "ADD . /app of a CI-built Meteor bundle; only npm install of server dependencies, no meteor build"}
+    - {path: apps/meteor/.docker/Dockerfile.alpine, reason: "COPY . /app of a CI-built Meteor bundle; same pattern on Alpine, with a FIPS variant"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+    - {path: ee/apps/Dockerfile, reason: "enterprise microservices image, not the main server"}
+  target: null
+  context: apps/meteor/.docker
+  evidence:
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 20, quote: "ADD --chown=rocketchat:rocketchat . /app"}
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 38, quote: "RUN cd /app/bundle/programs/server \\"}
+    - {path: apps/meteor/.docker/Dockerfile.alpine, line: 7, quote: "COPY . /app"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 27, quote: "PORT=3000 \\"}
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 69, quote: "EXPOSE 3000"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: image
+  accept: ["node main.js"]
+  evidence:
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 71, quote: "CMD [\"node\", \"main.js\"]"}
+healthPath:
+  accept: ["/livez", "/readyz", "/health"]
+  evidence:
+    - {path: apps/meteor/server/routes/health.ts, line: 27, quote: "WebApp.rawHandlers.use('/health', (_req: IncomingMessage, res: ServerResponse) => {"}
+    - {path: apps/meteor/server/routes/health.ts, line: 120, quote: "WebApp.rawHandlers.use('/livez', async (_req: IncomingMessage, res: ServerResponse) => {"}
+    - {path: apps/meteor/server/routes/health.ts, line: 138, quote: "WebApp.rawHandlers.use('/readyz', async (_req: IncomingMessage, res: ServerResponse) => {"}
+database:
+  status: required
+  engines: [mongodb]
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [MONGO_URL, MONGO_OPLOG_URL]
+  evidence:
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 25, quote: "MONGO_URL=mongodb://mongo:27017/rocketchat \\"}
+    - {path: docker-compose-ci.yml, line: 18, quote: "- MONGO_URL=mongodb://mongo:27017/rocketchat?replicaSet=rs0"}
+migrations:
+  mode: startup
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The monolith runs all services in process; ee/apps microservices with NATS are an optional enterprise topology.
+  evidence:
+    - {path: docker-compose-local.yml, line: 126, quote: "image: nats:2.6-alpine"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/app/uploads]
+  s3: native
+  s3SelectBy: {}
+  # FileUpload_Storage_Type defaults to GridFS (stored in MongoDB); AmazonS3 and FileSystem are the other types.
+  evidence:
+    - {path: apps/meteor/server/settings/file-upload.ts, line: 89, quote: "await this.add('FileUpload_Storage_Type', 'GridFS', {"}
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 65, quote: "VOLUME /app/uploads"}
+env:
+  required:
+    - {name: MONGO_URL, secret: true, buildTime: false, note: "MongoDB connection string; replica set recommended"}
+    - {name: ROOT_URL, secret: false, buildTime: false, note: "public URL; the image default is http://localhost:3000"}
+  optional: [PORT, MONGO_OPLOG_URL, TRANSPORTER, ROCKETCHAT_LICENSE, Accounts_AvatarStorePath]
+  buildTime: []
+  evidence:
+    - {path: apps/meteor/.docker/Dockerfile.debian, line: 28, quote: "ROOT_URL=http://localhost:3000 \\"}
+blockers:
+  expected:
+    - "MongoDB is required (MONGO_URL, replica set); it is outside the MVP datastores"
+    - "No Dockerfile builds from the repository: the official Dockerfiles copy a CI-built Meteor bundle"
+  mustNot:
+    - "Missing PostgreSQL or Redis must not be a blocker: the app uses MongoDB and no Redis"
+    - "NATS and the ee/apps microservices must not count as required services: the monolith runs by itself"
+    - "Local /app/uploads must not be a blocker: GridFS or S3 can hold uploads"
+vendorQuestions:
+  legitimate:
+    - "Where does MongoDB run? Deployz cannot provide it"
+    - "How is the Meteor bundle built? The repository has no Dockerfile that runs meteor build"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Health path? (/livez, /readyz)"
+    - "Is Redis needed? (no)"
+traps:
+  - "Dockerfile.debian and Dockerfile.alpine look like production images but ADD a pre-built bundle (apps/meteor/.docker/Dockerfile.debian:20)"
+  - "docker-compose-local.yml and docker-compose-ci.yml list traefik, NATS and many ee services; they are test stacks, not the product topology"
+  - "/health is marked deprecated in favour of /livez and /readyz (apps/meteor/server/routes/health.ts:25)"
+  - "The image sets MONGO_URL to mongodb://mongo:27017, a link alias that does not exist outside docker-compose"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed (MongoDB required; Dockerfiles copy a CI-built bundle)", evidence: "Dockerfile.debian:25 MONGO_URL; :20 ADD . /app"}
+  - {field: dockerfile/port/startCommand/healthPath, change: "none", evidence: "Dockerfile.debian:27,71; health.ts:27,120,138"}
+  - {field: redis/workers/storage, change: "none: no Redis; GridFS default", evidence: "file-upload.ts:89; docker-compose-local.yml:126 nats only in test stack"}
+  - {field: all, change: verified, evidence: "13 citations checked"}

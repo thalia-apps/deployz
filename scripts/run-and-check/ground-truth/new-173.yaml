@@ -1,0 +1,139 @@
+id: new-173
+repository: Helicone/helicone
+commit: 7720d286110391c3e3776bb46a18fb2a13f7567c
+summary: >
+  Helicone is an LLM observability and gateway platform made of a Next.js web app (web, port 3000), a TypeScript API
+  server called Jawn (valhalla/jawn, port 8585), and a Cloudflare-Workers-style proxy worker. It stores relational data in
+  PostgreSQL, request analytics in ClickHouse (required), request and response bodies in S3-compatible storage (MinIO in
+  compose), and uses Redis for caching and limits. The root Dockerfile is an all-in-one bundle that installs PostgreSQL
+  17, ClickHouse and MinIO in one container under supervisord. The split compose file is docker/docker-compose.yml.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    ClickHouse is a required analytics store (CLICKHOUSE_HOST and CLICKHOUSE_CREDS in Jawn and web) and is outside the MVP.
+    The product is also several services with distinct images (web, Jawn, worker). The root Dockerfile does build from
+    source, but it packs PostgreSQL, ClickHouse and MinIO into one image with data on local disk, which is not a
+    deployable single web service.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "all-in-one image: PostgreSQL 17, ClickHouse, MinIO, Jawn and web under supervisord with local-disk data; a local test bundle, not a service image"}
+    - {path: docker/dockerfiles/dockerfile_web, reason: "web UI image only (port 3000); needs the separate Jawn API and ClickHouse"}
+    - {path: valhalla/dockerfile, reason: "Jawn API image; the product also needs the web image and ClickHouse"}
+    - {path: docker/dockerfiles/dockerfile_worker, reason: "wrangler dev --local proxy worker for local use"}
+    - {path: valhalla/dockerfile_dev, reason: "development image"}
+    - {path: docker/dockerfiles/dockerfile_migrations, reason: "separate migration runner image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "FROM clickhouse/clickhouse-server:24.3.13.40 AS database-stage"}
+    - {path: Dockerfile, line: 164, quote: "CMD [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]"}
+    - {path: docker/docker-compose.yml, line: 135, quote: "dockerfile: valhalla/dockerfile"}
+    - {path: docker/docker-compose.yml, line: 177, quote: "dockerfile: docker/dockerfiles/dockerfile_web"}
+runtime: {accept: [node]}
+port:
+  accept: [3000, 8585]
+  evidence:
+    - {path: docker/docker-compose.yml, line: 183, quote: "- \"3000:3000\""}
+    - {path: valhalla/jawn/src/index.ts, line: 254, quote: "const port = parseInt(process.env.PORT ?? \"8585\");"}
+    - {path: Dockerfile, line: 168, quote: "EXPOSE 3000 8585 8123 9080 9001 5432"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: explicit
+  accept: ["yarn --cwd web start", "yarn start"]
+  evidence:
+    - {path: docker/dockerfiles/dockerfile_web, line: 38, quote: "CMD [\"yarn\", \"--cwd\", \"web\", \"start\"]"}
+    - {path: supervisord.conf, line: 47, quote: "command=yarn start"}
+healthPath:
+  # Jawn serves /healthcheck on 8585. The web app (3000) has no dedicated health route found; / is its landing page.
+  accept: ["/healthcheck", "/"]
+  evidence:
+    - {path: valhalla/jawn/src/index.ts, line: 144, quote: "app.get(\"/healthcheck\", (req, res) => {"}
+database:
+  status: required
+  engines: [postgres, clickhouse]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, SUPABASE_DATABASE_URL, CLICKHOUSE_HOST, CLICKHOUSE_USER, CLICKHOUSE_PASSWORD, CLICKHOUSE_CREDS]
+  # PostgreSQL maps to Deployz RDS. ClickHouse is a second required engine that Deployz cannot provide.
+  evidence:
+    - {path: docker/docker-compose.yml, line: 9, quote: "image: postgres:17.4"}
+    - {path: docker/docker-compose.yml, line: 26, quote: "image: clickhouse/clickhouse-server:24.3.13.40"}
+    - {path: docker/docker-compose.yml, line: 160, quote: "\"CLICKHOUSE_HOST\": \"http://clickhouse:8123\","}
+    - {path: supervisord.conf, line: 25, quote: "[program:clickhouse]"}
+migrations:
+  mode: command
+  accept: ["flyway migrate", "python3 clickhouse/ch_hcone.py"]
+  evidence:
+    - {path: docker/docker-compose.yml, line: 111, quote: "dockerfile: docker/dockerfiles/dockerfile_migrations"}
+    - {path: supervisord.conf, line: 58, quote: "flyway migrate"}
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: docker/docker-compose.yml, line: 94, quote: "image: redis:8.0.2-alpine"}
+    - {path: valhalla/jawn/src/lib/clients/redisClient.ts, line: 3, quote: "const redisHost = process.env.REDIS_HOST;"}
+workers:
+  status: independent
+  commands: ["npx wrangler dev --local"]
+  evidence:
+    - {path: docker/dockerfiles/dockerfile_worker, line: 17, quote: "CMD env > .dev.vars && echo \"n\" | npx wrangler dev --local --var WORKER_TYPE:${WORKER_TYPE} --ip 0.0.0.0 --port ${WORKER_PORT}"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # Request and response bodies and prompt bodies go to S3-compatible buckets (MinIO in compose).
+  evidence:
+    - {path: docker/docker-compose.yml, line: 54, quote: "image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z"}
+    - {path: supervisord.conf, line: 44, quote: "S3_BUCKET_NAME=\"%(ENV_S3_BUCKET_NAME)s\""}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL (Jawn also reads SUPABASE_DATABASE_URL)"}
+    - {name: CLICKHOUSE_HOST, secret: false, buildTime: false, note: "ClickHouse HTTP URL; Deployz cannot provide ClickHouse"}
+    - {name: S3_ENDPOINT, secret: false, buildTime: false, note: "S3 endpoint"}
+    - {name: S3_BUCKET_NAME, secret: false, buildTime: false, note: "request and response bucket"}
+    - {name: BETTER_AUTH_SECRET, secret: true, buildTime: false, note: "auth secret"}
+    - {name: NEXT_PUBLIC_HELICONE_JAWN_SERVICE, secret: false, buildTime: false, note: "public URL of the Jawn API; the browser calls it"}
+  optional: [REDIS_HOST, JAWN_PORT, S3_PROMPT_BUCKET_NAME, STRIPE_SECRET_KEY, SMTP_PORT]
+  buildTime: []
+  evidence:
+    - {path: supervisord.conf, line: 55, quote: "NEXT_PUBLIC_HELICONE_JAWN_SERVICE=\"%(ENV_NEXT_PUBLIC_HELICONE_JAWN_SERVICE)s\""}
+    - {path: supervisord.conf, line: 44, quote: "BETTER_AUTH_SECRET=\"%(ENV_BETTER_AUTH_SECRET)s\""}
+blockers:
+  expected:
+    - "ClickHouse is a required analytics store (CLICKHOUSE_HOST and CLICKHOUSE_CREDS) and is outside the MVP datastores"
+    - "The product is separate services with separate images: Next.js web (3000), Jawn API (8585) and the proxy worker; the browser calls Jawn directly"
+    - "The root Dockerfile bundles PostgreSQL, ClickHouse and MinIO with local-disk data in one container, which is not a stateless web service"
+  mustNot:
+    - "PostgreSQL, Redis and S3 must not block by themselves: all are supported MVP resources"
+    - "MinIO in docker-compose.yml must not block: S3 is supported"
+    - "Mailhog (SMTP 1025, UI 8025) must not be treated as required: development mail catcher"
+    - "The root Dockerfile must not be accepted as the production image only because it builds from source"
+    - "Kafka and ZooKeeper in docker-compose.yml must not be reported as required: Jawn consumers run only when KAFKA_ENABLED is true, and it defaults to false"
+vendorQuestions:
+  legitimate:
+    - "Can ClickHouse run outside Deployz (managed ClickHouse)?"
+    - "Where is the Jawn API hosted, given the web app needs its public URL (NEXT_PUBLIC_HELICONE_JAWN_SERVICE)?"
+  unnecessary:
+    - "Which database for relational data? (PostgreSQL)"
+    - "Is Redis needed? (optional)"
+traps:
+  - "The root Dockerfile looks like the single production image, but its first stage is the ClickHouse server image with PostgreSQL 17 and MinIO installed and supervisord as the process manager (Dockerfile:1-16,164)"
+  - "The root Dockerfile and supervisord.conf set dummy keys and NODE_ENV=development for Jawn (supervisord.conf:44)"
+  - "Redis appears in docker-compose.yml but Jawn only reads it when REDIS_HOST is set (valhalla/jawn/src/lib/clients/redisClient.ts:3)"
+  - "docker/dockerfiles/dockerfile_worker runs wrangler dev --local, a Cloudflare Workers emulator, not a production Node server"
+  - "docker-compose.yml also defines zookeeper and kafka services, but Kafka is off by default (valhalla/jawn/src/lib/clients/kafkaConsumers/KafkaConsumer.ts:16)"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "ClickhouseWrapper.ts:13 CLICKHOUSE_HOST is a required string; root Dockerfile:1 and supervisord.conf:25 bundle ClickHouse"}
+  - {field: blockers.mustNot, change: "added: Kafka and ZooKeeper in docker-compose.yml must not count as required", evidence: "docker/docker-compose.yml:426,438 services; KafkaConsumer.ts:16 KAFKA_ENABLED defaults to false"}
+  - {field: traps, change: "added the optional Kafka trap", evidence: "KafkaConsumer.ts:16"}
+  - {field: dockerfile/port/healthPath/redis/workers/storage, change: "none: confirmed", evidence: "valhalla/jawn/src/index.ts:144,254; redisClient.ts:3"}
+  - {field: all, change: verified, evidence: "22 citations checked"}

@@ -1,0 +1,489 @@
+{
+  "id": "new-167",
+  "commit": "e8d7de8b300b62f109e3e272bf8011ad1268cd37",
+  "analyser": "rules@r7-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "cookbook/frameworks/sandbox",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "cookbook/frameworks/sandbox/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "agno",
+        "pyproject.toml"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"python\", \"-I\", \"-m\", \"agno.sandbox.agentcore.server\", \"serve\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "vendor_required"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "MEDIA_GCS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "MEDIA_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALPHA_FEATURES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHORIZATION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/06_storage/06_media_storage_s3.py",
+            "read in cookbook/06_storage/07_media_storage_multiturn.py",
+            "read in cookbook/06_storage/09_media_storage_delete.py",
+            "read in cookbook/06_storage/10_media_storage_workflow.py",
+            "read in cookbook/06_storage/11_media_storage_file_generation.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "CONFIG_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno_infra/agno/cli/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ORIGIN_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/data_labeling/image_search/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISCORD_BOT_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cookbook/91_tools/discord_tools.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DOCS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ELSE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GCP_PROJECT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/06_storage/08_media_storage_gcs.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_GCS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/06_storage/08_media_storage_gcs.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/06_storage/06_media_storage_s3.py",
+            "read in cookbook/06_storage/07_media_storage_multiturn.py",
+            "read in cookbook/06_storage/09_media_storage_delete.py",
+            "read in cookbook/06_storage/10_media_storage_workflow.py",
+            "read in cookbook/06_storage/11_media_storage_file_generation.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cookbook/12_context/15a_wiki_notion.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_DATABASE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/12_context/15a_wiki_notion.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OS_SECURITY_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REFERENCE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SERVICE_ACCOUNT_CACHE_TTL_SECONDS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/os/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TELEGRAM_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in libs/agno/agno/os/interfaces/telegram/router.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_SHUTDOWN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TELEMETRY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in libs/agno/agno/api/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WIKI_BRANCH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/12_context/15_wiki_git.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WIKI_GITHUB_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cookbook/12_context/15_wiki_git.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WIKI_LOCAL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/12_context/15_wiki_git.py",
+            "read in cookbook/12_context/15a_wiki_notion.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WIKI_REPO_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cookbook/12_context/15_wiki_git.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (libs/agno/pyproject.toml, libs/agno_infra/pyproject.toml, libs/agnoctl/pyproject.toml), and no Dockerfile builds an application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: every package manifest publishes a library, framework, SDK or CLI that others install (libs/agno/pyproject.toml, libs/agno_infra/pyproject.toml, libs/agnoctl/pyproject.toml), and no Dockerfile builds an application."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies agno, pyproject.toml, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "health-path-required",
+        "category": "health",
+        "severity": "error",
+        "message": "No health check route or container health check was found, so Deployz does not know when the app is ready. Expose a health route (for example /health) or add a container health check before deploying."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ELSE, REFERENCE, SERVICE_ACCOUNT_CACHE_TTL_SECONDS. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 5,
+  "outcome": "NOT_DEPLOYABLE"
+}
