@@ -1,0 +1,1053 @@
+{
+  "id": "new-133",
+  "commit": "cbb96e151fe0c57c16a4456fe1bd04230b1c1e5c",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "vite build --emptyOutDir",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/sbin/tini\", \"--\", \"/opt/recipes/boot.sh\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "hostChecked": true,
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACCOUNT_EMAIL_SUBJECT_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACCOUNT_EMAIL_VERIFICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_RATELIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLAUTH_SITE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLAUTH_TRUSTED_PROXY_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOWED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares ALLOWED_HOSTS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH_LDAP_BIND_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_BIND_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_CACHE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_SERVER_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_TLS_CACERTFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_USER_ATTR_MAP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_USER_SEARCH_BASE_DN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_LDAP_USER_SEARCH_FILTER_STR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ORIGIN_ALLOW_ALL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "boot.sh declares DATABASE_URL",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares DB_ENGINE",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEBUG_TOOLBAR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_FROM_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DJANGO_VITE_DEV_SERVER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DRF_THROTTLE_RECIPE_URL_IMPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_HOST_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXPORT_FILE_CACHE_DURATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXTERNAL_CONNECTORS_QUEUE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FDC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FORCE_THEME_FROM_SPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HCAPTCHA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HCAPTCHA_SITEKEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMPRINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LDAP_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_OWNED_SPACES_PREF_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_ZIP_FILE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_ZIP_FILE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_ZIP_NESTING_DEPTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_ZIP_TOTAL_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares POSTGRES_DB",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares POSTGRES_HOST",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.template declares POSTGRES_PASSWORD",
+            "boot.sh declares POSTGRES_PASSWORD",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares POSTGRES_PORT",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares POSTGRES_USER",
+            "boot.sh declares POSTGRES_USER",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRIVACY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATELIMIT_URL_IMPORT_REQUESTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERSE_PROXY_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_CUSTOM_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_QUERYSTRING_EXPIRE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_REGION_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_SIGNATURE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.template declares SECRET_KEY",
+            "read in manage.py",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SESSION_COOKIE_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_COOKIE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHARING_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SHOPPING_MIN_AUTOSYNC_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOCIALACCOUNT_PROVIDERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOCIAL_DEFAULT_GROUP",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPACE_AI_CREDITS_MONTHLY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPACE_DEFAULT_MAX_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPACE_DEFAULT_MAX_RECIPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPACE_DEFAULT_MAX_USERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQL_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TERMS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TIMEZONE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.template declares TZ",
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UNAUTHENTICATED_THEME_FROM_SPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in recipes/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": []
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 4,
+    "questions": 0,
+    "generatedAt": "2026-10-29T13:49:09.659Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

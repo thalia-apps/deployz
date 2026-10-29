@@ -1,0 +1,235 @@
+{
+  "id": "new-199",
+  "commit": "d12fb1d61eaced6463bb129b93b09fd202507a9b",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "deploy/docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/opt/emqx/bin/emqx\", \"foreground\"]",
+      "port": 1883
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "BUILD_WITHOUT_JQ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUILD_WITHOUT_QUIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUILD_WITHOUT_ROCKSDB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUILD_WITH_QUIC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ELIXIR_MAKE_TAR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMQX_BROKER_INSTR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMQX_FLAVOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMQX_REL_FORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STORE_STATE_IN_DS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "deploy/charts/emqx-enterprise/Chart.yaml"
+    ],
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported repository: deploy/docker/Dockerfile exposes port 1883 (MQTT), so the image is a database or message-broker server that clients reach over its own protocol, not a web application.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: deploy/docker/Dockerfile exposes port 1883 (MQTT), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (deploy/charts/emqx-enterprise/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05722596,
+        "promptTokens": 13416,
+        "completionTokens": 207
+      },
+      "latencyMs": 4817
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4818,
+    "questions": 1,
+    "generatedAt": "2026-10-29T14:30:26.283Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

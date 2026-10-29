@@ -1,0 +1,277 @@
+{
+  "id": "new-47",
+  "commit": "9bc90b0063c87eb590d52fd08c852f2d304ff43a",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "elixir",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"run\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_EXPORTS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_IMPORTS_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": "/app/bin/plausible eval Plausible.Release.interweave_migrate",
+      "mode": "pre_deploy"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APP_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mix.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/plausible/s3.ex"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIG_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/runtime.exs",
+            "read in rel/overlays/import_extra_config.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEFAULT_DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/runtime.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MINIO_HOST_FOR_CLICKHOUSE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/plausible/s3.ex"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MIX_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tracker/compiler/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in tracker/compiler/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_EXPORTS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/plausible/s3.ex"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_IMPORTS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/plausible/s3.ex"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SITE_DEFAULT_INGEST_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/runtime.exs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database driver: ecto_ch, and the app's Ecto repo runs on ClickHouse through ecto_ch. Deployz does not support ClickHouse."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: ecto_ch, and the app's Ecto repo runs on ClickHouse through ecto_ch. Deployz does not support ClickHouse."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07364016,
+        "promptTokens": 14806,
+        "completionTokens": 758
+      },
+      "latencyMs": 10153
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "clickhouse",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "/app/bin/plausible eval Plausible.Release.interweave_migrate"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10155,
+    "questions": 2,
+    "generatedAt": "2026-10-29T14:36:46.435Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

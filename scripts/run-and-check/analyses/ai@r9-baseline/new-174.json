@@ -1,0 +1,616 @@
+{
+  "id": "new-174",
+  "commit": "26cdefb46600c0fa5953c4b5ee5003c125539fc4",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "server/dashboard",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "server/dashboard/Dockerfile"
+    },
+    "build": {
+      "command": "npm run clean && npx prettier --check . && npx tsup",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"server.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "APP_DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMIN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/auth.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in integrations/vercel-ai-sdk/config/test-config.ts",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "API_INTERNAL_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/dashboard/src/lib/server-api-url.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "APP_DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares APP_DB_NAME",
+            "read in server/db.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AUTH_DISABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/auth.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COHERE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in integrations/vercel-ai-sdk/config/test-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DASHBOARD_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py",
+            "read in server/dashboard/src/app/api/auth/refresh/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in integrations/vercel-ai-sdk/config/test-config.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "HISTORY_DB_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in server/auth.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MEM0_AGENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in cli/python/src/mem0_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in mem0/client/main.py",
+            "read in integrations/deepseek-plugin/src/index.ts",
+            "read in integrations/vercel-ai-sdk/config/test-config.ts",
+            "read in cli/python/src/mem0_cli/config.py",
+            "read in integrations/pi-agent-plugin/src/config/index.ts",
+            "read in integrations/hermes-plugin-mem0/_setup.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MEM0_APPLICATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mem0/client/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in cli/python/src/mem0_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in cli/python/src/mem0_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_CLIENT_STACK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mem0/client/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_DEFAULT_EMBEDDER_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_DEFAULT_LLM_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mem0-ts/src/client/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in integrations/hermes-plugin-mem0/_setup.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MEM0_RUN_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in cli/python/src/mem0_cli/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_SOURCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mem0/client/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_TELEMETRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/telemetry.py",
+            "read in integrations/openclaw/fs-safe.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_TELEMETRY_STATE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/telemetry.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEM0_USER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cli/node/src/config.ts",
+            "read in cli/python/src/mem0_cli/config.py",
+            "read in integrations/pi-agent-plugin/src/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/dashboard/src/lib/server-api-url.ts",
+            "read in server/dashboard/src/utils/api.ts",
+            "read in server/dashboard/src/app/setup/page.tsx",
+            "read in server/dashboard/src/app/(root)/dashboard/memories/page.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_INSTANCE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/dashboard/src/app/(root)/dashboard/components/nav-wrapper.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/dashboard/src/app/api/auth/refresh/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in server/main.py",
+            "read in integrations/vercel-ai-sdk/config/test-config.ts",
+            "read in mem0-ts/src/oss/src/config/defaults.ts",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "POSTGRES_COLLECTION_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py",
+            "read in server/db.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "server/.env.example declares POSTGRES_PASSWORD",
+            "read in server/main.py",
+            "read in server/db.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/main.py",
+            "read in server/db.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "server/.env.example declares POSTGRES_USER",
+            "read in server/main.py",
+            "read in server/db.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in integrations/hermes-plugin-mem0/_oss_providers.py",
+            "read in integrations/hermes-plugin-mem0/_setup.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unconfirmed service: the repository declares mem0 (builds server/dev.Dockerfile) in server/docker-compose.yaml, which mem0-dashboard needs. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares mem0 (builds server/dev.Dockerfile) in server/docker-compose.yaml, which mem0-dashboard needs. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ANTHROPIC_API_KEY, API_INTERNAL_URL, COHERE_API_KEY, GROQ_API_KEY, MEM0_API_KEY, and 2 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 8,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06477768,
+        "promptTokens": 13563,
+        "completionTokens": 559
+      },
+      "latencyMs": 8116
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [
+          "no cited production source line uses the service"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 8121,
+    "questions": 2,
+    "generatedAt": "2026-10-29T14:27:13.202Z",
+    "failedChecks": 1,
+    "promptVersion": 19
+  }
+}

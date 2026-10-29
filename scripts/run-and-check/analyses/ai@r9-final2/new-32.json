@@ -1,0 +1,744 @@
+{
+  "id": "new-32",
+  "commit": "27b7303baf41bb28babc610ac8eaa486e1ddfab5",
+  "analyser": "ai@r9-final2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/alpine.Dockerfile"
+    },
+    "build": {
+      "command": "npm run build-js && npm run build-theme-light && npm run build-theme-dark",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./bootstrap.sh\"]",
+      "port": 9090
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LD_DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "LD_DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "LD_DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "LD_DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "LD_DB_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "HOST_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/prod.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_ALLOWED_INTERNAL_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_AUTH_PROXY_LOGOUT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_AUTH_PROXY_LOGOUT_URL",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_AUTH_PROXY_USERNAME_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_AUTH_PROXY_USERNAME_HEADER",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_CONTAINER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_CONTAINER_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LD_CONTEXT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_CONTEXT_PATH",
+            "read in bookmarks/admin.py",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_CORS_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_CSRF_TRUSTED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_CSRF_TRUSTED_ORIGINS",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DB_DATABASE",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LD_DB_ENGINE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"sqlite\" stores data on the container disk — set \"postgres\" or \"django.db.backends.postgresql_psycopg2\" to use the managed PostgreSQL database",
+            ".env.sample declares LD_DB_ENGINE",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LD_DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DB_HOST",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LD_DB_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DB_OPTIONS",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares LD_DB_PASSWORD",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LD_DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DB_PORT",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LD_DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DB_USER",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "LD_DISABLE_ASSET_UPLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_DISABLE_BACKGROUND_TASKS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DISABLE_BACKGROUND_TASKS",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_DISABLE_LOGIN_FORM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DISABLE_LOGIN_FORM",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_DISABLE_URL_VALIDATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_DISABLE_URL_VALIDATION",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_ENABLE_AUTH_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_ENABLE_AUTH_PROXY",
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_ENABLE_OIDC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_ENABLE_REFRESH_FAVICONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_ENABLE_SNAPSHOTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_FAVICON_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_HOST_DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_HOST_DATA_DIR"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LD_HOST_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_HOST_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LD_MONOLITH_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_MONOLITH_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_PREVIEW_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SESSION_COOKIE_AGE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SINGLEFILE_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SINGLEFILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SINGLEFILE_TIMEOUT_SEC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SINGLEFILE_UBLOCK_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SNAPSHOT_PDF_MAX_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SUPERUSER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LD_SUPERUSER_NAME",
+            "read in bookmarks/management/commands/create_initial_superuser.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_SUPERUSER_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares LD_SUPERUSER_PASSWORD",
+            "read in bookmarks/management/commands/create_initial_superuser.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LD_USE_X_FORWARDED_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_OP_AUTHORIZATION_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_OP_JWKS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_OP_TOKEN_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_OP_USER_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_RP_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_RP_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_RP_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_RP_SIGN_ALGO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_USERNAME_CLAIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_USE_PKCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_VERIFY_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bookmarks/settings/base.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: LD_DB_ENGINE. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06723288,
+        "promptTokens": 13908,
+        "completionTokens": 614
+      },
+      "latencyMs": 10099
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10100,
+    "questions": 2,
+    "generatedAt": "2026-10-29T15:17:33.520Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  }
+}
