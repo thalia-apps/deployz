@@ -4235,15 +4235,32 @@ describe('server — GitHub installation binding', () => {
     }
   });
 
-  it('refuses a code whose user cannot see the installation, even for a new installation', async () => {
+  it('refuses a code whose user cannot see an older installation', async () => {
+    installationCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    try {
+      const state = await startInstall(org.cookie);
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=bad-code`,
+        headers: { cookie: org.cookie },
+      });
+      expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
+      expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+    } finally {
+      installationCreatedAt = new Date().toISOString();
+    }
+  });
+
+  // A failed code exchange (for example, client credentials of another OAuth
+  // App) must not block the install that just happened.
+  it('binds a new installation even when the code check fails', async () => {
     const state = await startInstall(org.cookie);
     const response = await app.inject({
       method: 'GET',
       url: `/api/github/setup?installation_id=4242&state=${encodeURIComponent(state)}&code=bad-code`,
       headers: { cookie: org.cookie },
     });
-    expect(response.headers['location']).toContain('/dashboard/applications?github=unverified');
-    expect(await db.select().from(schema.githubInstallations)).toEqual([]);
+    expect(response.headers['location']).toContain('/dashboard/applications?github=connected');
   });
 
   it('binds an older installation when the code user can see it', async () => {

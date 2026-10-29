@@ -4070,9 +4070,10 @@ export async function buildServer({
       // moments ago.
       if (existing === null) {
         const proven =
-          code && githubClientId && githubClientSecret
+          isFreshInstallation(account.createdAt, Date.now()) ||
+          (code && githubClientId && githubClientSecret
             ? await userCanSeeInstallation(code, installationId, githubClientId, githubClientSecret, githubFetch)
-            : isFreshInstallation(account.createdAt, Date.now());
+            : false);
         if (!proven) {
           request.log.warn({ installationId }, 'github setup refused: installation ownership not proven');
           return reply.redirect(returnUrl('unverified'));
