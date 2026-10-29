@@ -199,8 +199,17 @@ export async function handler(event: WorkerEvent): Promise<BatchResponse | void>
       // Shadow-only, noop when Jev is disabled — same construction as the
       // analysis runner's wiring in createDeps below.
       const jevFailureShadow = createJevFailureShadowRunnerFromEnv({ db }, resolveJevConfig(process.env));
-      const failed = await sweepStuckJobs(db, new Date(), jevFailureShadow);
-      const relaysDisconnected = await sweepRelayLiveness(db);
+      // Each sweep stands alone: a failure in one (a job-list query, the
+      // liveness update) must not skip the sweeps after it. A failing single
+      // job is already isolated inside sweepStuckJobs.
+      const failed = await sweepStuckJobs(db, new Date(), jevFailureShadow).catch((error: unknown) => {
+        console.error('sweepStuckJobs failed', error);
+        return 0;
+      });
+      const relaysDisconnected = await sweepRelayLiveness(db).catch((error: unknown) => {
+        console.error('sweepRelayLiveness failed', error);
+        return 0;
+      });
       // A build-sweep failure (e.g. a CodeBuild API error) must not fail the
       // whole scheduled invoke — the job sweep above already committed, and
       // the next tick retries the build sweep anyway.
