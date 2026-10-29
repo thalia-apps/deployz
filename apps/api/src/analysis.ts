@@ -484,7 +484,17 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // not PostgreSQL. Stored v74 rows can ask a library for a Dockerfile, call a
 // prebuilt-binary or multi-process image deployable, or block on an optional
 // datastore.
-export const ANALYSIS_VERSION = 75;
+// Version 76 (2026-10 corpus round 7): the Python Neo4j and Cassandra drivers
+// are unsupported databases; a production image that sets the connection
+// variable (`ENV MONGO_URL=mongodb://…`) corroborates the database; a hidden
+// directory's image that starts nothing and a `templates/` or `starters/`
+// Dockerfile are not app images; a development-named Dockerfile or an
+// `ADD <url>` image is no buildable alternative to a prebuilt-binary image;
+// a test suite's package manifest does not make the repository a library.
+// Stored v75 rows can call a Neo4j or MongoDB app, a framework monorepo or a
+// prebuilt-binary image deployable. Integration note: Rounds 4 to 6 may also
+// bump this constant; renumber at consolidated integration.
+export const ANALYSIS_VERSION = 76;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;
