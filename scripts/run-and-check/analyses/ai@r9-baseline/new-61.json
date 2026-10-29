@@ -1,0 +1,283 @@
+{
+  "id": "new-61",
+  "commit": "fd08b56eef24d953e619877dee5990c560f8468e",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "sync-server.Dockerfile"
+    },
+    "build": {
+      "command": "lage build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"build/app.js\"]",
+      "port": 5006
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACTUAL_CACHE_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/desktop-electron/index.ts",
+            "read in packages/cli/src/config.ts",
+            "read in packages/loot-core/src/server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_DOCUMENT_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/desktop-electron/index.ts",
+            "read in packages/loot-core/src/server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_ENCRYPTION_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_LOCK_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_NO_LOCK",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_SERVER_SELF_SIGNED_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/desktop-electron/server.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/config.ts",
+            "read in packages/loot-core/src/server/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_SESSION_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACTUAL_SYNC_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/cli/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EXECUTION_CONTEXT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/desktop-electron/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/loot-core/src/shared/environment.ts",
+            "read in packages/sync-server/src/app.ts",
+            "read in packages/loot-core/src/server/mutators.ts",
+            "read in packages/loot-core/src/server/prefs.ts",
+            "read in packages/loot-core/src/server/sheet.ts",
+            "read in packages/loot-core/src/server/aql/compiler.ts",
+            "read in packages/loot-core/src/server/budgetfiles/app.ts",
+            "read in packages/loot-core/src/server/sync/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REACT_APP_NETLIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/loot-core/src/shared/environment.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database: SQLite driver better-sqlite3. Deployz hosts PostgreSQL and MySQL only; an embedded file database does not survive in the container model."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.088506,
+        "promptTokens": 18280,
+        "completionTokens": 814
+      },
+      "latencyMs": 11594
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "sqlite",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 11595,
+    "questions": 3,
+    "generatedAt": "2026-10-29T14:38:36.449Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

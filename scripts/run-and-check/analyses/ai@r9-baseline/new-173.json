@@ -1,0 +1,1069 @@
+{
+  "id": "new-173",
+  "commit": "7720d286110391c3e3776bb46a18fb2a13f7567c",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "next build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/usr/bin/supervisord\", \"-c\", \"/etc/supervisor/conf.d/supervisord.conf\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_URL",
+          "kind": "url"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        },
+        {
+          "name": "SUPABASE_DATABASE_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "EU_S3_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "kind": "bucket"
+        },
+        {
+          "name": "S3_PROMPT_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "API_HEARTBEAT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in helicone-heartbeat/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "helicone-heartbeat/.env.example declares AWS_REGION"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "CLICKHOUSE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts",
+            "read in clickhouse/ch_hcone.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in worker/src/index.ts",
+            "read in clickhouse/backfill_clickhouse.py",
+            "read in clickhouse/ch_hcone.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in clickhouse/ch_hcone.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in clickhouse/backfill_clickhouse.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts",
+            "read in clickhouse/ch_hcone.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "valhalla/jawn/.env.example declares DATABASE_URL",
+            "valhalla/jawn/.env.example declares DATABASE_URL",
+            "web/.env.example declares DATABASE_URL",
+            "web/.env.example declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "ENABLE_UNSAFE_READ",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/RequestBodyBufferContainer/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/lib/environment/get.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_CLICKHOUSE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_CLICKHOUSE_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_CLICKHOUSE_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_HELICONE_ORG_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_REQUEST_LOGS_QUEUE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_REQUEST_LOGS_QUEUE_URL_LOW_PRIORITY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_SECURE_CACHE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_SUPABASE_SERVICE_ROLE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_SUPABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EU_VALHALLA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in helicone-mcp/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_API_WORKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/lib/onboarding/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_ENV_LOADED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/lib/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HELICONE_WORKER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/lib/onboarding/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/RequestBodyBufferContainer/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOOPS_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in bifrost/app/api/agent-course-signup/route.ts",
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_SIZE_BYTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/RequestBodyBufferContainer/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_APP_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_APP_URL",
+            "read in valhalla/jawn/src/index.ts",
+            "read in valhalla/jawn/src/packages/common/toImplement/server/BetterAuthWrapper.ts",
+            "read in bifrost/middleware.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_BASE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BETTER_AUTH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/packages/common/auth/server/AuthClientFactory.ts",
+            "read in web/packages/common/auth/server/AuthClientFactory.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_HELICONE_JAWN_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_HELICONE_JAWN_SERVICE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_HELICONE_RESTRICT_PRO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_HELICONE_RESTRICT_PRO"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_IS_ON_PREM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/llm/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in bifrost/app/providers.tsx"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SLACK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SUPABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_SUPABASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bifrost/app/api/model-request/route.ts",
+            "read in bifrost/middleware.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/jawn/src/index.ts",
+            "read in worker/RequestBodyBufferContainer/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "docker/.env.example declares POSTGRES_PASSWORD",
+            "Dockerfile declares POSTGRES_PASSWORD",
+            "read in clickhouse/backfill_clickhouse.py",
+            "read in clickhouse/backfill_postgres.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in clickhouse/backfill_clickhouse.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "Dockerfile declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PRICE_PROD_ALERTS_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PRICE_PROD_EVALS_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PRICE_PROD_EXPERIMENTS_FLAT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PRICE_PROD_PROMPTS_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "S3_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in valhalla/prompt_security/main.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "valhalla/jawn/.env.example declares S3_BUCKET_NAME",
+            "Dockerfile declares S3_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "valhalla/jawn/.env.example declares S3_ENDPOINT",
+            "Dockerfile declares S3_ENDPOINT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_PROMPT_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "valhalla/jawn/.env.example declares S3_PROMPT_BUCKET_NAME",
+            "Dockerfile declares S3_PROMPT_BUCKET_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in valhalla/prompt_security/main.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "S3_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in valhalla/prompt_security/main.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_BOT_TOKEN_AUTO_INVITE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SLACK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_MODEL_REQUEST_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SLACK_MODEL_REQUEST_WEBHOOK_URL",
+            "read in bifrost/app/api/model-request/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_CLOUD_GATEWAY_TOKEN_USAGE_PRODUCT",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in valhalla/jawn/src/utils/settings.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_GROWTH_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in web/pages/api/stripe/event_webhook/index.ts",
+            "stripe requires STRIPE_WEBHOOK_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUPABASE_DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "valhalla/jawn/.env.example declares SUPABASE_DATABASE_URL",
+            "valhalla/jawn/.env.example declares SUPABASE_DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "SUPABASE_SERVICE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SUPABASE_SERVICE_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SUPABASE_SERVICE_ROLE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in worker/src/index.ts",
+            "read in valhalla/jawn/src/packages/common/toImplement/server/SupabaseAuthWrapper.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SUPABASE_URL",
+            "read in worker/src/index.ts",
+            "read in valhalla/jawn/src/packages/common/toImplement/server/SupabaseAuthWrapper.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_HELICONE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in web/pages/api/llm/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TTL_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/RequestBodyBufferContainer/src/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VALHALLA_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in helicone-heartbeat/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VERCEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VERCEL_ENV"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WORKER_DEFINED_REDIRECT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKER_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in worker/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "valhalla/terraform/main.tf",
+      "docker/terraform/github-secrets/main.tf",
+      "docker/terraform/ecr/main.tf"
+    ],
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported database driver: @clickhouse/client, and a clickhouse service is defined in docker/docker-compose.yml. Deployz does not support ClickHouse.",
+      "Unsupported container setup: Dockerfile runs supervisord with 10 programs (supervisord.conf) in one container. Deployz runs one web process and declared workers as separate services."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: @clickhouse/client, and a clickhouse service is defined in docker/docker-compose.yml. Deployz does not support ClickHouse."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Dockerfile runs supervisord with 10 programs (supervisord.conf) in one container. Deployz runs one web process and declared workers as separate services."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: LOOPS_API_KEY, NEXT_PUBLIC_APP_URL, PRICE_PROD_ALERTS_ID, PRICE_PROD_EVALS_ID, PRICE_PROD_EXPERIMENTS_FLAT_ID, and 4 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (valhalla/terraform/main.tf, docker/terraform/github-secrets/main.tf, docker/terraform/ecr/main.tf). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 9,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07710912,
+        "promptTokens": 15677,
+        "completionTokens": 759
+      },
+      "latencyMs": 10964
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "clickhouse",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10968,
+    "questions": 2,
+    "generatedAt": "2026-10-29T14:27:11.864Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

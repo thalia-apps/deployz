@@ -16,6 +16,7 @@ import {
   detectEnvVarModel,
   detectGitCopyInDockerfile,
   detectHealthEndpoint,
+  detectLocalFilesystem,
   detectPort,
   detectPostgresql,
   detectStartupCommand,
@@ -29,6 +30,7 @@ import { assessRedis } from '../src/redis.js';
 import { buildReadinessReport, rejectionFindingId } from '../src/readiness-report.js';
 import {
   assessMysql,
+  checkDatabaseVersion,
   checkDockerComposeMultiService,
   checkDatastoreServerImage,
   checkElasticsearch,
@@ -37,11 +39,13 @@ import {
   checkKafka,
   checkKubernetes,
   checkMongo,
+  checkMultiImageStack,
   checkMultiProcessImage,
   checkNoBuildableDockerfile,
   checkOtherUnsupportedDatabases,
   checkRabbitMq,
   checkSqlite,
+  checkTerraform,
   checkUnexplainedDeclaredServices,
 } from '../src/rejection.js';
 
@@ -1330,5 +1334,114 @@ describe('Round 8 OneDeploy catalog (database, broker and storage servers)', () 
     // A source file outside the root, or a nested script, is application source.
     expect(checkNoBuildableDockerfile(withPaths({}, ['.gitmodules', 'Readme.md', 'server/index.js'])).dependency).not.toBe('no-application-source');
     expect(checkNoBuildableDockerfile(withPaths({}, ['.gitmodules', 'Readme.md', 'bin/start.sh'])).dependency).not.toBe('no-application-source');
+  });
+});
+
+describe('Round 8 analysis gaps (OneDeploy catalog follow-up)', () => {
+  const withPaths = (files: FileTree, extra: string[] = []): FileTree =>
+    Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), ...extra], enumerable: false });
+  const app = 'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nRUN npm ci\nEXPOSE 3000\nCMD ["node", "server.js"]\n';
+  const outcome = (tree: FileTree) => buildReadinessReport(analyseRepo(tree)).outcome;
+
+  it('keeps durable state that a state directory variable names, also when the app has an S3 SDK (OpenClaw)', () => {
+    const compose = (variable: string) =>
+      ['services:', '  gateway:', '    build: .', '    environment:', `      ${variable}: /home/node/.openclaw`, '    volumes:', '      - "${OPENCLAW_CONFIG_DIR:-/tmp/.openclaw}:/home/node/.openclaw"'].join('\n');
+    const tree = (variable: string) =>
+      withPaths({
+        Dockerfile: app,
+        'docker-compose.yml': compose(variable),
+        'package.json': JSON.stringify({ dependencies: { '@aws-sdk/client-s3': '^3' } }),
+        'server.js': 'require("@aws-sdk/client-s3");\n',
+      });
+    expect(detectLocalFilesystem(tree('OPENCLAW_STATE_DIR')).detected).toBe(true);
+    expect(outcome(tree('OPENCLAW_STATE_DIR'))).toBe('DEPLOYABLE_WITH_CHANGES');
+    // A mount that no state or data directory variable names keeps the S3 option (the old answer).
+    expect(detectLocalFilesystem(tree('OPENCLAW_GATEWAY_URL')).detected).toBe(false);
+  });
+
+  it('keeps a data directory that the image writes into its configuration (SFTPGo)', () => {
+    const dockerfile = (value: string) =>
+      `FROM golang:1.27 AS builder\nCOPY . /workspace\nRUN go build -o sftpgo\nFROM debian:trixie-slim\nCOPY --from=builder /workspace/sftpgo /usr/local/bin/\nRUN sed -i 's|"users_base_dir": "",|"users_base_dir": "${value}",|' /etc/sftpgo/sftpgo.json\nCMD ["sftpgo", "serve"]\n`;
+    expect(checkExplicitPersistentDataDir({ Dockerfile: dockerfile('/srv/sftpgo/data') }).reason).toContain('users_base_dir = /srv/sftpgo/data');
+    expect(checkExplicitPersistentDataDir({ Dockerfile: dockerfile('/tmp/sftpgo') }).detected).toBe(false);
+  });
+
+  it('rejects a stack of seven or more component images, not a monorepo of a few apps (Harbor)', () => {
+    const components = ['core', 'jobservice', 'registry', 'registryctl', 'portal', 'nginx', 'exporter'];
+    const portal =
+      'FROM node:22 AS b\nCOPY src/portal /b\nRUN npm ci && npm run build\nFROM nginx:1.27\nCOPY --from=b /b/dist /usr/share/nginx/html\nEXPOSE 8080\nCMD ["nginx", "-g", "daemon off;"]\n';
+    const stack = withPaths({ 'src/portal/docker-build/Dockerfile': portal }, components.map((name) => `make/photon/${name}/Dockerfile`));
+    expect(checkMultiImageStack(stack).reason).toContain('make/photon/ holds the Dockerfiles of 7 component images');
+    expect(buildReadinessReport(analyseRepo(stack)).findings.map((finding) => finding.id)).toContain('unsupported-multi-service');
+    expect(checkMultiImageStack(withPaths({}, components.slice(0, 4).map((name) => `apps/${name}/Dockerfile`))).detected).toBe(false);
+    // Vendored, development and example image families are not components of the product (Airflow docker-examples).
+    expect(checkMultiImageStack(withPaths({}, components.map((name) => `third_party/grpc/${name}/Dockerfile`))).detected).toBe(false);
+    expect(checkMultiImageStack(withPaths({}, components.map((name) => `docker-stack-docs/docker-examples/extending/${name}/Dockerfile`))).detected).toBe(false);
+  });
+
+  it('selects the server image, not the agent or CLI image of the same repository (Woodpecker)', () => {
+    const agent =
+      'FROM golang:1.27 AS build\nWORKDIR /src\nCOPY . .\nRUN make build-agent\nFROM scratch\nCOPY --from=build /src/dist/woodpecker-agent /bin/\nEXPOSE 3000\nENTRYPOINT ["/bin/woodpecker-agent"]\n';
+    const server = 'FROM scratch\nARG TARGETOS TARGETARCH\nEXPOSE 8000 9000\nCOPY dist/server/${TARGETOS}_${TARGETARCH}/woodpecker-server /bin/\nENTRYPOINT ["/bin/woodpecker-server"]\n';
+    const tree = withPaths({ 'docker/Dockerfile.agent.multiarch': agent, 'docker/Dockerfile.server.multiarch.rootless': server, 'go.mod': 'module go.woodpecker-ci.org/woodpecker\n' });
+    expect(selectedDockerfile(tree)?.path).toBe('docker/Dockerfile.server.multiarch.rootless');
+    expect(checkNoBuildableDockerfile(tree).dependency).toBe('no-buildable-dockerfile');
+    // Without a server image an agent image is the app.
+    expect(selectedDockerfile({ 'docker/Dockerfile.agent': agent })?.path).toBe('docker/Dockerfile.agent');
+  });
+
+  it('a Dockerfile that downloads a released build and copies no source does not build this commit (Keycloak)', () => {
+    const release = [
+      'FROM registry.access.redhat.com/ubi9 AS build',
+      'ARG KEYCLOAK_VERSION=999.0.0-SNAPSHOT',
+      'ARG KEYCLOAK_DIST=https://github.com/keycloak/keycloak/releases/download/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.tar.gz',
+      'ADD $KEYCLOAK_DIST /tmp/keycloak/',
+      'ADD ubi-null.sh /tmp/',
+      'RUN tar -xf /tmp/keycloak/keycloak-*.tar.gz -C /opt',
+      'FROM registry.access.redhat.com/ubi9-micro',
+      'COPY --from=build /opt/keycloak /opt/keycloak',
+      'EXPOSE 8080',
+      'ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]',
+    ].join('\n');
+    // The Dockerfile of a test directory is not fetched: it is unusable whatever it holds.
+    const tree = withPaths({ 'quarkus/container/Dockerfile': release, 'quarkus/container/ubi-null.sh': '#!/bin/bash\n' }, ['test-framework/db-edb/container/Dockerfile']);
+    expect(checkNoBuildableDockerfile(tree).reason).toContain('downloads a released build (https://github.com/keycloak/keycloak/releases/download/');
+    expect(outcome(tree)).toBe('DEPLOYABLE_WITH_CHANGES');
+    // A Dockerfile that downloads a tool archive and builds the copied source is the app's build.
+    const tool = 'FROM node:22\nRUN curl -L https://github.com/aquasecurity/trivy/releases/download/v0.50.0/trivy.tar.gz | tar xz\nCOPY . .\nRUN npm ci\nCMD ["node", "server.js"]\n';
+    expect(checkNoBuildableDockerfile(withPaths({ Dockerfile: tool, 'package.json': '{}' })).detected).toBe(false);
+  });
+
+  it('an app that downloads and starts the Elasticsearch server needs Elasticsearch (SonarQube)', () => {
+    const gradle = 'def elasticSearchArchiveName() {\n  return "elasticsearch-${version}-linux-x86_64.tar.gz"\n}\n';
+    expect(checkElasticsearch({ 'sonar-application/build.gradle': gradle }).reason).toContain('downloads the search server (elasticsearch-${version}-linux-x86_64.tar.gz)');
+    expect(outcome(withPaths({ 'sonar-application/build.gradle': gradle }))).toBe('NOT_DEPLOYABLE');
+    // A client dependency or a test build is not the server.
+    expect(checkElasticsearch({ 'build.gradle': 'implementation "co.elastic.clients:elasticsearch-java:8.15.0"\n' }).detected).toBe(false);
+    expect(checkElasticsearch({ 'tests/build.gradle': gradle }).detected).toBe(false);
+  });
+
+  it('rejects an app that needs a newer database version than Deployz provides (Wiki.js 3)', () => {
+    const db = 'if (dbVersion.major < 17) {\n  logger.error(`Your PostgreSQL database version is too old. Requires >= 17. Exiting...`)\n}\n';
+    expect(checkDatabaseVersion({ 'backend/core/db.ts': db }).reason).toContain('needs PostgreSQL 17 or later');
+    expect(rejectionFindingId('database-version')).toBe('unsupported-database-other');
+    expect(outcome(withPaths({ Dockerfile: app, 'backend/core/db.ts': db, 'package.json': JSON.stringify({ dependencies: { pg: '^8' } }) }))).toBe('NOT_DEPLOYABLE');
+    for (const line of ['// Supports PostgreSQL 12 or later', '# PostgreSQL 15 to 18', 'MySQL 8.0+ is required']) {
+      expect(checkDatabaseVersion({ 'src/db.ts': line }).detected, line).toBe(false);
+    }
+    // A client package range, a document, a comment or a deployment file note is not the app's requirement (Airflow, PeerTube, Grist).
+    expect(checkDatabaseVersion({ 'requirements.txt': 'mysql-connector-python>=9.0\n' }).detected).toBe(false);
+    expect(checkDatabaseVersion({ 'docs/install.md': 'PostgreSQL 17 or later is required' }).detected).toBe(false);
+    expect(checkDatabaseVersion({ 'src/db.ts': '// Requires PostgreSQL >= 17 for MERGE\n' }).detected).toBe(false);
+    expect(checkDatabaseVersion({ 'support/docker/production/docker-compose.yml': '# With PostgreSQL >= 18, switch the mount target\n' }).detected).toBe(false);
+    expect(checkDatabaseVersion({ Dockerfile: 'RUN apt-get install -y mariadb-client # mysql-client requires 11+\n' }).detected).toBe(false);
+  });
+
+  it('ignores Terraform of CI directories and a module library with no root configuration (Vault enos/)', () => {
+    const tf = 'resource "aws_instance" "x" {}\n';
+    expect(checkTerraform({ 'enos/ci/bootstrap/main.tf': tf, 'enos/modules/backend_raft/main.tf': tf }).detected).toBe(false);
+    expect(checkTerraform({ 'modules/vpc/main.tf': tf }).detected).toBe(false);
+    // A root configuration that uses the modules is the app's own infrastructure (the old answer).
+    expect(checkTerraform({ 'main.tf': tf, 'modules/vpc/main.tf': tf }).detected).toBe(true);
   });
 });

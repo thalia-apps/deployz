@@ -1,0 +1,408 @@
+{
+  "id": "new-179",
+  "commit": "63273f8e599e73f0fb38c0739314e8d46b6bc83d",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "@nestjs/core",
+      "dockerfilePath": "prod.Dockerfile"
+    },
+    "build": {
+      "command": "pnpm exec tsup",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"/usr/src/app/aio_run.mjs\"]",
+      "port": 80
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "pre_deploy",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "prod.Dockerfile declares DATABASE_URL",
+            "prod.Dockerfile declares DATABASE_URL"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DATA_ENCRYPTION_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares DATA_ENCRYPTION_KEY",
+            "read in packages/hoppscotch-backend/src/utils.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ENABLE_SUBPATH_BASED_ACCESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ENABLE_SUBPATH_BASED_ACCESS",
+            "read in aio_run.mjs",
+            "read in packages/hoppscotch-sh-admin/prod_run.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FRONTEND_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-selfhost-web/webapp-server/internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GENERATE_GQL_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-backend/src/main.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GO_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-selfhost-web/webapp-server/internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GQL_SCHEMA_EMIT_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-backend/src/gql-schema.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOPP_AIO_ALTERNATE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in aio_run.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOPP_ALTERNATE_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in aio_run.mjs",
+            "read in packages/hoppscotch-sh-admin/prod_run.mjs",
+            "read in packages/hoppscotch-selfhost-web/prod_run.mjs",
+            "read in packages/hoppscotch-backend/prod_run.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY_APP_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TRUST_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUST_PROXY"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_ADMIN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_ADMIN_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_APP_PRIVACY_POLICY_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_APP_PRIVACY_POLICY_LINK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_APP_TOS_LINK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_APP_TOS_LINK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_BACKEND_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_BACKEND_API_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_BACKEND_GQL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_BACKEND_GQL_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_BACKEND_WS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_BACKEND_WS_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_PROXYSCOTCH_ACCESS_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares VITE_PROXYSCOTCH_ACCESS_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "VITE_SHORTCODE_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares VITE_SHORTCODE_BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WEBAPP_BUNDLE_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-desktop/crates/webapp-bundler/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBAPP_SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/hoppscotch-selfhost-web/webapp-server/internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WHITELISTED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WHITELISTED_ORIGINS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07030188,
+        "promptTokens": 14873,
+        "completionTokens": 576
+      },
+      "latencyMs": 9052
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "pnpm exec prisma migrate deploy"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9054,
+    "questions": 1,
+    "generatedAt": "2026-10-29T14:28:13.006Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "id": "new-222",
+  "commit": "52a8b2e7d36a4c755c0e876168646b3a2253752b",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": ".docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/tmp/docker_run_git.sh\"]",
+      "port": 443
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APACHE_RUN_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in install-dev/controllers/http/system.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PS_FF_DEFAULT_THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_FF_DEFAULT_THEME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PS_FF_FRONT_CONTAINER_V2",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_FF_FRONT_CONTAINER_V2",
+            "read in index.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_LOG_MAX_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/config/config.yml",
+            "read in app/config/config_dev.yml",
+            "read in app/config/config_prod.yml",
+            "read in app/config/config_test.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_LOG_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/config/config.yml",
+            "read in app/config/config_dev.yml",
+            "read in app/config/config_prod.yml",
+            "read in app/config/config_test.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_TRUSTED_PROXIES",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unconfirmed service: the repository declares mysql (mysql:8.4) in docker-compose.yml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares mysql (mysql:8.4) in docker-compose.yml. Deployz did not find how the application uses it."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -24,7 +24,7 @@
 import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
-import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, ROOT_README, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
 
 export interface AnswerCheck {
@@ -477,9 +477,16 @@ export type RepositoryKind = (typeof REPOSITORY_KINDS)[number];
 function checkRepositoryKind(ctx: CheckContext, id: string, kind: RepositoryKind, answer: FactAnswer): AnswerCheck {
   if (kind === 'application') return result(id, []);
   const reasons = confidenceReasons(answer.confidence);
+  // A README sentence wraps ("open source relational" / "databases."): a README line supports the role
+  // when it and the lines next to it name it.
+  const readmeRoleLines = new Set(
+    packFiles(ctx.pack)
+      .filter((file) => ROOT_README.test(file.path))
+      .flatMap((file) => file.lines.filter((line, index) => DATASTORE_ROLE.test(file.lines.slice(Math.max(0, index - 1), index + 2).join(' ').replace(/\s+/g, ' ')))),
+  );
   const supports =
     kind === 'datastore'
-      ? (line: string, path: string) => isProductionFile(path) && DATASTORE_ROLE.test(line)
+      ? (line: string, path: string) => (isProductionFile(path) && DATASTORE_ROLE.test(line)) || (ROOT_README.test(path) && readmeRoleLines.has(line))
       : (line: string, path: string) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line);
   reasons.push(...checkEvidence(ctx.pack, answer.evidence, supports));
   return result(id, reasons);

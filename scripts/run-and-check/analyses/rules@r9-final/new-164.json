@@ -1,0 +1,707 @@
+{
+  "id": "new-164",
+  "commit": "1f72133e27e1cc0a7a05fb35a93df0f9e33136c4",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "cmd/quivr-autoscaler",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "cmd/quivr-autoscaler/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/usr/local/bin/quivr-autoscaler\"]",
+      "port": 5183
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "MLFLOW_AUTH_DATABASE_URI",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEMO_DESCRIBED_ALERTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_FEED_PRIVATE_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_FEED_SUGGESTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_SECURE_COOKIE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_STATE_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DEMO_STATS_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBED_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in plugins/hosted-embed/main.go",
+            "read in deploy/cpu/embedding_server.py",
+            "read in deploy/modal/embeddinggemma.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBED_MAX_CONTAINERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/modal/embeddinggemma.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBED_MIN_CONTAINERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/modal/embeddinggemma.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MLFLOW_ALLOWED_HOSTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MLFLOW_ARTIFACTS_DESTINATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MLFLOW_AUTH_ADMIN_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "MLFLOW_AUTH_ADMIN_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MLFLOW_AUTH_DATABASE_URI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "MLFLOW_CORS_ALLOWED_ORIGINS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MLFLOW_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in conformance/checks/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs",
+            "read in deploy/mlflow/entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "QUIVR_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_AUTOSCALER_BACKEND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_AUTOSCALER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_AUTOSCALER_KUBERNETES_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_AUTOSCALER_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_AUTOSCALER_RAILWAY_SERVICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_CONFORMANCE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in conformance/runner.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_DEMO_ALERTS_EVALUATOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_DEMO_CORPORA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in quivr-search/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_DEMO_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in deploy/railway/check_public.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "QUIVR_EMBEDDING_HEALTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/cpu/embedding_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_EMBEDDING_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/cpu/embedding_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_HOSTED_QUERY_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in plugins/hosted-embed/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_INSTANCE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_MODEL_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/cpu/embedding_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_PLUGIN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in sdks/python/src/quivr_plugin/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_PLUGIN_MANIFEST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in sdks/python/src/quivr_plugin/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_PLUGIN_MODULE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in deploy/images/plugin.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "QUIVR_PLUGIN_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in sdks/python/src/quivr_plugin/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_QUEUE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_QUEUE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/railway/core-entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUIVR_SINGLE_MACHINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in deploy/railway/core-entrypoint.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILWAY_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in deploy/railway/reset.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILWAY_ENVIRONMENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RAILWAY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in cmd/quivr-autoscaler/main.go"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEAVIATE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in deploy/vector-host/host.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: deploy/compose/compose.yaml defines 2 application services (weaviate, tei). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Unsupported infrastructure: deploy/compose/compose.yaml requires a Temporal server (service \"temporal\", image temporalio/temporal:1.8.3@sha256:cea463d98a8d6def4420f903ea5c3fcd0d85c8d10fbcc2770a50c12fff2eb26d) which Deployz does not provision."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: deploy/compose/compose.yaml defines 2 application services (weaviate, tei). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: deploy/compose/compose.yaml requires a Temporal server (service \"temporal\", image temporalio/temporal:1.8.3@sha256:cea463d98a8d6def4420f903ea5c3fcd0d85c8d10fbcc2770a50c12fff2eb26d) which Deployz does not provision."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: EMBED_API_KEY, MLFLOW_ALLOWED_HOSTS, MLFLOW_AUTH_ADMIN_PASSWORD, MLFLOW_CORS_ALLOWED_ORIGINS, QUIVR_DEMO_PASSWORD, and 1 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "NOT_DEPLOYABLE"
+}

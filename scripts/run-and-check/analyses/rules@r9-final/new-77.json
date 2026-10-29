@@ -1,0 +1,125 @@
+{
+  "id": "new-77",
+  "commit": "9bbe2813f55fb856d1d710470a8020240c292e32",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "rust",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: /bin/meilisearch",
+      "port": 7700
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "CARGO_MANIFEST_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in crates/openapi-generator/src/main.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_CONFIG_FILE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in crates/meilisearch/src/option.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_TEST_FULL_SNAPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in crates/meili-snap/src/lib.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MILLI_TEST_FULL_SNAPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in crates/milli/src/snapshot_tests.rs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in external-crates/async-openai/src/config.rs"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported storage: the app declares durable local state (db_path = ./data.ms (config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the app declares durable local state (db_path = ./data.ms (config.toml)) with no VOLUME or Compose mount. Deployz provides object storage, not an attached data directory."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

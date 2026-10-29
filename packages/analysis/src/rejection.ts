@@ -28,6 +28,7 @@ import {
   isRuntimeSourcePath,
   isWorkerServiceCommand,
   LANGUAGE_SOURCE_REGEX,
+  NON_APP_DOCKERFILE_DIR_REGEX,
   listDockerfileCandidates,
   listProductionComposeFiles,
   parseComposeServices,
@@ -446,11 +447,26 @@ const ES_DEPS = ['@elastic/elasticsearch', '@opensearch-project/opensearch'] as 
 const ES_PYTHON_TOKENS = ['elasticsearch', 'elasticsearch-dsl', 'opensearch-py'] as const;
 const PY_MANIFEST_REGEX = /(?:^|\/)(?:requirements[^/]*\.txt|Pipfile|pyproject\.toml|setup\.py)$/;
 const ES_ENV_REGEX = /^(?:ELASTIC(?:SEARCH)?_(?:URL|URI|HOSTS?|NODE|NODES)|ES_(?:URL|HOSTS?|NODE)|OPENSEARCH_(?:URL|HOSTS?|NODE))$/;
+// A build file that downloads the search server distribution (`elasticsearch-${version}-linux-x86_64.tar.gz`):
+// the app packages the server and starts it next to itself (SonarQube).
+const SEARCH_SERVER_ARCHIVE_REGEX = /\b(?:elasticsearch|opensearch)-(?:\$\{?[\w.]+\}?|\d)[\w.${}-]*\.(?:tar\.gz|tgz|zip)\b/i;
+const BUILD_FILE_REGEX = /(?:^|\/)(?:build\.gradle(?:\.kts)?|pom\.xml|Makefile|Dockerfile[^/]*|[^/]+\.dockerfile|package\.json)$/i;
 
 /**
  * Check for an Elasticsearch or OpenSearch dependency the app requires (unsupported).
  */
 export function checkElasticsearch(tree: FileTree): RejectionFinding {
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !BUILD_FILE_REGEX.test(path) || !isRuntimeSourcePath(path)) continue;
+    const archive = SEARCH_SERVER_ARCHIVE_REGEX.exec(content)?.[0];
+    if (archive) {
+      return {
+        detected: true,
+        dependency: '@elastic/elasticsearch',
+        reason: `Unsupported search engine: ${path} downloads the search server (${archive}), so the app runs Elasticsearch/OpenSearch next to itself with its index on local disk. Deployz does not support Elasticsearch/OpenSearch.`,
+      };
+    }
+  }
   const deps = collectDependencyNames(tree);
   const python = ES_PYTHON_TOKENS.filter((token) => findDependencyEvidence(tree, token).some((path) => PY_MANIFEST_REGEX.test(path) && isRuntimeSourcePath(path)));
   for (const dep of [...ES_DEPS.filter((name) => deps.includes(name)), ...python]) {
@@ -556,6 +572,44 @@ export function checkOtherUnsupportedDatabases(tree: FileTree): RejectionFinding
   };
 }
 
+/** The newest major version of each engine that Deployz provides (RDS PostgreSQL 16, RDS MySQL 8.0). */
+const PROVIDED_DATABASE_VERSIONS = { PostgreSQL: 16, MySQL: 8 } as const;
+const DEPENDENCY_MANIFEST_REGEX =
+  /(?:^|\/)(?:package\.json|requirements[^/]*|Pipfile|pyproject\.toml|setup\.(?:py|cfg)|composer\.json|Gemfile|go\.mod|pom\.xml|build\.gradle(?:\.kts)?|Cargo\.toml|mix\.exs|[^/]+\.csproj)$/i;
+// A statement of the minimum server version: `Requires >= 17`, `PostgreSQL 17 or later required`, `MySQL 8.4+`.
+const MINIMUM_VERSION_REGEX = /(?:>=|≥|\bat least|\bminimum(?: version)?(?: is)?)\s*v?(\d+)(?:\.\d+)?\b|\b(\d+)(?:\.\d+)?\s*(?:\+|or (?:later|newer|higher|above)\b)/i;
+/** Application source code: where the app checks the server version it connects to. */
+const APP_SOURCE_REGEX = /\.(?:[cm]?[jt]sx?|go|py|rb|php|cs|java|kt|scala|ex|exs|rs)$/i;
+const COMMENT_LINE_REGEX = /^\s*(?:#|\/\/|\/?\*|--|<!--)/;
+// The line states a requirement, not a note (`Requires >= 17`, `is too old`, `not supported`).
+const REQUIREMENT_WORD_REGEX = /\brequire|\bneeds?\b|\bminimum\b|\bat least\b|too old|not supported|unsupported/i;
+
+/**
+ * The app states in its source code that it needs a newer PostgreSQL or MySQL major version
+ * than Deployz provides (Wiki.js 3 exits with "Requires >= 17" on PostgreSQL 16). A comment,
+ * a configuration sample, a Compose file, a Dockerfile and a document only describe a setup.
+ */
+export function checkDatabaseVersion(tree: FileTree): RejectionFinding {
+  for (const [path, content] of Object.entries(tree)) {
+    if (!content || !APP_SOURCE_REGEX.test(path) || !isRuntimeSourcePath(path) || DEPENDENCY_MANIFEST_REGEX.test(path)) continue;
+    for (const line of content.split('\n')) {
+      if (line.length > 400 || COMMENT_LINE_REGEX.test(line) || !REQUIREMENT_WORD_REGEX.test(line)) continue;
+      const engine = /postgre(?:s|sql)/i.test(line) ? 'PostgreSQL' : /\bmysql\b/i.test(line) ? 'MySQL' : null;
+      if (engine === null) continue;
+      const match = MINIMUM_VERSION_REGEX.exec(line);
+      const minimum = Number(match?.[1] ?? match?.[2]);
+      if (minimum > PROVIDED_DATABASE_VERSIONS[engine] && minimum < 100) {
+        return {
+          detected: true,
+          dependency: 'database-version',
+          reason: `Unsupported database version: the app needs ${engine} ${minimum} or later (${path}: "${line.trim().slice(0, 160)}"), and Deployz provides ${engine} ${PROVIDED_DATABASE_VERSIONS[engine]}.`,
+        };
+      }
+    }
+  }
+  return { detected: false, dependency: 'none', reason: 'No database version requirement above the provided versions' };
+}
+
 // ── §11.4 architecture rejection checks ─────────────────────────────────────
 // Each check detects one class of infrastructure Deployz does NOT host or
 // manage. Every check is deliberately narrow (files/dependencies that can
@@ -603,10 +657,16 @@ function kubernetesFiles(tree: FileTree): string[] {
   ];
 }
 
+// Terraform of a CI or tooling directory sets up test infrastructure, not the app (Vault `enos/ci/`).
+const IAC_TOOLING_DIR_REGEX = /(?:^|\/)(?:\.?ci|\.circleci|hack)\//i;
+const TERRAFORM_MODULE_DIR_REGEX = /(?:^|\/)modules\//;
+
 function terraformFiles(tree: FileTree): string[] {
-  return filePathsMatching(tree, /\.tf$/).concat(
-    filePathsMatching(tree, /(?:^|\/)(?:\.terraform(?:\.lock)?\.hcl|terraform\.tfstate(?:\.backup)?|\.terraform\/)/),
-  );
+  const files = filePathsMatching(tree, /\.tf$/)
+    .concat(filePathsMatching(tree, /(?:^|\/)(?:\.terraform(?:\.lock)?\.hcl|terraform\.tfstate(?:\.backup)?|\.terraform\/)/))
+    .filter((path) => !IAC_TOOLING_DIR_REGEX.test(path));
+  // Modules with no root configuration that uses them are a module library, not a deployment.
+  return files.some((path) => !TERRAFORM_MODULE_DIR_REGEX.test(path)) ? files : [];
 }
 
 function pulumiConfigFiles(tree: FileTree): string[] {
@@ -951,6 +1011,35 @@ export function checkDockerComposeMultiService(tree: FileTree): RejectionFinding
   return { detected: false, dependency: 'none', reason: 'No multi-service compose app detected' };
 }
 
+// The Dockerfile of one component image in its own directory (Harbor `make/photon/core/Dockerfile`).
+const COMPONENT_IMAGE_REGEX = /^(?:(.*)\/)?([^/]+)\/Dockerfile$/;
+// Vendored, development and hidden trees hold no component of the product.
+const NON_COMPONENT_DIR_REGEX = /(?:^|\/)(?:third_party|vendor|node_modules|dev|devenv|develop|development|\.[\w-][\w.-]*)\//i;
+const MIN_STACK_COMPONENTS = 7;
+
+/**
+ * A microservice stack: seven or more sibling directories each hold the Dockerfile of one
+ * component image (Harbor `make/photon/{core,jobservice,registry,portal,…}`). Deployz builds one
+ * image, and one component (or the front end) is not the whole app.
+ */
+export function checkMultiImageStack(tree: FileTree): RejectionFinding {
+  const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS] ?? Object.keys(tree);
+  const families = new Map<string, string[]>();
+  for (const path of paths) {
+    const match = COMPONENT_IMAGE_REGEX.exec(path);
+    if (!match || !isRuntimeSourcePath(path) || NON_COMPONENT_DIR_REGEX.test(path) || NON_APP_DOCKERFILE_DIR_REGEX.test(path)) continue;
+    const parent = match[1] ?? '.';
+    families.set(parent, [...(families.get(parent) ?? []), match[2]!]);
+  }
+  const [parent, components] = [...families].sort((a, b) => b[1].length - a[1].length)[0] ?? ['', []];
+  if (components.length < MIN_STACK_COMPONENTS) return { detected: false, dependency: 'none', reason: 'No multi-image stack detected' };
+  return {
+    detected: true,
+    dependency: 'multi-image-stack',
+    reason: `Unsupported architecture: ${parent}/ holds the Dockerfiles of ${components.length} component images (${components.slice(0, 6).join(', ')}), so the app is a stack of cooperating services. Deployz runs ONE web process per deployment plus declared background workers.`,
+  };
+}
+
 /** Persistent volumes: k8s PVCs, Terraform EFS/EBS, compose named volumes referenced by an app service. */
 export function checkPersistentVolumes(tree: FileTree): RejectionFinding {
   const pvc = outsideDeploymentSamples(contentMatches(tree, /\.ya?ml$/, /^kind:\s*PersistentVolumeClaim\s*$/m));
@@ -1181,6 +1270,7 @@ export function checkNoBuildableDockerfile(tree: FileTree): RejectionFinding {
 const DIRECTORY_VAR = /(?:HOMEPAGE_CONFIG_DIR|THELOUNGE_HOME|(?:^|_)(?:DATA_DIR|CONFIG_DIR|STORAGE_PATH|DATA_FOLDER)$)/;
 // The app's own YAML or TOML configuration file, and a setting in it that is the data location.
 const APP_CONFIG_FILE = /(?:^|\/)config(?:\/[\w.-]+)?\.(?:ya?ml|toml)$/i;
+const EPHEMERAL_DIR_VALUE_REGEX = /\b(?:tmp|temp|cache|logs?)\b/i;
 const CONFIG_DATA_PATH_SETTING = /^\s*((?:storage|data|db|database)_(?:path|dir|directory))\s*[:=]\s*["']?([^\s"'#,]+)/im;
 
 /**
@@ -1267,6 +1357,12 @@ function findExplicitDurableDir(tree: FileTree): string | null {
           return `${kv[1]}=${kv[2]} (${selected})`;
         }
       }
+    }
+    // A RUN step that writes a data directory into the app's configuration file
+    // (SFTPGo `sed … "users_base_dir": "/srv/sftpgo/data"`).
+    for (const m of productionStageText(folded).matchAll(/^\s*RUN\b.*$/gm)) {
+      const setting = /["']?(\w*(?:data|base|storage)_dir)["']?\s*[:=]\s*["']?(\/[\w./-]+)/i.exec(m[0]);
+      if (setting?.[1] && setting[2] && !EPHEMERAL_DIR_VALUE_REGEX.test(setting[2])) return `${setting[1]} = ${setting[2]} (${selected})`;
     }
   }
 

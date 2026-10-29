@@ -1,0 +1,423 @@
+{
+  "id": "new-123",
+  "commit": "61a784eea53cba2756d4fecebe3a8a497fcf844e",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsc && babel src --out-dir lib --extensions '.ts' && webpack --mode production",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/app/docker/entrypoints/run-server.sh\"]",
+      "port": 8088
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": "superset db upgrade",
+      "mode": "pre_deploy"
+    },
+    "worker": {
+      "command": "/app/docker/docker-bootstrap.sh worker"
+    },
+    "workers": [
+      {
+        "id": "superset-worker",
+        "command": "/app/docker/docker-bootstrap.sh worker",
+        "source": "docker-compose.yml superset-worker"
+      },
+      {
+        "id": "superset-worker-beat",
+        "command": "/app/docker/docker-bootstrap.sh beat",
+        "source": "docker-compose.yml superset-worker-beat"
+      }
+    ],
+    "environment": {
+      "variables": [
+        {
+          "key": "DEFAULT_MAP_RENDERER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_VERSIONING_CAPTURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLASK_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAPBOX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset-websocket/src/config.ts",
+            "read in superset-websocket/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RIG_HOST_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset-embedded-sdk/testrig/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RIG_SUPERSET_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset-embedded-sdk/testrig/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCARF_ANALYTICS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SOFT_DELETE_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQLALCHEMY_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/mcp_service/server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_APP_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_CONFIG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_ENABLE_SWAGGER_UI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_EXPOSE_BUILD_DETAILS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_HOME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SUPERSET_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SUPERSET_VERSION_HISTORY_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TALISMAN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERSION_HISTORY_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBPACK_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in superset-frontend/src/embedded/index.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 3 application services (superset, superset-websocket, superset-node). Deployz runs ONE web process per deployment plus declared background workers."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 3 application services (superset, superset-websocket, superset-node). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: SUPERSET_HOME. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "buildTarget": "superset",
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07820604,
+        "promptTokens": 15854,
+        "completionTokens": 779
+      },
+      "latencyMs": 11333
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "exactly one listed service must build the app from this repository"
+        ],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "superset db upgrade"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 11335,
+    "questions": 2,
+    "generatedAt": "2026-10-29T13:47:13.429Z",
+    "failedChecks": 1,
+    "promptVersion": 19
+  }
+}

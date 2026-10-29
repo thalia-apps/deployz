@@ -7,7 +7,9 @@
  * commit, so there is no head to resolve) and serves the tree/blob reads
  * from an on-disk cache keyed by git object sha — a sha names immutable
  * content, so a cached answer is the answer forever. A miss goes to GitHub
- * once. Everything the production code does with the responses (relevance
+ * once: a blob of a served tree is read from raw.githubusercontent.com by its
+ * path, which the API rate limit does not count, and only then from the
+ * API. Everything the production code does with the responses (relevance
  * filtering, caps, priority, lockfile handling) is untouched.
  */
 import { execFileSync } from 'node:child_process';
@@ -132,6 +134,40 @@ export function createSnapshotFetch(options: SnapshotFetchOptions): FetchFn {
     }
   }
 
+  /** Where each blob of a served tree lives, so that a blob can be read by its path. */
+  const blobPaths = new Map<string, { commit: string; path: string }>();
+  let rawFallbackLogged = false;
+  const rememberTree = (request: { owner: string; repo: string; ref: string }, body: unknown): void => {
+    for (const entry of (body as { tree?: Array<{ type?: string; sha?: string; path?: string }> } | null)?.tree ?? []) {
+      if (entry.type === 'blob' && entry.sha && entry.path) blobPaths.set(`${request.owner}/${request.repo}/${entry.sha}`, { commit: request.ref, path: entry.path });
+    }
+  };
+
+  /**
+   * A blob from raw.githubusercontent.com by its path in the pinned tree, in the shape of the blobs API.
+   * The REST API rate limit (1000 requests per hour for an Actions job token) does not count these reads.
+   */
+  async function fetchRaw(request: { owner: string; repo: string; ref: string }): Promise<CachedResponse | null> {
+    const location = blobPaths.get(`${request.owner}/${request.repo}/${request.ref}`);
+    if (location === undefined) return null;
+    const encodedPath = location.path.split('/').map(encodeURIComponent).join('/');
+    // A public repository needs no token; an Actions job token can be refused for another repository.
+    for (const token of [null, ...(options.token ? [options.token] : [])]) {
+      try {
+        const response = await fetchImpl(`https://raw.githubusercontent.com/${request.owner}/${request.repo}/${location.commit}/${encodedPath}`, {
+          method: 'GET',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (response.status !== 200) continue;
+        const bytes = Buffer.from(await response.arrayBuffer());
+        return { status: 200, body: { sha: request.ref, size: bytes.length, encoding: 'base64', content: bytes.toString('base64') } };
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
   return async (url) => {
     const request = classifyGithubUrl(url);
     switch (request.kind) {
@@ -143,11 +179,24 @@ export function createSnapshotFetch(options: SnapshotFetchOptions): FetchFn {
       case 'blob': {
         const path = snapshotCachePath(options.cacheDir, request);
         const cached = readCache(path);
-        if (cached) return respond(cached.status, cached.body);
+        if (cached) {
+          if (request.kind === 'tree') rememberTree(request, cached.body);
+          return respond(cached.status, cached.body);
+        }
         if (options.offline) {
           throw new Error(`snapshot cache miss for ${request.owner}/${request.repo} ${request.kind} ${request.ref} (offline)`);
         }
+        const raw = request.kind === 'blob' ? await fetchRaw(request) : null;
+        if (raw !== null) {
+          writeCache(path, raw);
+          return respond(raw.status, raw.body);
+        }
+        if (request.kind === 'blob' && !rawFallbackLogged) {
+          rawFallbackLogged = true;
+          console.warn(`raw.githubusercontent.com did not serve blob ${request.ref} of ${request.owner}/${request.repo}: reading it from the rate-limited API.`);
+        }
         const live = await fetchLive(url);
+        if (request.kind === 'tree') rememberTree(request, live.body);
         if (live.status >= 200 && live.status < 300) writeCache(path, { status: live.status, body: live.body });
         return respond(live.status, live.body, {
           'x-ratelimit-remaining': live.headers.get('x-ratelimit-remaining') ?? '',

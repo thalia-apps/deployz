@@ -1,0 +1,521 @@
+{
+  "id": "new-211",
+  "commit": "d644650f61270ba375e0725cfe630a33f682c428",
+  "analyser": "ai@r9-final2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "buildscripts/antithesis/base_images/workload",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "buildscripts/antithesis/base_images/workload/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 27018
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ASAN_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/resmokelib/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTHOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/todo_linter.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_PROFILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BAZEL_BINARY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/gather_failed_tests.py",
+            "read in buildscripts/generate_result_tasks.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BUILD_WORKING_DIRECTORY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in buildscripts/coverity_linter.py",
+            "read in buildscripts/yamllinters.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BUILD_WORKSPACE_DIRECTORY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/resmokelib/config.py",
+            "read in buildscripts/archive_artifacts.py",
+            "read in buildscripts/bazel_burn_in.py",
+            "read in buildscripts/clang_format_version.py",
+            "read in buildscripts/create_rbe_sysroot.py",
+            "read in buildscripts/cs_suggest_variants.py",
+            "read in buildscripts/errorcodes.py",
+            "read in buildscripts/gather_failed_tests.py",
+            "read in buildscripts/generate_result_tasks.py",
+            "read in buildscripts/large_file_check.py",
+            "read in buildscripts/legacy_commands_check.py",
+            "read in buildscripts/lint_resmoke_suite_tests.py",
+            "read in buildscripts/print_local_rbe_container_url.py",
+            "read in buildscripts/pyrightlint.py",
+            "read in buildscripts/quickmongolint.py",
+            "read in buildscripts/resmoke.py",
+            "read in buildscripts/setup_clang_tidy.py",
+            "read in buildscripts/todo_linter.py",
+            "read in buildscripts/uv_lock_check.py",
+            "read in buildscripts/validate_evg_project_config.py",
+            "read in evergreen/download_db_contrib_tool.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CS_BF_GUIDANCE_REF",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/cs_suggest_variants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CS_BF_GUIDANCE_REPO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/cs_suggest_variants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CS_BF_GUIDANCE_SUBDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/cs_suggest_variants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bazel/bazelisk.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HONEYCOMB_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HONEYCOMB_DATASET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_RELEASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/generate_version_expansions.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JIRA_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/jira_cve_links.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LOCAL_RESOURCES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/bazel_local_resources.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MERGE_QUEUE_ANALYTICS_GITHUB_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGODB_REPO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/cs_suggest_variants.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_BAZEL_PODMAN_AUTO_MIGRATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/podman_recovery.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_PR_BOT_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/profile_data_pr.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_PR_BOT_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in buildscripts/profile_data_pr.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_TOOLCHAIN_FROM_BAZEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/mongo_toolchain.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_TOOLCHAIN_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/mongo_toolchain.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_TOOLCHAIN_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/mongo_toolchain.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MONGO_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/generate_version_expansions.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NO_COLOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bazel/wrapper_hook/hermetic_container/env.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/pyrightlint.py",
+            "read in buildscripts/utils.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REQUESTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/todo_linter.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "S3_CACHE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in buildscripts/github_merge_queue_metrics.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TMPDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bazel/gpg_signer.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TSAN_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/resmokelib/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UBSAN_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/resmokelib/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERSION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/todo_linter.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VIRTUAL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in buildscripts/resmoke.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_CACHE_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in bazel/bazelisk.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported repository: buildscripts/antithesis/base_images/workload/Dockerfile exposes port 27017 (MongoDB), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: buildscripts/antithesis/base_images/workload/Dockerfile exposes port 27017 (MongoDB), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: BUILD_WORKING_DIRECTORY. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0569052,
+        "promptTokens": 13520,
+        "completionTokens": 170
+      },
+      "latencyMs": 4766
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4767,
+    "questions": 1,
+    "generatedAt": "2026-10-29T15:14:52.356Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  }
+}

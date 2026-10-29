@@ -1,0 +1,187 @@
+{
+  "id": "new-183",
+  "commit": "7a174fd05604dac39af95f76ea9db73db2b3ca5f",
+  "analyser": "rules@r9-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "ee/apps",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "ee/apps/Dockerfile"
+    },
+    "build": {
+      "command": "turbo run build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"--force-fips\", \"--require\", \"./src/fips.js\", \"src/service.js\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/health",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "EVENT_LOOP_LAG_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/meteor/server/routes/health.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in packages/release-action/src/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HEAP_USAGE_PERCENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/meteor/server/routes/health.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/release-action/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_UNTRACED_METHODS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/tracing/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIPLE_INSTANCES_EXPIRE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/instance-status/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MULTIPLE_INSTANCES_PING_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/instance-status/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/fuselage/index.js",
+            "read in packages/http-router/src/Router.ts",
+            "read in packages/jwt/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/http-router/src/Router.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRACING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/tracing/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported database dependency: mongodb, and apps/meteor/.docker/Dockerfile.alpine sets MONGO_URL. Deployz does not support MongoDB. Use PostgreSQL."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database dependency: mongodb, and apps/meteor/.docker/Dockerfile.alpine sets MONGO_URL. Deployz does not support MongoDB. Use PostgreSQL."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "NOT_DEPLOYABLE"
+}

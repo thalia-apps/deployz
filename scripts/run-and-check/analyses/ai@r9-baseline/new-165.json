@@ -1,0 +1,2388 @@
+{
+  "id": "new-165",
+  "commit": "e2316d032883070a2e9aded36d2eb38b8e3a03df",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "classic",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "classic/Dockerfile.autogpt"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: []",
+      "port": 3310
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "AP_SERVER_DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DIRECT_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AGENT_MAX_TURNS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AGPT_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AGPT_WS_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AP_SERVER_DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/original_autogpt/autogpt/app/main.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AP_SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/original_autogpt/autogpt/app/main.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_CALLBACK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/auth/login/with-provider/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUX_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AUX_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BASELINE_PROMPT_CACHE_TTL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "BETTER_AUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/lib/share/routes.ts",
+            "read in autogpt_platform/frontend/src/app/(platform)/auth/callback/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py",
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_AUX_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_AUX_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_CLAUDE_AGENT_CLI_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_DIRECT_ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_E2B_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CHAT_OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLAUDE_AGENT_AUTOCOMPACT_PCT_OVERRIDE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_CLI_PATH",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_CONTEXT_WINDOW",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_CROSS_USER_PROMPT_CACHE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_FALLBACK_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MAX_BUDGET_USD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MAX_BUFFER_SIZE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MAX_SUBTASKS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MAX_THINKING_TOKENS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MAX_TRANSIENT_RETRIES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLAUDE_AGENT_THINKING_EFFORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLAUDE_AGENT_USE_RESUME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CLIENT_CACHE_MAXSIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_CACHE_TTL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COMMUNITY_REBUILD_MIN_NEW_EPISODES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "COMMUNITY_REBUILD_USE_FLEX_TIER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONTENT_JUDGE_TIMEOUT_S",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONTEXT_MAX_FACTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTEXT_REFRESH_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "CONTEXT_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DAILY_COST_LIMIT_MICRODOLLARS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DATABASE_STRING",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/forge/forge/app.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DIRECT_ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DIRECT_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/schema.prisma"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DISABLED_COMMANDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/original_autogpt/autogpt/app/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_SENTRY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOTENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_SANDBOX_ON_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_SANDBOX_TEMPLATE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "E2B_SANDBOX_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ELSE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBEDDER_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBEDDER_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "EMBEDDER_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_CLOUD_LOGGING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENABLE_FILE_LOGGING",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_QUERY_BACKOFF_BASE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_QUERY_MAX_ATTEMPTS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_SOCKET_CONNECT_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_SOCKET_TIMEOUT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FAST_ADVANCED_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FAST_STANDARD_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FILE_SECRET_SETTINGS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_CONTENT_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_FIRST_STAGE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_JEV_ASK_THRESHOLD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_JEV_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_JEV_TIMEOUT_S",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GATE_TIMEOUT_S",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INIT_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INTERNAL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "JWKS_ALLOW_INSECURE_TRANSPORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/auth/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_JWKS_ALGORITHMS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/auth/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_JWKS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/auth/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LANGFUSE_PROMPT_CACHE_TTL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LANGFUSE_PROMPT_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LEARNING_REVIEWER_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LEVEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLM_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLM_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOCAL_REQUEST_TIMEOUT_S",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOG_DIR",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOG_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/forge/forge/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_HANDLERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/forge/forge/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_AGENT_RUNS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_AGENT_SCHEDULES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MAX_DAILY_RESETS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEXT_PUBLIC_AGPT_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_AGPT_WS_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BEHAVE_AS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_COOKIEBOT_CBID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_COOKIEBOT_GEOREGIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_FRONTEND_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/lib/share/routes.ts",
+            "read in autogpt_platform/frontend/src/app/(platform)/auth/callback/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_GA_MEASUREMENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABELS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_ADS_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_LAUNCHDARKLY_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_LAUNCHDARKLY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_POSTHOG_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_REVISION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SENTRY_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SSE_TIMEOUT_MS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/chat/sessions/[sessionId]/stream/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VERCEL_TARGET_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/instrumentation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/autogpt_libs/autogpt_libs/logging/config.py",
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NO_PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/sdk/env.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/transcribe/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py",
+            "read in autogpt_platform/frontend/src/app/api/transcribe/route.ts",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPEN_ROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ORCA_HOOKS_SKIP_INSTALL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .orca/hooks.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORCA_ROOT_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .orca/hooks.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORCA_WORKSPACE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .orca/hooks.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ORCA_WORKTREE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in .orca/hooks.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAIN_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/forge/forge/logging/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_BUILTIN_TOOL_SPANS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PROMPT_PATHS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RATE_LIMIT_RESET_COST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "READ_SCREEN_SHADOW_SAMPLE_RATE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "REDIS_CLUSTER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLUSTER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RERANKER_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "RESTRICT_TO_WORKSPACE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in classic/original_autogpt/autogpt/app/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPTED_MODEL_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/scripted_model/scripted_model/__main__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPTED_MODEL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/scripted_model/scripted_model/__main__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCRIPTED_MODEL_SCRIPTS_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/scripted_model/scripted_model/__main__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SDK_INCLUDE_PARTIAL_MESSAGES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SDK_RECONCILE_OPENROUTER_COST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SDK_STEP_CHECKIN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SEMAPHORE_LIMIT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SESSION_META_PREFIX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SESSION_TTL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SETTINGS_CLS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SIMULATION_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPEND_CEILING_RESET",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STREAM_LOCK_TTL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STREAM_REPLAY_COUNT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STREAM_TTL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SWAP_PROXY_BACKEND_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_CONFDIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_LISTEN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_LISTEN_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_QUOTA_PER_BOX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_QUOTA_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SWAP_PROXY_QUOTA_WINDOW_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/swap_proxy/swap_proxy/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TEST_MODE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "THINKING_ADVANCED_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "THINKING_STANDARD_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TITLE_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRANSCRIPTION_API_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/transcribe/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCRIPTION_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/transcribe/route.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCRIPTION_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/app/api/transcribe/route.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TREE_BUDGET_SIGNAL_ENABLED",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TREE_CEILING_FLOOR_MICRODOLLARS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TREE_CEILING_FRACTION_OF_DAILY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TREE_CEILING_MICRODOLLARS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TREE_MAX_NODES",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TREE_WRAPUP_THRESHOLD",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TRY",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TURN_STREAM_PREFIX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_CLAUDE_AGENT_SDK",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_CLAUDE_CODE_SUBSCRIPTION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_E2B_SANDBOX",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_LOCAL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_OPENROUTER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VALUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_TARGET_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/frontend/src/services/environment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOICE_TTS_INSTRUCTIONS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VOICE_TTS_MODEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VOICE_TTS_SPEED",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VOICE_TTS_USD_PER_1K_CHARS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VOICE_TTS_VOICE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "WARM_CONTEXT_REFRESH_JOIN_GRACE_MS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/graphiti/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "WEEKLY_COST_LIMIT_MICRODOLLARS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in autogpt_platform/backend/backend/copilot/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "sentry",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported infrastructure: a RabbitMQ service is defined in autogpt_platform/docker-compose.yml.",
+      "Unsupported architecture: autogpt_platform/docker-compose.yml defines 2 application services (migrate, clamav). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported infrastructure: a RabbitMQ service is defined in autogpt_platform/docker-compose.yml."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: autogpt_platform/docker-compose.yml defines 2 application services (migrate, clamav). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: AGENT_MAX_TURNS, AUX_API_KEY, BASELINE_PROMPT_CACHE_TTL, CLAUDE_AGENT_AUTOCOMPACT_PCT_OVERRIDE, CLAUDE_AGENT_CLI_PATH, and 94 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 98,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.11374704,
+        "promptTokens": 22409,
+        "completionTokens": 1263
+      },
+      "latencyMs": 16170
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "exactly one listed service must build the app from this repository"
+        ],
+        "subject": "docker-compose-multi-service",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "autogpt_platform/backend/schema.prisma:3 uses the declared path or variable"
+        ],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 16186,
+    "questions": 4,
+    "generatedAt": "2026-10-29T14:26:17.332Z",
+    "failedChecks": 2,
+    "promptVersion": 19
+  }
+}

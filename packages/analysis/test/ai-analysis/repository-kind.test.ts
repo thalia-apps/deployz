@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { analyseRepo } from '../../src/analyser.js';
 import { runAiAnalysis } from '../../src/ai-analysis/index.js';
-import { buildEvidencePack } from '../../src/ai-analysis/evidence-pack.js';
+import { buildEvidencePack, evidenceFileRequests, isProductionFile } from '../../src/ai-analysis/evidence-pack.js';
 import { TREE_PATHS, type FileTree } from '../../src/detectors.js';
 import { buildReadinessReport } from '../../src/readiness-report.js';
 import { cite, fact, fakeGateway, toWire } from './helpers.js';
@@ -141,5 +141,74 @@ describe('AI Analysis: datastore repository kind', () => {
     const { report, failedChecks } = await outcomeOf(DATASTORE(), 'datastore', { evidence: cite('src/server.c', 2, 'int main(int argc, char **argv) { return serve(); }') });
     expect(failedChecks).toBe(1);
     expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+});
+
+// A database server whose role only the root README states (PostgreSQL new-221, MySQL new-213,
+// RabbitMQ new-224): the rules tree does not hold the README, the AI evidence files do.
+const README_ONLY = (): FileTree =>
+  withPaths({
+    'README.md': [
+      'PostgreSQL Database Management System',
+      '=====================================',
+      '',
+      'PostgreSQL is an advanced object-relational database management system',
+      'that supports an extended subset of the SQL standard.',
+    ].join('\n'),
+    'GNUmakefile.in': 'all:\n\t$(MAKE) -C src all\n',
+    'src/backend/main/main.c': 'int main(int argc, char *argv[]) { return PostmasterMain(argc, argv); }\n',
+  });
+
+describe('AI Analysis: the root README for the repository kind', () => {
+  it('requests the root README only for the repository kind question', () => {
+    // The rules tree holds no README; the path list of the repository has it.
+    const withReadmePath = (files: Record<string, string>): FileTree =>
+      Object.defineProperty(files, TREE_PATHS, { value: [...Object.keys(files), 'README.md'], enumerable: false });
+    const { 'README.md': _readme, ...source } = README_ONLY();
+    const rulesTree = withReadmePath({ ...source });
+    expect(evidenceFileRequests(rulesTree, analyseRepo(rulesTree))).toContain('README.md');
+    const app = withReadmePath({
+      Dockerfile: ['FROM node:20', 'COPY . .', 'EXPOSE 3000', 'CMD ["node", "index.js"]'].join('\n'),
+      'package.json': JSON.stringify({ name: 'a', dependencies: { express: '^4' } }),
+      'index.js': 'require("express")().listen(process.env.PORT || 3000);',
+    });
+    expect(evidenceFileRequests(app, analyseRepo(app))).not.toContain('README.md');
+  });
+
+  it('a datastore answer that cites the README role line is not deployable', async () => {
+    const { report, failedChecks, prompt } = await outcomeOf(README_ONLY(), 'datastore', {
+      evidence: cite('README.md', 4, 'PostgreSQL is an advanced object-relational database management system'),
+    });
+    expect(prompt).toContain('4| PostgreSQL is an advanced object-relational database management system');
+    expect(failedChecks).toBe(0);
+    expect(report.outcome).toBe('NOT_DEPLOYABLE');
+  });
+
+  it('a README role sentence that wraps over two lines supports the answer (MariaDB new-209)', async () => {
+    const tree = withPaths({
+      ...README_ONLY(),
+      'README.md': ['# MariaDB Server', '', 'MariaDB Server is one of the most widely deployed open source relational', ' databases. It is built by a global community.'].join('\n'),
+    });
+    const { report, failedChecks } = await outcomeOf(tree, 'datastore', {
+      evidence: [cite('README.md', 1, '# MariaDB Server')[0]!, cite('README.md', 3, 'open source relational')[0]!],
+    });
+    expect(failedChecks).toBe(0);
+    expect(report.outcome).toBe('NOT_DEPLOYABLE');
+    // The title line alone names no role.
+    expect((await outcomeOf(tree, 'datastore', { evidence: cite('README.md', 1, '# MariaDB Server') })).failedChecks).toBe(1);
+  });
+
+  it('is never production evidence for another answer', () => {
+    expect(isProductionFile('README.md')).toBe(false);
+    expect(isProductionFile('docs/README.md')).toBe(false);
+    const tree = withPaths({
+      ...README_ONLY(),
+      Dockerfile: ['FROM debian:12', 'COPY . /src', 'RUN make -C /src'].join('\n'),
+      'README.md': 'Run it with `PORT=5432 ./start.sh`; the start script listens on PORT.\n',
+    });
+    const pack = buildEvidencePack(tree, analyseRepo(tree));
+    const other = pack.questions.filter((question) => !(question.kind === 'fact' && question.fact === 'repositoryKind'));
+    expect(other.length).toBeGreaterThan(0);
+    expect(other.flatMap((question) => question.windows).some((file) => file.path === 'README.md')).toBe(false);
   });
 });

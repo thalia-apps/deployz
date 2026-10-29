@@ -1,0 +1,566 @@
+{
+  "id": "new-152",
+  "commit": "f4735b64807f742f81ece1f18e715d3044e2e222",
+  "analyser": "ai@r9-final2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "npm run bundle",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"migrate-and-serve\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALBACROSS_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AMPLITUDE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTERRA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DELIGHTED_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "E2E",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "E2E_TEST_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENVIRONMENT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EVALUATION_ANALYTICS_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVENTS_SLACK_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FIRST_PROMOTER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLAGSMITH_API_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "FLAGSMITH_API_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js",
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FLAGSMITH_ON_FLAGSMITH_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FLAGSMITH_ON_FLAGSMITH_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FLAGSMITH_PROXY_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GITHUB_APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_ANALYTICS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "HEADWAY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LINKEDIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_FORMAT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MCP_SERVER_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "METRICS_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORTER_OTLP_ENDPOINT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OTEL_SERVICE_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PYLON_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REO_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SLACK_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSPORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp/src/flagsmith_mcp/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USE_SECURE_COOKIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VERCEL_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in frontend/api/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sendgrid",
+      "sentry"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ENVIRONMENT, FLAGSMITH_API_TOKEN, FLAGSMITH_API_URL, LOG_FORMAT, LOG_LEVEL, and 6 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 10,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05893668,
+        "promptTokens": 13038,
+        "completionTokens": 369
+      },
+      "latencyMs": 6262
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "startup",
+          "command": null
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 6266,
+    "questions": 1,
+    "generatedAt": "2026-10-29T15:08:06.272Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  }
+}

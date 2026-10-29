@@ -1,0 +1,2785 @@
+{
+  "id": "new-206",
+  "commit": "f943528f8f51d469fa6ef4ccb62d84d14b291cb8",
+  "analyser": "ai@r9-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "express",
+      "dockerfilePath": "Dockerfile.standalone-infisical"
+    },
+    "build": {
+      "command": "tsdown",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"./standalone-entrypoint.sh\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/api/status",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "AUDIT_LOGS_DB_CONNECTION_URI",
+          "kind": "url"
+        },
+        {
+          "name": "DB_CONNECTION_URI",
+          "kind": "url"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "OBJECT_STORAGE_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ACME_DEVELOPMENT_HTTP01_CHALLENGE_HOST_OVERRIDES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ACME_DNS_RESOLVER_SERVERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUDIT_LOGS_DB_CONNECTION_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AUDIT_LOGS_DB_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUDIT_LOGS_DB_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUDIT_LOGS_DB_ROOT_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AUTH_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BCRYPT_SALT_ROUND",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BOOTSTRAP_INFISICAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CAPTCHA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CAPTCHA_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "CAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CDN_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CERT_CA_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CERT_POLICY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_AUDIT_LOG_ENGINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_AUDIT_LOG_INSERT_SETTINGS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_AUDIT_LOG_TABLE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLICKHOUSE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_APP_ID_GITHUB_APP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_APP_ID_GITHUB_APP",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_GITLAB_LOGIN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_AWS_INTEGRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_AZURE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_BITBUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GCP_SECRET_MANAGER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GITHUB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GITHUB",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GITHUB_APP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GITHUB_APP",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GITHUB_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GITHUB_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GITLAB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GITLAB",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GITLAB_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GITLAB_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_GOOGLE_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_ID_GOOGLE_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_HEROKU",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_NETLIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_ID_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_PRIVATE_KEY_GITHUB_APP",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_PRIVATE_KEY_GITHUB_APP",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_AWS_INTEGRATION",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_AZURE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_BITBUCKET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GCP_SECRET_MANAGER",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GITHUB",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GITHUB",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GITHUB_APP",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GITHUB_APP",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GITHUB_LOGIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GITHUB_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GITLAB",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GITLAB",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GITLAB_LOGIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GITLAB_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_GOOGLE_LOGIN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares CLIENT_SECRET_GOOGLE_LOGIN",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_HEROKU",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_NETLIFY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SECRET_VERCEL",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SLUG_GITHUB_APP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLIENT_SLUG_GITHUB_APP",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "CLIENT_SLUG_VERCEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTENTFUL_DELIVERY_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTENTFUL_ENVIRONMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONTENTFUL_SPACE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COOKIE_SECRET_SIGN_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOWED_HEADERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CORS_ALLOWED_ORIGINS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATADOG_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATADOG_ENV",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATADOG_HOSTNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATADOG_HOSTNAME",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DATADOG_PROFILING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATADOG_PROFILING_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATADOG_SERVICE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATADOG_SERVICE",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_CONNECTION_URI",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_READ_REPLICAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_REPLICA_POOL_MAX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_REPLICA_POOL_MIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_ROOT_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEFAULT_SAML_ORG_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMIC_SECRET_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DYNAMIC_SECRET_AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ENCRYPTION_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "GITHUB_API_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOLANG_SIDECAR_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GO_SIDECAR_BINARY_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GO_SIDECAR_SHADOW_SAMPLE_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HSM_KEY_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HSM_LIB_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HSM_PIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HSM_SLOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HUBSPOT_PORTAL_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "HUBSPOT_SIGNUP_FORM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IDENTITY_TLS_CERT_AUTH_CLIENT_CERTIFICATE_HEADER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFISICAL_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFISICAL_PLATFORM_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFISICAL_PRIMARY_INSTANCE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INFISICAL_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AWS_ACCESS_KEY_ID",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AWS_ACCESS_KEY_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AWS_SECRET_ACCESS_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AWS_SECRET_ACCESS_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_APP_CONFIGURATION_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_APP_CONFIGURATION_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_APP_CONFIGURATION_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_APP_CONFIGURATION_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_CLIENT_SECRETS_CLIENT_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_CLIENT_SECRETS_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_CLIENT_SECRETS_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_CLIENT_SECRETS_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_DEVOPS_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_DEVOPS_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_DEVOPS_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_DEVOPS_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_KEY_VAULT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_KEY_VAULT_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_AZURE_KEY_VAULT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_AZURE_KEY_VAULT_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GCP_SERVICE_ACCOUNT_CREDENTIAL",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GCP_SERVICE_ACCOUNT_CREDENTIAL",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_APP_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_APP_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_APP_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_APP_PRIVATE_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_APP_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_APP_SLUG",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_OAUTH_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_OAUTH_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_PRIVATE_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_SLUG",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITHUB_RADAR_APP_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITHUB_RADAR_APP_WEBHOOK_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITLAB_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITLAB_OAUTH_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_GITLAB_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_GITLAB_OAUTH_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_HEROKU_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_HEROKU_OAUTH_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_HEROKU_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_HEROKU_OAUTH_CLIENT_SECRET",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_STRIPE_OAUTH_AUTHORIZE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_STRIPE_OAUTH_AUTHORIZE_URL",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_STRIPE_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_STRIPE_OAUTH_CLIENT_ID",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INF_APP_CONNECTION_STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares INF_APP_CONNECTION_STRIPE_SECRET_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "INITIAL_ORGANIZATION_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERCOM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INTERNAL_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_AUTH_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_AUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "JWT_INVITE_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_MFA_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_PROVIDER_AUTH_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_REFRESH_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "JWT_SIGNUP_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KMS_ROOT_KEY_RETENTION_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KUBERNETES_AUTO_FETCH_SERVICE_ACCOUNT_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares KUBERNETES_AUTO_FETCH_SERVICE_ACCOUNT_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LEGACY_IDENTITY_ACCESS_TOKEN_EXPIRATION_ENFORCED_AT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_KEY_OFFLINE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_SERVER_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LICENSE_SERVER_V2_SERVICE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend-go/internal/config/config.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOOPS_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_LEASE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_MACHINE_IDENTITY_TOKEN_AGE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_CAPTCHA_SITE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares NEXT_PUBLIC_CAPTCHA_SITE_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SAML_ORG_SLUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend-go/internal/config/config.go",
+            "read in backend/src/lib/config/env.ts",
+            "read in backend/src/server/routes/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OBJECT_STORAGE_S3_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OBJECT_STORAGE_S3_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OBJECT_STORAGE_S3_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OBJECT_STORAGE_S3_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "OBJECT_STORAGE_S3_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_COLLECTOR_BASIC_AUTH_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares OTEL_COLLECTOR_BASIC_AUTH_PASSWORD",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_COLLECTOR_BASIC_AUTH_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_COLLECTOR_BASIC_AUTH_USERNAME",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_DROP_HIGH_CARDINALITY_METERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_DROP_HIGH_CARDINALITY_METERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OTEL_EXPORT_OTLP_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_EXPORT_OTLP_ENDPOINT",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_EXPORT_TYPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_EXPORT_TYPE",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_OTLP_PUSH_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_OTLP_PUSH_INTERVAL",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OTEL_TELEMETRY_COLLECTION_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares OTEL_TELEMETRY_COLLECTION_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAM_AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PAM_AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PARAMS_FOLDER_SECRET_DETECTION_ENTROPY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PARAMS_FOLDER_SECRET_DETECTION_PATHS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PEBBLE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PING_IDENTITY_DEVOPS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PING_IDENTITY_DEVOPS_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PING_IDENTITY_DEVOPS_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PING_IDENTITY_DEVOPS_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PIT_CHECKPOINT_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PIT_TREE_CHECKPOINT_WINDOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAIN_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PLAIN_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PLAIN_WISH_LABEL_IDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PLAIN_WISH_LABEL_IDS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_DB"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTHOG_HOST",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTHOG_PROJECT_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares POSTHOG_PROJECT_API_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PYLON_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLUSTER_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_READ_REPLICAS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_MASTER_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_SENTINEL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_URL",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RELAY_AUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ROOT_ENCRYPTION_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "SALT_ROUNDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SAMBA_ADMIN_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SAMBA_ADMIN_PASSWORD"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SANITIZED_SCHEMA_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETS_ACTIVATION_ORG_MAX_AGE_MONTHS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRETS_ACTIVATION_ORG_MAX_MEMBERS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_CLONE_TIMEOUT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_COMMIT_BATCH_SIZE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_CPU_THREADS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_GIT_APP_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_GIT_APP_SLUG",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_MAX_REPO_SIZE_MB",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_MEMORY_LIMIT_MB",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_ORG_WHITELIST",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_SCAN_TIMEOUT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_STUCK_SCAN_TIMEOUT",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_WEBHOOK_PROXY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SECRET_SCANNING_WEBHOOK_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SHOULD_USE_DATADOG_TRACER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SHOULD_USE_DATADOG_TRACER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SITE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SITE_URL",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_CUSTOM_CA_CERT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_FROM_ADDRESS",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_FROM_NAME",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HELO_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_HOST",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_HOST",
+            "read in backend/src/lib/config/env.ts",
+            "smtp requires SMTP_HOST"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PASSWORD",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_PORT",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SMTP_PORT",
+            "read in backend/src/lib/config/env.ts",
+            "smtp requires SMTP_PORT"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SMTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SMTP_USERNAME",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SNOWFLAKE_DISABLE_PLATFORM_DETECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/disable-sdk-platform-detection.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSL_CLIENT_CERTIFICATE_HEADER_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SSL_CLIENT_CERTIFICATE_HEADER_KEY",
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TECHNITIUM_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TECHNITIUM_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TECHNITIUM_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/bdd/features/environment.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TNS_ADMIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXY_CIDRS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "URL_GITLAB_LOGIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "URL_GITLAB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "WORKFLOW_SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/src/lib/config/env.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: INF_APP_CONNECTION_AWS_ACCESS_KEY_ID, INF_APP_CONNECTION_AWS_SECRET_ACCESS_KEY. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": null,
+    "answers": [],
+    "settings": [],
+    "latencyMs": 10,
+    "questions": 0,
+    "generatedAt": "2026-10-29T14:31:35.324Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

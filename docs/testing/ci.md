@@ -230,6 +230,12 @@ validates each input, uses no repository secrets, has only `contents: read`
 and does not keep Git credentials in the checkout. It uploads one JSON result
 for each recipe for 14 days. `pnpm runcheck:fetch --run <run id>` downloads
 them ([`compatibility.md`](compatibility.md#the-exam-on-x86_64-runners)).
+The `analyse-ai` mode caches the GitHub snapshot of each recipe (the job
+token allows 1000 GitHub API requests per hour). A branch restores the newest
+snapshot of its own runs or of `main`, and a run that fetched new files saves
+them under its own key. A file that is not in the snapshot is read from
+raw.githubusercontent.com by its path in the pinned tree, which the API rate
+limit does not count; only the tree and a failed raw read use the API.
 
 ## Timing expectations
 

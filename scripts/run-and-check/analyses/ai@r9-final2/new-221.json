@@ -1,0 +1,123 @@
+{
+  "id": "new-221",
+  "commit": "27c844034f827b3910bc8a358780c6609ba87a41",
+  "analyser": "ai@r9-final2",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "src/tools/oss-scanner",
+      "runtime": "unknown",
+      "framework": null,
+      "dockerfilePath": "src/tools/oss-scanner/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported storage: the image reads its configuration from /src/src/tools/ci/pg_ci_base.conf (TEMP_CONFIG in src/tools/oss-scanner/Dockerfile), and no Dockerfile instruction creates that file. Deployz does not mount configuration files."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported storage: the image reads its configuration from /src/src/tools/ci/pg_ci_base.conf (TEMP_CONFIG in src/tools/oss-scanner/Dockerfile), and no Dockerfile instruction creates that file. Deployz does not mount configuration files."
+      },
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.03030588,
+        "promptTokens": 6088,
+        "completionTokens": 313
+      },
+      "latencyMs": 5400
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "datastore",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 5401,
+    "questions": 3,
+    "generatedAt": "2026-10-29T15:15:49.690Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  }
+}
