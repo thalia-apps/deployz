@@ -11,7 +11,7 @@ import { estimateTokens, SpendLimitExceededError, type AiGateway, type TokenUsag
 import { renderEvidencePack, type EvidencePack } from './evidence-pack.js';
 
 /** Bump when the prompt or the schema changes, so stored results show which prompt made them. */
-export const ANALYST_PROMPT_VERSION = 17;
+export const ANALYST_PROMPT_VERSION = 18;
 export const ANALYST_MAX_PROMPT_TOKENS = 30_000;
 /** Opus 5.5 always thinks, and thinking is billed to the same completion budget as the JSON. */
 export const ANALYST_MAX_OUTPUT_TOKENS = 12_000;
@@ -144,8 +144,8 @@ RULES
 - Return JSON only. Do not execute repository commands.
 
 BLOCKER QUESTIONS (kind "blocker")
-The scanner found an item that Deployz cannot host (a datastore it does not provide, durable data on the local disk, or a second application service). Answer with exactly one of:
-- "required": the production start path needs the item, and no setting replaces it.
+The scanner found an item that Deployz cannot host (a datastore it does not provide, durable data on the local disk, or a second application service), or a declared service: a service that the repository's own stack (a Compose file, a Helm chart, an env sample) starts and that the scanner did not find the app using. Answer with exactly one of:
+- "required": the production start path needs the item, and no setting replaces it. For a declared service, cite a production source or configuration line that connects to or uses it; the Compose file, the env sample and a document only declare it.
 - "optional_by_setting": an environment variable switches the app to an engine that Deployz provides, and with that value the app does not need the item. Give setting (the exact variable name), settingValue (the value that selects the engine; for a connection URL, its scheme such as "postgres://"), and engine ("postgres", "mysql", "redis" or "s3"). Cite the line that reads the variable and the line that maps the value to the engine. A variable that only sets a path, or an engine that Deployz does not provide, is not this answer.
 - "not_used": the production app never uses the item: the dependency is declared but the started code never imports or connects to it, or the declared directory holds no durable data and the code never writes it. Cite the start path that shows it.
 

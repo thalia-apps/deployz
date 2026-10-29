@@ -379,8 +379,38 @@ is final.
     not a missing PostgreSQL extension), durable local state (a declared
     data directory, a data path in the app's own `config.yaml` or
     `config.toml` such as qdrant `storage_path: ./storage`, a `VOLUME`,
-    Compose named volumes), and a second
-    application service in the production Compose file.
+    Compose named volumes), a second
+    application service in the production Compose file, and a declared
+    service (below).
+  - A declared service (`unconfirmed-declared-service`, rejection
+    `unexplained-declared-service`): a service that the repository's own
+    stack declares and that the rules do not explain. The stack is the
+    production Compose file or, when the repository has none, the shallowest
+    development stack (`dev/`, `.devcontainer/`, a source-mounted file; never
+    a test, CI, example, sample, demo or documentation folder). It is a
+    datastore or broker service (PostgreSQL, MySQL or MariaDB, Redis or
+    Valkey, MongoDB, Elasticsearch or OpenSearch, Kafka or Redpanda, RabbitMQ,
+    CockroachDB, ClickHouse, Cassandra, Neo4j, CouchDB, a search or vector
+    engine, MinIO) that an application service of the stack names. A
+    development stack names it with `links` or a host in a value
+    (`REDIS_URL: redis://redis:6379`); `depends_on` there is only the start
+    order (saleor's optional cache). An admin tool image is not a datastore
+    and not an app. A development stack with more than one relational engine
+    tests the app against each (shlink), so it states no need. The production
+    file keeps the optional services of a lighter production variant
+    (Flagsmith). Helm chart dependencies (not a vendored subchart) and env
+    sample connection settings of an engine that Deployz does not provide
+    (`KAFKA_BROKERS=…`) are declared services too; the rules' own PostgreSQL,
+    MySQL, Redis and storage checks already read the env samples. A service
+    is explained when the rules found its engine (PostgreSQL or MySQL
+    evidence, a required Redis, S3 storage) or another rejection, dismissed
+    or not, names it. In a development stack, a second service that builds
+    from the repository and that the selected app names is a declared service
+    too (mem0: the dashboard needs the API). The finding is CODE_CHANGE
+    (outcome 2), never a blocker by itself: the vendor can mark it "not used
+    in production", and the AI asks one question. Huly (CockroachDB,
+    Redpanda, Elasticsearch in `dev/`), zammad (Redis in `.devcontainer/`,
+    which the rules read as optional) and mem0 were false DEPLOYABLE before.
   - A fact that the rules did not resolve: no port, no start command, no
     health path (`vendor_required`: a health handler whose route was not
     resolved), no Dockerfile or a tied choice, an
@@ -437,7 +467,7 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 17): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 18): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
@@ -461,7 +491,13 @@ is final.
     datastore (dependency manifests, tests, documents and deployment files
     do not count); no production line uses the declared path or variable of
     the local state; a second Compose service is a third-party image (it
-    does not build from the repository) that no production line names.
+    does not build from the repository) that no production line names; no
+    production source line names a declared service or its engine (any
+    case).
+  - `required` for a declared service: medium or high confidence and a
+    cited production source or configuration line (never a Compose file, an
+    env sample, a manifest or a document) that names the service or its
+    engine. Without it the answer changes nothing.
   - Start command: the final stage's CMD, its ENTRYPOINT, both together, a
     `package.json` script that the CMD runs, or a script file that the CMD
     starts. Nothing else, never a description.
@@ -531,7 +567,14 @@ is final.
   sets it and `database-connection-unverified` is gone. An unknown one
   keeps that vendor question.
   - A `required` answer keeps the rules fix class. A required datastore is
-    already a CAPABILITY_GAP (outcome 3). Durable local state and a second
+    already a CAPABILITY_GAP (outcome 3). A checked `required` declared
+    service whose cited line names an engine that Deployz does not provide
+    (MongoDB, Elasticsearch or OpenSearch, Kafka or Redpanda, RabbitMQ,
+    CockroachDB and the other datastores) becomes that engine's rejection:
+    a CAPABILITY_GAP (outcome 3). A cited PostgreSQL, MySQL, Redis or
+    storage line, or a second app service, keeps the question (outcome 2).
+    Post-MVP: provision the supported engine on such an answer. Durable
+    local state and a second
     Compose service stay CODE_CHANGE (outcome 2) also when the AI says
     `required`: the app can move its data to S3 or the database, or drop
     the service. The live exam confirms it: the AI says `required` for the
@@ -770,8 +813,8 @@ TEST deployment fails in the vendor's own account.
   (`packages/contracts/src/vendor-disputes.ts`) accept a dispute:
   `unsupported-database-mongo`, `-elasticsearch`, `-other`, `-sqlite`,
   `-mariadb`, `unsupported-redis-setup`, `unsupported-message-queue`,
-  `unsupported-multi-service`, `unsupported-persistent-volume` and
-  `local-file-storage`. The rule: being wrong only fails the vendor's TEST
+  `unsupported-multi-service`, `unconfirmed-declared-service`,
+  `unsupported-persistent-volume` and `local-file-storage`. The rule: being wrong only fails the vendor's TEST
   deployment. It does not bypass security, and it does not give an image
   that Deployz cannot build. `unsupported-gpu`, `unsupported-architecture`,
   `unsupported-no-dockerfile`, `build-context-git-metadata` and the

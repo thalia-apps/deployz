@@ -2,7 +2,9 @@
  * Merges the checked AI answers into the rules Analysis. Per question:
  *
  * - a blocker answered "required", or any answer that fails its check: the
- *   rules value stays (`rules`);
+ *   rules value stays (`rules`). A declared service answered "required" that
+ *   passes, with a cited line that uses an engine Deployz does not provide,
+ *   becomes that engine's rejection (`ai`): not deployable;
  * - a blocker answered "not used" or "optional by setting" that passes: the
  *   rejection is dismissed (`ai`). A setting adds the engine it selects (a
  *   database, Redis or S3). When Deployz does not set that variable itself,
@@ -21,7 +23,7 @@ import { isSecretName, type FileTree, type MigrationStartupEvidence } from '../d
 import { isGeneratableSecretName } from '../env-classification.js';
 import { combineOverrides } from '../vendor-disputes.js';
 import type { AnalystOutput, SupportedEngine } from './analyst.js';
-import { databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
+import { citedLine, databaseVariableSemantic, factValue, type AnswerCheck, type DockerfileValue, type MigrationValue } from './checks.js';
 import { isProductionFile, type EvidencePack } from './evidence-pack.js';
 import { LOCAL_FILESYSTEM_FINDING } from './open-items.js';
 
@@ -71,6 +73,19 @@ export interface MergeResult {
 }
 
 type Meta = Record<string, unknown>;
+
+/** The rejection of each engine Deployz does not provide, by the words of a cited line. */
+const UNSUPPORTED_SERVICE_REJECTIONS: readonly { readonly words: RegExp; readonly dependency: string; readonly engine: string }[] = [
+  { words: /mongo/i, dependency: 'mongodb', engine: 'MongoDB' },
+  { words: /elastic|opensearch/i, dependency: '@elastic/elasticsearch', engine: 'Elasticsearch/OpenSearch' },
+  { words: /kafka|redpanda/i, dependency: 'kafka', engine: 'Kafka' },
+  { words: /rabbitmq|amqp/i, dependency: 'rabbitmq', engine: 'RabbitMQ' },
+  {
+    words: /cockroach|clickhouse|cassandra|scylla|neo4j|couch|meilisearch|typesense|qdrant|weaviate|milvus|chroma/i,
+    dependency: 'declared-datastore',
+    engine: 'a datastore Deployz does not provide',
+  },
+];
 
 function replaceFinding(findings: AnalysisResult['findings'], detector: string, patch: Partial<AnalysisResult['findings'][number]>): AnalysisResult['findings'] {
   const index = findings.findIndex((finding) => finding.detector === detector);
@@ -141,6 +156,7 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
 
   // ── Blockers: a passing "not used" or "optional by setting" dismisses the rejection. ──
   const dismissed: string[] = [];
+  const required: { reason: string; rejection: AnalysisResult['rejections'][number] }[] = [];
   const settings: SettingChange[] = [];
   const overrides: { -readonly [K in keyof ResourceOverrides]: ResourceOverrides[K] } = {};
   for (const answer of answers.blockers) {
@@ -148,14 +164,32 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
     if (question?.kind !== 'blocker') continue;
     const check = checkOf(answer.id);
     const dismisses = answer.answer !== 'required' && check.ok;
+    const unsupported =
+      question.category === 'declared_service' && answer.answer === 'required' && check.ok
+        ? UNSUPPORTED_SERVICE_REJECTIONS.flatMap((entry) =>
+            answer.evidence
+              .filter((item) => entry.words.test(citedLine(pack, item) ?? ''))
+              .map((item) => ({ ...entry, cited: `${item.path}:${item.line}` })),
+          )[0]
+        : undefined;
     merged.push({
       id: answer.id,
       subject: question.dependency,
       answer: answer.answer,
       value: answer.answer === 'optional_by_setting' ? { setting: answer.setting, value: answer.settingValue, engine: answer.engine } : null,
-      decision: dismisses ? 'ai' : 'rules',
+      decision: dismisses || unsupported !== undefined ? 'ai' : 'rules',
       reasons: check.reasons,
     });
+    if (unsupported !== undefined) {
+      required.push({
+        reason: question.reason,
+        rejection: {
+          detected: true,
+          dependency: unsupported.dependency,
+          reason: `Unsupported service: the app needs ${unsupported.engine} (${unsupported.cited}), which the repository's own setup declares. Deployz does not provide it.`,
+        },
+      });
+    }
     if (!dismisses) continue;
     if (question.dependency === LOCAL_FILESYSTEM_FINDING) overrides.localFilesystem = false;
     else dismissed.push(question.reason);
@@ -172,7 +206,7 @@ export function mergeAiAnswers(input: MergeInput): MergeResult {
   const base = Object.keys(overrides).length > 0 ? analyseRepo(tree, combineOverrides(input.baseOverrides, overrides)) : rules;
   const meta: Meta = { ...base.metadata };
   let findings = [...base.findings];
-  let rejections = base.rejections;
+  let rejections = base.rejections.map((rejection) => required.find((entry) => rejection.detected && entry.reason === rejection.reason)?.rejection ?? rejection);
   const aiResolved: string[] = [];
   let migration: MergeResult['migration'] = null;
 

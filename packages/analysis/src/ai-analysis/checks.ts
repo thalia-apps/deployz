@@ -8,6 +8,9 @@
  * - "optional by setting": a cited line reads the setting, and the value
  *   selects an engine that Deployz provides;
  * - "not used": no production source file imports or connects to the item;
+ * - "required" for a declared service: a cited production source line names
+ *   the service or its engine (a Compose file, an env sample or a document
+ *   only declares it);
  * - the start command is the image's CMD/ENTRYPOINT or a script the CMD runs;
  * - the port agrees with the Dockerfile EXPOSE / ENV PORT / HEALTHCHECK, or
  *   the app reads PORT (Deployz sets PORT to the manifest port);
@@ -152,6 +155,11 @@ const DATASTORE_PATTERN: Record<string, RegExp> = {
   dynamo: /dynamo/i,
 };
 
+/** Any service name or engine word of a declared-service item, in any case. */
+export function declaredServicePattern(item: BlockerItem): RegExp {
+  return new RegExp(item.terms.map(escape).join('|') || '(?!)', 'i');
+}
+
 function datastorePattern(item: BlockerItem): RegExp {
   const engine = item.terms.find((term) => term in DATASTORE_PATTERN);
   return engine !== undefined ? DATASTORE_PATTERN[engine]! : word(item.dependency);
@@ -163,6 +171,11 @@ function usedBy(ctx: CheckContext, item: BlockerItem): string[] {
     const pattern = datastorePattern(item);
     const imported = firstMatch(ctx.tree, (line) => pattern.test(line) && (IMPORT_LINE.test(line) || /:\/\/|jdbc:|adapter|driver|dialect|client/i.test(line)));
     return imported !== null ? [`${imported} imports or connects to it`] : [];
+  }
+  if (item.category === 'declared_service') {
+    const pattern = declaredServicePattern(item);
+    const named = firstMatch(ctx.tree, (line) => pattern.test(line));
+    return named !== null ? [`${named} names the service or its engine`] : [];
   }
   if (item.category === 'local_state') {
     const declared = item.terms.filter((term) => term.startsWith('/') || /^[A-Z][A-Z0-9_]{2,}$/.test(term)).filter((term) => !/^(?:STORAGE|FILESYSTEM_DISK|BUCKET)$/.test(term));
@@ -202,10 +215,26 @@ const ENGINES_FOR: Record<BlockerItem['category'], readonly SupportedEngine[]> =
   datastore: ['postgres', 'mysql'],
   local_state: ['s3', 'postgres', 'mysql'],
   compose_service: ['postgres', 'mysql', 'redis', 's3'],
+  declared_service: ['postgres', 'mysql', 'redis', 's3'],
 };
 
+/** A required declared service needs a cited production source line that uses it: the stack only declares it. */
+function requiredDeclaredServiceReasons(ctx: CheckContext, question: BlockerItem, answer: BlockerAnswer): string[] {
+  const pattern = declaredServicePattern(question);
+  const sources = new Set(productionSources(ctx.tree));
+  const used = answer.evidence.some((item) => {
+    const line = citedLine(ctx.pack, item);
+    return line !== null && sources.has(item.path) && pattern.test(line);
+  });
+  return [
+    ...confidenceReasons(answer.confidence),
+    ...citationReasons(ctx.pack, answer.evidence),
+    ...(used ? [] : ['no cited production source line uses the service']),
+  ];
+}
+
 export function checkBlocker(ctx: CheckContext, question: Question & BlockerItem, answer: BlockerAnswer): AnswerCheck {
-  if (answer.answer === 'required') return result(question.id, []);
+  if (answer.answer === 'required') return result(question.id, question.category === 'declared_service' ? requiredDeclaredServiceReasons(ctx, question, answer) : []);
   const reasons = confidenceReasons(answer.confidence);
   if (answer.answer === 'not_used') {
     reasons.push(...citationReasons(ctx.pack, answer.evidence), ...usedBy(ctx, question));

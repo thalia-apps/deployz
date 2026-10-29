@@ -13,6 +13,7 @@ import {
   CMD_CHAIN_MAX_DEPTH,
   collectDependencyNames,
   composeApplicationServices,
+  composeBuildDockerfile,
   composeServices,
   detectEnvVarModel,
   detectUnbuildableDockerfile,
@@ -20,6 +21,7 @@ import {
   DIALECT_AGNOSTIC_DRIVERS,
   extractCmdScriptPaths,
   findDependencyEvidence,
+  INFRA_COMPOSE_IMAGE_REGEX,
   installsPhpExtension,
   isProductionComposeFile,
   isRuntimeSourcePath,
@@ -27,6 +29,7 @@ import {
   LANGUAGE_SOURCE_REGEX,
   listDockerfileCandidates,
   listProductionComposeFiles,
+  parseComposeServices,
   productionStageText,
   selectedDockerfile,
   WORKER_SERVICE_NAME_REGEX,
@@ -1549,4 +1552,154 @@ export function checkRequiredThirdPartyService(tree: FileTree): RejectionFinding
     };
   }
   return { detected: false, dependency: 'none', reason: 'No required third-party service detected' };
+}
+/** What the rules found for the engines Deployz provides: a declared service of one of them is explained by it. */
+export interface DeclaredServiceContext {
+  readonly postgres: boolean;
+  readonly mysql: boolean;
+  readonly redis: boolean;
+  readonly storage: boolean;
+  /** The reasons of every other detected rejection, dismissed ones included: a rejection that names the engine explains it. */
+  readonly rejectionReasons: readonly string[];
+}
+
+type DeclaredEngine = 'postgres' | 'mysql' | 'redis' | 's3' | 'other';
+
+/** Datastore and broker images, with the words a rejection reason uses for the engine. Admin and UI tools are not datastores. */
+const DECLARED_DATASTORES: readonly { readonly image: RegExp; readonly engine: DeclaredEngine; readonly words: RegExp }[] = [
+  { image: /cockroach/i, engine: 'other', words: /cockroach/i },
+  { image: /postgres|postgis|pgvector|timescale/i, engine: 'postgres', words: /postgres/i },
+  { image: /mysql|mariadb|percona/i, engine: 'mysql', words: /mysql|mariadb/i },
+  { image: /redis|valkey|keydb|dragonfly/i, engine: 'redis', words: /redis/i },
+  { image: /mongo/i, engine: 'other', words: /mongo/i },
+  { image: /elasticsearch|opensearch/i, engine: 'other', words: /elastic|opensearch/i },
+  { image: /kafka|redpanda/i, engine: 'other', words: /kafka|redpanda/i },
+  { image: /rabbitmq|amqp/i, engine: 'other', words: /rabbitmq|amqp/i },
+  { image: /clickhouse/i, engine: 'other', words: /clickhouse/i },
+  { image: /cassandra|scylla/i, engine: 'other', words: /cassandra|scylla/i },
+  { image: /neo4j/i, engine: 'other', words: /neo4j/i },
+  { image: /couchdb|couchbase/i, engine: 'other', words: /couch/i },
+  { image: /meilisearch|typesense|qdrant|weaviate|milvus|chroma/i, engine: 'other', words: /meilisearch|typesense|qdrant|weaviate|milvus|chroma/i },
+  { image: /minio|seaweedfs|rustfs/i, engine: 's3', words: /minio|seaweedfs|rustfs/i },
+];
+const DATASTORE_TOOL_IMAGE_REGEX = /admin|commander|express|console|insight|exporter|kibana|dashboards|[-_/]ui(?:[:@]|$)/i;
+// A test, CI, example or documentation stack is not how the app runs.
+const NON_STACK_COMPOSE_PATH_REGEX =
+  /(?:^|\/)(?:test|testing|tests|[\w.-]+[._-]tests?|e2e|ci|\.github|\.gitlab|\.circleci|cypress|playwright|[\w.-]*examples?|[\w.-]*samples?|demos?|docs?|benchmarks?|fixtures?|templates?)(?:\/|$)|(?:docker-)?compose[.-](?:test|testing|ci|e2e|example|sample|demo)(?:[.-][\w.-]+)?\.ya?ml$/i;
+const ANY_COMPOSE_FILE_REGEX = /(?:^|\/)(?:docker-)?compose(?:[.-][\w.-]+)?\.ya?ml$/i;
+
+// The app's own chart, not a vendored subchart (`charts/app/charts/redis/Chart.yaml`).
+const HELM_CHART_REGEX = /^(?!(?:.*\/)?charts\/[^/]+\/charts\/)(?:.*\/)?Chart\.ya?ml$/;
+const ENV_SAMPLE_PATH_REGEX = /(?:^|\/)\.env\.(?:example|template|sample)$/i;
+// A connection setting with a value: `REDIS_URL=redis://localhost:6379`, `ELASTICSEARCH_HOST=elastic`.
+const SAMPLE_CONNECTION_REGEX = /^\s*(?:export\s+)?([A-Z][A-Z0-9_]*_(?:URL|URI|DSN|HOSTS?|BROKERS?|NODES?|SERVERS?))\s*=\s*["']?([^\s"'#]+)/gm;
+
+/** The `name:` of each entry of a chart's `dependencies:` list. */
+function helmDependencies(content: string): string[] {
+  const block = /^dependencies:[ \t]*\r?\n((?:[ \t].*(?:\r?\n|$)|-.*(?:\r?\n|$)|[ \t]*\r?\n)*)/m.exec(content)?.[1] ?? '';
+  return [...block.matchAll(/^\s*-?\s*name:\s*["']?([\w.-]+)/gm)].map((match) => match[1]!);
+}
+
+function declaredEngineOf(image: string): (typeof DECLARED_DATASTORES)[number] | null {
+  if (DATASTORE_TOOL_IMAGE_REGEX.test(image)) return null;
+  return DECLARED_DATASTORES.find((entry) => entry.image.test(image)) ?? null;
+}
+
+/**
+ * The Compose files that describe how the app runs: the production file, or,
+ * when the repository has none, its development stack (the shallowest Compose
+ * files outside test, CI, example and documentation folders).
+ */
+function declaredStackFiles(tree: FileTree): { files: string[]; production: boolean } {
+  const production = listProductionComposeFiles(tree).find((path) => !NON_STACK_COMPOSE_PATH_REGEX.test(path));
+  if (production !== undefined) return { files: [production], production: true };
+  const stack = Object.keys(tree).filter((path) => ANY_COMPOSE_FILE_REGEX.test(path) && !NON_STACK_COMPOSE_PATH_REGEX.test(path));
+  const depth = Math.min(...stack.map((path) => path.split('/').length));
+  return { files: stack.filter((path) => path.split('/').length === depth).sort(), production: false };
+}
+
+/**
+ * Whether a service's lines name another service: `links`, a host in a value (`redis://redis:6379`),
+ * or, in the production stack, `depends_on`. A development stack starts its tools in order with
+ * `depends_on` (saleor's optional cache), so there it is no connection.
+ */
+function namesService(from: ComposeService, name: string, production: boolean): boolean {
+  const lines = from.body.split(/\r?\n/);
+  const start = production ? -1 : lines.findIndex((line) => /^\s*depends_on:/.test(line));
+  const indent = start === -1 ? 0 : lines[start]!.search(/\S/);
+  const end = start === -1 ? -1 : lines.findIndex((line, index) => index > start && line.trim() !== '' && line.search(/\S/) <= indent);
+  const kept = start === -1 ? lines : [...lines.slice(0, start), ...(end === -1 ? [] : lines.slice(end))];
+  return kept.some((line) => line.split(/[^\w.-]+/).includes(name));
+}
+
+/** The relational engines of a stack: a development stack with more than one tests the app against each (shlink). */
+const RELATIONAL_ENGINE_REGEXES = [/postgres|postgis|pgvector|timescale/i, /mysql|mariadb|percona/i, /mssql|sqlserver|sql-edge/i, /cockroach/i];
+
+/**
+ * Services that the repository's own stack declares and the rules did not
+ * explain: a datastore that an application service of the stack connects to,
+ * of an engine that no rules finding and no rejection accounts for; or, in a
+ * development stack, a second application service from the repository that
+ * the selected app needs. It is a question, not a blocker: the app may not
+ * need the service at runtime (a development cache, a search engine that a
+ * setting turns off). The production stack's application services are
+ * `checkDockerComposeMultiService`'s.
+ */
+export function checkUnexplainedDeclaredServices(tree: FileTree, context: DeclaredServiceContext): RejectionFinding {
+  const explained = (entry: (typeof DECLARED_DATASTORES)[number]): boolean =>
+    (entry.engine === 'postgres' && context.postgres) ||
+    (entry.engine === 'mysql' && context.mysql) ||
+    (entry.engine === 'redis' && context.redis) ||
+    (entry.engine === 's3' && context.storage) ||
+    context.rejectionReasons.some((reason) => entry.words.test(reason));
+  const { files, production } = declaredStackFiles(tree);
+  const selected = selectedDockerfile(tree)?.path;
+  const found: string[] = [];
+  for (const file of files) {
+    // The production file's own reader also marks the services that a lighter production variant leaves out optional (Flagsmith).
+    const compose = composeServices(tree);
+    const services = (production && compose?.file === file ? compose.services : parseComposeServices(tree[file] ?? '')).filter((service) => !service.optional);
+    const relational = RELATIONAL_ENGINE_REGEXES.filter((regex) => services.some((service) => service.image !== null && regex.test(service.image)));
+    if (!production && relational.length > 1) continue;
+    const apps = services.filter(
+      (service) =>
+        service.image === null ||
+        (declaredEngineOf(service.image) === null && !INFRA_COMPOSE_IMAGE_REGEX.test(service.image) && !DATASTORE_TOOL_IMAGE_REGEX.test(service.image)),
+    );
+    for (const service of services) {
+      const entry = service.image ? declaredEngineOf(service.image) : null;
+      if (entry === null || explained(entry) || !apps.some((app) => namesService(app, service.name, production))) continue;
+      found.push(`${service.name} (${service.image}) in ${file}`);
+    }
+    if (production || selected === undefined) continue;
+    const app = services.find((service) => composeBuildDockerfile(file, service.build) === selected);
+    if (!app) continue;
+    for (const other of services) {
+      const dockerfile = composeBuildDockerfile(file, other.build);
+      if (other === app || dockerfile === null || dockerfile === selected) continue;
+      if (other.command !== null && isWorkerServiceCommand(other.name, other.command)) continue;
+      if (namesService(app, other.name, production)) found.push(`${other.name} (builds ${dockerfile}) in ${file}, which ${app.name} needs`);
+    }
+  }
+  for (const [file, content] of Object.entries(tree)) {
+    if (NON_STACK_COMPOSE_PATH_REGEX.test(file.slice(0, file.lastIndexOf('/') + 1)) || !content) continue;
+    if (HELM_CHART_REGEX.test(file)) {
+      for (const name of helmDependencies(content)) {
+        const entry = declaredEngineOf(name);
+        if (entry !== null && !explained(entry)) found.push(`${name} (a Helm dependency) in ${file}`);
+      }
+    } else if (ENV_SAMPLE_PATH_REGEX.test(file)) {
+      for (const [, key, value] of content.matchAll(SAMPLE_CONNECTION_REGEX)) {
+        // The rules' own PostgreSQL, MySQL, Redis and storage assessments already read the env samples.
+        const entry = declaredEngineOf(`${key} ${value!.split('://')[0]}`);
+        if (entry !== null && entry.engine === 'other' && !explained(entry)) found.push(`${key} in ${file}`);
+      }
+    }
+  }
+  if (found.length === 0) return { detected: false, dependency: 'none', reason: 'No unexplained declared service' };
+  return {
+    detected: true,
+    dependency: 'unexplained-declared-service',
+    reason: `Unconfirmed service: the repository declares ${found.join('; ')}. Deployz did not find how the application uses it.`,
+  };
 }

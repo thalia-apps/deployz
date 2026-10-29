@@ -1,0 +1,4057 @@
+{
+  "id": "new-128",
+  "commit": "eff7c6b735f6b20a4766745dc86c6bdc52bd9840",
+  "analyser": "ai@declared-v18",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "tsc && vite build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"sh\", \"-c\", \"export PATH=/data/node_modules/.bin:$PATH && prisma migrate deploy --schema=/data/packages/prisma/schema.prisma && exec concurrently -k -n web,worker \\\"cd /data/apps/web && exec next start\\\" \\\"cd /data/apps/worker && exec tsx worker.ts\\\"\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "SPACES_BUCKET_NAME",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ALLOW_INSECURE_TLS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ALLOW_INSECURE_TLS",
+            "read in packages/lib/safeFetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALLOW_PRIVATE_NETWORK_ACCESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ALLOW_PRIVATE_NETWORK_ACCESS",
+            "read in packages/lib/safeFetch.ts",
+            "read in packages/lib/ssrf.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ANTHROPIC_API_KEY",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ANTHROPIC_MODEL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares APPLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares APPLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares APPLE_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_KEY_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares APPLE_KEY_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares APPLE_PRIVATE_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "APPLE_TEAM_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares APPLE_TEAM_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ARCHIVE_SCRIPT_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/worker/worker.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ARCHIVE_TAKE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ARCHIVE_TAKE_COUNT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ATLASSIAN_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ATLASSIAN_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ATLASSIAN_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ATLASSIAN_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ATLASSIAN_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ATLASSIAN_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ATLASSIAN_SCOPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ATLASSIAN_SCOPE"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH0_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTH0_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH0_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AUTH0_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH0_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTH0_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH0_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTH0_ISSUER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHELIA_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTHELIA_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHELIA_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AUTHELIA_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHELIA_WELLKNOWN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTHELIA_WELLKNOWN_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHENTIK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTHENTIK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHENTIK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AUTHENTIK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHENTIK_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTHENTIK_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTHENTIK_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTHENTIK_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTOSCROLL_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AUTOSCROLL_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_B2C_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_AD_B2C_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_B2C_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AZURE_AD_B2C_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_B2C_PRIMARY_USER_FLOW",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_AD_B2C_PRIMARY_USER_FLOW"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_B2C_TENANT_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_AD_B2C_TENANT_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_AD_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AZURE_AD_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_AD_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_AD_TENANT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares AZURE_API_KEY",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_MODEL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AZURE_RESOURCE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares AZURE_RESOURCE_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BASE_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BATTLENET_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BATTLENET_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BATTLENET_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares BATTLENET_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BATTLENET_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BATTLENET_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BATTLENET_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BATTLENET_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BOX_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BOX_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BOX_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares BOX_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BOX_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BOX_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BROWSER_LIFECYCLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BROWSER_LIFECYCLE"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BROWSER_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BROWSER_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "BUNGIE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares BUNGIE_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BUNGIE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BUNGIE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BUNGIE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares BUNGIE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "BUNGIE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares BUNGIE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COGNITO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COGNITO_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "COGNITO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares COGNITO_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "COGNITO_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COGNITO_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COGNITO_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COGNITO_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "COINBASE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COINBASE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "COINBASE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares COINBASE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "COINBASE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares COINBASE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CUSTOM_OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares CUSTOM_OPENAI_BASE_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "CUSTOM_OPENAI_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares CUSTOM_OPENAI_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.sample declares DATABASE_URL",
+            "read in packages/prisma/schema.prisma"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DISABLE_BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISABLE_BROWSER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISABLE_NEW_SSO_USERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISABLE_NEW_SSO_USERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISCORD_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares DISCORD_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DISCORD_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DISCORD_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DROPBOX_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DROPBOX_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DROPBOX_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares DROPBOX_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DROPBOX_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DROPBOX_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUENDE_IDS6_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DUENDE_IDS6_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUENDE_IDS6_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares DUENDE_IDS6_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUENDE_IDS6_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DUENDE_IDS6_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "DUENDE_IDS6_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares DUENDE_IDS6_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "EMAIL_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares EMAIL_FROM",
+            "read in packages/lib/transporter.ts",
+            "read in packages/lib/schemaValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMAIL_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares EMAIL_SERVER",
+            "read in packages/lib/transporter.ts",
+            "read in packages/lib/schemaValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EVEONLINE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares EVEONLINE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "EVEONLINE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares EVEONLINE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "EVEONLINE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares EVEONLINE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEBOOK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FACEBOOK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEBOOK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FACEBOOK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEBOOK_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FACEBOOK_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEIT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FACEIT_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEIT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FACEIT_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FACEIT_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FACEIT_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORTYTWO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FORTYTWO_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORTYTWO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FORTYTWO_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORTYTWO_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FORTYTWO_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FOURSQUARE_APIVERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FOURSQUARE_APIVERSION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FOURSQUARE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FOURSQUARE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FOURSQUARE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FOURSQUARE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FOURSQUARE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FOURSQUARE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FRESHBOOKS_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FRESHBOOKS_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FRESHBOOKS_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FRESHBOOKS_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FRESHBOOKS_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FRESHBOOKS_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FUSIONAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FUSIONAUTH_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FUSIONAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares FUSIONAUTH_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "FUSIONAUTH_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FUSIONAUTH_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FUSIONAUTH_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FUSIONAUTH_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FUSIONAUTH_TENANT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares FUSIONAUTH_TENANT_ID"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITHUB_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITHUB_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITHUB_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITHUB_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_AUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITLAB_AUTH_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITLAB_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GITLAB_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GITLAB_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GITLAB_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GOOGLE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares GOOGLE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares GOOGLE_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HUBSPOT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares HUBSPOT_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HUBSPOT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares HUBSPOT_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "HUBSPOT_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares HUBSPOT_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IDS4_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IDS4_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "IDS4_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares IDS4_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "IDS4_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IDS4_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IDS4_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IDS4_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IGNORE_UNAUTHORIZED_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/lib/safeFetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNORE_URL_SIZE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IGNORE_URL_SIZE_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "IMPORT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares IMPORT_LIMIT",
+            "read in apps/web/pages/api/v1/migration/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INDEX_TAKE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares INDEX_TAKE_COUNT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "KAKAO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares KAKAO_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "KAKAO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares KAKAO_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "KAKAO_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares KAKAO_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "KEYCLOAK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares KEYCLOAK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "KEYCLOAK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares KEYCLOAK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "KEYCLOAK_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares KEYCLOAK_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "KEYCLOAK_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares KEYCLOAK_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LINE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares LINE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LINE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINKEDIN_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LINKEDIN_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINKEDIN_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares LINKEDIN_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "LINKEDIN_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares LINKEDIN_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILCHIMP_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAILCHIMP_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILCHIMP_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares MAILCHIMP_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILCHIMP_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAILCHIMP_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILRU_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAILRU_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILRU_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares MAILRU_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAILRU_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAILRU_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MAX_LINKS_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAX_LINKS_PER_USER",
+            "read in apps/web/pages/api/v1/archives/index.ts",
+            "read in packages/lib/verifyCapacity.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MAX_WORKERS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MEILI_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MEILI_HOST",
+            "read in packages/lib/meilisearchClient.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILI_MASTER_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.sample declares MEILI_MASTER_KEY",
+            "read in packages/lib/meilisearchClient.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "MEILI_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MEILI_TIMEOUT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONOLITH_CUSTOM_OPTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MONOLITH_CUSTOM_OPTIONS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONOLITH_MAX_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares MONOLITH_MAX_BUFFER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MONTHLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/payment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NAVER_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NAVER_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NAVER_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NAVER_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NAVER_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NAVER_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NETLIFY_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NETLIFY_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NETLIFY_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NETLIFY_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NETLIFY_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NETLIFY_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXTAUTH_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NEXTAUTH_SECRET"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "NEXTAUTH_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXTAUTH_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ADMIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ADMIN",
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in apps/web/pages/api/v1/worker/index.ts",
+            "read in apps/web/pages/api/v1/users/[id]/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_APPLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_APPLE_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ATLASSIAN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ATLASSIAN_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AUTH0_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_AUTH0_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AUTHELIA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_AUTHELIA_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AUTHENTIK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_AUTHENTIK_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AZURE_AD_B2C_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_AZURE_AD_B2C_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_AZURE_AD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_AZURE_AD_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BATTLENET_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_BATTLENET_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BOX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_BOX_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_BUNGIE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_BUNGIE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_COGNITO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_COGNITO_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_COINBASE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_COINBASE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_CREDENTIALS_ENABLED",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_CREDENTIALS_ENABLED",
+            "read in apps/web/pages/api/v1/logins/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DEMO",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DEMO",
+            "read in apps/web/pages/api/v1/collections/index.ts",
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in apps/web/pages/api/v1/links/index.ts",
+            "read in apps/web/pages/api/v1/highlights/index.ts",
+            "read in apps/web/pages/api/v1/migration/index.ts",
+            "read in apps/web/pages/api/v1/users/index.ts",
+            "read in apps/web/pages/api/v1/tokens/index.ts",
+            "read in apps/web/pages/api/v2/dashboard/index.ts",
+            "read in apps/web/pages/api/v1/rss/index.ts",
+            "read in apps/web/pages/api/v1/tags/index.ts",
+            "read in apps/web/pages/api/v1/links/archive/index.ts",
+            "read in apps/web/pages/api/v1/links/[id]/index.ts",
+            "read in apps/web/pages/api/v1/links/[id]/archive/index.ts",
+            "read in apps/web/pages/api/v1/users/[id]/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DEMO_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DEMO_PASSWORD",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DEMO_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DEMO_USERNAME",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISABLE_REGISTRATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DISABLE_REGISTRATION",
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in apps/web/pages/api/v1/logins/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_DISCORD_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DISCORD_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DROPBOX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DROPBOX_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_DUENDE_IDS6_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_DUENDE_IDS6_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_EMAIL_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_EMAIL_PROVIDER",
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in apps/web/pages/api/v1/logins/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_EVEONLINE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_EVEONLINE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FACEBOOK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FACEBOOK_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FACEIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FACEIT_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FORTYTWO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FORTYTWO_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FOURSQUARE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FOURSQUARE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FRESHBOOKS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FRESHBOOKS_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_FUSIONAUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_FUSIONAUTH_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_GITHUB_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_GITHUB_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_GITLAB_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_GITLAB_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_GOOGLE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_GOOGLE_ENABLED",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_HUBSPOT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_HUBSPOT_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_IDS4_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_IDS4_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_KAKAO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_KAKAO_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_KEYCLOAK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_KEYCLOAK_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_LINE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_LINE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_LINKEDIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_LINKEDIN_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAILCHIMP_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_MAILCHIMP_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAILRU_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_MAILRU_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_MAX_FILE_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_MAX_FILE_BUFFER",
+            "read in apps/web/pages/api/v1/archives/index.ts",
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in packages/lib/schemaValidation.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_MOBILE_APP_REDIRECT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_MOBILE_APP_REDIRECT_ENABLED",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_NAVER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_NAVER_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_NETLIFY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_NETLIFY_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_OIDC_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_OIDC_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_OKTA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_OKTA_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_OLLAMA_ENDPOINT_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_OLLAMA_ENDPOINT_URL",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_ONELOGIN_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ONELOGIN_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_OSSO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_OSSO_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_OSU_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_OSU_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_PATREON_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_PATREON_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_PINTEREST_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_PINTEREST_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_PIPEDRIVE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_PIPEDRIVE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_REDDIT_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_REDDIT_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_REQUIRE_CC",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in packages/lib/verifyCapacity.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_RSS_POLLING_INTERVAL_MINUTES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_RSS_POLLING_INTERVAL_MINUTES",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SALESFORCE_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_SALESFORCE_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SLACK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_SLACK_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_SPOTIFY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_SPOTIFY_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRAVA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_STRAVA_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_STRIPE_BILLING_PORTAL_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_SYNOLOGY_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_SYNOLOGY_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_TODOIST_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_TODOIST_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_TRIAL_PERIOD_DAYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in packages/lib/verifyCapacity.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_TWITCH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_TWITCH_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_UNITED_EFFECTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_UNITED_EFFECTS_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_USER_CONTENT_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_USER_CONTENT_DOMAIN",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_VK_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_VK_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WIKIMEDIA_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_WIKIMEDIA_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_WORDPRESS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_WORDPRESS_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_YANDEX_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_YANDEX_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZITADEL_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ZITADEL_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZOHO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ZOHO_ENABLED"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEXT_PUBLIC_ZOOM_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares NEXT_PUBLIC_ZOOM_ENABLED"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in packages/prisma/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OIDC_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_SCOPES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_SCOPES"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OIDC_WELLKNOWN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OIDC_WELLKNOWN_URL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OKTA_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OKTA_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OKTA_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OKTA_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OKTA_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OKTA_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OKTA_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OKTA_ISSUER"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OLLAMA_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OLLAMA_MODEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ONELOGIN_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ONELOGIN_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ONELOGIN_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ONELOGIN_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ONELOGIN_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ONELOGIN_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ONELOGIN_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ONELOGIN_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OPENAI_API_KEY",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OPENAI_MODEL"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OPENROUTER_API_KEY",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENROUTER_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OPENROUTER_MODEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSSO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OSSO_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSSO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OSSO_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSSO_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OSSO_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSSO_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OSSO_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSU_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OSU_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSU_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares OSU_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "OSU_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares OSU_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PAGINATION_TAKE_COUNT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PAGINATION_TAKE_COUNT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PATREON_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PATREON_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PATREON_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PATREON_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PATREON_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PATREON_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PDF_MARGIN_BOTTOM",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PDF_MARGIN_BOTTOM"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PDF_MARGIN_TOP",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PDF_MARGIN_TOP"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PDF_MAX_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PDF_MAX_BUFFER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PERPLEXITY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PERPLEXITY_API_KEY",
+            "read in apps/web/pages/api/v1/config/index.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PERPLEXITY_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PERPLEXITY_MODEL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PINTEREST_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PINTEREST_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PINTEREST_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PINTEREST_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PINTEREST_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PINTEREST_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PIPEDRIVE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PIPEDRIVE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PIPEDRIVE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PIPEDRIVE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "PIPEDRIVE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PIPEDRIVE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PLAYWRIGHT_WS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PLAYWRIGHT_WS_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares POSTGRES_PASSWORD"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PREVIEW_MAX_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PREVIEW_MAX_BUFFER",
+            "read in packages/lib/generatePreview.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PROXY",
+            "read in packages/lib/safeFetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_BYPASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PROXY_BYPASS"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PROXY_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares PROXY_PASSWORD",
+            "read in packages/lib/safeFetch.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares PROXY_USERNAME",
+            "read in packages/lib/safeFetch.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "READABILITY_MAX_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares READABILITY_MAX_BUFFER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDDIT_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares REDDIT_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDDIT_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares REDDIT_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "REDDIT_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares REDDIT_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "RSS_SUBSCRIPTION_LIMIT_PER_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares RSS_SUBSCRIPTION_LIMIT_PER_USER",
+            "read in apps/web/pages/api/v1/rss/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SALESFORCE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SALESFORCE_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SALESFORCE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SALESFORCE_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SALESFORCE_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SALESFORCE_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SCREENSHOT_MAX_BUFFER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SCREENSHOT_MAX_BUFFER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SEARCH_FILTER_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SEARCH_FILTER_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SLACK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SLACK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SLACK_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SLACK_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SPACES_BUCKET_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.sample declares SPACES_BUCKET_NAME",
+            "read in packages/filesystem/fileExists.ts",
+            "read in packages/filesystem/createFile.ts",
+            "read in packages/filesystem/readFile.ts",
+            "read in packages/filesystem/removeFile.ts",
+            "read in packages/filesystem/removeFolder.ts",
+            "read in packages/filesystem/moveFile.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPACES_ENDPOINT",
+          "required": true,
+          "secret": false,
+          "source": [
+            "S3 is used only when all of these are set; otherwise files go to the container disk",
+            ".env.sample declares SPACES_ENDPOINT",
+            "read in packages/filesystem/s3Client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPACES_FORCE_PATH_STYLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SPACES_FORCE_PATH_STYLE",
+            "read in packages/filesystem/s3Client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPACES_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "S3 is used only when all of these are set; otherwise files go to the container disk",
+            ".env.sample declares SPACES_KEY",
+            "read in packages/filesystem/s3Client.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPACES_REGION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "S3 is used only when all of these are set; otherwise files go to the container disk",
+            ".env.sample declares SPACES_REGION",
+            "read in packages/filesystem/s3Client.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPACES_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "S3 is used only when all of these are set; otherwise files go to the container disk",
+            ".env.sample declares SPACES_SECRET",
+            "read in packages/filesystem/s3Client.ts"
+          ],
+          "purpose": "external_credential",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SPOTIFY_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SPOTIFY_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SPOTIFY_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SPOTIFY_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SPOTIFY_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SPOTIFY_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "STORAGE_FOLDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares STORAGE_FOLDER",
+            "read in packages/filesystem/createFolder.ts",
+            "read in packages/filesystem/fileExists.ts",
+            "read in packages/filesystem/createFile.ts",
+            "read in packages/filesystem/readFile.ts",
+            "read in packages/filesystem/removeFile.ts",
+            "read in packages/filesystem/removeFolder.ts",
+            "read in packages/filesystem/moveFile.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRAVA_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares STRAVA_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRAVA_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares STRAVA_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRAVA_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares STRAVA_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "STRIPE_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in apps/web/pages/api/v1/config/index.ts",
+            "read in apps/web/pages/api/v1/payment/index.ts",
+            "read in apps/web/pages/api/v1/users/[id]/index.ts",
+            "read in packages/lib/verifyCapacity.ts",
+            "stripe requires STRIPE_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SYNOLOGY_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SYNOLOGY_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SYNOLOGY_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares SYNOLOGY_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SYNOLOGY_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SYNOLOGY_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SYNOLOGY_WELLKNOWN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares SYNOLOGY_WELLKNOWN_URL"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TEXT_CONTENT_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares TEXT_CONTENT_LIMIT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TODOIST_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares TODOIST_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TODOIST_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares TODOIST_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TODOIST_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares TODOIST_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITCH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares TWITCH_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITCH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares TWITCH_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "TWITCH_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares TWITCH_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "UNITED_EFFECTS_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares UNITED_EFFECTS_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "UNITED_EFFECTS_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares UNITED_EFFECTS_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "UNITED_EFFECTS_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares UNITED_EFFECTS_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "UNITED_EFFECTS_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares UNITED_EFFECTS_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "VK_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VK_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "VK_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares VK_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "VK_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares VK_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WIKIMEDIA_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares WIKIMEDIA_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "WIKIMEDIA_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares WIKIMEDIA_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "WIKIMEDIA_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares WIKIMEDIA_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "WORDPRESS_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares WORDPRESS_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "WORDPRESS_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares WORDPRESS_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "WORDPRESS_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares WORDPRESS_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "YANDEX_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares YANDEX_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "YANDEX_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares YANDEX_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "YANDEX_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares YANDEX_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "YEARLY_PRICE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in apps/web/pages/api/v1/payment/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ZITADEL_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZITADEL_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZITADEL_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ZITADEL_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZITADEL_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZITADEL_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZITADEL_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZITADEL_ISSUER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOHO_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZOHO_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOHO_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ZOHO_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOHO_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZOHO_CUSTOM_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOOM_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZOOM_CLIENT_ID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOOM_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.sample declares ZOOM_CLIENT_SECRET"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "ZOOM_CUSTOM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.sample declares ZOOM_CUSTOM_NAME"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "smtp",
+      "sentry"
+    ],
+    "unsupported": [
+      "Unconfirmed service: the repository declares meilisearch (getmeili/meilisearch:v1.13.3) in docker-compose.yml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares meilisearch (getmeili/meilisearch:v1.13.3) in docker-compose.yml. Deployz did not find how the application uses it."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: MEILI_MASTER_KEY, SPACES_ENDPOINT, SPACES_KEY, SPACES_REGION, SPACES_SECRET. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 4,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04990788,
+        "promptTokens": 10193,
+        "completionTokens": 482
+      },
+      "latencyMs": 7285
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [
+          "packages/lib/meilisearchClient.ts:1 names the service or its engine"
+        ],
+        "subject": "unexplained-declared-service",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7289,
+    "questions": 1,
+    "generatedAt": "2026-10-29T06:00:03.209Z",
+    "failedChecks": 1,
+    "promptVersion": 18
+  }
+}

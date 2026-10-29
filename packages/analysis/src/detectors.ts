@@ -294,10 +294,8 @@ function posixJoin(...parts: string[]): string {
   return segments.join('/');
 }
 
-export function composeServices(tree: FileTree): { file: string; services: ComposeService[] } | null {
-  const path = listProductionComposeFiles(tree)[0];
-  if (path === undefined) return null;
-  const content = tree[path] ?? '';
+/** The services of one Compose file. A service another waits on with `service_completed_successfully` is a one-shot job and is left out. */
+export function parseComposeServices(content: string): ComposeService[] {
   const oneShot = new Set<string>();
   for (const match of content.matchAll(/^\s+([a-zA-Z0-9_-]+):\s*\r?\n\s+condition:\s*service_completed_successfully/gm)) {
     if (match[1]) oneShot.add(match[1]);
@@ -378,6 +376,14 @@ export function composeServices(tree: FileTree): { file: string; services: Compo
     if (inPorts && listItem?.[1]) current.ports.push(listItem[1]);
     if (inCommand && listItem?.[1] !== undefined) current.command = `${current.command ?? ''} ${listItem[1]}`.trim();
   }
+  return services;
+}
+
+export function composeServices(tree: FileTree): { file: string; services: ComposeService[] } | null {
+  const path = listProductionComposeFiles(tree)[0];
+  if (path === undefined) return null;
+  const content = tree[path] ?? '';
+  const services = parseComposeServices(content);
   // A lighter stand-alone production variant next to the file (`docker-compose.flags-only.yml`) that
   // runs the first application service with a subset of the services makes every service it leaves
   // out optional (Flagsmith). An overlay merged with `-f` (`docker-compose.s3.yml`) defines its

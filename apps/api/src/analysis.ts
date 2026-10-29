@@ -494,7 +494,16 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Stored v75 rows can call a Neo4j or MongoDB app, a framework monorepo or a
 // prebuilt-binary image deployable. Integration note: Rounds 4 to 6 may also
 // bump this constant; renumber at consolidated integration.
-export const ANALYSIS_VERSION = 76;
+// Version 77 (AI prompt v18): a datastore that the repository's own stack
+// (the production Compose file, or with none the shallowest development
+// stack, a Helm chart dependency, an env sample connection setting) wires to
+// the app, and that no rules finding or rejection explains, is an open item
+// (`unconfirmed-declared-service`, outcome 2), as is a second app service
+// that the selected app needs in a development stack. The AI asks one closed
+// question; a checked "required" with a cited production line of an engine
+// Deployz does not provide is NOT_DEPLOYABLE. Stored v76 rows can call Huly,
+// zammad and mem0 deployable.
+export const ANALYSIS_VERSION = 77;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

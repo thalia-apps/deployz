@@ -71,6 +71,7 @@ import {
   checkRequiredConfigFileMount,
   checkMultiProcessImage,
   checkRequiredThirdPartyService,
+  checkUnexplainedDeclaredServices,
   listIgnoredDeploymentFiles,
 } from './rejection.js';
 
@@ -365,7 +366,9 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
 
   // The rejections always read the rules' own assessment: a resource override never adds or removes one.
   const dismissed = new Set(overrides.dismissedRejections ?? []);
+  const checked: RejectionFinding[] = [];
   const reject = (finding: RejectionFinding): void => {
+    checked.push(finding);
     if (!dismissed.has(finding.reason)) rejections.push(finding);
   };
   reject(checkRedisUnsupported(tree, assessedRedis));
@@ -373,6 +376,15 @@ export function analyseRepo(tree: FileTree, overrides: ResourceOverrides = {}): 
   for (const check of REJECTION_CHECKS) {
     reject(check(tree));
   }
+  reject(
+    checkUnexplainedDeclaredServices(tree, {
+      postgres: assessedPostgres.evidence.length > 0,
+      mysql: assessedMysql.detected,
+      redis: assessedRedis.required,
+      storage: findings.some((finding) => finding.detector === 's3' && finding.detected),
+      rejectionReasons: checked.filter((finding) => finding.detected).map((finding) => finding.reason),
+    }),
+  );
 
   const metadata = buildMetadata(findings, redis, postgres);
 
