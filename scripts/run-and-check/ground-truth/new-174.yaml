@@ -1,0 +1,138 @@
+id: new-174
+repository: mem0ai/mem0
+commit: 26cdefb46600c0fa5953c4b5ee5003c125539fc4
+summary: >
+  The repository root is the mem0ai Python and TypeScript library (pyproject.toml, mem0/, mem0-ts/, cli/): an SDK, not an
+  application. The repository also ships a self-hosted REST server in server/ (FastAPI, port 8000) with its own Dockerfile,
+  Alembic migrations, JWT auth, and a separate Next.js dashboard (server/dashboard, port 3000). The server stores memories
+  in PostgreSQL with pgvector (default database "postgres") and users and API keys in a second database (mem0_app) on the
+  same PostgreSQL server. It also keeps a SQLite history file at /app/history/history.db and needs an LLM and embedder key
+  (OpenAI by default). There is no openmemory/ directory at this commit.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The repo root is a library, so NOT_DEPLOYABLE is correct for a root-level deployment. The server/ subdirectory is a
+    real one-image web service on one port that fits the MVP (PostgreSQL with pgvector on RDS, no Redis, no S3), and
+    DEPLOYABLE_WITH_CHANGES is defensible if the tool follows server/: it needs the Dockerfile context server/, a start
+    command that runs `alembic upgrade head` before uvicorn without --reload, a mem0_app database, and the pgvector
+    extension.
+dockerfile:
+  accept: [server/Dockerfile]
+  reject:
+    - {path: server/dev.Dockerfile, reason: "development image: poetry, editable install, --reload, used by server/docker-compose.yaml"}
+    - {path: server/dashboard/Dockerfile, reason: "separate Next.js dashboard image (port 3000), optional"}
+  target: null
+  context: server
+  evidence:
+    - {path: server/Dockerfile, line: 7, quote: "RUN pip install --no-cache-dir -r requirements.txt"}
+    - {path: server/Dockerfile, line: 15, quote: "CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\", \"--reload\"]"}
+    - {path: server/docker-compose.yaml, line: 7, quote: "dockerfile: server/dev.Dockerfile"}
+    - {path: server/requirements.txt, line: 4, quote: "mem0ai>=0.1.48"}
+runtime: {accept: [python]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: server/Dockerfile, line: 11, quote: "EXPOSE 8000"}
+    - {path: server/Dockerfile, line: 15, quote: "\"--port\", \"8000\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/Dockerfile, line: 15, quote: "\"--host\", \"0.0.0.0\""}
+startCommand:
+  source: explicit
+  accept: ["uvicorn main:app --host 0.0.0.0 --port 8000", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
+  evidence:
+    - {path: server/Dockerfile, line: 15, quote: "CMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\", \"--reload\"]"}
+    - {path: server/docker-compose.yaml, line: 21, quote: "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"}
+healthPath:
+  # No dedicated API health route was found in server/main.py or server/routers; "/api/health" is only listed in a request-log skip set (and is the dashboard route).
+  # FastAPI serves /docs and /openapi.json without auth.
+  accept: ["/docs", "/openapi.json"]
+  evidence:
+    - {path: server/main.py, line: 59, quote: "SKIPPED_REQUEST_LOG_PATHS = {\"/api/health\", \"/docs\", \"/redoc\", \"/openapi.json\"}"}
+    - {path: server/main.py, line: 146, quote: "app = FastAPI("}
+    - {path: server/main.py, line: 557, quote: "@app.get(\"/\", summary=\"Redirect to the OpenAPI documentation\", include_in_schema=False)"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_COLLECTION_NAME, APP_DB_NAME]
+  # Two databases on one PostgreSQL server: POSTGRES_DB (default "postgres") holds the pgvector memories table, APP_DB_NAME (default mem0_app) holds users and API keys.
+  # server/init-db.sh creates mem0_app in the compose stack; the Docker image does not. The pgvector extension must be allowed (RDS PostgreSQL supports it).
+  evidence:
+    - {path: server/main.py, line: 123, quote: "\"provider\": \"pgvector\","}
+    - {path: server/main.py, line: 108, quote: "POSTGRES_HOST = os.environ.get(\"POSTGRES_HOST\", \"postgres\")"}
+    - {path: server/db.py, line: 12, quote: "db = os.environ.get(\"APP_DB_NAME\", \"mem0_app\")"}
+    - {path: server/init-db.sh, line: 8, quote: "WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mem0_app')\\gexec"}
+    - {path: mem0/vector_stores/pgvector.py, line: 268, quote: "cur.execute(\"CREATE EXTENSION IF NOT EXISTS vector\")"}
+migrations:
+  mode: command
+  accept: ["alembic upgrade head"]
+  # The README says the API runs alembic on startup, but the Dockerfile CMD does not; only the compose command does.
+  evidence:
+    - {path: server/docker-compose.yaml, line: 21, quote: "alembic upgrade head"}
+    - {path: server/README.md, line: 218, quote: "The API runs `alembic upgrade head` on startup, which creates empty tables that"}
+    - {path: server/alembic/versions/001_create_users_and_api_keys.py, line: 12, quote: "from alembic import op"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/app/history]
+  s3: none
+  s3SelectBy: {}
+  # The SQLite history file (edit history of memories) is lost on task restart; memories themselves are in PostgreSQL.
+  evidence:
+    - {path: server/main.py, line: 116, quote: "HISTORY_DB_PATH = os.environ.get(\"HISTORY_DB_PATH\", \"/app/history/history.db\")"}
+    - {path: mem0/memory/storage.py, line: 14, quote: "self.connection = sqlite3.connect(self.db_path, check_same_thread=False)"}
+env:
+  required:
+    - {name: JWT_SECRET, secret: true, buildTime: false, note: "the server raises at import time without it unless AUTH_DISABLED=true"}
+    - {name: POSTGRES_HOST, secret: false, buildTime: false, note: "default is the compose service name postgres"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "default postgres"}
+    - {name: OPENAI_API_KEY, secret: true, buildTime: false, note: "default LLM and embedder are OpenAI"}
+  optional: [ADMIN_API_KEY, AUTH_DISABLED, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_COLLECTION_NAME, APP_DB_NAME, HISTORY_DB_PATH, DASHBOARD_URL, MEM0_TELEMETRY, MEM0_DEFAULT_LLM_MODEL, MEM0_DEFAULT_EMBEDDER_MODEL]
+  buildTime: []
+  evidence:
+    - {path: server/main.py, line: 90, quote: "if not AUTH_DISABLED and not JWT_SECRET:"}
+    - {path: server/main.py, line: 115, quote: "OPENAI_API_KEY = os.environ.get(\"OPENAI_API_KEY\")"}
+    - {path: server/main.py, line: 160, quote: "DASHBOARD_URL = os.environ.get(\"DASHBOARD_URL\", \"http://localhost:3000\")"}
+blockers:
+  expected:
+    - "The repository root is the mem0 SDK (library); a root-level deploy has no application. The deployable service is server/"
+    - "server/Dockerfile runs uvicorn with --reload and does not run `alembic upgrade head` or create the mem0_app database; the start command and database setup need a change"
+  mustNot:
+    - "The pgvector store must not be treated as a separate vector database server: it is an extension on the PostgreSQL database"
+    - "The dashboard (server/dashboard, port 3000) must not be required: the REST API works without it"
+    - "Redis, S3 and a worker must not be reported as required"
+    - "The many vector store, LLM and graph providers in mem0/ (Qdrant, Neo4j, Chroma and others) must not be reported as required: the server config uses pgvector"
+vendorQuestions:
+  legitimate:
+    - "Is the target the server/ REST API (not the SDK)? Which LLM and embedder provider and key will it use?"
+    - "Should AUTH be on with ADMIN_API_KEY or JWT_SECRET, or is AUTH_DISABLED=true acceptable?"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Which database? (PostgreSQL with pgvector)"
+    - "Is Redis needed? (no)"
+traps:
+  - "The repo root has pyproject.toml, mem0/ and mem0-ts/ and no Dockerfile; it is a library, and the only Dockerfiles are under server/"
+  - "server/docker-compose.yaml builds server/dev.Dockerfile with context .. and mounts the source (docker-compose.yaml:5-16); server/Dockerfile instead installs mem0ai from PyPI (requirements.txt:4)"
+  - "The compose stack publishes the API on host port 8888 and the dashboard on 3000, but the container port is 8000 (docker-compose.yaml:9)"
+  - "Two PostgreSQL databases are used on one server (vector store in postgres, app tables in mem0_app)"
+  - "The server crashes at import without JWT_SECRET unless AUTH_DISABLED=true (main.py:90-94)"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES] kept. The repository root is the mem0ai SDK (library), so NOT_DEPLOYABLE is the primary outcome for the root. server/ is a real one-image service; its CMD has --reload and no migration, and the mem0_app database must exist, so DEPLOYABLE_WITH_CHANGES is defensible. Note: a start command setting could also fix --reload, and APP_DB_NAME could point to the same database as POSTGRES_DB, so the server alone is close to DEPLOYABLE.", evidence: "server/Dockerfile:15; server/db.py:12; server/main.py:104-127"}
+  - {field: healthPath, change: "added evidence: / redirects to the OpenAPI docs; no /health route exists", evidence: "server/main.py:557"}
+  - {field: database/redis/storage/workers/port/env, change: "none: confirmed", evidence: "server/main.py:90,108,116,123; server/db.py:12; server/Dockerfile:11"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

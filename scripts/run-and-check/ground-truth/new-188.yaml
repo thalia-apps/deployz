@@ -1,0 +1,140 @@
+id: new-188
+repository: payloadcms/payload
+commit: ae600cf5a6a8aa29a7f88ec6141cb755bf6c0bac
+summary: >
+  The Payload repository is the pnpm/turbo source monorepo of the Payload CMS framework (payload, db adapters, the
+  Next.js admin integration, plugins, docs, examples, templates, and a large test suite). The root has no Dockerfile.
+  The root `pnpm dev` runs test/dev.ts, a development harness that picks a test config and defaults to MongoDB. Each
+  directory under templates/ (blank, website, ecommerce, with-postgres, ...) is a separate starter project with its own
+  package.json (pinned npm versions), Dockerfile and docker-compose.yml. The template Dockerfiles are the Next.js
+  standalone pattern (port 3000, node server.js) and ask the project to set output: 'standalone', which at least
+  templates/with-postgres/next.config.ts does not. Most templates default to MongoDB.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    From the root, the repository is a framework monorepo (private workspace "payload-monorepo", no root Dockerfile,
+    root dev script is a test harness), so NOT_DEPLOYABLE is the faithful answer. A template subfolder is not a fair
+    DEPLOYABLE_WITH_CHANGES: templates/with-postgres has no lockfile, so its Dockerfile stops with "Lockfile not found."
+    (Dockerfile:18), next.config.ts has no output: 'standalone', the Dockerfile path and context must point to the
+    template directory, and uploads need object storage. These are several non-catalogue changes to a different
+    project than the repository root.
+dockerfile:
+  accept: []
+  reject:
+    - {path: templates/with-postgres/Dockerfile, reason: "template starter, not the repository root; stops with 'Lockfile not found.' because the template has no lockfile, and needs output: 'standalone', which next.config.ts does not set"}
+    - {path: templates/blank/Dockerfile, reason: "template starter with MongoDB default (docker-compose mongo service); not selected from the root"}
+    - {path: templates/website/Dockerfile, reason: "website template, MongoDB default"}
+    - {path: templates/with-vercel-mongodb/Dockerfile, reason: "Vercel + MongoDB template"}
+    - {path: templates/with-vercel-postgres/Dockerfile, reason: "Vercel Postgres/Blob template; needs Vercel storage"}
+    - {path: templates/blank-tanstack/Dockerfile, reason: "TanStack Start template"}
+    - {path: templates/_template/Dockerfile, reason: "internal template source used to generate the other templates"}
+    - {path: examples/localization/Dockerfile, reason: "example project, MongoDB default"}
+    - {path: examples/astro/payload/Dockerfile, reason: "example project, MongoDB default"}
+    - {path: examples/remix/payload/Dockerfile, reason: "example project, MongoDB default"}
+    - {path: examples/remix/website/Dockerfile, reason: "example frontend project"}
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 2, quote: "\"name\": \"payload-monorepo\","}
+    - {path: package.json, line: 4, quote: "\"private\": true,"}
+    - {path: package.json, line: 76, quote: "\"dev\": \"cross-env NODE_OPTIONS=\\\"--no-deprecation --max-old-space-size=16384\\\" tsx ./test/dev.ts\","}
+    - {path: templates/with-postgres/Dockerfile, line: 18, quote: "else echo \"Lockfile not found.\" && exit 1; \\"}
+    - {path: templates/with-postgres/Dockerfile, line: 1, quote: "# To use this Dockerfile, you have to set `output: 'standalone'` in your next.config.mjs file."}
+    - {path: templates/with-postgres/Dockerfile, line: 60, quote: "COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./"}
+    - {path: templates/with-postgres/package.json, line: 22, quote: "\"@payloadcms/db-postgres\": \"3.82.1\","}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: templates/with-postgres/Dockerfile, line: 65, quote: "EXPOSE 3000"}
+    - {path: templates/with-postgres/Dockerfile, line: 67, quote: "ENV PORT 3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: templates/with-postgres/Dockerfile, line: 71, quote: "CMD HOSTNAME=\"0.0.0.0\" node server.js"}
+startCommand:
+  source: explicit
+  accept: ["node server.js", "HOSTNAME=\"0.0.0.0\" node server.js"]
+  evidence:
+    - {path: templates/with-postgres/Dockerfile, line: 71, quote: "CMD HOSTNAME=\"0.0.0.0\" node server.js"}
+    - {path: templates/with-postgres/package.json, line: 16, quote: "\"start\": \"cross-env NODE_OPTIONS=--no-deprecation next start\","}
+healthPath:
+  # Payload has no dedicated health route; the admin login page and the REST API root respond without credentials.
+  accept: ["/", "/admin/login", "/api/access"]
+  evidence:
+    - {path: templates/with-postgres/src/payload.config.ts, line: 21, quote: "collections: [Users, Media],"}
+database:
+  status: required
+  engines: [postgres, mongodb, sqlite]
+  default: mongodb
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: postgres}
+  connectionVars: [DATABASE_URL]
+  # The root dev harness defaults to MongoDB; templates/with-postgres uses the PostgreSQL adapter.
+  evidence:
+    - {path: templates/with-postgres/src/payload.config.ts, line: 27, quote: "db: postgresAdapter({"}
+    - {path: templates/with-postgres/src/payload.config.ts, line: 29, quote: "connectionString: process.env.DATABASE_URL || '',"}
+    - {path: templates/blank/docker-compose.yml, line: 21, quote: "image: mongo:latest"}
+    - {path: package.json, line: 81, quote: "\"dev:postgres\": \"cross-env PAYLOAD_DATABASE=postgres pnpm runts ./test/dev.ts\","}
+migrations:
+  mode: command
+  accept: ["payload migrate"]
+  evidence:
+    - {path: templates/with-postgres/package.json, line: 9, quote: "\"ci\": \"payload migrate && pnpm build\","}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/app/media]
+  s3: none
+  s3SelectBy: {}
+  # The Media collection uses local disk uploads; an S3 storage plugin (@payloadcms/storage-s3) is an addition, not in the template.
+  evidence:
+    - {path: templates/with-postgres/src/collections/Media.ts, line: 15, quote: "upload: true,"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL connection string"}
+    - {name: PAYLOAD_SECRET, secret: true, buildTime: false, note: "empty string default; Payload needs a secret"}
+  optional: [PORT]
+  buildTime: []
+  evidence:
+    - {path: templates/with-postgres/src/payload.config.ts, line: 23, quote: "secret: process.env.PAYLOAD_SECRET || '',"}
+blockers:
+  expected:
+    - "From the root there is no application: the repository is a framework monorepo with no root Dockerfile; only templates/* and examples/* subprojects have Dockerfiles"
+    - "A template Dockerfile needs output: 'standalone' in next.config and a template directory as the build context; no template has a lockfile, so the Dockerfile fails as is"
+  mustNot:
+    - "MongoDB in templates/blank/docker-compose.yml must not be reported as required for every template: templates/with-postgres uses PostgreSQL"
+    - "The root test/dev.ts dev server must not be treated as the production start command"
+    - "Redis must not be reported: no template uses it"
+vendorQuestions:
+  legitimate:
+    - "Which template or project directory in this repo should be deployed (for example templates/with-postgres)? The root is the framework source"
+    - "Where should uploaded media be stored? Local disk is lost on restart; object storage needs a storage plugin"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Is Redis needed? (no)"
+traps:
+  - "templates/ and examples/ hold more than ten Dockerfiles; most pair with a MongoDB service in docker-compose.yml"
+  - "template Dockerfiles say to set output: 'standalone' in next.config.mjs, but templates use next.config.ts (templates/with-postgres/Dockerfile:1)"
+  - "Root `pnpm dev` runs test/dev.ts, a test harness that drops the test database (PAYLOAD_DROP_DATABASE default true, test/dev.ts:153)"
+  - "templates/with-postgres/package.json pins payload 3.82.1 from npm, so a build context at the repo root would not use the workspace source"
+  - "docker-compose.yml in templates runs `pnpm dev` with the source mounted, a dev setup"
+openQuestions:
+  - "Whether a vendor connecting this repo is expected to pick a template; the brief treats the root as the unit, so NOT_DEPLOYABLE is primary"
+  - "The next.config.ts of templates/with-postgres was not read in full; the absence of a standalone setting comes from a repository-wide search"
+crossReview:
+  - {field: outcome.accept, change: "removed DEPLOYABLE_WITH_CHANGES; kept NOT_DEPLOYABLE only", evidence: "templates/with-postgres has no yarn.lock, package-lock.json or pnpm-lock.yaml (no template has one) and Dockerfile:18 exits when none exists; next.config.ts:9-29 has no output standalone, which Dockerfile:1 requires"}
+  - {field: dockerfile.accept, change: "emptied (was templates/with-postgres/Dockerfile); context set to root; added Dockerfile:18 evidence", evidence: "no Dockerfile at the root; the template Dockerfile is not buildable without a lockfile"}
+  - {field: "database, redis, port, start, migrations", change: "none: confirmed for templates/with-postgres", evidence: "payload.config.ts:27-29 postgresAdapter with DATABASE_URL; Dockerfile:65 EXPOSE 3000, :71 node server.js; package.json:9 payload migrate"}
+  - {field: all, change: verified, evidence: "14 citations checked"}

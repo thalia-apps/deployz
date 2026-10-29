@@ -1,0 +1,150 @@
+id: new-178
+repository: ToolJet/ToolJet
+commit: 338ac6f1e851ee5c737069fab36e918a4524cdcd
+summary: >
+  ToolJet is a low-code internal-tool builder: a NestJS (Node) server that also serves the built React frontend
+  (SERVE_CLIENT), plus a plugin bundle. docker/ce-production.Dockerfile builds plugins, frontend and server from source
+  in a multi-stage build and bundles a local Redis (bound to 127.0.0.1 and started by the entrypoint). The image has
+  no CMD: the entrypoint waits for PostgreSQL, runs db:setup:prod and then executes the given command, which the
+  compose file sets to npm run start:prod. The server listens on PORT (default 3000), health at /api/health. It needs
+  two PostgreSQL databases on the same server (the app database and the ToolJet Database, TOOLJET_DB). The ToolJet
+  Database feature is served through a separate PostgREST process (postgrest/postgrest image in the compose file),
+  reached with PGRST_HOST. Other docker files are EE, cloud, preview or dev variants.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    The community-edition Dockerfile builds from source and runs one web service on one HTTP port with PostgreSQL 16
+    and (bundled or Valkey) Redis; the migration runs in the entrypoint. The image has no default start command, so the
+    start command must be set to npm run start:prod (or a CMD added). The ToolJet Database feature needs a PostgREST
+    sidecar that Deployz does not run, so that feature is unavailable; the app builder, data sources and users still
+    work. DEPLOYABLE_WITH_CHANGES is the primary answer because of the missing CMD and the non-default Dockerfile path.
+dockerfile:
+  accept: [docker/ce-production.Dockerfile]
+  reject:
+    - {path: docker/ce-preview.Dockerfile, reason: "preview image for pull requests, not the production image"}
+    - {path: docker/LTS/ee/ee-production.Dockerfile, reason: "enterprise edition image"}
+    - {path: docker/LTS/cloud/cloud-production.Dockerfile, reason: "ToolJet Cloud image"}
+    - {path: docker/client.Dockerfile, reason: "frontend-only image"}
+    - {path: docker/client.Dockerfile.dev, reason: "development image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/ce-production.Dockerfile, line: 29, quote: "RUN npm --prefix frontend run build --production"}
+    - {path: docker/ce-production.Dockerfile, line: 41, quote: "RUN npm --prefix server run build"}
+    - {path: docker/ce-production.Dockerfile, line: 141, quote: "ENTRYPOINT [\"/usr/bin/tini\", \"-g\", \"--\", \"./server/entrypoint.sh\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: server/src/main.ts, line: 162, quote: "const port = parseInt(process.env.PORT) || 3000;"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/src/main.ts, line: 161, quote: "const listen_addr = process.env.LISTEN_ADDR || '::';"}
+startCommand:
+  source: explicit
+  accept: ["npm run start:prod", "npm --prefix server run start:prod"]
+  # The image has no CMD; entrypoint.sh ends with exec "$@" so a command must be given (deploy/docker/docker-compose.yaml sets npm run start:prod).
+  evidence:
+    - {path: deploy/docker/docker-compose.yaml, line: 16, quote: "command: npm run start:prod"}
+    - {path: package.json, line: 44, quote: "\"start:prod\": \"exec npm --prefix server run start:prod\","}
+    - {path: server/package.json, line: 16, quote: "\"start:prod\": \"NODE_ENV=production exec node dist/src/main\","}
+    - {path: docker/ce-entrypoint.sh, line: 43, quote: "exec \"$@\""}
+healthPath:
+  accept: ["/api/health", "/health"]
+  evidence:
+    - {path: server/src/modules/app/controller.ts, line: 22, quote: "@Get(['/health', '/api/health'])"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [PG_HOST, PG_DB, PG_USER, PG_PASS, DATABASE_URL, TOOLJET_DB, TOOLJET_DB_HOST, TOOLJET_DB_USER, TOOLJET_DB_PASS]
+  # Two databases: the app database and the ToolJet Database (TOOLJET_DB); both can sit on one PostgreSQL server.
+  evidence:
+    - {path: .env.example, line: 42, quote: "PG_HOST=<db host>"}
+    - {path: .env.example, line: 52, quote: "TOOLJET_DB="}
+    - {path: server/scripts/create-database.ts, line: 41, quote: "await createTooljetDb(envVars, envVars.TOOLJET_DB);"}
+    - {path: server/package.json, line: 44, quote: "\"db:setup:prod\": \"npm run db:create:prod && npm run db:migrate:prod\","}
+migrations:
+  mode: startup
+  accept: ["npm run db:setup:prod", "docker/ce-entrypoint.sh"]
+  evidence:
+    - {path: docker/ce-entrypoint.sh, line: 15, quote: "SETUP_CMD='npm run db:setup:prod'"}
+    - {path: server/package.json, line: 44, quote: "\"db:setup:prod\": \"npm run db:create:prod && npm run db:migrate:prod\","}
+redis:
+  status: required
+  selectBy: {}
+  # The image bundles a Redis bound to 127.0.0.1 that the entrypoint starts; REDIS_HOST/REDIS_PORT point to an external one.
+  evidence:
+    - {path: docker/ce-production.Dockerfile, line: 75, quote: "&& apt-get update && apt-get install -y redis-server"}
+    - {path: docker/ce-entrypoint.sh, line: 6, quote: "redis-server /app/redis.conf"}
+    - {path: .env.example, line: 76, quote: "REDIS_HOST=localhost"}
+workers:
+  status: embedded
+  commands: []
+  # WORKER=true turns on BullMQ job processing in the same server process.
+  evidence:
+    - {path: .env.example, line: 67, quote: "WORKER="}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: TOOLJET_HOST, secret: false, buildTime: false, note: "public URL of the deployment"}
+    - {name: LOCKBOX_MASTER_KEY, secret: true, buildTime: false, note: "encryption key for stored credentials"}
+    - {name: SECRET_KEY_BASE, secret: true, buildTime: false, note: "session secret"}
+    - {name: PG_HOST, secret: false, buildTime: false, note: "app database host (or DATABASE_URL); with PG_DB, PG_USER, PG_PASS"}
+    - {name: PG_PASS, secret: true, buildTime: false, note: "app database password"}
+    - {name: TOOLJET_DB, secret: false, buildTime: false, note: "name of the second (ToolJet Database) database; with TOOLJET_DB_HOST, TOOLJET_DB_USER, TOOLJET_DB_PASS"}
+  optional: [SERVE_CLIENT, PORT, LISTEN_ADDR, PGRST_HOST, PGRST_JWT_SECRET, PGRST_DB_PRE_CONFIG, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_TLS, WORKER, MIGRATION_MODE, TOOLJET_WORKFLOW_SANDBOX_BYPASS, TOOLJET_DB_RECONFIG, CHECK_FOR_UPDATES, DISABLE_TOOLJET_TELEMETRY, SMTP_USERNAME, SMTP_PASSWORD, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 10, quote: "TOOLJET_HOST=http://localhost:8082"}
+    - {path: .env.example, line: 11, quote: "LOCKBOX_MASTER_KEY=0000000000000000000000000000000000000000000000000000000000000000"}
+    - {path: .env.example, line: 12, quote: "SECRET_KEY_BASE=replace_with_secret_key_base"}
+    - {path: .env.example, line: 73, quote: "TOOLJET_WORKFLOW_SANDBOX_BYPASS="}
+blockers:
+  expected:
+    - "The image has no default command: set the start command to npm run start:prod (the entrypoint runs the database setup first)"
+    - "The ToolJet Database feature needs a PostgREST service (PGRST_HOST); Deployz runs one image, so that feature is not available"
+    - "A second PostgreSQL database (TOOLJET_DB) is needed on the same server"
+  mustNot:
+    - "The bundled Redis must not be reported as a missing external service: the entrypoint starts it inside the container"
+    - "docker-compose.yaml services (plugins, client, postgrest, redis) must not be counted as separate required deployments: they are the development stack"
+    - "Python or Oracle client libraries in the image must not be reported as extra services"
+    - "A separate migration task must not be required: the entrypoint runs db:setup:prod before start"
+vendorQuestions:
+  legitimate:
+    - "Is the ToolJet Database feature needed? It needs PostgREST, which Deployz does not run"
+    - "Should a separate Redis (Valkey) be used instead of the one bundled in the container?"
+  unnecessary:
+    - "Which port? (3000, or PORT)"
+    - "Health path? (/api/health)"
+    - "Which Dockerfile? (docker/ce-production.Dockerfile)"
+traps:
+  - "docker-compose.yaml at the root is a development stack (dev Dockerfiles, bind mounts, client on 8082, server on 3000) (docker-compose.yaml:11-64)"
+  - "deploy/docker/docker-compose.yaml uses the published tooljet/tooljet-ce image and port 80 with PORT=80, not the repository build (deploy/docker/docker-compose.yaml:8, 15)"
+  - ".env.example sets TOOLJET_HOST to localhost:8082, the dev client port (.env.example:10)"
+  - "ce-production.Dockerfile has no CMD; without a start command the entrypoint runs the DB setup and exits (docker/ce-entrypoint.sh:43)"
+  - "The image runs Redis on 127.0.0.1 inside the container; with several tasks each has its own Redis"
+  - "Many other Dockerfiles exist (EE, cloud, preview, cypress) and only ce-production builds the community edition for production"
+  - "PostgREST is optional for startup: deploy/docker/docker-compose.yaml marks its service as needed only when ToolJet DB is used (line 17), and the proxy falls back to http://localhost:3001 (postgrest-proxy.service.ts:120)"
+  - "db:create also creates a sample database (SAMPLE_DB), so the database user must be able to run createdb (server/scripts/create-database.ts:42, 70)"
+  - "The server listens on '::'(IPv6 any), which also accepts IPv4 on Linux (server/src/main.ts:161)"
+openQuestions:
+  - "Whether the missing PostgREST sidecar makes the app NOT_DEPLOYABLE for a vendor who needs ToolJet Database"
+crossReview:
+  - {field: image / redis, change: "none: confirmed multi-process image. The entrypoint starts a daemonized redis-server bound to 127.0.0.1 inside the container (ce-production.Dockerfile:126-129), then runs the DB setup and execs the command. One task works; REDIS_HOST can point to Valkey instead", evidence: "docker/ce-entrypoint.sh:4-8"}
+  - {field: database, change: "none: two databases are required because create-database.ts throws if TOOLJET_DB is empty; added evidence", evidence: "server/scripts/create-database.ts:41, 81-87"}
+  - {field: blockers, change: "none: PostgREST is not needed to start; only the ToolJet Database feature uses it. Not a blocker for the core flow. Added a trap", evidence: "deploy/docker/docker-compose.yaml:17; postgrest-proxy.service.ts:120"}
+  - {field: outcome.accept, change: "none: both outcomes kept (no CMD means the start command is set in Deployz, which is settings only; DEPLOYABLE_WITH_CHANGES if a CMD must be added)", evidence: "ce-production.Dockerfile:141; ce-entrypoint.sh:43"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

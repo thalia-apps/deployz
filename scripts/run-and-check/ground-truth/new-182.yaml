@@ -1,0 +1,122 @@
+id: new-182
+repository: hcengineering/platform
+commit: f292d165efa8603f2914f34f7c18e6f32fe15fcc
+summary: >
+  Huly Platform is a Rush monorepo (TypeScript, Svelte, Rust) for a project-management and collaboration suite. It runs
+  as many separate services (pods): front, account, transactor, collaborator, fulltext, workspace, stats, datalake,
+  hulylake, hulypulse, rekoni, print, sign, backup and more. Each pod has its own Dockerfile that copies a CI-built
+  bundle. The dev stack needs CockroachDB (or PostgreSQL, or MongoDB), Redpanda (Kafka API), Elasticsearch,
+  an S3-compatible object store (MinIO) and Redis. The README sends self-hosters to the separate huly-selfhost repository.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Deployz runs one image as one web service. Huly needs more than ten distinct service images at runtime, plus Redpanda
+    (Kafka) and Elasticsearch, which are outside the MVP. Every pod Dockerfile copies a pre-built bundle, so none builds
+    from source. The pods are required parts of the product, not optional workers from one image.
+dockerfile:
+  accept: []
+  reject:
+    - {path: pods/server/Dockerfile, reason: "transactor pod: copies pre-built bundle/bundle.js onto hardcoreeng/base; one of many separate service images"}
+    - {path: pods/front/Dockerfile, reason: "front pod: copies pre-built bundle.js and dist/ onto hardcoreeng/front-base"}
+    - {path: dev/base-image/base.Dockerfile, reason: "base image for the pods, not an application"}
+  target: null
+  context: .
+  evidence:
+    - {path: pods/server/Dockerfile, line: 1, quote: "FROM hardcoreeng/base:v20250916"}
+    - {path: pods/server/Dockerfile, line: 5, quote: "COPY bundle/bundle.js ./"}
+    - {path: pods/front/Dockerfile, line: 6, quote: "COPY dist/ ./dist/"}
+    - {path: README.md, line: 34, quote: "If you're primarily interested in self-hosting Huly without the intention to modify or contribute to its development, please use [huly-selfhost](https://github.com/hcengineering/huly-selfhost)."}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: pods/server/Dockerfile, line: 8, quote: "EXPOSE 8080"}
+    - {path: pods/front/Dockerfile, line: 8, quote: "EXPOSE 8080"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: image
+  accept: ["node ./bundle.js"]
+  evidence:
+    - {path: pods/server/Dockerfile, line: 9, quote: "CMD [ \"node\", \"./bundle.js\" ]"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: required
+  engines: [cockroachdb, postgres]
+  default: cockroachdb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [DB_URL, ACCOUNTS_DB_URL]
+  # Default at this commit: CockroachDB (DB_CR_URL, postgres wire). dev/docker-compose.pg.yaml overrides DB_URL with PostgreSQL 16. MongoDB only remains in README text and dev/local-mongo.
+  evidence:
+    - {path: dev/docker-compose.yaml, line: 55, quote: "image: cockroachdb/cockroach:latest-v24.3"}
+    - {path: dev/docker-compose.yaml, line: 185, quote: "- DB_URL=${DB_CR_URL}"}
+    - {path: dev/docker-compose.yaml, line: 235, quote: "- ACCOUNTS_DB_URL=${DB_CR_URL}"}
+    - {path: dev/docker-compose.pg.yaml, line: 10, quote: "image: postgres:16"}
+    - {path: dev/docker-compose.yaml, line: 66, quote: "image: docker.redpanda.com/redpandadata/redpanda:v24.3.6"}
+    - {path: dev/docker-compose.yaml, line: 139, quote: "image: 'elasticsearch:7.14.2'"}
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: dev/docker-compose.yaml, line: 163, quote: "image: redis:8.0.2-alpine3.21"}
+workers:
+  status: independent
+  commands: []
+  # Separate pods: account, workspace, collaborator, fulltext, rekoni, print, sign, backup, datalake, hulylake, hulypulse, process, worker, events-processor.
+  evidence:
+    - {path: dev/docker-compose.yaml, line: 307, quote: "image: hardcoreeng/transactor"}
+    - {path: dev/docker-compose.yaml, line: 359, quote: "image: hardcoreeng/fulltext"}
+    - {path: dev/docker-compose.yaml, line: 262, quote: "image: hardcoreeng/front"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # Files go to an S3-compatible store (MinIO in the dev stack; pgsty/silo image).
+  evidence:
+    - {path: dev/docker-compose.yaml, line: 121, quote: "image: 'pgsty/silo'"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "More than ten separate service images are required at runtime (front, transactor, account, collaborator, fulltext, workspace, stats, datalake and others); Deployz runs one image"
+    - "Redpanda (Kafka API) is a required message broker (QUEUE_CONFIG=redpanda:9092); it stays in the minimal dev stack"
+    - "Elasticsearch backs the fulltext pod (full-text search); the minimal dev stack drops it, so it is a search feature need, not the main blocker"
+    - "CockroachDB (PostgreSQL wire protocol) is the default database at this commit; PostgreSQL 16 is an override (docker-compose.pg.yaml); MongoDB is stale README text only"
+    - "No Dockerfile builds from source: every pod Dockerfile copies a CI-built bundle"
+  mustNot:
+    - "A single pod Dockerfile (pods/server or pods/front) must not be treated as the whole application"
+    - "MinIO must not be the only reason for NOT_DEPLOYABLE: S3 would replace it"
+    - "Redis alone must not be a blocker: docker-compose.min.yaml excludes it"
+vendorQuestions:
+  legitimate:
+    - "Is there a single-image build of Huly? The repository ships one image per pod; huly-selfhost is a separate repository"
+  unnecessary:
+    - "Which port? (8080 in each pod)"
+    - "Is Redis needed? (yes, in the dev stack)"
+traps:
+  - "pods/server/Dockerfile is the transactor, not the whole product, and it copies a CI-built bundle (pods/server/Dockerfile:5)"
+  - "dev/docker-compose.yaml pulls hardcoreeng/* images from a registry, so it does not show how to build any of them"
+  - "dev/docker-compose.min.yaml is a smaller dev stack but still lists several pods plus CockroachDB, Redpanda and MinIO"
+  - "README mentions MongoDB, but the current dev compose file uses CockroachDB (dev/docker-compose.yaml:55)"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed (more than ten pod images, Redpanda required, every pod Dockerfile copies a CI-built bundle)", evidence: "dev/docker-compose.yaml pods; pods/server/Dockerfile:5"}
+  - {field: database, change: "removed mongodb from engines: default at this commit is CockroachDB (postgres wire), PostgreSQL via override; MongoDB is stale README text", evidence: "dev/docker-compose.yaml:55; dev/docker-compose.pg.yaml:10; README.md:230"}
+  - {field: redis.status, change: "required -> optional: docker-compose.min.yaml lists redis among excluded services", evidence: "dev/docker-compose.min.yaml:4"}
+  - {field: blockers.expected, change: "Elasticsearch softened (min stack drops it); Redpanda kept required", evidence: "dev/docker-compose.min.yaml:4; dev/.env:7 QUEUE_CONFIG=redpanda:9092"}
+  - {field: all, change: verified, evidence: "13 citations checked"}

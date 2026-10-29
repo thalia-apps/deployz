@@ -1,0 +1,940 @@
+{
+  "id": "new-177",
+  "commit": "72b5c59c06607e09ea855be61b6ff5a3446fc951",
+  "analyser": "rules@r7-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"uv\", \"run\", \"--no-sync\", \"uvicorn\", \"graph_service.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]",
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares ANTHROPIC_API_KEY",
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in graphiti_core/llm_client/anthropic_client.py",
+            "anthropic requires ANTHROPIC_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ANTHROPIC_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AZURE_OPENAI_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_EMBEDDINGS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BROWSER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/graphiti_mcp_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_DENSITY_THRESHOLD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/helpers.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_MIN_TOKENS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/helpers.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_OVERLAP_TOKENS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in graphiti_core/helpers.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CHUNK_TOKEN_SIZE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in graphiti_core/helpers.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COMMUNITY_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/driver/driver.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_BACKEND",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/graph_service/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DESTROY_GRAPH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DOTENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBEDDER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBEDDER_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_DIM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/embedder/client.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EMBEDDING_MODEL_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/graph_service/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "ENTITY_EDGE_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/driver/driver.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENTITY_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/driver/driver.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ENV_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EPISODE_ID_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "EPISODE_INDEX_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in graphiti_core/driver/driver.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_DATABASE",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_HOST",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/graph_service/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares FALKORDB_PASSWORD",
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_PORT",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares FALKORDB_PORT",
+            "read in server/graph_service/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "FALKORDB_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FALKORDB_URI",
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FALKORDB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FALKORDB_USER"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FALKORDB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILE_SECRET_SETTINGS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "GITHUB_SHA",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares GITHUB_SHA"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "GOOGLE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GOOGLE_LOCATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_PROJECT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GRAPHITI",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GRAPHITI_GROUP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GROQ_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "INIT_SETTINGS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "JEV_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in graphiti_core/llm_client/jev_client.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "LLM",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LLM_STRUCTURED_OUTPUT_MODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAX_REFLEXION_ITERATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAX_REFLEXION_ITERATIONS"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MODEL_NAME",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEO4J_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEO4J_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares NEO4J_PASSWORD",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEO4J_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares NEO4J_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "NEO4J_URI",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEO4J_URI",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "NEO4J_USER",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares NEO4J_USER",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py",
+            "read in mcp_server/src/services/factories.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares OPENAI_API_KEY",
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in server/graph_service/config.py",
+            "read in graphiti_core/llm_client/openai_decisions_client.py",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_BASE_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in server/graph_service/config.py",
+            "read in graphiti_core/llm_client/openai_decisions_client.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENAI_ORGANIZATION_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SEMAPHORE_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SEMAPHORE_LIMIT",
+            "read in graphiti_core/helpers.py",
+            "read in mcp_server/src/graphiti_mcp_server.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SERVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SETTINGS_CLS",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in mcp_server/src/config/schema.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "USER_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_AZURE_AD",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_PARALLEL_RUNTIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USE_PARALLEL_RUNTIME",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml",
+            "read in graphiti_core/helpers.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VAR_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOYAGE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "VOYAGE_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in mcp_server/config/config-docker-falkordb-combined.yaml",
+            "read in mcp_server/config/config-docker-falkordb.yaml",
+            "read in mcp_server/config/config-docker-neo4j.yaml",
+            "read in mcp_server/config/config.yaml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": [
+      "Unsupported database driver: neo4j, and NEO4J_URI is required. Deployz does not support this database."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported database driver: neo4j, and NEO4J_URI is required. Deployz does not support this database."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ANTHROPIC_API_KEY, AZURE_OPENAI_API_KEY, DATABASE, DB_BACKEND, DOTENV_SETTINGS, and 21 more. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 24,
+  "outcome": "NOT_DEPLOYABLE"
+}

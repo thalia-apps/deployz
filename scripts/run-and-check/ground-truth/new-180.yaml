@@ -1,0 +1,100 @@
+id: new-180
+repository: AppFlowy-IO/AppFlowy
+commit: 8fcee27d9bd93aad4ee0191d5d8d915d6a9a4e93
+summary: >
+  AppFlowy is the Flutter (Dart) and Rust client for a Notion-like workspace. It ships as a desktop app (macOS, Windows,
+  Linux) and mobile apps. This repository has no server: the cloud back end (AppFlowy-Cloud) is a separate project.
+  The only Dockerfile compiles the Linux desktop app and starts the GUI binary (./AppFlowy) on an X11 display, so it is
+  not a web service. There is no HTTP port, no health path and no database in this repository.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is a desktop and mobile application, not a web service. The one Dockerfile builds a Flutter Linux
+    desktop bundle and runs a GUI that needs a DISPLAY, so there is nothing to put behind an HTTPS ALB. The server side
+    (AppFlowy-Cloud) is not in this repository.
+dockerfile:
+  accept: []
+  reject:
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, reason: "builds the Linux desktop bundle with cargo make appflowy-linux and runs the GUI binary ./AppFlowy; no server"}
+  target: null
+  context: .
+  evidence:
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 35, quote: "RUN flutter config --enable-linux-desktop"}
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 54, quote: "OPENSSL_STATIC=1 ZSTD_SYS_USE_PKG_CONFIG=1 ROCKSDB_LIB_DIR=\"/usr/lib/\" cargo make -p production-linux-x86_64 appflowy-linux"}
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 85, quote: "CMD [\"./AppFlowy\"]"}
+    - {path: frontend/scripts/docker-buildfiles/docker-compose.yml, line: 20, quote: "- DISPLAY=$DISPLAY"}
+    - {path: README.md, line: 55, quote: "- [Download AppFlowy Desktop (macOS, Windows, and Linux)](https://github.com/AppFlowy-IO/AppFlowy/releases)"}
+runtime: {accept: [dart, rust]}
+port:
+  # No server port: the container runs a desktop GUI.
+  accept: []
+  evidence:
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 85, quote: "CMD [\"./AppFlowy\"]"}
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: image
+  accept: ["./AppFlowy"]
+  evidence:
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 85, quote: "CMD [\"./AppFlowy\"]"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # The desktop client keeps data in local SQLite and RocksDB files; the cloud back end is a separate repository.
+  evidence:
+    - {path: frontend/scripts/docker-buildfiles/Dockerfile, line: 40, quote: "RUN sudo pacman -S --needed --noconfirm jemalloc git libkeybinder3 sqlite clang rsync libnotify rocksdb zstd mpv"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "Not a web application: the repository is a Flutter and Rust desktop and mobile client; the only Dockerfile runs a GUI (./AppFlowy) that needs an X11 DISPLAY"
+    - "No server code in this repository: the AppFlowy-Cloud back end is a separate project"
+  mustNot:
+    - "Missing database must not be reported as a blocker for a DEPLOYABLE decision: there is no server to give a database to"
+    - "A port or health path must not be invented for the desktop container"
+vendorQuestions:
+  legitimate:
+    - "Which repository holds the server? AppFlowy-Cloud is the back end; this repository is the client"
+  unnecessary:
+    - "Which port? (no server)"
+    - "Which database? (no server)"
+traps:
+  - "A Dockerfile and a docker-compose.yml exist (frontend/scripts/docker-buildfiles), which looks deployable, but they build and run the Linux desktop GUI with host X11 (docker-compose.yml:20)"
+  - "README links to self-hosting (README.md:62), but that guide deploys the separate AppFlowy-Cloud stack, not this repository"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed; the only Dockerfile builds and runs the Linux desktop GUI", evidence: "frontend/scripts/docker-buildfiles/Dockerfile:85 CMD ./AppFlowy"}
+  - {field: dockerfile/port/startCommand/healthPath/database/redis/workers/storage, change: "none: no server code, no port, no datastore", evidence: "only two docker-buildfiles files exist (git ls-tree); docker-compose.yml:20 DISPLAY"}
+  - {field: all, change: verified, evidence: "7 citations checked"}

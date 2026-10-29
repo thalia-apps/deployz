@@ -1,0 +1,715 @@
+{
+  "id": "new-105",
+  "commit": "ae229ca894c0b80ad84664afcfdde523b5e87057",
+  "analyser": "rules@r7-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": "prod.Dockerfile"
+    },
+    "build": {
+      "command": "docusaurus build",
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"gunicorn\", \"-c\", \"gunicorn-config.py\", \"src.khoj.main:app\"]",
+      "port": 42110
+    },
+    "health": {
+      "path": "/api/health",
+      "mode": "explicit",
+      "hostChecked": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_DB",
+          "kind": "database"
+        },
+        {
+          "name": "POSTGRES_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/storage.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_IMAGE_UPLOAD_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/storage.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/storage.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_USER_UPLOADED_IMAGES_BUCKET_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/storage.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/utils/helpers.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EXA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "EXA_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FIRECRAWL_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "FIRECRAWL_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "GOOGLE_CLIENT_ID",
+          "required": true,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/auth.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GOOGLE_CLIENT_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/auth.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GUNICORN_GRACEFUL_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gunicorn-config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GUNICORN_KEEP_ALIVE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gunicorn-config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GUNICORN_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gunicorn-config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GUNICORN_WORKERS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in gunicorn-config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_ADMIN_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_ADMIN_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_ALLOWED_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_CLOUD_SUBSCRIPTION_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/helpers.py",
+            "read in src/khoj/utils/state.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_DEFAULT_CHAT_MODEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_DJANGO_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/app/settings.py",
+            "read in src/khoj/configure.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/main.py",
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_RESEARCH_ITERATIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/research.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "KHOJ_TERRARIUM_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/utils/helpers.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_OAUTH_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/helpers.py",
+            "read in src/khoj/routers/notion.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_OAUTH_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/helpers.py",
+            "read in src/khoj/routers/notion.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "NOTION_REDIRECT_URI",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/helpers.py",
+            "read in src/khoj/routers/notion.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OLOSTEP_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OLOSTEP_API_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/database/adapters/__init__.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/utils/initialization.py",
+            "openai requires OPENAI_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/utils/initialization.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PGSERVER_DATA_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTGRES_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/app/settings.py"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "POSTHOG_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/telemetry/telemetry.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PROMPTRACE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/utils/helpers.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/auth.py",
+            "read in src/khoj/routers/email.py",
+            "resend requires RESEND_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_AUDIENCE_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/email.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RESEND_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/email.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/api_subscription.py",
+            "read in src/khoj/utils/state.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_KHOJ_PRODUCT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/api_subscription.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_SIGNING_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/api_subscription.py",
+            "read in src/khoj/utils/state.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_ACCOUNT_SID",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/twilio.py",
+            "twilio requires TWILIO_ACCOUNT_SID"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_AUTH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/khoj/routers/twilio.py",
+            "twilio requires TWILIO_AUTH_TOKEN"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "TWILIO_VERIFICATION_SID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/khoj/routers/twilio.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "stripe",
+      "resend",
+      "openai",
+      "twilio"
+    ],
+    "unsupported": [
+      "Unsupported architecture: docker-compose.yml defines 3 application services (sandbox, computer, server). Deployz runs ONE web process per deployment plus declared background workers.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported architecture: docker-compose.yml defines 3 application services (sandbox, computer, server). Deployz runs ONE web process per deployment plus declared background workers."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET. Set them in the application's Configuration screen before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

@@ -1,0 +1,143 @@
+id: new-170
+repository: langfuse/langfuse
+commit: b1067f3a8c7deb449893f7f84d2e2699a4405656
+summary: >
+  Langfuse is an LLM observability platform (Next.js web app plus a separate Node worker, TypeScript monorepo). It needs
+  PostgreSQL (Prisma), ClickHouse (required: all traces, observations and scores), Redis (BullMQ queues), and S3-compatible
+  blob storage (event uploads, required bucket). The web image (web/Dockerfile, port 3000) and the worker image
+  (worker/Dockerfile, port 3030) are two separate Dockerfiles and two services. The official compose file runs
+  langfuse-web, langfuse-worker, postgres, clickhouse, minio and redis.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    ClickHouse is a required analytics store (CLICKHOUSE_URL is mandatory in the env schema and the web entrypoint exits
+    without it), and ClickHouse is outside the MVP. The product also needs a second image, the worker, to process the
+    ingestion queue, so a one-image deploy would accept events and never write them.
+dockerfile:
+  accept: []
+  reject:
+    - {path: web/Dockerfile, reason: "builds the web app from source (turbo prune) and is the right web image, but the product also needs the separate worker image; listed as rejected only because no single Dockerfile covers the product"}
+    - {path: worker/Dockerfile, reason: "worker image; the worker is a second required service"}
+    - {path: ai-gateway/Dockerfile, reason: "separate AI gateway service"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+  target: null
+  context: .
+  evidence:
+    - {path: web/Dockerfile, line: 151, quote: "RUN turbo prune web --docker"}
+    - {path: web/Dockerfile, line: 252, quote: "RUN NODE_OPTIONS='--max-old-space-size-percentage=75' turbo run build --filter=web..."}
+    - {path: worker/Dockerfile, line: 258, quote: "CMD [\"node\", \"worker/dist/index.js\"]"}
+    - {path: docker-compose.yml, line: 118, quote: "image: docker.langfuse.com/langfuse/langfuse:4"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: web/Dockerfile, line: 311, quote: "ENV PORT 3000"}
+    - {path: docker-compose.yml, line: 122, quote: "- 3000:3000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: web/Dockerfile, line: 321, quote: "node ./web/server.js --keepAliveTimeout 110000; \\"}
+startCommand:
+  source: image
+  accept: ["node ./web/server.js", "./web/entrypoint.sh"]
+  evidence:
+    - {path: web/Dockerfile, line: 315, quote: "ENTRYPOINT [\"dumb-init\", \"--\", \"./web/entrypoint.sh\"]"}
+    - {path: web/Dockerfile, line: 321, quote: "node ./web/server.js --keepAliveTimeout 110000; \\"}
+healthPath:
+  accept: ["/api/public/health", "/api/public/ready"]
+  evidence:
+    - {path: web/src/pages/api/public/health.ts, line: 36, quote: "return res.status(result.isHealthy ? 200 : 503).json({"}
+database:
+  status: required
+  engines: [postgres, clickhouse]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL, DATABASE_HOST, DATABASE_USERNAME, DATABASE_PASSWORD, DATABASE_NAME, CLICKHOUSE_URL, CLICKHOUSE_MIGRATION_URL, CLICKHOUSE_USER, CLICKHOUSE_PASSWORD]
+  # PostgreSQL maps to Deployz RDS. ClickHouse is a second required database engine that Deployz cannot provide.
+  evidence:
+    - {path: web/entrypoint.sh, line: 76, quote: "if [ -z \"$DATABASE_URL\" ]; then"}
+    - {path: web/entrypoint.sh, line: 111, quote: "if [ -z \"$CLICKHOUSE_URL\" ]; then"}
+    - {path: packages/shared/src/env.ts, line: 169, quote: "CLICKHOUSE_URL: z.url(),"}
+    - {path: docker-compose.yml, line: 148, quote: "image: docker.io/clickhouse/clickhouse-server:25.12"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: web/entrypoint.sh, line: 126, quote: "prisma migrate deploy --schema=./packages/shared/prisma/schema.prisma"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: docker-compose.yml, line: 190, quote: "image: docker.io/redis:7"}
+    - {path: docker-compose.yml, line: 79, quote: "REDIS_HOST: ${REDIS_HOST:-redis}"}
+    - {path: docker-compose.yml, line: 82, quote: "LANGFUSE_BULLMQ_SKIP_REDIS_VERSION_CHECK: ${LANGFUSE_BULLMQ_SKIP_REDIS_VERSION_CHECK:-false}"}
+workers:
+  status: independent
+  commands: ["node worker/dist/index.js"]
+  # The worker is a separate Dockerfile and image (worker/Dockerfile), not the web image with another command.
+  evidence:
+    - {path: worker/Dockerfile, line: 258, quote: "CMD [\"node\", \"worker/dist/index.js\"]"}
+    - {path: docker-compose.yml, line: 7, quote: "langfuse-worker:"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # LANGFUSE_S3_EVENT_UPLOAD_BUCKET is a required variable; the compose file uses MinIO with force-path-style, real S3 works with the same variables.
+  evidence:
+    - {path: packages/shared/src/env.ts, line: 332, quote: "LANGFUSE_S3_EVENT_UPLOAD_BUCKET: z.string(), // Langfuse requires a bucket name for S3 Event Uploads."}
+    - {path: docker-compose.yml, line: 51, quote: "LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_EVENT_UPLOAD_BUCKET:-langfuse}"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL"}
+    - {name: CLICKHOUSE_URL, secret: false, buildTime: false, note: "ClickHouse HTTP URL; Deployz cannot provide ClickHouse"}
+    - {name: CLICKHOUSE_MIGRATION_URL, secret: false, buildTime: false, note: "ClickHouse native URL for migrations"}
+    - {name: CLICKHOUSE_USER, secret: false, buildTime: false, note: "ClickHouse user"}
+    - {name: CLICKHOUSE_PASSWORD, secret: true, buildTime: false, note: "ClickHouse password"}
+    - {name: REDIS_HOST, secret: false, buildTime: false, note: "Redis host (or REDIS_CONNECTION_STRING)"}
+    - {name: REDIS_AUTH, secret: true, buildTime: false, note: "Redis password"}
+    - {name: NEXTAUTH_URL, secret: false, buildTime: false, note: "public URL"}
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "session secret"}
+    - {name: SALT, secret: true, buildTime: false, note: "API key hashing salt"}
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "64 hex characters"}
+    - {name: LANGFUSE_S3_EVENT_UPLOAD_BUCKET, secret: false, buildTime: false, note: "S3 bucket for event uploads"}
+  optional: [LANGFUSE_S3_MEDIA_UPLOAD_BUCKET, LANGFUSE_S3_BATCH_EXPORT_ENABLED, SMTP_CONNECTION_URL, LANGFUSE_INIT_ORG_ID, LANGFUSE_INIT_USER_EMAIL, TELEMETRY_ENABLED, PORT]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yml, line: 24, quote: "SALT: ${SALT:-mysalt} # CHANGEME"}
+    - {path: docker-compose.yml, line: 125, quote: "NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-mysecret} # CHANGEME"}
+    - {path: docker-compose.yml, line: 25, quote: "ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}"}
+blockers:
+  expected:
+    - "ClickHouse is required (CLICKHOUSE_URL is mandatory; the web entrypoint exits without it) and is outside the MVP datastores"
+    - "The ingestion pipeline needs the separate worker image (worker/Dockerfile, port 3030); the web image alone only queues events"
+  mustNot:
+    - "PostgreSQL and Redis must not block by themselves: both are supported MVP datastores"
+    - "MinIO in docker-compose.yml must not block: S3 is supported with the LANGFUSE_S3_* variables"
+    - "web/Dockerfile must not be reported as missing or non-source: it builds from source"
+    - "The in-app agent sandbox image (packages/in-app-agent-sandbox-runtime) must not be treated as a required service"
+vendorQuestions:
+  legitimate:
+    - "Can ClickHouse be replaced by a managed ClickHouse (for example ClickHouse Cloud) outside Deployz?"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which Dockerfile builds the web app? (web/Dockerfile)"
+    - "Is Redis needed? (yes, BullMQ)"
+traps:
+  - "docker-compose.yml uses prebuilt images (docker.langfuse.com/langfuse/langfuse:4), not the repo Dockerfiles; docker-compose.build.yml builds from source"
+  - "Only PostgreSQL is named DATABASE_URL; ClickHouse is configured by separate CLICKHOUSE_* variables, so a detector that looks for one database misses it (packages/shared/src/env.ts:169)"
+  - "Port 3030 belongs to the worker, port 9090/9091 to MinIO; the web port is 3000 (docker-compose.yml:20,122,178)"
+  - "Redis TLS variables point to /certs files that are optional (docker-compose.yml:83-86)"
+openQuestions:
+  - "No PostgreSQL-only mode was found at this commit: CLICKHOUSE_URL is z.url() without a default or nullish"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "web/entrypoint.sh:111 exits when CLICKHOUSE_URL is unset; env.ts:169 has CLICKHOUSE_URL: z.url() with no default"}
+  - {field: database, change: "none: postgres + clickhouse confirmed", evidence: "docker-compose.yml:148 clickhouse-server; DATABASE_URL check at web/entrypoint.sh:76"}
+  - {field: redis, change: "none: required confirmed (BullMQ queues; REDIS_HOST is nullish in env.ts:97 but the ingestion queue needs it)", evidence: "packages/shared/src/env.ts:97"}
+  - {field: dockerfile/port/startCommand/healthPath/storage/workers, change: "none: confirmed", evidence: "web/Dockerfile:151,311,315; worker/Dockerfile:258"}
+  - {field: all, change: verified, evidence: "16 citations checked"}

@@ -1,0 +1,162 @@
+id: new-185
+repository: zammad/zammad
+commit: 8f0bf00fe5e36af71a89a03bad6c82b7cf9186ae
+summary: >
+  Zammad is a Ruby on Rails help-desk and ticketing application (PostgreSQL only, Redis for ActionCable and the
+  legacy WebSocket session store, optional Elasticsearch for search). The root Dockerfile builds from source (Ruby 3.4,
+  pnpm assets, bundle) into ONE image, but that image is a multi-role image: bin/docker-entrypoint runs one role per
+  container (zammad-init, zammad-nginx, zammad-railsserver, zammad-websocket, zammad-scheduler, zammad-backup). A working
+  site needs nginx (port 8080) in front of puma (3000) and a separate legacy WebSocket server (6042), a scheduler
+  process, and an init task for the database. nginx is in the image; the Rails server, WebSocket server and scheduler
+  are started by different entrypoint arguments.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    One web service on one HTTP port does not describe Zammad. The browser UI needs /ws (WebSocket server on 6042) and
+    /cable and / (puma on 3000), which the nginx role joins; the repo splits these roles over several containers of the
+    same image (the documented docker stack). Redis is required (ActionCable; the initializer calls exit! when Redis is
+    unreachable). The scheduler (background-worker) is a legitimate worker from the same image and zammad-init is a
+    legitimate migration task, but the WebSocket server on a second port, plus nginx and puma as two processes, need a
+    custom single-container start script (a multi-process image), which is not a safe catalogue change. The classic UI
+    opens its realtime connection on /ws (app/assets/javascripts/app/lib/app_post/websocket.coffee:179), so puma alone
+    on one port gives a broken UI. Elasticsearch is optional (ELASTICSEARCH_ENABLED=false, an empty es_url disables it)
+    and must not decide the outcome. Only NOT_DEPLOYABLE is accepted.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: .gitlab/packager.io/dockerfiles/Dockerfile.debian, reason: "CI packaging test image for the deb package, not the application image"}
+    - {path: .gitlab/packager.io/dockerfiles/Dockerfile.ubuntu, reason: "CI packaging test image for the deb package, not the application image"}
+    - {path: .gitlab/packager.io/dockerfiles/Dockerfile.rhel, reason: "CI packaging test image for the rpm package"}
+    - {path: .gitlab/packager.io/dockerfiles/Dockerfile.sles, reason: "CI packaging test image for the rpm package"}
+    - {path: .devcontainer/with-ldap/ldap/Dockerfile, reason: "LDAP test server for the devcontainer"}
+    - {path: spec/fixtures/files/smime/generate/Dockerfile, reason: "test fixture generator"}
+    - {path: doc/developer_manual/assets/ldap/Dockerfile, reason: "documentation LDAP example"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 7, quote: "FROM docker.io/library/ruby:$RUBY_VERSION-slim-trixie AS base"}
+    - {path: Dockerfile, line: 70, quote: "COPY . ."}
+    - {path: Dockerfile, line: 111, quote: "ZAMMAD_SAFE_MODE=1 DATABASE_URL=postgresql://zammad:/zammad bundle exec rake assets:precompile"}
+    - {path: Dockerfile, line: 170, quote: "ENTRYPOINT [\"/opt/zammad/bin/docker-entrypoint\"]"}
+runtime: {accept: [ruby]}
+port:
+  # nginx role listens on NGINX_PORT (8080); puma behind it is on 3000; the legacy WebSocket server is on 6042.
+  accept: [8080, 3000]
+  evidence:
+    - {path: bin/docker-entrypoint, line: 16, quote: ": \"${NGINX_PORT:=8080}\""}
+    - {path: bin/docker-entrypoint, line: 22, quote: ": \"${ZAMMAD_RAILSSERVER_PORT:=3000}\""}
+    - {path: bin/docker-entrypoint, line: 24, quote: ": \"${ZAMMAD_WEBSOCKET_PORT:=6042}\""}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: bin/docker-entrypoint, line: 179, quote: "exec bundle exec puma -b tcp://[::]:\"${ZAMMAD_RAILSSERVER_PORT}\" -e \"${RAILS_ENV}\""}
+startCommand:
+  # The image has only ENTRYPOINT and no CMD: the role is the first argument. The web role is zammad-railsserver (puma),
+  # reached through zammad-nginx.
+  source: explicit
+  accept: ["zammad-railsserver", "zammad-nginx"]
+  evidence:
+    - {path: bin/docker-entrypoint, line: 173, quote: "elif [ \"$1\" = 'zammad-railsserver' ]; then"}
+    - {path: bin/docker-entrypoint, line: 139, quote: "elif [ \"$1\" = 'zammad-nginx' ]; then"}
+    - {path: Procfile, line: 1, quote: "web: bundle exec script/rails server -b ${ZAMMAD_BIND_IP:=127.0.0.1} -p ${ZAMMAD_RAILS_PORT:=3000}"}
+healthPath:
+  # /api/v1/monitoring/health_check needs a monitoring token (authentication_check_only); "/" serves the SPA unauthenticated.
+  accept: ["/", "/api/v1/monitoring/health_check"]
+  evidence:
+    - {path: config/routes/monitoring.rb, line: 6, quote: "match api_path + '/monitoring/health_check',         to: 'monitoring#health_check',        via: :get"}
+    - {path: app/controllers/monitoring_controller.rb, line: 5, quote: "prepend_before_action -> { authentication_check }, except: %i[health_check status amount_check]"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [POSTGRESQL_HOST, POSTGRESQL_PORT, POSTGRESQL_DB, POSTGRESQL_USER, POSTGRESQL_PASS, POSTGRESQL_OPTIONS]
+  evidence:
+    - {path: config/database/database.yml, line: 9, quote: "adapter: postgresql"}
+    - {path: Dockerfile, line: 130, quote: "POSTGRESQL_DB=zammad_production \\"}
+    - {path: Dockerfile, line: 131, quote: "POSTGRESQL_HOST=zammad-postgresql \\"}
+    - {path: Gemfile, line: 21, quote: "gem 'pg', '~> 1.5', '>= 1.5.4', group: :postgres"}
+migrations:
+  mode: command
+  accept: ["zammad-init"]
+  evidence:
+    - {path: bin/docker-entrypoint, line: 60, quote: "if [ \"$1\" = 'zammad-init' ]; then"}
+    - {path: bin/docker-entrypoint, line: 70, quote: "bundle exec rake db:create db:migrate db:seed"}
+redis:
+  status: required
+  selectBy: {REDIS_URL: url}
+  evidence:
+    - {path: Gemfile, line: 41, quote: "gem 'redis', '< 6'"}
+    - {path: config/initializers/zzz_action_cable_preferences.rb, line: 6, quote: "adapter:        :redis,"}
+    - {path: config/initializers/zzz_action_cable_preferences.rb, line: 16, quote: "Zammad::SafeMode.continue_or_exit!"}
+    - {path: lib/zammad/service/redis.rb, line: 15, quote: "url:    ENV['REDIS_URL'].presence || 'redis://localhost:6379',"}
+workers:
+  status: independent
+  commands: ["zammad-scheduler", "bundle exec script/background-worker.rb start"]
+  # The WebSocket server (zammad-websocket, port 6042) is a second role, not a worker: browsers connect to it on /ws.
+  evidence:
+    - {path: bin/docker-entrypoint, line: 187, quote: "exec bundle exec script/background-worker.rb start"}
+    - {path: Procfile, line: 3, quote: "worker: bundle exec script/background-worker.rb start"}
+    - {path: bin/docker-entrypoint, line: 195, quote: "exec bundle exec script/websocket-server.rb -b 0.0.0.0 -p \"${ZAMMAD_WEBSOCKET_PORT}\" start"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/opt/zammad/storage, /opt/zammad/tmp]
+  s3: native
+  s3SelectBy: {}
+  # Attachments use the DB provider by default (Store::Provider::DB); an S3 provider is a Zammad setting (admin UI), not an env var.
+  evidence:
+    - {path: app/models/store/provider/db.rb, line: 13, quote: "Store::Provider::DB.create("}
+    - {path: Gemfile, line: 191, quote: "gem 'aws-sdk-s3', require: false"}
+    - {path: Dockerfile, line: 147, quote: "RUN mkdir -p \"/opt/zammad/storage\" \"/opt/zammad/tmp\" && \\"}
+env:
+  required:
+    - {name: POSTGRESQL_HOST, secret: false, buildTime: false, note: "the image default zammad-postgresql does not exist on Deployz"}
+    - {name: POSTGRESQL_PASS, secret: true, buildTime: false, note: "image default is zammad"}
+    - {name: REDIS_URL, secret: false, buildTime: false, note: "defaults to redis://localhost:6379, which does not exist"}
+    - {name: ELASTICSEARCH_ENABLED, secret: false, buildTime: false, note: "set false: the entrypoint default is true and waits for zammad-elasticsearch:9200"}
+  optional: [POSTGRESQL_PORT, POSTGRESQL_USER, POSTGRESQL_DB, POSTGRESQL_OPTIONS, REDIS_USERNAME, REDIS_PASSWORD, NGINX_PORT, ZAMMAD_RAILSSERVER_PORT, ZAMMAD_WEBSOCKET_PORT, ZAMMAD_WEB_CONCURRENCY, MEMCACHE_SERVERS, AUTOWIZARD_JSON, RAILS_TRUSTED_PROXIES]
+  buildTime: [COMMIT_SHA, BUILD_LABEL]
+  evidence:
+    - {path: Dockerfile, line: 42, quote: "ARG COMMIT_SHA"}
+    - {path: bin/docker-entrypoint, line: 10, quote: ": \"${ELASTICSEARCH_ENABLED:=true}\""}
+    - {path: bin/docker-entrypoint, line: 113, quote: "if [ \"${ELASTICSEARCH_ENABLED}\" == \"false\" ]; then"}
+    - {path: Dockerfile, line: 134, quote: "POSTGRESQL_PASS=zammad \\"}
+blockers:
+  expected:
+    - "The application is several roles of one image (nginx, puma, WebSocket server on 6042, scheduler, init) started by different entrypoint arguments; one ECS web service has one start command and one HTTP port, so nginx plus puma plus the WebSocket server need a custom start script (multi-process image)"
+    - "Redis is required: ActionCable and the Redis ping at boot exit the process when Redis is unreachable"
+    - "COMMIT_SHA is a required build argument: the Dockerfile fails the build when it is empty"
+  mustNot:
+    - "Elasticsearch must not be a blocker: ELASTICSEARCH_ENABLED=false disables it (search degrades to the database); it is an optional integration"
+    - "MySQL or MariaDB must not be expected: Zammad supports PostgreSQL only"
+    - "The port must not be reported as 3000 only: the nginx role is on 8080 and the bind address for puma is [::]"
+    - "memcached must not be required: MEMCACHE_SERVERS is optional, the default cache is a file store"
+vendorQuestions:
+  legitimate:
+    - "How are nginx, puma and the WebSocket server on 6042 started in one container, or is the WebSocket path (/ws) served by a second service?"
+    - "Which Redis URL and PostgreSQL credentials should be used? Is Elasticsearch needed for search?"
+  unnecessary:
+    - "Which Dockerfile? (the root Dockerfile is the only application image)"
+    - "Is Redis needed? (yes, required)"
+    - "Which database engine? (PostgreSQL only)"
+traps:
+  - "Procfile lists web, websocket and worker for the packaged deb install and binds 127.0.0.1 by default (Procfile:1); the Docker entrypoint is a different mechanism"
+  - "The Dockerfile has ENTRYPOINT only and no CMD; with no argument the entrypoint execs the empty command (bin/docker-entrypoint:206)"
+  - "bin/docker-entrypoint defaults ELASTICSEARCH_ENABLED=true and POSTGRESQL_HOST=zammad-postgresql, hostnames of the upstream docker-compose stack"
+  - "config/environments/production.rb does not serve public assets unless RAILS_SERVE_STATIC_FILES is set (production.rb:27); nginx normally serves /assets"
+  - "The WebSocket session store uses Redis only when REDIS_URL is set; ActionCable requires Redis regardless"
+  - "/api/v1/monitoring/health_check needs a monitoring token and is not an unauthenticated ALB check"
+  - ".gitlab/packager.io and devcontainer Dockerfiles are CI and dev images, not the application image"
+openQuestions:
+  - "Whether a coding agent could add a start script that runs nginx, puma and the WebSocket server together; the repo supplies none"
+  - "The unauthenticated page used for the ALB health check: / was assumed, not exercised"
+crossReview:
+  - {field: outcome.accept, change: "removed DEPLOYABLE_WITH_CHANGES; kept NOT_DEPLOYABLE only", evidence: "the classic UI connects to /ws on the WebSocket server (6042) besides puma (3000); one container that runs nginx, puma and the WebSocket server is a multi-process image, not a closed-catalogue change"}
+  - {field: redis and elasticsearch, change: "none: Redis required, Elasticsearch optional confirmed", evidence: "lib/search_index_backend.rb:1010 enabled? is es_url.present?; bin/docker-entrypoint:113 sets es_url empty when ELASTICSEARCH_ENABLED=false; zzz_action_cable_preferences.rb:6 adapter redis"}
+  - {field: "dockerfile, database, migrations, health", change: "none: confirmed", evidence: "Dockerfile has ENTRYPOINT only; database.yml:9 postgresql; bin/docker-entrypoint:60 zammad-init; monitoring_controller.rb:6 health_check needs a token"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

@@ -1,0 +1,140 @@
+id: new-190
+repository: openobserve/openobserve
+commit: 99042f764015f4d505f48cd11c248a593b3c325f
+summary: >
+  OpenObserve is a Rust observability platform (logs, metrics, traces) with an embedded Vue web UI. One binary serves
+  the UI and the API on HTTP port 5080. deploy/build/Dockerfile builds the web UI with Node and the server with cargo
+  from the repository source. By default it runs in single-node local mode (ZO_LOCAL_MODE=true) with SQLite metadata and
+  data files on local disk (/data). Local mode can use S3 for data (ZO_LOCAL_MODE_STORAGE=s3) and PostgreSQL for metadata
+  (ZO_META_STORE=postgres) with an in-memory queue, so NATS is needed only in cluster mode (ZO_LOCAL_MODE=false).
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    deploy/build/Dockerfile builds from source and runs one process on port 5080 with /healthz. Environment settings alone
+    select S3 for data and PostgreSQL for metadata in single-node local mode, so no repository change is needed. Without
+    those settings the defaults write SQLite and data files to /data, which is lost on a new task. The write-ahead log is
+    always on local disk (data_wal_dir), so a task restart can lose the data not yet flushed to S3; a strict read can ask for
+    a repository change or an accepted data-loss window. The Rust build is large and slow but needs no change.
+dockerfile:
+  accept: [deploy/build/Dockerfile]
+  reject:
+    - {path: deploy/build/Dockerfile.pr, reason: "copies a pre-built ./bin/openobserve binary, no build"}
+    - {path: deploy/build/Dockerfile.tag.amd64, reason: "release image for amd64 only (x86_64 target, release-prod profile); builds from source but pinned to one architecture and used by the release pipeline"}
+    - {path: deploy/build/Dockerfile.amd64, reason: "architecture-specific release variant"}
+    - {path: deploy/build/Dockerfile.aarch64, reason: "architecture-specific release variant"}
+    - {path: cross/Dockerfile.oss.musl, reason: "cross-compilation builder image"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+  target: null
+  context: .
+  evidence:
+    - {path: deploy/build/Dockerfile, line: 7, quote: "RUN NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build"}
+    - {path: deploy/build/Dockerfile, line: 21, quote: "RUN cargo build --release"}
+    - {path: deploy/build/Dockerfile, line: 32, quote: "CMD [\"/openobserve\"]"}
+    - {path: deploy/build/Dockerfile.pr, line: 8, quote: "COPY ./bin/openobserve /"}
+runtime: {accept: [rust]}
+port:
+  accept: [5080]
+  evidence:
+    - {path: src/config/src/config.rs, line: 1725, quote: "#[env_config(name = \"ZO_HTTP_PORT\", default = 5080)]"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: src/api/http/src/server.rs, line: 61, quote: "\"0.0.0.0\".to_string()"}
+startCommand:
+  source: image
+  accept: ["/openobserve"]
+  evidence:
+    - {path: deploy/build/Dockerfile, line: 32, quote: "CMD [\"/openobserve\"]"}
+healthPath:
+  accept: ["/healthz"]
+  evidence:
+    - {path: src/api/http/src/handler/http/router/mod.rs, line: 897, quote: ".route(\"/healthz\", get(status::healthz).head(status::healthz_head))"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {ZO_META_STORE: postgres, ZO_META_POSTGRES_DSN: "postgres://user:password@host:5432/openobserve"}
+  connectionVars: [ZO_META_STORE, ZO_META_POSTGRES_DSN, ZO_META_POSTGRES_HOST, ZO_META_POSTGRES_USER, ZO_META_POSTGRES_PASSWORD, ZO_META_POSTGRES_DBNAME]
+  # Metadata store defaults to SQLite in local mode (file under /data). PostgreSQL keeps metadata off the task disk.
+  evidence:
+    - {path: src/config/src/config.rs, line: 2067, quote: "#[env_config(name = \"ZO_META_STORE\", default = \"\")]"}
+    - {path: src/config/src/config.rs, line: 4453, quote: "cfg.common.meta_store = \"sqlite\".to_string();"}
+    - {path: src/config/src/config.rs, line: 2069, quote: "#[env_config(name = \"ZO_META_POSTGRES_DSN\", default = \"\")]"}
+    - {path: src/config/src/config.rs, line: 4463, quote: "if !cfg.common.local_mode && !cfg.common.meta_store.starts_with(\"postgres\") {"}
+migrations:
+  mode: startup
+  accept: []
+  # Schema is created by the server at start; no separate migration tool is needed.
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  # ZO_NODE_ROLE defaults to all: ingester, querier, compactor and router run in the one process.
+  evidence:
+    - {path: src/config/src/config.rs, line: 2090, quote: "#[env_config(name = \"ZO_NODE_ROLE\", default = \"all\")]"}
+scheduledJobs:
+  status: embedded
+  items: [compactor, alert manager, and other background tasks in the same process]
+  evidence:
+    - {path: src/config/src/config.rs, line: 2090, quote: "#[env_config(name = \"ZO_NODE_ROLE\", default = \"all\")]"}
+storage:
+  local: required
+  paths: [/data]
+  s3: native
+  s3SelectBy: {ZO_LOCAL_MODE_STORAGE: s3, ZO_S3_BUCKET_NAME: "<bucket>", ZO_S3_PROVIDER: aws, ZO_S3_REGION_NAME: "<region>"}
+  # Default data and WAL are on local disk (ZO_DATA_DIR ./data/openobserve/, created at /data by init-dir). With S3 selected the WAL still stays on disk until flushed.
+  evidence:
+    - {path: src/config/src/config.rs, line: 2050, quote: "#[env_config(name = \"ZO_LOCAL_MODE_STORAGE\", default = \"disk\")]"}
+    - {path: src/config/src/config.rs, line: 2128, quote: "#[env_config(name = \"ZO_DATA_DIR\", default = \"./data/openobserve/\")]"}
+    - {path: src/config/src/config.rs, line: 2130, quote: "#[env_config(name = \"ZO_DATA_WAL_DIR\", default = \"\")] // ./data/openobserve/wal/"}
+    - {path: src/config/src/config.rs, line: 3608, quote: "#[env_config(name = \"ZO_S3_BUCKET_NAME\", default = \"\")]"}
+    - {path: deploy/build/Dockerfile, line: 31, quote: "RUN [\"/openobserve\", \"init-dir\", \"-p\", \"/data/\"]"}
+env:
+  required:
+    - {name: ZO_ROOT_USER_EMAIL, secret: false, note: "root (first admin) user email"}
+    - {name: ZO_ROOT_USER_PASSWORD, secret: true, note: "root user password"}
+  optional: [ZO_LOCAL_MODE_STORAGE, ZO_S3_BUCKET_NAME, ZO_S3_PROVIDER, ZO_S3_REGION_NAME, ZO_S3_SERVER_URL, ZO_META_STORE, ZO_META_POSTGRES_DSN, ZO_DATA_DIR, ZO_DATA_WAL_DIR, ZO_HTTP_PORT, ZO_HTTP_ADDR, ZO_NODE_ROLE]
+  buildTime: []
+  evidence:
+    - {path: src/config/src/config.rs, line: 1676, quote: "#[env_config(name = \"ZO_ROOT_USER_EMAIL\")]"}
+    - {path: src/config/src/config.rs, line: 1678, quote: "#[env_config(name = \"ZO_ROOT_USER_PASSWORD\")]"}
+blockers:
+  expected:
+    - "Default state is SQLite metadata plus data and WAL on local disk (/data); a deploy without ZO_META_STORE=postgres and ZO_LOCAL_MODE_STORAGE=s3 loses data on restart"
+    - "The write-ahead log stays on local disk in S3 mode, so data not yet flushed to S3 can be lost when the task stops"
+  mustNot:
+    - "NATS must not be reported as required: it is needed only for cluster mode (ZO_LOCAL_MODE=false); local mode uses the in-memory queue"
+    - "ClickHouse, Elasticsearch, Kafka or MinIO must not be reported as required: OpenObserve stores data in its own format on disk or S3"
+    - "Redis must not be reported as required"
+    - "A separate ingester, querier or router service must not be required: ZO_NODE_ROLE defaults to all"
+    - "Dockerfile.pr must not be chosen: it copies a pre-built binary"
+vendorQuestions:
+  legitimate:
+    - "Which root user email and password should be set (ZO_ROOT_USER_EMAIL, ZO_ROOT_USER_PASSWORD)?"
+    - "Which S3 bucket should hold the data (ZO_S3_BUCKET_NAME) and is a data-loss window for unflushed WAL data acceptable?"
+  unnecessary:
+    - "Which port? (5080)"
+    - "Health path? (/healthz)"
+    - "Is NATS needed? (not in local mode)"
+    - "Is a worker needed? (all roles run in one process)"
+traps:
+  - "Cluster mode (ZO_LOCAL_MODE=false) requires NATS and PostgreSQL; leave local mode on (config.rs:2047, config.rs:4408-4412, config.rs:4463-4467)"
+  - "ZO_LOCAL_MODE_STORAGE is ignored when ZO_LOCAL_MODE is false; in local mode it chooses disk or s3 (config.rs:2049-2050)"
+  - "Default meta store is SQLite when ZO_META_STORE is empty in local mode (config.rs:4451-4453)"
+  - "ZO_QUEUE_STORE defaults to memory in local mode and nats in cluster mode (config.rs:4396-4402)"
+  - "Dockerfile.tag.amd64 and the other tag variants build from source but only for one architecture; Dockerfile.pr and the cross/ files do not build the app"
+  - "The cargo release build is slow and memory heavy; the web build sets NODE_OPTIONS max-old-space-size=8192 (deploy/build/Dockerfile:7)"
+  - "Even with S3 data and PostgreSQL metadata, local mode keeps the cluster coordinator and local cache on SQLite under data_db_dir, and ingested data stays in the WAL on local disk until it is uploaded; both are transient, not primary data (src/infra/src/db/mod.rs:135-145, src/main.rs:262-263)"
+  - "The root user email and password have no default in the Rust config; the first start needs both (config.rs:1676-1679)"
+crossReview:
+  - {field: "outcome.accept", change: "none: kept [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]. With ZO_LOCAL_MODE_STORAGE=s3 and ZO_META_STORE=postgres the primary data and metadata leave the disk by settings alone, so local disk is not a durable-state requirement. Only the WAL window (flushed to local disk on shutdown, uploaded to S3 later) is lost on task replacement; a strict reader may ask for a change, so both stay", evidence: "src/main.rs:262 \"// flush WAL cache to disk\"; config.rs:3947 is_local_storage only for disk/local; db/mod.rs:128-132 meta store dispatch"}
+  - {field: "database", change: "none: PostgreSQL is a settings-only choice in local mode", evidence: "config.rs:4463 the postgres-only rule applies only when not local_mode; config.rs:4468 needs the DSN"}
+  - {field: "storage", change: "none: S3 is a settings-only choice; added a trap that coordinator and cache stay on SQLite in local mode", evidence: "config.rs:3947 cfg.common.is_local_storage = cfg.common.local_mode"}
+  - {field: "traps", change: "fixed citation: ZO_LOCAL_MODE default is at config.rs:2047, not 2053 (2053 is cluster_coordinator)", evidence: "config.rs:2047 ZO_LOCAL_MODE default = true"}
+  - {field: "dockerfile, port, startCommand, healthPath, redis, workers", change: "none: confirmed", evidence: "deploy/build/Dockerfile:7,21,32; config.rs:1725; router/mod.rs:897; server.rs:61"}
+  - {field: "all", change: "verified", evidence: "17 citations checked"}

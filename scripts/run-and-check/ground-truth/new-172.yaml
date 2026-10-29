@@ -1,0 +1,125 @@
+id: new-172
+repository: Arize-ai/phoenix
+commit: 80f27153694c92e55b1b970a7af4c11093103341
+summary: >
+  Arize Phoenix is an LLM observability and evaluation server (Python, FastAPI/Starlette, React UI). The root Dockerfile
+  builds the UI (pnpm) and the Python wheel from source and runs `python -m phoenix.server.main serve` in a distroless
+  image. One process serves the UI, the REST and GraphQL API and OTLP/HTTP on 6006; OTLP/gRPC is a second port, 4317.
+  The database is SQLite in the working directory by default, or PostgreSQL through PHOENIX_SQL_DATABASE_URL. Schema
+  migrations run inside the process at startup. No Redis, no object store, no worker.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One source-built Dockerfile, one HTTP port (6006) with /healthz, PostgreSQL optional through one URL variable, and
+    in-process migrations. Traces can reach the app over OTLP/HTTP on 6006; the gRPC port 4317 is optional. Without
+    PHOENIX_SQL_DATABASE_URL the SQLite file sits on ephemeral task storage, so a Deployz deploy should select PostgreSQL.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: scripts/docker/devops/Dockerfile, reason: "development environment image for the devops compose stack"}
+    - {path: evals/harbor/environments/Dockerfile, reason: "evaluation sandbox image"}
+    - {path: examples/computer_use_agent/Dockerfile, reason: "example application image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 47, quote: "RUN pnpm --filter 'phoenix-ui...' run build"}
+    - {path: Dockerfile, line: 65, quote: "RUN uv build"}
+    - {path: Dockerfile, line: 131, quote: "FROM ${BASE_IMAGE}"}
+    - {path: docker-compose.yml, line: 4, quote: "dockerfile: ./Dockerfile"}
+runtime: {accept: [python]}
+port:
+  accept: [6006]
+  evidence:
+    - {path: src/phoenix/config.py, line: 3133, quote: "PORT = 6006"}
+    - {path: Dockerfile, line: 164, quote: "EXPOSE 6006"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: src/phoenix/config.py, line: 3131, quote: "HOST = \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["python -m phoenix.server.main serve", "-m phoenix.server.main serve"]
+  evidence:
+    - {path: Dockerfile, line: 172, quote: "CMD [\"-m\", \"phoenix.server.main\", \"serve\"]"}
+healthPath:
+  accept: ["/healthz"]
+  evidence:
+    - {path: src/phoenix/server/app.py, line: 784, quote: "@router.get(\"/healthz\")"}
+    - {path: src/phoenix/server/app.py, line: 789, quote: "@router.get(\"/readyz\")"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {PHOENIX_SQL_DATABASE_URL: "postgresql://user:pass@host:5432/db"}
+  connectionVars: [PHOENIX_SQL_DATABASE_URL, PHOENIX_POSTGRES_HOST, PHOENIX_POSTGRES_PORT, PHOENIX_POSTGRES_USER, PHOENIX_POSTGRES_PASSWORD, PHOENIX_POSTGRES_DB]
+  # The image installs the `pg` extra, so PostgreSQL works in the shipped image.
+  evidence:
+    - {path: src/phoenix/config.py, line: 3400, quote: "return f\"sqlite:///{working_dir}/phoenix.db\""}
+    - {path: src/phoenix/config.py, line: 170, quote: "ENV_PHOENIX_SQL_DATABASE_URL = \"PHOENIX_SQL_DATABASE_URL\""}
+    - {path: Dockerfile, line: 64, quote: "--extra pg"}
+    - {path: docker-compose.yml, line: 12, quote: "PHOENIX_SQL_DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: src/phoenix/db/migrate.py, line: 37, quote: "def migrate("}
+    - {path: src/phoenix/db/migrate.py, line: 83, quote: "def migrate_in_thread(engine: AsyncEngine, log_migrations: bool = True) -> None:"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # SQLite and exported datasets live under the working directory (PHOENIX_WORKING_DIR). With PostgreSQL nothing durable is needed on disk.
+  evidence:
+    - {path: src/phoenix/config.py, line: 139, quote: "ENV_PHOENIX_WORKING_DIR = \"PHOENIX_WORKING_DIR\""}
+    - {path: src/phoenix/config.py, line: 3399, quote: "working_dir = get_working_dir()"}
+env:
+  required: []
+  optional: [PHOENIX_SQL_DATABASE_URL, PHOENIX_PORT, PHOENIX_HOST, PHOENIX_GRPC_PORT, PHOENIX_ENABLE_AUTH, PHOENIX_SECRET, PHOENIX_ROOT_URL, PHOENIX_WORKING_DIR]
+  buildTime: []
+  # With PHOENIX_ENABLE_AUTH=true, PHOENIX_SECRET is required (config.py:1390). Auth is off by default, so the UI is open to anyone who can reach the ALB.
+  evidence:
+    - {path: src/phoenix/config.py, line: 403, quote: "ENV_PHOENIX_ENABLE_AUTH = \"PHOENIX_ENABLE_AUTH\""}
+    - {path: src/phoenix/config.py, line: 425, quote: "ENV_PHOENIX_SECRET = \"PHOENIX_SECRET\""}
+    - {path: src/phoenix/config.py, line: 772, quote: "ENV_PHOENIX_ROOT_URL = \"PHOENIX_ROOT_URL\""}
+blockers:
+  expected: []
+  mustNot:
+    - "The gRPC port 4317 must not count as the app port or block the deploy: OTLP/HTTP is served on the HTTP port 6006"
+    - "The Prometheus port 9090 must not be treated as a second service"
+    - "A missing database must not be a blocker: SQLite is the default and PostgreSQL is optional"
+    - "Redis, object storage or a worker must not be reported as required"
+    - "The distroless base image (no shell) must not be a blocker: CMD runs Python directly"
+vendorQuestions:
+  legitimate:
+    - "Should authentication be on (PHOENIX_ENABLE_AUTH and PHOENIX_SECRET)? Without it anyone can read traces"
+  unnecessary:
+    - "Which port? (6006)"
+    - "Which Dockerfile? (Dockerfile)"
+    - "Is Redis needed? (no)"
+traps:
+  - "Dockerfile exposes three ports (6006, 4317, 9090); the web service port is 6006 (Dockerfile:164-168)"
+  - "Default storage is SQLite under the working directory, lost on task restart; docker-compose.yml shows the PostgreSQL setup (docker-compose.yml:12)"
+  - "The final image is distroless with no shell, so the start command is `-m phoenix.server.main serve` on the image python entrypoint (Dockerfile:172)"
+  - "The Dockerfile pulls a WASM binary from GitHub at build time (Dockerfile:101-117); this is a build-time download only"
+openQuestions:
+  - "Whether a tool should ask for PHOENIX_ENABLE_AUTH: it is off by default, which makes a public deploy open"
+crossReview:
+  - {field: outcome.accept, change: "none: DEPLOYABLE confirmed. Phoenix has a PostgreSQL driver (pg extra in the image), so SQLite is not a gap (docs/ai-analysis.md rule: SQLite is a gap only when it is the only driver). Postgres is chosen by one env variable, a setting. A tool that leaves SQLite is still running, but data is lost on restart, so the truth says the Deployz deploy should select PostgreSQL.", evidence: "Dockerfile:64 --extra pg; config.py:3392 reads PHOENIX_SQL_DATABASE_URL"}
+  - {field: database, change: "none: status optional, default sqlite, deployzEngine postgres, selectBy PHOENIX_SQL_DATABASE_URL confirmed", evidence: "config.py:3400, 170"}
+  - {field: storage, change: "none: with PostgreSQL and no PHOENIX_WORKING_DIR no local storage is used, so no disk change is needed", evidence: "config.py:3219 _no_local_storage()"}
+  - {field: port/startCommand/healthPath/redis/workers, change: "none: confirmed", evidence: "config.py:3133; Dockerfile:172; app.py:784"}
+  - {field: all, change: verified, evidence: "21 citations checked"}

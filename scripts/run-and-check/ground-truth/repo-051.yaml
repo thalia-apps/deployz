@@ -1,0 +1,136 @@
+id: repo-051
+repository: docusealco/docuseal
+commit: c216e43d2499614cbf432b13b0fa918c8fd966e6
+summary: >
+  DocuSeal is a Ruby on Rails (Ruby 4.0, Puma) document-signing app. The root Dockerfile builds it from source in three
+  stages (download of fonts, ONNX model and pdfium; webpack with shakapacker; Ruby app) and runs Puma on port 3000.
+  The database is SQLite on local disk by default and PostgreSQL or MySQL through DATABASE_URL. Sidekiq runs inside the
+  Puma process (embedded) and needs Redis; when REDIS_URL is empty the app starts a local redis-server inside the
+  container. Migrations run at start. Files go to local disk by default or to S3 when S3_ATTACHMENTS_BUCKET is set.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    One web process from a root Dockerfile that builds from source, port 3000, /up health route, migrations at start,
+    Sidekiq embedded in Puma. Only settings are needed: DATABASE_URL (PostgreSQL), SECRET_KEY_BASE, optional REDIS_URL,
+    and S3_ATTACHMENTS_BUCKET for durable files. The SQLite and local-disk defaults lose data on restart, so Deployz
+    must select PostgreSQL and S3.
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 45, quote: "RUN echo \"gem 'shakapacker'\" > Gemfile && ./bin/shakapacker"}
+    - {path: Dockerfile, line: 104, quote: "EXPOSE 3000"}
+    - {path: Dockerfile, line: 105, quote: "CMD [\"/app/bin/bundle\", \"exec\", \"puma\", \"-C\", \"/app/config/puma.rb\", \"--dir\", \"/app\"]"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: config/puma.rb, line: 22, quote: "port ENV.fetch('PORT', 3000)"}
+    - {path: Dockerfile, line: 104, quote: "EXPOSE 3000"}
+bindAllInterfaces:
+  value: true
+  # Puma's `port` directive binds 0.0.0.0.
+  evidence:
+    - {path: config/puma.rb, line: 22, quote: "port ENV.fetch('PORT', 3000)"}
+startCommand:
+  source: image
+  accept: ["/app/bin/bundle exec puma -C /app/config/puma.rb --dir /app", "bundle exec puma -C config/puma.rb"]
+  evidence:
+    - {path: Dockerfile, line: 105, quote: "CMD [\"/app/bin/bundle\", \"exec\", \"puma\", \"-C\", \"/app/config/puma.rb\", \"--dir\", \"/app\"]"}
+healthPath:
+  accept: ["/up"]
+  evidence:
+    - {path: config/routes.rb, line: 14, quote: "get 'up' => 'rails/health#show'"}
+database:
+  status: required
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DATABASE_URL: "postgres://user:password@host:5432/docuseal"}
+  connectionVars: [DATABASE_URL, DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME]
+  # Without DATABASE_URL the app uses SQLite in $WORKDIR (/data/docuseal), which is not durable on Fargate.
+  evidence:
+    - {path: config/database.yml, line: 26, quote: "adapter: sqlite3"}
+    - {path: config/database.yml, line: 27, quote: "database: <%= ENV['WORKDIR'] || '.' %>/db.sqlite3"}
+    - {path: config/database.yml, line: 32, quote: "url: <%= ENV['DATABASE_URL'] %>"}
+    - {path: config/database.yml, line: 36, quote: "url: <%= ENV['DATABASE_URL'].sub(/\\Amysql2?/, 'trilogy') %>"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: config/initializers/migrate.rb, line: 4, quote: "ActiveRecord::Tasks::DatabaseTasks.migrate if ENV['RAILS_ENV'] == 'production' && ENV['RUN_MIGRATIONS'] != 'false'"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: "redis://<host>:6379/0"}
+  # Sidekiq needs Redis. If REDIS_URL is empty the app sets a local URL and a Puma plugin forks and execs a redis-server child process (installed in the image). With REDIS_URL set (Deployz Redis) no second process runs.
+  evidence:
+    - {path: config/dotenv.rb, line: 103, quote: "if ENV['REDIS_URL'].to_s.empty?"}
+    - {path: config/dotenv.rb, line: 109, quote: "ENV['LOCAL_REDIS_URL'] = ENV.fetch('REDIS_URL', nil)"}
+    - {path: lib/puma/plugin/redis_server.rb, line: 56, quote: "exec('redis-server', '--requirepass', Digest::SHA1.hexdigest(\"redis#{ENV.fetch('SECRET_KEY_BASE', '')}\"),"}
+    - {path: lib/puma/plugin/sidekiq_embed.rb, line: 68, quote: "RedisClient.new(url: ENV.fetch('REDIS_URL', nil)).call('GET', '1')"}
+    - {path: Dockerfile, line: 55, quote: "RUN apk add --no-cache libpq vips redis onnxruntime leptonica"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: config/puma.rb, line: 56, quote: "plugin :sidekiq_embed"}
+    - {path: config/puma.rb, line: 57, quote: "plugin :redis_server"}
+scheduledJobs:
+  status: embedded
+  items: [Sidekiq jobs in the Puma process]
+  evidence:
+    - {path: lib/puma/plugin/sidekiq_embed.rb, line: 56, quote: "@sidekiq.run"}
+storage:
+  local: conditional
+  paths: [/data/docuseal]
+  s3: native
+  s3SelectBy: {S3_ATTACHMENTS_BUCKET: "<bucket>", AWS_REGION: "<region>"}
+  # Default Active Storage service is Disk under $WORKDIR/attachments (/data/docuseal), not durable on Fargate.
+  evidence:
+    - {path: config/environments/production.rb, line: 41, quote: "if ENV['S3_ATTACHMENTS_BUCKET'].present?"}
+    - {path: config/environments/production.rb, line: 48, quote: ":disk"}
+    - {path: config/storage.yml, line: 3, quote: "root: <%= ENV['WORKDIR'] || '.' %>/attachments"}
+    - {path: config/storage.yml, line: 11, quote: "bucket: <%= ENV['S3_ATTACHMENTS_BUCKET'] %>"}
+    - {path: Dockerfile, line: 98, quote: "WORKDIR /data/docuseal"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, note: "PostgreSQL URL; empty means SQLite on local disk"}
+    - {name: SECRET_KEY_BASE, secret: true, note: "When empty the app writes a random value to $WORKDIR/docuseal.env on local disk, which is lost on a new task; set it so sessions and encrypted data survive restarts"}
+  optional: [REDIS_URL, S3_ATTACHMENTS_BUCKET, AWS_REGION, FORCE_SSL, RUN_MIGRATIONS, WORKDIR, PORT, RAILS_MAX_THREADS, SIDEKIQ_THREADS, WEB_CONCURRENCY]
+  buildTime: []
+  evidence:
+    - {path: config/dotenv.rb, line: 32, quote: "elsif ENV['SECRET_KEY_BASE'].to_s.empty?"}
+    - {path: config/dotenv.rb, line: 41, quote: "SECRET_KEY_BASE=#{SecureRandom.hex(64)}"}
+    - {path: config/environments/production.rb, line: 63, quote: "config.force_ssl = ENV['FORCE_SSL'].present? && ENV['FORCE_SSL'] != 'false'"}
+blockers:
+  expected: []
+  mustNot:
+    - "Redis must not be reported as required: the image contains redis-server and starts it when REDIS_URL is empty"
+    - "The image must not be reported as multi-process: the CMD runs only Puma; redis-server is forked by a Puma plugin only when REDIS_URL is empty, and Deployz sets REDIS_URL"
+    - "A separate Sidekiq worker must not be required: Sidekiq runs embedded in Puma"
+    - "SQLite default must not hide the database need: PostgreSQL through DATABASE_URL is the durable choice and is supported"
+    - "The font, ONNX model and pdfium downloads in the Dockerfile must not be treated as missing build artefacts: they are fetched in the download stage"
+vendorQuestions:
+  legitimate:
+    - "Which S3 bucket should hold uploaded documents? (S3_ATTACHMENTS_BUCKET; the default is local disk)"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Health path? (/up)"
+    - "Who runs migrations? (the app, at start)"
+    - "Is a worker needed? (Sidekiq is embedded)"
+traps:
+  - "Database default is SQLite in /data/docuseal; a deploy without DATABASE_URL works but loses data on restart (config/database.yml:25-29)"
+  - "Active Storage defaults to local disk; set S3_ATTACHMENTS_BUCKET for durable files (config/environments/production.rb:41-49)"
+  - "With REDIS_URL empty the Puma plugin forks redis-server inside the task (a second process, not a supervisor); queued jobs are lost on a new task, so set REDIS_URL to the Deployz Redis (lib/puma/plugin/redis_server.rb:50-58, config/dotenv.rb:103-110)"
+  - "Procfile runs plain puma and docker-compose.yml uses the published docuseal/docuseal image with a local volume; neither builds the repo (Procfile:1, docker-compose.yml:6)"
+  - "Dockerfile downloads fonts, a model and pdfium from GitHub releases during build; the build needs outbound internet (Dockerfile:5-18)"
+  - "DATABASE_URL hosts containing an underscore are re-parsed into DATABASE_HOST/PORT/USER/PASSWORD/NAME (config/dotenv.rb:89-101)"
+  - "Behind an HTTPS ALB set FORCE_SSL so the app assumes SSL and uses secure cookies (config/environments/production.rb:60-63)"
+crossReview:
+  - {field: "outcome.accept", change: "none: DEPLOYABLE confirmed. The CMD is only Puma; Sidekiq is a thread in Puma and redis-server is a runtime fork by a Puma plugin that starts only when REDIS_URL is empty, so with REDIS_URL set the image is single-process", evidence: "lib/puma/plugin/redis_server.rb:8; config/dotenv.rb:109"}
+  - {field: "redis", change: "kept optional; added the plugin evidence and the note that the fallback is a forked child process, not in-process", evidence: "lib/puma/plugin/redis_server.rb:50-58"}
+  - {field: "workers", change: "none: Sidekiq embedded in the Puma process", evidence: "lib/puma/plugin/sidekiq_embed.rb:17-22,56"}
+  - {field: "database, storage, healthPath, migrations, port", change: "none: confirmed", evidence: "config/database.yml:25-37; production.rb:41-49; routes.rb:14; migrate.rb:4; puma.rb:22"}
+  - {field: "all", change: "verified", evidence: "15 citations checked"}

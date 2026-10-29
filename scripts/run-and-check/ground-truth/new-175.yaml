@@ -1,0 +1,140 @@
+id: new-175
+repository: HKUDS/LightRAG
+commit: aaebfe1bb8d55deb6a4304d357a3bf4c92fcd40a
+summary: >
+  LightRAG is a Python (FastAPI, uvicorn) graph-based RAG server with a React web UI (built with bun and served by the
+  API). The root Dockerfile builds the UI and the Python package from source and runs python -m
+  lightrag.api.lightrag_server on 9621. The default storage backends are local files under WORKING_DIR (JsonKVStorage,
+  JsonDocStatusStorage, NetworkXStorage, NanoVectorDBStorage), so state is lost on a Fargate task replacement. Env
+  settings switch all four stores to PostgreSQL (PGKVStorage, PGDocStatusStorage, PGVectorStorage with pgvector,
+  PGTableGraphStorage on plain tables, no Apache AGE), which RDS PostgreSQL can host. The LLM and the embedding model are
+  external APIs (LLM_BINDING_* and EMBEDDING_BINDING_*). Neo4j, MongoDB, Milvus, Qdrant, Memgraph and OpenSearch are
+  optional alternative stores, not required.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    One Dockerfile builds the app from source, one HTTP port (9621), /health. The product needs a durable store, and the
+    default one is local disk. With LIGHTRAG_*_STORAGE set to the PG* classes and POSTGRES_* variables, every store
+    lives in RDS PostgreSQL (pgvector is installed with CREATE EXTENSION vector, PGTableGraphStorage needs no extension).
+    That is a configuration-only deploy (DEPLOYABLE), but the storage choice is not the default, so
+    DEPLOYABLE_WITH_CHANGES (set the storage env, enable pgvector) is also defensible. A deploy with the default file
+    storage loses all data on restart.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.lite, reason: "lite variant without the offline extras; not the main image"}
+    - {path: Dockerfile.postgres, reason: "database image variant, not the application"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "&& bun run build"}
+    - {path: Dockerfile, line: 143, quote: "EXPOSE 9621"}
+    - {path: Dockerfile, line: 146, quote: "CMD [\"python\", \"-m\", \"lightrag.api.lightrag_server\"]"}
+runtime: {accept: [python]}
+port:
+  accept: [9621]
+  evidence:
+    - {path: Dockerfile, line: 143, quote: "EXPOSE 9621"}
+    - {path: lightrag/api/config.py, line: 371, quote: "default=get_env_value(\"PORT\", 9621, int),"}
+    - {path: env.example, line: 16, quote: "PORT=9621"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: lightrag/api/config.py, line: 365, quote: "default=get_env_value(\"HOST\", \"0.0.0.0\"),"}
+    - {path: env.example, line: 15, quote: "HOST=0.0.0.0"}
+startCommand:
+  source: image
+  accept: ["python -m lightrag.api.lightrag_server", "docker-entrypoint.sh python -m lightrag.api.lightrag_server"]
+  evidence:
+    - {path: Dockerfile, line: 146, quote: "CMD [\"python\", \"-m\", \"lightrag.api.lightrag_server\"]"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: lightrag/api/lightrag_server.py, line: 2846, quote: "\"/health\","}
+database:
+  status: optional
+  engines: [postgres]
+  default: null
+  deployzEngine: postgres
+  selectBy: {LIGHTRAG_KV_STORAGE: PGKVStorage, LIGHTRAG_DOC_STATUS_STORAGE: PGDocStatusStorage, LIGHTRAG_VECTOR_STORAGE: PGVectorStorage, LIGHTRAG_GRAPH_STORAGE: PGTableGraphStorage}
+  connectionVars: [POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DATABASE]
+  # PostgreSQL is not required by default (file storage), but it is the only way to keep data on Deployz. Needs pgvector.
+  evidence:
+    - {path: env.example, line: 1411, quote: "LIGHTRAG_KV_STORAGE=JsonKVStorage"}
+    - {path: env.example, line: 1413, quote: "LIGHTRAG_GRAPH_STORAGE=NetworkXStorage"}
+    - {path: env.example, line: 1405, quote: "### PGTableGraphStorage runs the graph on plain PostgreSQL 14+ tables with no"}
+    - {path: env.example, line: 1428, quote: "POSTGRES_HOST=localhost"}
+    - {path: lightrag/kg/postgres_impl.py, line: 936, quote: "await connection.execute(\"CREATE EXTENSION IF NOT EXISTS vector\")  # type: ignore"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: optional
+  selectBy: {LIGHTRAG_KV_STORAGE: RedisKVStorage, LIGHTRAG_DOC_STATUS_STORAGE: RedisDocStatusStorage}
+  evidence:
+    - {path: env.example, line: 1651, quote: "REDIS_URI=redis://localhost:6379"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/data/rag_storage, /app/data/inputs, /app/data/prompts]
+  s3: none
+  s3SelectBy: {}
+  # Default stores and uploaded input files are local disk. With the PG* storages the graph, vectors and KV move to
+  # PostgreSQL; uploaded files in INPUT_DIR still use the container disk (not durable on Fargate).
+  evidence:
+    - {path: Dockerfile, line: 113, quote: "ENV WORKING_DIR=/app/data/rag_storage"}
+    - {path: Dockerfile, line: 106, quote: "RUN mkdir -p /app/data/rag_storage /app/data/inputs /app/data/prompts /app/data/tiktoken"}
+env:
+  required:
+    - {name: LLM_BINDING_API_KEY, secret: true, buildTime: false, note: "API key of the LLM provider (openai by default); needed to index and query"}
+    - {name: EMBEDDING_BINDING_API_KEY, secret: true, buildTime: false, note: "API key of the embedding provider"}
+    - {name: LIGHTRAG_API_KEY, secret: true, buildTime: false, note: "without it (or AUTH_ACCOUNTS plus TOKEN_SECRET) every endpoint is public on 0.0.0.0"}
+  optional: [LLM_BINDING, LLM_MODEL, LLM_BINDING_HOST, EMBEDDING_BINDING, EMBEDDING_MODEL, EMBEDDING_BINDING_HOST, AUTH_ACCOUNTS, TOKEN_SECRET, WHITELIST_PATHS, WORKERS, WORKSPACE, LIGHTRAG_KV_STORAGE, LIGHTRAG_DOC_STATUS_STORAGE, LIGHTRAG_GRAPH_STORAGE, LIGHTRAG_VECTOR_STORAGE, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DATABASE, PORT, HOST]
+  buildTime: []
+  evidence:
+    - {path: env.example, line: 1070, quote: "LLM_BINDING_API_KEY=your_api_key"}
+    - {path: env.example, line: 1304, quote: "EMBEDDING_BINDING_API_KEY=your_api_key"}
+    - {path: env.example, line: 199, quote: "# LIGHTRAG_API_KEY=your-secure-api-key-here"}
+blockers:
+  expected:
+    - "Default storage is local files (WORKING_DIR); durable state needs the PostgreSQL storage classes, which must be selected through LIGHTRAG_*_STORAGE and POSTGRES_* settings"
+    - "pgvector must be enabled on the RDS PostgreSQL database for PGVectorStorage"
+    - "LLM and embedding provider keys are needed before documents can be indexed"
+  mustNot:
+    - "Neo4j, MongoDB, Milvus, Qdrant, Memgraph, OpenSearch must not be reported as required: they are optional alternative stores"
+    - "Apache AGE must not be reported as required: PGTableGraphStorage runs on plain PostgreSQL tables"
+    - "docker-compose-full.yml (Neo4j, Milvus, Postgres) must not be treated as the required topology"
+    - "Redis must not be reported as required"
+    - "The React web UI must not be treated as a second service: the API serves the built UI"
+vendorQuestions:
+  legitimate:
+    - "Which LLM and embedding provider and keys? (LLM_BINDING_API_KEY, EMBEDDING_BINDING_API_KEY)"
+    - "Should the knowledge base live in PostgreSQL (PG* storages) so it survives restarts? Where do uploaded input files go?"
+  unnecessary:
+    - "Which port? (9621)"
+    - "Health path? (/health)"
+    - "Which Dockerfile? (Dockerfile at the repo root)"
+traps:
+  - "The default storage classes (JsonKVStorage, NanoVectorDBStorage, NetworkXStorage) write to local disk; a deploy that keeps them loses the graph and vectors on restart (env.example:1411-1414)"
+  - "env.docker-compose-full selects Neo4j and Milvus; it is an example of external stores, not a requirement (env.docker-compose-full:814-816)"
+  - "env.example lists MongoDB, Neo4j, OpenSearch and Redis settings next to PostgreSQL; a detector that matches every listed engine reports many false datastores (env.example:1510, 1527, 1651)"
+  - "Dockerfile.lite and Dockerfile.postgres are variants; the root Dockerfile is the main image"
+  - "The /health route has an auth dependency in code but is documented as an always reachable liveness probe"
+  - "lightrag_webui is a bun/Vite project built inside the Dockerfile; it is not a separate service"
+openQuestions:
+  - "Whether a deploy whose storage choice is only an env setting counts as DEPLOYABLE or DEPLOYABLE_WITH_CHANGES"
+crossReview:
+  - {field: outcome.accept, change: "none: both outcomes kept. The default stores are local files, but the four LIGHTRAG_*_STORAGE settings are real env-only switches (config.py:627 reads them) and PGTableGraphStorage uses plain tables, so durable state needs no code change", evidence: "lightrag/api/config.py:627; env.example:1405-1416"}
+  - {field: database, change: "none: PostgreSQL stays optional by default and is the only durable path. pgvector is created by CREATE EXTENSION IF NOT EXISTS vector (postgres_impl.py:936), which RDS PostgreSQL allows", evidence: "lightrag/kg/postgres_impl.py:936"}
+  - {field: dockerfile, change: "none: Dockerfile builds the UI with bun and installs the package from source; the entrypoint drops to a non-root user then runs the CMD", evidence: "Dockerfile:17, 146; docker-entrypoint.sh"}
+  - {field: healthPath, change: "none: /health has combined_auth as a dependency but the route text says unauthenticated callers get a liveness 200", evidence: "lightrag/api/lightrag_server.py:2846-2852"}
+  - {field: workers, change: "none: WORKERS above 1 is forced to 1 in uvicorn mode; no separate worker process", evidence: "lightrag/api/config.py:996-1002"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

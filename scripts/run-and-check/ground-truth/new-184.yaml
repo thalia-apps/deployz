@@ -1,0 +1,118 @@
+id: new-184
+repository: zulip/zulip
+commit: 3cfe56fa781acdcebb3f5a5669e7c3d18dfae90c
+summary: >
+  Zulip is a Django (Python) and Tornado team-chat server with a TypeScript web front end. Production is installed on a
+  dedicated Debian or Ubuntu machine by scripts/setup/install, which uses Puppet to set up nginx, uwsgi (Django), a
+  Tornado process on 9800, supervisor-managed queue workers, PostgreSQL (with PGroonga), Redis, RabbitMQ and memcached
+  on the same host. The repository has no application Dockerfile: the Docker image is a separate project (zulip/docker-zulip).
+  Dockerfile-postgresql builds only a database image and tools/ci/Dockerfile is a CI base image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    RabbitMQ is a required message broker (USING_RABBITMQ = True) and memcached is a required cache; both are outside the
+    MVP datastores. The product also needs nginx, uwsgi, a Tornado process and many queue worker processes managed by
+    supervisor on one host, and no Dockerfile in the repository builds the application.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile-postgresql, reason: "PostgreSQL image with PGroonga; not the application"}
+    - {path: tools/ci/Dockerfile, reason: "generic Debian or Ubuntu CI base image"}
+    - {path: tools/ci/Dockerfile.prod, reason: "CI image that installs a released Zulip tarball for upgrade tests; not a build from source"}
+    - {path: tools/setup/dev-vagrant-docker/Dockerfile, reason: "development environment image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile-postgresql, line: 17, quote: "FROM groonga/pgroonga:$PGROONGA_VERSION-alpine-$POSTGRESQL_VERSION-slim"}
+    - {path: tools/ci/Dockerfile, line: 1, quote: "# Dockerfile for a generic Debian/Ubuntu image with just the basics we"}
+    - {path: tools/ci/Dockerfile.prod, line: 15, quote: "ADD Docker-prod-8.0.diff /tmp"}
+    - {path: docs/production/docker.md, line: 3, quote: "Zulip provides an {doc}`official Docker image <docker:index>` for"}
+runtime: {accept: [python]}
+port:
+  accept: [80]
+  evidence:
+    - {path: puppet/zulip/templates/nginx/zulip-enterprise.template.erb, line: 16, quote: "listen 80;"}
+    - {path: puppet/zulip/templates/nginx/tornado-upstreams.conf.template.erb, line: 21, quote: "server 127.0.0.1:9800;"}
+bindAllInterfaces:
+  value: false
+  evidence: []
+startCommand:
+  source: image
+  accept: ["supervisorctl"]
+  evidence:
+    - {path: puppet/zulip/templates/supervisor/zulip.conf.template.erb, line: 10, quote: "[program:zulip-django]"}
+healthPath:
+  accept: ["/health"]
+  evidence:
+    - {path: zproject/urls.py, line: 1030, quote: "urls += [path(\"health\", health)]"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: []
+  # Zulip also uses PGroonga (Dockerfile-postgresql) for full-text search; the standard PostgreSQL text search is the fallback.
+  evidence:
+    - {path: zproject/computed_settings.py, line: 357, quote: "\"ENGINE\": \"django.db.backends.postgresql\","}
+    - {path: Dockerfile-postgresql, line: 17, quote: "FROM groonga/pgroonga:$PGROONGA_VERSION-alpine-$POSTGRESQL_VERSION-slim"}
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: zproject/default_settings.py, line: 239, quote: "REDIS_HOST = \"127.0.0.1\""}
+workers:
+  status: independent
+  commands: []
+  # Queue workers (zulip_events_<queue>), Tornado and Django run as separate supervisor programs on one host.
+  evidence:
+    - {path: puppet/zulip/templates/supervisor/zulip.conf.template.erb, line: 45, quote: "[program:zulip-tornado]"}
+    - {path: puppet/zulip/templates/supervisor/zulip.conf.template.erb, line: 80, quote: "[program:zulip_events_<%= queue %>]"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # LOCAL_UPLOADS_DIR is the default; S3_AUTH_UPLOADS_BUCKET and S3_AVATAR_BUCKET select S3.
+  evidence:
+    - {path: zproject/default_settings.py, line: 171, quote: "S3_AUTH_UPLOADS_BUCKET = \"\""}
+    - {path: zproject/default_settings.py, line: 187, quote: "LOCAL_UPLOADS_DIR: str | None = None"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "RabbitMQ is a required message broker (USING_RABBITMQ = True, RABBITMQ_HOST defaults to 127.0.0.1); it is outside the MVP"
+    - "memcached is a required cache (SingletonBMemcached); it is not part of the MVP datastores"
+    - "No Dockerfile in the repository builds Zulip; the installer expects a dedicated machine and runs nginx, uwsgi, Tornado and supervisor-managed workers together"
+  mustNot:
+    - "PostgreSQL and Redis must not be blockers by themselves: both are in the MVP"
+    - "Dockerfile-postgresql must not be chosen as the application Dockerfile"
+    - "Port 9800 (Tornado) must not be the app port: nginx fronts Django and Tornado on 80 and 443"
+vendorQuestions:
+  legitimate:
+    - "Where do RabbitMQ and memcached run? Deployz cannot provide them"
+    - "Is there a Dockerfile that builds the application? The Docker image is in the separate zulip/docker-zulip repository"
+  unnecessary:
+    - "Which database? (PostgreSQL)"
+    - "Is Redis needed? (yes, required)"
+traps:
+  - "Dockerfile-postgresql is a database image, not the app (Dockerfile-postgresql:17)"
+  - "Settings in zproject/default_settings.py point every service at 127.0.0.1, so the app expects all dependencies on one host"
+  - "The Docker docs (docs/production/docker.md:3) describe an image that lives in a different repository"
+  - "Zulip nginx terminates TLS itself and proxies Django (uwsgi) and Tornado (9800); a single HTTP port behind an ALB does not match the shipped topology"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed (RabbitMQ, memcached, multi-process host install, no app Dockerfile)", evidence: "computed_settings.py:410 USING_RABBITMQ = True; :423 SingletonBMemcached"}
+  - {field: dockerfile.reject, change: "added tools/ci/Dockerfile.prod and tools/setup/dev-vagrant-docker/Dockerfile (the only other Dockerfiles)", evidence: "git ls-tree: Dockerfile-postgresql, tools/ci/Dockerfile, tools/ci/Dockerfile.prod, tools/setup/dev-vagrant-docker/Dockerfile"}
+  - {field: port/healthPath/database/redis/workers/storage, change: "none", evidence: "zulip-enterprise.template.erb:16; urls.py:1030; computed_settings.py:357; default_settings.py:239,171,187"}
+  - {field: all, change: verified, evidence: "12 citations checked"}

@@ -1,0 +1,132 @@
+id: new-171
+repository: comet-ml/opik
+commit: 25fa8b47b62d9f97ed9171920643de4bd6c51726
+summary: >
+  Opik is an LLM observability and evaluation platform made of several services: a Java 25 Dropwizard backend
+  (apps/opik-backend, port 8080), a React frontend served by nginx (apps/opik-frontend), a Python evaluator backend
+  (apps/opik-python-backend, port 8000), and optional guardrails and sandbox services. The backend needs MySQL (state),
+  ClickHouse (analytics, with ZooKeeper in the compose stack), Redis, and S3-compatible storage (MinIO in compose).
+  The official stack is deployment/docker-compose/docker-compose.yaml.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    ClickHouse is a required analytics store (ANALYTICS_DB_* settings, a "clickhouse" readiness health check) and is
+    outside the MVP. The product also needs several distinct images at runtime (backend, nginx frontend, Python backend),
+    and the UI is a separate nginx image that proxies to the backend.
+dockerfile:
+  accept: []
+  reject:
+    - {path: apps/opik-backend/Dockerfile, reason: "builds the Java backend from source (maven) and is the API image, but the product also needs the frontend and python-backend images, and ClickHouse"}
+    - {path: apps/opik-frontend/Dockerfile, reason: "separate nginx frontend image"}
+    - {path: apps/opik-python-backend/Dockerfile, reason: "separate evaluator service"}
+    - {path: apps/opik-guardrails-backend/Dockerfile, reason: "optional guardrails service"}
+    - {path: apps/opik-sandbox-executor-python/Dockerfile, reason: "sandbox executor service"}
+  target: null
+  context: apps/opik-backend
+  evidence:
+    - {path: apps/opik-backend/Dockerfile, line: 22, quote: "mvn clean package -Dmaven.test.skip=true -Dmaven.source.skip=true -Dmaven.javadoc.skip=true -Dspotless.skip=true"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 170, quote: "context: ../../apps/opik-backend"}
+    - {path: apps/opik-frontend/Dockerfile, line: 23, quote: "RUN npm run build -- --mode $BUILD_MODE \\"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 322, quote: "context: ../../apps/opik-python-backend"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: apps/opik-backend/Dockerfile, line: 89, quote: "EXPOSE 8080"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 295, quote: "test: [ \"CMD\", \"curl\", \"-f\", \"http://localhost:8080/health-check\" ]"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  source: image
+  accept: ["./entrypoint.sh", "java -jar opik-backend.jar server config.yml"]
+  evidence:
+    - {path: apps/opik-backend/Dockerfile, line: 98, quote: "CMD [\"./entrypoint.sh\"]"}
+    - {path: apps/opik-backend/entrypoint.sh, line: 39, quote: "java $JAVA_OPTS -jar opik-backend-$OPIK_VERSION.jar server config.yml"}
+healthPath:
+  accept: ["/health-check"]
+  evidence:
+    - {path: apps/opik-backend/config.yml, line: 353, quote: "healthCheckUrlPaths: [\"/health-check\"]"}
+database:
+  status: required
+  engines: [mysql, clickhouse]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [STATE_DB_URL, STATE_DB_USER, STATE_DB_PASS, ANALYTICS_DB_HOST, ANALYTICS_DB_PORT, ANALYTICS_DB_USERNAME, ANALYTICS_DB_PASS, ANALYTICS_DB_MIGRATIONS_URL]
+  # MySQL 8 maps to Deployz RDS. ClickHouse is a second required engine that Deployz cannot provide.
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 5, quote: "image: mysql:8.4.2"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 181, quote: "STATE_DB_PROTOCOL: \"jdbc:mysql://\""}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 46, quote: "image: clickhouse/clickhouse-server:26.3.16.16-alpine"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 190, quote: "ANALYTICS_DB_HOST: \"clickhouse\""}
+    - {path: apps/opik-backend/config.yml, line: 373, quote: "- name: clickhouse"}
+migrations:
+  mode: command
+  accept: ["./run_db_migrations.sh"]
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 175, quote: "command: [ \"bash\", \"-c\", \"./run_db_migrations.sh && ./provision_agent_insights_readonly_user.sh && ./entrypoint.sh\" ]"}
+    - {path: apps/opik-backend/Dockerfile, line: 74, quote: "run_db_migrations.sh"}
+redis:
+  status: required
+  selectBy: {}
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 22, quote: "image: redis:7.2.4-alpine3.19"}
+    - {path: apps/opik-backend/config.yml, line: 370, quote: "- name: redis"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 313, quote: "image: ghcr.io/comet-ml/opik/opik-python-backend:${OPIK_VERSION:-latest}"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: native
+  s3SelectBy: {}
+  # MinIO in compose stores attachments; the backend uses an S3 client, so real S3 works.
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 127, quote: "image: *minio-image"}
+env:
+  required:
+    - {name: STATE_DB_URL, secret: false, buildTime: false, note: "MySQL host, port and database"}
+    - {name: STATE_DB_USER, secret: false, buildTime: false, note: "MySQL user"}
+    - {name: STATE_DB_PASS, secret: true, buildTime: false, note: "MySQL password"}
+    - {name: ANALYTICS_DB_HOST, secret: false, buildTime: false, note: "ClickHouse host; Deployz cannot provide ClickHouse"}
+    - {name: ANALYTICS_DB_PASS, secret: true, buildTime: false, note: "ClickHouse password"}
+  optional: [OPIK_VERSION, PYTHON_EVALUATOR_URL, ANALYTICS_DB_PORT, ANALYTICS_DB_USERNAME]
+  buildTime: [OPIK_VERSION]
+  evidence:
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 184, quote: "STATE_DB_USER: opik"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 185, quote: "STATE_DB_PASS: opik"}
+    - {path: deployment/docker-compose/docker-compose.yaml, line: 279, quote: "PYTHON_EVALUATOR_URL: ${PYTHON_EVALUATOR_URL:-http://python-backend:${PYTHON_BACKEND_PORT:-8000}}"}
+blockers:
+  expected:
+    - "ClickHouse is a required analytics store (ANALYTICS_DB_* variables, clickhouse readiness check) and is outside the MVP datastores"
+    - "The product runs as several distinct images (Java backend, nginx frontend, Python evaluator backend), not one image on one port"
+  mustNot:
+    - "MySQL and Redis must not block by themselves: both are supported MVP datastores"
+    - "ZooKeeper in docker-compose.yaml must not be counted separately: it only serves the ClickHouse cluster"
+    - "MinIO must not block: S3 is supported"
+    - "Port 3003 (redoc server in the backend image) must not be treated as the app port"
+    - "The Java runtime must not be a blocker by itself"
+vendorQuestions:
+  legitimate:
+    - "Can ClickHouse run outside Deployz (managed ClickHouse) and the backend point to it?"
+    - "How are the frontend and the Python evaluator hosted, given they are separate images?"
+  unnecessary:
+    - "Which port? (8080 for the backend)"
+    - "Which database for state? (MySQL 8)"
+traps:
+  - "The backend image starts a redoc web server on 3003 in the background before the Java process (apps/opik-backend/entrypoint.sh:5); the API port is 8080"
+  - "The Dockerfile CMD is entrypoint.sh, which does not run migrations; migrations run from run_db_migrations.sh in the compose command (docker-compose.yaml:175)"
+  - "Health is a Dropwizard path on the application port, /health-check, and its checks fail when ClickHouse or Redis is missing (apps/opik-backend/config.yml:353-373)"
+  - "Dockerfile.cpu and Dockerfile in apps/opik-guardrails-backend are optional guardrails, not the main app"
+crossReview:
+  - {field: outcome.accept, change: "none: NOT_DEPLOYABLE confirmed", evidence: "config.yml:373 registers a critical clickhouse ready check beside db and redis (lines 370-376); compose:46 clickhouse image"}
+  - {field: database, change: "none: mysql + clickhouse confirmed", evidence: "docker-compose.yaml:181 and :190"}
+  - {field: redis/workers/storage/port/healthPath, change: "none: confirmed", evidence: "config.yml:353,370; Dockerfile:89"}
+  - {field: all, change: verified, evidence: "22 citations checked"}

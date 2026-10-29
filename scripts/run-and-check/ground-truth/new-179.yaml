@@ -1,0 +1,146 @@
+id: new-179
+repository: hoppscotch/hoppscotch
+commit: 63273f8e599e73f0fb38c0739314e8d46b6bc83d
+summary: >
+  Hoppscotch is an open-source API client. The self-host stack is a NestJS backend (GraphQL and REST, Prisma and
+  PostgreSQL), the selfhost-web SPA, an admin dashboard and a small Go webapp-server. prod.Dockerfile has one stage per
+  piece (backend, app, sh_admin) and a last stage, aio, that puts all of them in one image behind Caddy. aio_run.mjs
+  starts Caddy, the backend (internal port 8080) and the webapp-server. With ENABLE_SUBPATH_BASED_ACCESS=true Caddy
+  serves everything on one port (HOPP_ALTERNATE_PORT, default 80): the SPA on /, the admin on /admin and the backend on
+  /backend. Without it the aio image uses three ports (3000 app, 3100 admin, 3170 backend). PostgreSQL is required.
+  Migrations are a separate command (prisma migrate deploy). No Redis and no S3: the pub/sub is in memory.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, DEPLOYABLE]
+  reason: >
+    prod.Dockerfile builds the aio target from source, and with ENABLE_SUBPATH_BASED_ACCESS=true it serves the whole
+    product on one HTTP port with /backend/ping as the health route, backed by RDS PostgreSQL. The Dockerfile has a
+    non-standard name (prod.Dockerfile) and the migration is a separate command (pnpm exec prisma migrate deploy), so
+    the setup is mostly Deployz settings (DEPLOYABLE); DEPLOYABLE_WITH_CHANGES is accepted because the default
+    ports are the multiport layout and the subpath env and a migration command must be set. The default root
+    docker-compose.yml starts several services and is only the development layout.
+dockerfile:
+  accept: [prod.Dockerfile]
+  reject:
+    - {path: packages/hoppscotch-backend/Dockerfile, reason: "backend-only image; the frontend is a separate service"}
+    - {path: packages/hoppscotch-selfhost-web/Dockerfile, reason: "frontend-only image"}
+    - {path: packages/hoppscotch-sh-admin/Dockerfile, reason: "admin dashboard-only image"}
+  target: aio
+  context: .
+  evidence:
+    - {path: prod.Dockerfile, line: 306, quote: "FROM node_base AS aio"}
+    - {path: prod.Dockerfile, line: 353, quote: "CMD [\"node\", \"/usr/src/app/aio_run.mjs\"]"}
+    - {path: docker-compose.deploy.yml, line: 32, quote: "- ENABLE_SUBPATH_BASED_ACCESS=true"}
+runtime: {accept: [node]}
+port:
+  accept: [80]
+  # Subpath mode: Caddy listens on HOPP_ALTERNATE_PORT (default 80). Multiport mode uses 3000, 3100 and 3170 instead.
+  evidence:
+    - {path: aio-subpath-access.Caddyfile, line: 6, quote: ":{$HOPP_ALTERNATE_PORT:80} {"}
+    - {path: .env.example, line: 46, quote: "ENABLE_SUBPATH_BASED_ACCESS=false"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: aio-subpath-access.Caddyfile, line: 6, quote: ":{$HOPP_ALTERNATE_PORT:80} {"}
+startCommand:
+  source: image
+  accept: ["node /usr/src/app/aio_run.mjs"]
+  evidence:
+    - {path: prod.Dockerfile, line: 353, quote: "CMD [\"node\", \"/usr/src/app/aio_run.mjs\"]"}
+    - {path: aio_run.mjs, line: 121, quote: "const backendProcess = runChildProcessWithPrefix(\"node\", [\"/dist/backend/dist/src/main.js\"], \"Backend Server\")"}
+healthPath:
+  accept: ["/backend/ping"]
+  # Subpath mode. The backend route is /ping (backend port 3170 in multiport mode).
+  evidence:
+    - {path: healthcheck.sh, line: 20, quote: "curlCheck \"http://localhost:${HOPP_ALTERNATE_PORT:-${HOPP_AIO_ALTERNATE_PORT:-80}}/backend/ping\" || exit 1"}
+    - {path: packages/hoppscotch-backend/src/app.controller.ts, line: 4, quote: "@Controller('ping')"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: .env.example, line: 3, quote: "DATABASE_URL=postgresql://postgres:testpass@hoppscotch-db:5432/hoppscotch"}
+    - {path: docker-compose.deploy.yml, line: 6, quote: "image: postgres:15"}
+migrations:
+  mode: command
+  accept: ["pnpm exec prisma migrate deploy"]
+  # The image does not migrate on start; the compose files run prisma migrate deploy before aio_run.mjs.
+  evidence:
+    - {path: docker-compose.deploy.yml, line: 42, quote: "\"pnpm exec prisma migrate deploy && node /usr/src/app/aio_run.mjs\","}
+    - {path: docker-compose.yml, line: 180, quote: "command: sh -c \"pnpm exec prisma migrate deploy\""}
+redis:
+  status: none
+  selectBy: {}
+  # graphql-redis-subscriptions is a dependency, but the pub/sub service always builds the in-memory PubSub.
+  evidence:
+    - {path: packages/hoppscotch-backend/src/pubsub/pubsub.service.ts, line: 17, quote: "this.pubsub = new LocalPubSub();"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: ephemeral
+  paths: [/data/webapp-server]
+  s3: none
+  s3SelectBy: {}
+  # /data/webapp-server holds a signing key that is regenerated if lost; no user data is stored on disk.
+  evidence:
+    - {path: prod.Dockerfile, line: 346, quote: "RUN mkdir -p /data/webapp-server && chmod g=rwX /data /data/webapp-server"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL connection string"}
+    - {name: DATA_ENCRYPTION_KEY, secret: true, buildTime: false, note: "32-character key for sensitive data stored in the database"}
+    - {name: ENABLE_SUBPATH_BASED_ACCESS, secret: false, buildTime: false, note: "set to true so one port serves the app, /admin and /backend"}
+    - {name: VITE_BASE_URL, secret: false, buildTime: false, note: "public URL of the app; the aio start script injects VITE_* values into the built SPA at start"}
+    - {name: VITE_BACKEND_GQL_URL, secret: false, buildTime: false, note: "public GraphQL URL (https://host/backend/graphql in subpath mode)"}
+    - {name: VITE_BACKEND_WS_URL, secret: false, buildTime: false, note: "public websocket URL (wss://host/backend/graphql)"}
+    - {name: VITE_BACKEND_API_URL, secret: false, buildTime: false, note: "public REST URL (https://host/backend/v1)"}
+    - {name: WHITELISTED_ORIGINS, secret: false, buildTime: false, note: "CORS origins; must include the public URL"}
+  optional: [VITE_SHORTCODE_BASE_URL, VITE_ADMIN_URL, HOPP_ALTERNATE_PORT, TRUST_PROXY, PROXY_APP_URL, VITE_APP_TOS_LINK, VITE_APP_PRIVACY_POLICY_LINK, VITE_PROXYSCOTCH_ACCESS_TOKEN]
+  buildTime: []
+  evidence:
+    - {path: .env.example, line: 6, quote: "DATA_ENCRYPTION_KEY=data encryption key with 32 char"}
+    - {path: .env.example, line: 29, quote: "VITE_BASE_URL=http://localhost:3000"}
+    - {path: .env.example, line: 15, quote: "WHITELISTED_ORIGINS=http://localhost:3170,http://localhost:3000,http://localhost:3100,app://localhost_3200,app://hoppscotch"}
+    - {path: aio_run.mjs, line: 42, quote: "const useSubpathAccess = process.env.ENABLE_SUBPATH_BASED_ACCESS === \"true\""}
+blockers:
+  expected:
+    - "The aio image serves three ports by default (3000 app, 3100 admin, 3170 backend); set ENABLE_SUBPATH_BASED_ACCESS=true to get one port"
+    - "The database schema is created by a separate command (pnpm exec prisma migrate deploy); the image does not run it on start"
+  mustNot:
+    - "The Go webapp-server, Caddy and the admin dashboard must not be reported as separate services: the aio image runs them in one container"
+    - "Redis must not be reported as required: the pub/sub is in memory"
+    - "S3 must not be reported as required"
+    - "The desktop app, browser extension and CLI packages must not be reported as blockers: the server stack is the product to deploy"
+    - "SMTP must not be a blocker by itself: sign-in providers and mail are set later in the admin dashboard"
+vendorQuestions:
+  legitimate:
+    - "What is the public URL (used for the VITE_* URLs and WHITELISTED_ORIGINS)?"
+    - "Which sign-in providers and mail server will the admin configure?"
+  unnecessary:
+    - "Which port? (80 in subpath mode)"
+    - "Health path? (/backend/ping)"
+    - "Is Redis needed? (no)"
+traps:
+  - "Without ENABLE_SUBPATH_BASED_ACCESS the aio image listens on 3000, 3100 and 3170 and the health script checks all three (healthcheck.sh:22-24)"
+  - "prod.Dockerfile has several targets (backend, app, sh_admin, aio); a build without a target takes the last stage, aio (prod.Dockerfile:306)"
+  - "docker-compose.yml at the root defines separate frontend, backend, admin, database and migrate services as the dev layout (docker-compose.yml:169-180)"
+  - "docker-compose.deploy.yml is marked as internal testing, but its aio command and env show the supported one-container layout (docker-compose.deploy.yml:1)"
+  - "graphql-redis-subscriptions is in package.json but unused: the in-memory PubSub is always created (pubsub.service.ts:17)"
+  - ".env.example uses localhost:3000/3100/3170 URLs; the VITE_* values must be the public HTTPS URLs"
+  - "The aio image is a multi-process container (Caddy, the Node backend and the Go webapp-server started by aio_run.mjs; it exits when any of them exits); it is one image and one port in subpath mode, so it fits the one-service model (aio_run.mjs:119-138)"
+  - "The backend packages/hoppscotch-backend/Dockerfile and the other per-package Dockerfiles build a single piece, not the whole product"
+openQuestions:
+  - "Whether the one-time prisma migrate deploy counts as a migration command in the Deployz settings or as a repository change (entry command wrapper)"
+crossReview:
+  - {field: image, change: "none: confirmed aio is a multi-process image (Caddy, backend on 8080, webapp-server) behind one Caddy port when ENABLE_SUBPATH_BASED_ACCESS=true; without it Caddy binds 3000/3100/3170. Added a trap", evidence: "aio_run.mjs:42, 119-138; prod.Dockerfile:306-353"}
+  - {field: redis, change: "none: PubSubService always builds the local in-memory PubSub", evidence: "pubsub.service.ts:17"}
+  - {field: migrations, change: "none: aio_run.mjs does not run prisma; only the compose files run prisma migrate deploy first", evidence: "docker-compose.deploy.yml:42; aio_run.mjs:119-122"}
+  - {field: outcome.accept, change: "none: both kept. A one-shot migration command plus the subpath env are Deployz settings; DEPLOYABLE_WITH_CHANGES stays defensible because the default layout is multiport", evidence: ".env.example:46; aio_run.mjs:42"}
+  - {field: all, change: verified, evidence: "19 citations checked"}
