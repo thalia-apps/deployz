@@ -393,7 +393,9 @@ function questionText(question: Question): string {
       ? 'Does the production app need this datastore?'
       : question.category === 'local_state'
         ? 'Does the production app keep durable data (data that must survive a new container) on this local path?'
-        : 'Does the web app need the other application service(s) to start and to serve its main function?';
+        : question.category === 'declared_service'
+          ? 'Does the production app need any of these services at runtime?'
+          : 'Does the web app need the other application service(s) to start and to serve its main function?';
   return `${question.id} (kind "blocker", ${question.category.replace('_', ' ')}): the scanner found: ${question.reason} ${subject}`;
 }
 

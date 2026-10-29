@@ -15,6 +15,7 @@ export const DISPUTABLE_FINDING_IDS = [
   'unsupported-redis-setup',
   'unsupported-message-queue',
   'unsupported-multi-service',
+  'unconfirmed-declared-service',
   'unsupported-persistent-volume',
   'local-file-storage',
 ] as const;

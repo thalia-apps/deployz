@@ -3,7 +3,8 @@
  *
  * - A blocker candidate: a rejection where it is not known whether the app
  *   needs the item (an unsupported datastore, durable local state, a second
- *   application service in the production Compose file).
+ *   application service in the production Compose file, or a service that the
+ *   repository's own stack declares and the rules did not find the app using).
  * - A fact that the rules did not resolve: no port, no start command, no
  *   health path, no Dockerfile or a tied choice, an unknown migration for a
  *   required database, or no variable that the app reads its required database
@@ -19,7 +20,7 @@ import type { AnalysisResult } from '../analyser.js';
 import { listDockerfileCandidates, type FileTree } from '../detectors.js';
 import { databaseConnectionUnverified } from '../manifest.js';
 
-export type BlockerCategory = 'datastore' | 'local_state' | 'compose_service';
+export type BlockerCategory = 'datastore' | 'local_state' | 'compose_service' | 'declared_service';
 export const OPEN_FACTS = ['dockerfile', 'port', 'startCommand', 'healthPath', 'migration', 'databaseVariable', 'repositoryKind'] as const;
 export type OpenFact = (typeof OPEN_FACTS)[number];
 
@@ -73,7 +74,28 @@ function composeTerms(reason: string): string[] {
   return list.split(/,\s*/).filter((name) => name.length > 0);
 }
 
+/**
+ * The declared services of an `unexplained-declared-service` reason (`redis (redis:7.0) in compose.yaml`,
+ * `KAFKA_BROKERS in .env.example`), the engine words of their images, and the usual connection names.
+ */
+function declaredServiceTerms(reason: string): string[] {
+  const terms = new Set<string>();
+  for (const entry of reason.replace(/^.*?declares /, '').split('; ')) {
+    const name = /^([\w.-]+)/.exec(entry)?.[1];
+    if (name) terms.add(name);
+    const engine = /\(([^)\s]+?)(?::[\w.-]+)?\)/.exec(entry)?.[1]?.split('/').pop();
+    if (engine && !engine.startsWith('builds')) terms.add(engine);
+  }
+  for (const term of [...terms]) {
+    if (/^[a-z][\w-]*$/.test(term)) for (const suffix of ['url', 'host']) terms.add(`${term.replace(/-/g, '_')}_${suffix}`);
+  }
+  return [...terms];
+}
+
 function blockerOf(dependency: string, reason: string): BlockerItem | null {
+  if (dependency === 'unexplained-declared-service') {
+    return { kind: 'blocker', category: 'declared_service', dependency, reason, terms: declaredServiceTerms(reason) };
+  }
   if (/^Unsupported (?:database|search engine)/.test(reason) && !/extension/.test(reason)) {
     return { kind: 'blocker', category: 'datastore', dependency, reason, terms: datastoreTerms(dependency, reason) };
   }

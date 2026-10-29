@@ -26,7 +26,7 @@ import {
 } from '../src/detectors.js';
 import { normalizeDeploymentManifest } from '../src/manifest.js';
 import { assessRedis } from '../src/redis.js';
-import { rejectionFindingId } from '../src/readiness-report.js';
+import { buildReadinessReport, rejectionFindingId } from '../src/readiness-report.js';
 import {
   assessMysql,
   checkDockerComposeMultiService,
@@ -41,6 +41,7 @@ import {
   checkOtherUnsupportedDatabases,
   checkRabbitMq,
   checkSqlite,
+  checkUnexplainedDeclaredServices,
 } from '../src/rejection.js';
 
 const envVar = (tree: FileTree, key: string) => detectEnvVarModel(tree).find((variable) => variable.key === key);
@@ -1129,5 +1130,152 @@ describe('Round 7 analysis gaps', () => {
       ['CMakeLists.txt', 'src/main.cpp', 'docker/development-macos-entrypoint.sh'],
     );
     expect(checkNoBuildableDockerfile(tree).dependency).toBe('no-buildable-dockerfile');
+  });
+});
+
+describe('declared services that the rules did not explain (Huly, zammad, mem0)', () => {
+  const rails: FileTree = {
+    Dockerfile: 'FROM ruby:3.4-slim\nWORKDIR /app\nCOPY . .\nRUN bundle install\nEXPOSE 3000\nCMD ["bundle", "exec", "puma"]\n',
+    Gemfile: "source 'https://rubygems.org'\ngem 'rails'\ngem 'pg'\ngem 'redis', '< 6'\n",
+    'config/application.rb': "redis_configured = ENV['REDIS_URL'].present?\n",
+    '.devcontainer/default/compose.yaml': [
+      'services:',
+      '  devcontainer:',
+      '    image: ghcr.io/rails/devcontainer/images/ruby:3.4',
+      '    environment:',
+      '      DATABASE_URL: postgres://app:app@postgresql:5432',
+      '      REDIS_URL: redis://redis:6379',
+      '      ES_URL: http://localhost:9200',
+      '    depends_on:',
+      '      - postgresql',
+      '      - redis',
+      '  elasticsearch:',
+      '    image: elasticsearch:9.5.5',
+      '    network_mode: service:devcontainer',
+      '  postgresql:',
+      '    image: postgres:17-alpine',
+      '  redis:',
+      '    image: redis:7.0',
+      '',
+    ].join('\n'),
+  };
+  const outcome = (tree: FileTree) => buildReadinessReport(analyseRepo(tree)).outcome;
+  const declared = (tree: FileTree) => analyseRepo(tree).rejections.find((entry) => entry.detected && entry.dependency === 'unexplained-declared-service');
+  const none = { postgres: false, mysql: false, redis: false, storage: false, rejectionReasons: [] };
+
+  it('asks about a Redis service that the development stack wires to the app when the rules found Redis optional (zammad)', () => {
+    const rejection = declared(rails);
+    expect(rejection?.reason).toContain('redis (redis:7.0) in .devcontainer/default/compose.yaml');
+    // The rules explain PostgreSQL, and nothing in the stack connects to Elasticsearch.
+    expect(rejection?.reason).not.toMatch(/postgresql|elasticsearch/);
+    expect(rejectionFindingId('unexplained-declared-service')).toBe('unconfirmed-declared-service');
+    // A question, not a blocker: a change to verify (outcome 2), never "not deployable" by itself.
+    expect(outcome(rails)).toBe('DEPLOYABLE_WITH_CHANGES');
+    // The vendor's or the AI's "not used" answer dismisses it.
+    expect(analyseRepo(rails, { dismissedRejections: [rejection!.reason] }).rejections.some((entry) => entry.detected && entry.dependency === 'unexplained-declared-service')).toBe(false);
+  });
+
+  it('asks nothing when the rules explain each declared service', () => {
+    expect(checkUnexplainedDeclaredServices(rails, { ...none, postgres: true, redis: true }).detected).toBe(false);
+    // A rejection that names the engine explains it.
+    const mongo = { 'docker-compose.yml': 'services:\n  web:\n    build: .\n    depends_on:\n      - mongo\n  mongo:\n    image: mongo:7\n' };
+    expect(checkUnexplainedDeclaredServices(mongo, none).detected).toBe(true);
+    expect(checkUnexplainedDeclaredServices(mongo, { ...none, rejectionReasons: ['Unsupported database dependency: mongodb, and a mongo service is defined'] }).detected).toBe(false);
+    // A test stack is not how the app runs, and an admin tool is not a datastore.
+    expect(checkUnexplainedDeclaredServices({ 'tests/docker-compose.yml': mongo['docker-compose.yml'] }, none).detected).toBe(false);
+    const tool = 'services:\n  web:\n    build: .\n    depends_on:\n      - ui\n  ui:\n    image: mongo-express:1\n';
+    expect(checkUnexplainedDeclaredServices({ 'docker-compose.yml': tool }, none).detected).toBe(false);
+  });
+
+  it('does not read start order, a database test matrix or a service that a production variant leaves out as a need (saleor, shlink, Flagsmith)', () => {
+    // A development stack starts its cache first with depends_on; the app reads its settings from an env file.
+    const ordered = 'services:\n  app:\n    build: ..\n    env_file:\n      - backend.env\n    depends_on:\n      - cache\n  cache:\n    image: valkey/valkey:8.1-alpine\n';
+    expect(checkUnexplainedDeclaredServices({ '.devcontainer/docker-compose.yml': ordered }, none).detected).toBe(false);
+    // In the production stack, depends_on is a need.
+    expect(checkUnexplainedDeclaredServices({ 'docker-compose.yml': ordered.replace('build: ..', 'build: .') }, none).detected).toBe(true);
+    // A development stack with several relational engines tests the app against each of them.
+    const matrix = 'services:\n  app:\n    build: .\n    volumes:\n      - ./:/app\n    links:\n      - db_mysql\n      - db_postgres\n      - redis\n  db_mysql:\n    image: mysql:8.0\n  db_postgres:\n    image: postgres:16\n  redis:\n    image: redis:7\n';
+    expect(checkUnexplainedDeclaredServices({ 'docker-compose.yml': matrix }, none).detected).toBe(false);
+    // A lighter stand-alone production variant that leaves Kafka out makes it optional.
+    const full = 'services:\n  api:\n    build: .\n    depends_on:\n      - kafka\n  kafka:\n    image: apache/kafka:3.9.1\n';
+    const lighter = 'services:\n  api:\n    build: .\n';
+    expect(checkUnexplainedDeclaredServices({ 'docker-compose.yml': full }, none).detected).toBe(true);
+    expect(checkUnexplainedDeclaredServices({ 'docker-compose.yml': full, 'docker-compose.flags-only.yml': lighter }, none).detected).toBe(false);
+  });
+
+  it('reads the shallowest development stack when there is no production Compose file (Huly)', () => {
+    const stack = [
+      'services:',
+      '  stream:',
+      "    image: 'hardcoreeng/stream'",
+      '  cockroach:',
+      '    image: cockroachdb/cockroach:latest-v24.3',
+      '  redpanda:',
+      '    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6',
+      '  redpanda_console:',
+      '    image: docker.redpanda.com/redpandadata/console:v2.8.3',
+      '    depends_on:',
+      '      - redpanda',
+      '  workspace:',
+      '    image: hardcoreeng/workspace',
+      '    links:',
+      '      - cockroach',
+      '    environment:',
+      '      - HULY_KAFKA_BOOTSTRAP=redpanda:9092',
+      '    depends_on:',
+      '      redpanda:',
+      '        condition: service_started',
+      '',
+    ].join('\n');
+    const tree: FileTree = {
+      'foundations/stream/Dockerfile': 'FROM rust:1 AS build\nCOPY . .\nRUN cargo build --release\nFROM debian:12\nCOPY --from=build /target/release/stream /stream\nEXPOSE 1080\nENTRYPOINT ["/stream"]\n',
+      'foundations/stream/Cargo.toml': '[package]\nname = "stream"\n',
+      'dev/docker-compose.yaml': stack,
+      'dev/local-mongo/docker-compose.yaml': 'services:\n  app:\n    build: .\n    depends_on:\n      - mongo\n  mongo:\n    image: mongo:7\n',
+      '.gitlab/ci/docker-compose.yml': 'services:\n  app:\n    build: .\n    depends_on:\n      - clickhouse\n  clickhouse:\n    image: clickhouse/clickhouse-server\n',
+    };
+    const reason = checkUnexplainedDeclaredServices(tree, none).reason;
+    expect(reason).toContain('cockroach (cockroachdb/cockroach:latest-v24.3) in dev/docker-compose.yaml');
+    expect(reason).toContain('redpanda (docker.redpanda.com/redpandadata/redpanda:v24.3.6) in dev/docker-compose.yaml');
+    expect(reason).not.toMatch(/console|mongo|clickhouse/);
+    expect(outcome(tree)).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+
+  it('asks about a second application service that the selected app needs in a development stack (mem0)', () => {
+    const compose = [
+      'services:',
+      '  mem0:',
+      '    build:',
+      '      context: ..',
+      '      dockerfile: server/dev.Dockerfile',
+      '    volumes:',
+      '      - .:/app',
+      '  mem0-dashboard:',
+      '    build: ./dashboard',
+      '    environment:',
+      '      - API_INTERNAL_URL=http://mem0:8000',
+      '',
+    ].join('\n');
+    const tree: FileTree = {
+      'server/dashboard/Dockerfile': 'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nRUN npm ci && npm run build\nEXPOSE 3000\nCMD ["node", "server.js"]\n',
+      'server/dashboard/package.json': '{\n  "name": "dashboard",\n  "dependencies": {\n    "next": "15.0.0"\n  }\n}\n',
+      'server/docker-compose.yaml': compose,
+    };
+    expect(declared(tree)?.reason).toContain('mem0 (builds server/dev.Dockerfile) in server/docker-compose.yaml, which mem0-dashboard needs');
+    expect(outcome(tree)).toBe('DEPLOYABLE_WITH_CHANGES');
+    // A service that the selected app does not name is not one it needs.
+    expect(declared({ ...tree, 'server/docker-compose.yaml': compose.replace('      - API_INTERNAL_URL=http://mem0:8000\n', '') })).toBeUndefined();
+  });
+
+  it('reads Helm chart dependencies and env sample connection settings', () => {
+    const context = { ...none, postgres: true, redis: true };
+    const chart = 'apiVersion: v2\nname: app\ndependencies:\n  - name: postgresql\n    version: 12.x\n  - name: elasticsearch\n    version: 19.x\n    condition: elasticsearch.enabled\n';
+    expect(checkUnexplainedDeclaredServices({ 'charts/app/Chart.yaml': chart }, context).reason).toContain('elasticsearch (a Helm dependency) in charts/app/Chart.yaml');
+    // A vendored subchart is not the app's own chart.
+    expect(checkUnexplainedDeclaredServices({ 'charts/app/charts/search/Chart.yaml': chart }, context).detected).toBe(false);
+    const sample = 'DATABASE_URL=postgres://localhost/app\nREDIS_URL=redis://localhost:6379\nKAFKA_BROKERS=localhost:9092\n# MONGO_URL=mongodb://localhost\n';
+    expect(checkUnexplainedDeclaredServices({ '.env.example': sample }, context).reason).toBe(
+      'Unconfirmed service: the repository declares KAFKA_BROKERS in .env.example. Deployz did not find how the application uses it.',
+    );
   });
 });

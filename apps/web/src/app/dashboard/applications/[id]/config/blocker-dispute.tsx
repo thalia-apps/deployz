@@ -31,6 +31,7 @@ const DISPUTE_SUBJECTS: Record<string, string> = {
   'unsupported-redis-setup': 'this Redis setup',
   'unsupported-message-queue': 'this message queue',
   'unsupported-multi-service': 'the extra services',
+  'unconfirmed-declared-service': 'the declared services',
   'unsupported-persistent-volume': 'the persistent disk volume',
   'local-file-storage': 'local file storage',
 };

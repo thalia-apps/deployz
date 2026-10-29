@@ -295,6 +295,18 @@ const MULTI_SERVICE_COPY: RejectionCopy = {
     'Run the app as a single container, or move the extra services out of the deployment.',
 };
 
+const DECLARED_SERVICE_COPY: RejectionCopy = {
+  ...ARCHITECTURE_COPY,
+  id: 'unconfirmed-declared-service',
+  title: 'Declares a service that Deployz could not confirm',
+  plainEnglishExplanation:
+    "This repository's own setup starts a service (for example a database, cache, search engine or second app) that Deployz did not find the app using.",
+  whyItMatters:
+    'Deployz provides only the services that it finds the app using. If the app needs this service, it fails at start or loses features.',
+  suggestedOutcome:
+    'If the app does not need the service in production, mark it as not used. If it needs it, make the app use a service that Deployz provides (PostgreSQL, MySQL, Redis or object storage).',
+};
+
 const STORAGE_COPY: RejectionCopy = {
   ...ARCHITECTURE_COPY,
   id: 'unsupported-persistent-volume',
@@ -372,6 +384,7 @@ function rejectionCopy(dependency: string): RejectionCopy {
     return MESSAGE_QUEUE_COPY;
   }
   if (dependency === 'docker-compose-multi-service') return MULTI_SERVICE_COPY;
+  if (dependency === 'unexplained-declared-service') return DECLARED_SERVICE_COPY;
   if (dependency === 'multi-process-image') return MULTI_PROCESS_COPY;
   if (dependency === 'persistent-volume' || dependency === 'local-filesystem') return STORAGE_COPY;
   if (dependency === 'gpu') return GPU_COPY;
@@ -420,6 +433,7 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'local-file-storage': 'CODE_CHANGE',
   'unsupported-persistent-volume': 'CODE_CHANGE',
   'unsupported-multi-service': 'CODE_CHANGE',
+  'unconfirmed-declared-service': 'CODE_CHANGE',
   'worker-command': 'CODE_CHANGE',
   'unsupported-database-mariadb': 'CODE_CHANGE',
   'unsupported-database-sqlite': 'CAPABILITY_GAP',
