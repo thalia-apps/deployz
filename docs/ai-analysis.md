@@ -110,7 +110,8 @@ Repository (GitHub tree, bounded)
   with no CMD is no start command: the vendor gives one. A CMD that only
   prints the usage or the version (`CMD ["--help"]`) is no start command
   either. A Dockerfile in a test,
-  example (also `docker_example/`) or dev-container directory, a base image (system packages only, no
+  example (also `docker_example/`), project template (`templates/`,
+  `starters/`) or dev-container directory, a base image (system packages only, no
   CMD, ENTRYPOINT, EXPOSE or COPY), a Dockerfile that starts a dev server
   (a dev server is `npm run dev`, `next dev`, `nodemon`, `--reload` or
   `sleep infinity`) and a Dockerfile that copies nothing in and starts a
@@ -118,8 +119,9 @@ Repository (GitHub tree, bounded)
   runs a bind-mounted checkout) are never selected. A Dockerfile in a `dev/` build directory
   is selected when it starts something (CMD, ENTRYPOINT or EXPOSE) and is not
   one of those; a `.devcontainer/` or `.gitpod/` Dockerfile never is. An
-  image in another hidden tool directory (`.oss-scanner/`) ranks with the dev
-  images. A production stage `FROM scratch` with no CMD or ENTRYPOINT only
+  image in another hidden directory ranks with the dev images, and it is
+  never selected when it starts nothing (the `.oss-scanner/` build
+  environment of medusa and vendure). A production stage `FROM scratch` with no CMD or ENTRYPOINT only
   exports files (focalboard `Dockerfile.build`) and is never selected. A
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
   mdBook, Antora, Docsify) ranks with the dev images, below the app image. So
@@ -220,7 +222,9 @@ Repository (GitHub tree, bounded)
   `COPY dist/shiori_…`) or a path of build arguments with no default (flipt's
   `COPY $TARGETPLATFORM/$BINARY /`). A goreleaser or other CI job makes these
   files before `docker build`. A candidate that copies nothing from the
-  repository (a Dockerfile for a mounted checkout) is not another buildable
+  repository (a Dockerfile for a mounted checkout, or one whose only `ADD`
+  downloads a URL) and a candidate whose name marks it for development
+  (typesense's `development-macos.Dockerfile`) are not another buildable
   Dockerfile. A capped or partial
   file list (GitHub cuts the listing of a very large repository and says
   `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
@@ -507,8 +511,8 @@ is final.
   deployable, and no "add a Dockerfile" finding. The rules engine gives
   `library-repository` itself only when every production package manifest
   publishes its code (a `bin`, `exports`, a build backend, console scripts,
-  a Rust `[lib]`). A workspace root and the manifests in examples, templates
-  and cookbooks do not count. `"main"`, `"module"` or `"types"` alone does
+  a Rust `[lib]`). A workspace root and the manifests in examples, templates,
+  cookbooks and test suites (typesense's `api_tests/`) do not count. `"main"`, `"module"` or `"types"` alone does
   not publish, because an application's package.json has them too. One
   manifest that publishes nothing (an application's package.json or
   composer.json, a Rust binary crate) keeps outcome 2, and the model then
@@ -626,9 +630,13 @@ that is out of date).
 Ids: `unsupported-database-*` (MySQL is a supported engine, so only the
 still-unsupported engines land here — MariaDB-only setups, MongoDB,
 SQLite, Elasticsearch/OpenSearch (also the Python clients `elasticsearch`,
-`elasticsearch-dsl` and `opensearch-py`), Cassandra, Neo4j, CouchDB (`nano`),
-ClickHouse, embedded
-JVM databases), `unsupported-redis-setup`,
+`elasticsearch-dsl` and `opensearch-py`), Cassandra, Neo4j (also the Python
+drivers `cassandra-driver` and `neo4j`), CouchDB (`nano`), ClickHouse,
+embedded JVM databases; the client needs corroboration: a service of that
+database in the production Compose file, a required connection setting, or
+a production Dockerfile that sets the connection variable, such as
+Rocket.Chat's `ENV MONGO_URL=mongodb://…`, where an image of the database
+itself does not count), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue` (Kafka or RabbitMQ:
 a broker service in the production Compose file, also a `rabbitmq` service
 that `extends` another file and has no image, or a client such as `pika`,
