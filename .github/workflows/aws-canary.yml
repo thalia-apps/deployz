@@ -57,13 +57,12 @@ jobs:
   canary:
     name: ${{ github.event_name == 'schedule' && 'scheduled-production' || inputs.scenario }}
     runs-on: ubuntu-latest
-    # A profile run certifies one install + full teardown (retained RDS makes
-    # the purge slow) — budget it beyond the core ladder's 180 minutes. The
-    # scheduled run is always a profile run.
+    # Every scenario gets the same budget: the core ladder took 128 minutes
+    # before its Disconnect on 2026-10-29 (the failed release alone took 34).
     # The canary step gets the first part of this; the rest is the cleanup
     # and leak-audit budget (a Disconnect that retains a database plus a
     # Purge can take about 95 minutes).
-    timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.scenario == 'profile' || inputs.scenario == 'journey') && 300 || 240 }}
+    timeout-minutes: 300
     env:
       AWS_REGION: us-east-1
       DEPLOYZ_E2E_ALLOW_REAL_AWS: '1'
@@ -159,10 +158,10 @@ jobs:
 
       - name: Run the canary
         id: run
-        # Job timeout minus 60: leaves headroom for the cleanup and leak-audit
+        # Job timeout minus 120: leaves headroom for the cleanup and leak-audit
         # steps below to still run to completion when the canary step itself
         # times out, instead of the whole job being killed mid-teardown.
-        timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.scenario == 'profile' || inputs.scenario == 'journey') && 180 || 120 }}
+        timeout-minutes: 180
         env:
           DEPLOYZ_CANARY_RUN_ID: ${{ steps.params.outputs.run_id }}
           DEPLOYZ_CANARY_PROFILE: ${{ (steps.params.outputs.scenario == 'profile' || steps.params.outputs.scenario == 'journey') && steps.params.outputs.profile || '' }}
