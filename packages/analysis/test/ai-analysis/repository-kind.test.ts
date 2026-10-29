@@ -101,3 +101,45 @@ describe('AI Analysis: repository kind', () => {
     }
   });
 });
+
+// A key-value server in C with no Dockerfile (Valkey, new-229), and one with a toolchain image
+// that starts nothing (Redis, new-225): the rules alone would ask for a Dockerfile.
+const DATASTORE = (dockerfile?: string): FileTree =>
+  withPaths({
+    'README.md': '# Acme KV\n',
+    ...(dockerfile === undefined ? {} : { 'docker/Dockerfile.noble': dockerfile }),
+    'Makefile': 'all:\n\tcd src && $(MAKE)\n',
+    'src/server.h': ['#ifndef SERVER_H', '#define CONFIG_DEFAULT_SERVER_PORT 6379 /* TCP port. */', '#endif'].join('\n'),
+    'src/server.c': '#include "server.h"\nint main(int argc, char **argv) { return serve(); }\n',
+  });
+
+const DEFAULT_PORT = cite('src/server.h', 2, '#define CONFIG_DEFAULT_SERVER_PORT 6379 /* TCP port. */');
+
+describe('AI Analysis: datastore repository kind', () => {
+  it('is asked when no web port or start command is known, not only without a Dockerfile', () => {
+    expect(questionId(DATASTORE())).toBeDefined();
+    expect(questionId(DATASTORE(['FROM ubuntu:24.04', 'WORKDIR /workspace', 'COPY src /workspace/src', 'RUN make'].join('\n')))).toBeDefined();
+  });
+
+  it('shows the line with the default client port', async () => {
+    const { prompt } = await outcomeOf(DATASTORE(), null);
+    expect(prompt).toContain('2| #define CONFIG_DEFAULT_SERVER_PORT 6379');
+  });
+
+  it('a checked datastore answer is not deployable, with or without a Dockerfile', async () => {
+    for (const tree of [DATASTORE(), DATASTORE(['FROM ubuntu:24.04', 'WORKDIR /workspace', 'COPY src /workspace/src', 'RUN make'].join('\n'))]) {
+      const { report, failedChecks } = await outcomeOf(tree, 'datastore', { evidence: DEFAULT_PORT });
+      expect(failedChecks).toBe(0);
+      expect(report.outcome).toBe('NOT_DEPLOYABLE');
+      const ids = report.findings.map((finding) => finding.id);
+      expect(ids).toContain('unsupported-datastore-server');
+      expect(ids).not.toContain('unsupported-no-dockerfile');
+    }
+  });
+
+  it('keeps the rules outcome when the cited line names no datastore role or port', async () => {
+    const { report, failedChecks } = await outcomeOf(DATASTORE(), 'datastore', { evidence: cite('src/server.c', 2, 'int main(int argc, char **argv) { return serve(); }') });
+    expect(failedChecks).toBe(1);
+    expect(report.outcome).toBe('DEPLOYABLE_WITH_CHANGES');
+  });
+});

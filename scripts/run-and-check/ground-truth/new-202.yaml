@@ -1,0 +1,143 @@
+id: new-202
+repository: gristlabs/grist-core
+commit: 33808fc3accc20654c19a89655fd788cfea79445
+summary: >
+  Grist Core is a Node.js (TypeScript) spreadsheet-database web application. The root Dockerfile builds it from source
+  (yarn, webpack, Python 3.11 sandbox, gVisor runsc binary) into one image that serves HTTP on 8484 and binds 0.0.0.0.
+  The home database (users, orgs, workspaces) is SQLite by default and can be PostgreSQL through TYPEORM_TYPE=postgres.
+  Each Grist document is a SQLite file in GRIST_DATA_DIR (/persist/docs). The image defaults keep everything in a
+  /persist volume. Optional S3-compatible external storage (GRIST_DOCS_S3_*) copies documents to a versioned bucket and
+  restores them on demand; Redis is optional.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE]
+  reason: >
+    The image builds and runs as one HTTP service, and the home database can move to PostgreSQL by settings. The
+    document files are the problem. The default is local SQLite files in /persist/docs, which Fargate does not keep.
+    The repo gives a way out: external storage with GRIST_DOCS_S3_BUCKET (versioning required), but it uses static
+    access keys (GRIST_DOCS_S3_ACCESS_KEY and GRIST_DOCS_S3_SECRET_KEY are required, not a task role) and the local disk
+    stays the working copy, so a task stop can lose the latest edits. With PostgreSQL plus the versioned S3 bucket the
+    deployment is workable with settings only (accepted as DEPLOYABLE_WITH_CHANGES: settings and IAM keys, no code
+    change). Without them it is NOT_DEPLOYABLE because user documents live on durable local disk.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: sandbox/docker/Dockerfile, reason: "builds the optional docker sandbox image (Python 3.11 with faketime) used for formula sandboxing, not the application"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 13, quote: "FROM node:22-trixie AS prod-builder"}
+    - {path: Dockerfile, line: 57, quote: "RUN GRIST_BUILD_CHANNEL=${GRIST_BUILD_CHANNEL} GRIST_BUILD_COMMIT=${GRIST_BUILD_COMMIT} \\"}
+    - {path: Dockerfile, line: 98, quote: "FROM node:22-trixie-slim"}
+    - {path: Dockerfile, line: 7, quote: "FROM scratch AS ext"}
+runtime: {accept: [node]}
+port:
+  accept: [8484]
+  evidence:
+    - {path: Dockerfile, line: 194, quote: "EXPOSE 8484"}
+    - {path: stubs/app/server/server.ts, line: 53, quote: "port: parseInt(process.env.PORT!, 10) || 8484,"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 182, quote: "GRIST_HOST=0.0.0.0 \\"}
+startCommand:
+  source: image
+  accept: ["./sandbox/docker_entrypoint.sh ./sandbox/run.sh", "node _build/stubs/app/server/server.js"]
+  evidence:
+    - {path: Dockerfile, line: 205, quote: "ENTRYPOINT [\"./sandbox/docker_entrypoint.sh\"]"}
+    - {path: Dockerfile, line: 206, quote: "CMD [\"./sandbox/run.sh\"]"}
+    - {path: sandbox/run.sh, line: 19, quote: "exec env NODE_PATH=_build:_build/ext:_build/stubs:ext/node_modules node _build/stubs/app/server/server.js"}
+healthPath:
+  accept: ["/status"]
+  evidence:
+    - {path: app/server/lib/FlexServer.ts, line: 638, quote: "this.app.get(\"/status(/hooks)?\", async (req, res) => {"}
+database:
+  status: required
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {TYPEORM_TYPE: "sqlite|postgres"}
+  connectionVars: [TYPEORM_TYPE, TYPEORM_DATABASE, TYPEORM_HOST, TYPEORM_PORT, TYPEORM_USERNAME, TYPEORM_PASSWORD]
+  # The home database is SQLite at /persist/home.sqlite3 by default; PostgreSQL moves only the home database, not the document files.
+  evidence:
+    - {path: Dockerfile, line: 192, quote: "TYPEORM_DATABASE=/persist/home.sqlite3"}
+    - {path: app/server/lib/dbUtils.ts, line: 170, quote: "type: (process.env.TYPEORM_TYPE as any) || \"sqlite\",  // officially, TYPEORM_CONNECTION -"}
+    - {path: README.md, line: 660, quote: "TYPEORM_TYPE     | set to 'sqlite' or 'postgres'"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: stubs/app/server/server.ts, line: 73, quote: "await updateDb();"}
+    - {path: app/server/lib/dbUtils.ts, line: 116, quote: "await dataSource.runMigrations({ transaction: \"all\" });"}
+redis:
+  status: optional
+  selectBy: {REDIS_URL: url}
+  # Redis stores browser sessions and shares state between several workers. A single task works without it.
+  evidence:
+    - {path: README.md, line: 518, quote: "| REDIS_URL | optional redis server for browser sessions and db query caching |"}
+    - {path: app/server/lib/gristSessions.ts, line: 61, quote: "if (process.env.REDIS_URL) {"}
+workers:
+  status: embedded
+  commands: []
+  evidence:
+    - {path: sandbox/run.sh, line: 19, quote: "exec env NODE_PATH=_build:_build/ext:_build/stubs:ext/node_modules node _build/stubs/app/server/server.js"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/persist/docs, /persist]
+  s3: native
+  s3SelectBy: {GRIST_DOCS_S3_BUCKET: bucket name}
+  # S3 external storage is a backup and restore layer: documents stay on local disk while open. It needs GRIST_DOCS_S3_ENDPOINT (s3.amazonaws.com for AWS), static access and secret keys, and a bucket with versioning enabled.
+  evidence:
+    - {path: Dockerfile, line: 184, quote: "GRIST_DATA_DIR=/persist/docs \\"}
+    - {path: README.md, line: 444, quote: "| GRIST_DATA_DIR | Directory in which to store documents."}
+    - {path: app/server/lib/configureMinIOExternalStorage.ts, line: 34, quote: "preferredEnvVar: \"GRIST_DOCS_S3_BUCKET\","}
+    - {path: app/server/lib/configureMinIOExternalStorage.ts, line: 63, quote: "const accessKey = settings.flag(\"accessKey\").requireString({"}
+    - {path: app/server/lib/configureMinIOExternalStorage.ts, line: 95, quote: "throw new Error(`FATAL: the bucket \"${options.bucket}\" does not have versioning enabled`);"}
+env:
+  required:
+    - {name: APP_HOME_URL, secret: false, buildTime: false, note: "public https URL of the site; the home and doc servers need it for links and redirects"}
+    - {name: GRIST_SESSION_SECRET, secret: true, buildTime: false, note: "the built-in default secret is a published constant; a boot probe reports it"}
+    - {name: TYPEORM_TYPE, secret: false, buildTime: false, note: "set postgres; the default sqlite file lives on the ephemeral disk"}
+    - {name: TYPEORM_HOST, secret: false, buildTime: false, note: "PostgreSQL host; TYPEORM_DATABASE (database name), TYPEORM_USERNAME, TYPEORM_PASSWORD, TYPEORM_PORT go with it"}
+    - {name: GRIST_DOCS_S3_BUCKET, secret: false, buildTime: false, note: "keeps documents across task restarts; also set GRIST_DOCS_S3_ENDPOINT, GRIST_DOCS_S3_ACCESS_KEY, GRIST_DOCS_S3_SECRET_KEY, GRIST_DOCS_S3_BUCKET_REGION"}
+  optional: [PORT, GRIST_DEFAULT_EMAIL, GRIST_SANDBOX_FLAVOR, GRIST_FORCE_LOGIN, GRIST_SINGLE_ORG, REDIS_URL, GRIST_DATA_DIR, GRIST_INST_DIR, GRIST_DISABLE_S3]
+  buildTime: [GRIST_BUILD_CHANNEL, GRIST_BUILD_COMMIT]
+  evidence:
+    - {path: README.md, line: 429, quote: "| APP_HOME_URL | url prefix for home api (home and doc servers need this) |"}
+    - {path: README.md, line: 486, quote: "| GRIST_SESSION_SECRET | a key used to encode sessions |"}
+    - {path: app/server/lib/ICreate.ts, line: 60, quote: "export const DEFAULT_SESSION_SECRET ="}
+    - {path: Dockerfile, line: 55, quote: "ARG GRIST_BUILD_CHANNEL="}
+blockers:
+  expected:
+    - "Documents are SQLite files in GRIST_DATA_DIR (/persist/docs); Fargate disk is ephemeral, so GRIST_DOCS_S3_* external storage with a versioned bucket is needed to keep them"
+    - "The home database is SQLite on local disk by default; set TYPEORM_TYPE=postgres with a PostgreSQL 16 database"
+    - "S3 external storage needs static access and secret keys and an explicit endpoint; it does not use a task role"
+  mustNot:
+    - "Redis must not be reported as required: REDIS_URL is optional (sessions and multi-worker state)"
+    - "MySQL must not be expected: the home database supports sqlite and postgres only"
+    - "sandbox/docker/Dockerfile must not be treated as the application image"
+    - "The gVisor sandbox must not be required: the default runs formulas as unsandboxed Python; GRIST_SANDBOX_FLAVOR=gvisor is an option"
+vendorQuestions:
+  legitimate:
+    - "Is the S3 bucket versioned, and can access keys be supplied as secrets for GRIST_DOCS_S3_*?"
+    - "What public URL (APP_HOME_URL) and which login method (GRIST_DEFAULT_EMAIL, OIDC, SAML) are wanted?"
+  unnecessary:
+    - "Which Dockerfile? (the root Dockerfile)"
+    - "Which port? (8484)"
+    - "Is Redis needed? (optional)"
+traps:
+  - "Dockerfile sets TYPEORM_DATABASE=/persist/home.sqlite3; with only a volume-less task the user database and all documents vanish on restart (Dockerfile:192)"
+  - "TYPEORM_DATABASE means the SQLite file path by default but the database name for postgres (README.md:655)"
+  - "The first Dockerfile stage 'ext' is an empty stub for extensions; the last stage is the application, so no build target is needed (Dockerfile:7)"
+  - "The image entrypoint changes to user grist and fails when /persist is not writable (sandbox/docker_entrypoint.sh:40)"
+  - "Without REDIS_URL sessions are stored in a local file, so several tasks do not share logins"
+  - "The default session secret is a constant in the source (app/server/lib/ICreate.ts:60); set GRIST_SESSION_SECRET"
+openQuestions:
+  - "How much recent edit data a task stop can lose between the local SQLite write and the S3 upload was not measured"
+  - "The default sandbox flavor for the Docker image when GRIST_SANDBOX_FLAVOR is unset was not traced in code; README.md:320 says formulas run as Python directly on the machine"
+crossReview:
+  - {field: outcome.accept, change: "none: [DEPLOYABLE_WITH_CHANGES, NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "28 citations checked against the pinned commit by script (path, line, quote)"}

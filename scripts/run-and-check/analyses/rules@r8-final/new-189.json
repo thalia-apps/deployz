@@ -1,0 +1,78 @@
+{
+  "id": "new-189",
+  "commit": "f1cfbab919d63db8adbb350d1d097356ffbab6c2",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "docker/deployment.Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "typesense-server"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/opt/typesense-server\"]",
+      "port": 8108
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [
+      "openai"
+    ],
+    "unsupported": [
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (docker/deployment.Dockerfile copies typesense-server). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (docker/deployment.Dockerfile copies typesense-server). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies typesense-server, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

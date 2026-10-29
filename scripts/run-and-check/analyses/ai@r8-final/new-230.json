@@ -1,0 +1,426 @@
+{
+  "id": "new-230",
+  "commit": "0cc3ce1f8fef88457bd3a0dc222b1bad417ccc88",
+  "analyser": "ai@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "fastify",
+      "dockerfilePath": "dev/build/Dockerfile"
+    },
+    "build": {
+      "command": "rollup -c",
+      "context": ".",
+      "missingSources": [
+        "assets",
+        "blocks/compiled"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"node\", \"--no-experimental-webstorage\", \"backend\"]",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_PASS",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ADMIN_EMAIL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/models/users.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ADMIN_PASS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/models/users.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CONFIG_FILE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/core/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/core/db.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASS",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASS_FILE",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in backend/core/config.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_SCHEMA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SSL_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/core/db.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "KUBERNETES_SERVICE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_FORMAT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in dev/build/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/index.ts",
+            "read in backend/worker.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/models/extensions.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PATHEXT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/models/extensions.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/core/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PUPPETEER_EXECUTABLE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/models/rendering.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "UPGRADE_COMPANION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/api/system.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WIKI_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in backend/core/config.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "ignoredDeploymentFiles": [
+      "dev/chart/Chart.yaml"
+    ],
+    "externalServices": [
+      "smtp"
+    ],
+    "unsupported": [
+      "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (dev/build/Dockerfile copies blocks/compiled). Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: Every Dockerfile with a start command copies files the repository does not contain (dev/build/Dockerfile copies blocks/compiled). Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies assets, blocks/compiled, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (dev/chart/Chart.yaml). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0494802,
+        "promptTokens": 11605,
+        "completionTokens": 178
+      },
+      "latencyMs": 4970
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4971,
+    "questions": 1,
+    "generatedAt": "2026-10-29T09:25:00.991Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

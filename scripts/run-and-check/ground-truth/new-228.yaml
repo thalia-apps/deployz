@@ -1,0 +1,127 @@
+id: new-228
+repository: SonarSource/sonarqube
+commit: 53c8009b61340eda6e2f188993ba96122d911d64
+summary: >
+  SonarQube Community Build is a large Java code-quality server built with Gradle. One launcher JVM
+  (sonar-application) starts three child processes in the same container: an embedded Elasticsearch search process, the
+  web server (port 9000) and the Compute Engine. The repository has no Dockerfile at all (the .dockerignore refers to a
+  docker directory that is not in the repository; the official image lives in a separate project). It stores data in a
+  database (PostgreSQL, Oracle or SQL Server; the default embedded H2 is for tests) and keeps the Elasticsearch indexes
+  and temporary files under sonar.path.data and sonar.path.temp on local disk.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The server embeds Elasticsearch as a child process, and the web status only becomes UP when that search cluster is
+    healthy. Its index data lives in a local data directory. Elasticsearch is outside the MVP datastore list, and an
+    ephemeral Fargate disk loses the indexes at every task start. There is also no Dockerfile in the repository, and
+    a source build needs the Gradle monorepo build, a bundled JRE download and the frontend build, which is more than a
+    small Dockerfile addition. Four cooperating JVM processes in one container are also outside a single-process web
+    service.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: .dockerignore, line: 2, quote: "!docker"}
+    - {path: sonar-application/src/main/assembly/bin/linux-x86-64/sonar.sh, line: 85, quote: "-jar $LIB_DIR/sonar-application-@sqversion@.jar"}
+runtime: {accept: [java]}
+port:
+  accept: [9000]
+  evidence:
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 110, quote: "#sonar.web.port=9000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 100, quote: "#sonar.web.host=0.0.0.0"}
+startCommand:
+  source: explicit
+  accept: ["bin/linux-x86-64/sonar.sh console", "java -jar lib/sonar-application-*.jar"]
+  evidence:
+    - {path: sonar-application/src/main/assembly/bin/linux-x86-64/sonar.sh, line: 85, quote: "-jar $LIB_DIR/sonar-application-@sqversion@.jar"}
+    - {path: sonar-application/src/main/assembly/bin/linux-x86-64/sonar.sh, line: 148, quote: "exec $COMMAND_LINE -Dsonar.log.console=true"}
+healthPath:
+  # /api/system/status is public; /api/system/health needs a system administrator or a passcode.
+  accept: ["/api/system/status"]
+  evidence:
+    - {path: server/sonar-webserver-webapi/src/main/java/org/sonar/server/platform/ws/StatusAction.java, line: 62, quote: "controller.createAction(\"status\")"}
+    - {path: server/sonar-webserver-webapi/src/main/java/org/sonar/server/platform/ws/StatusAction.java, line: 42, quote: "STATUS_UP_REQUIRES_ES_HEALTH"}
+    - {path: server/sonar-webserver-webapi/src/main/java/org/sonar/server/platform/ws/HealthAction.java, line: 51, quote: "if (!systemPasscode.isValid(request) && !isSystemAdmin()) {"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {sonar.jdbc.url: url}
+  connectionVars: [SONAR_JDBC_URL, SONAR_JDBC_USERNAME, SONAR_JDBC_PASSWORD]
+  evidence:
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 18, quote: "The embedded H2 database is used by default."}
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 41, quote: "#----- PostgreSQL 15 to 18"}
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 25, quote: "#sonar.jdbc.username="}
+migrations:
+  # Not read in detail: the web server is assumed to update the schema at start.
+  mode: startup
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  # The Compute Engine and Elasticsearch are child processes of the launcher JVM.
+  status: embedded
+  commands: []
+  evidence:
+    - {path: server/sonar-process/src/main/java/org/sonar/process/ProcessId.java, line: 27, quote: "ELASTICSEARCH(\"es\", 1, \"es\", \"ElasticSearch\"),"}
+    - {path: server/sonar-process/src/main/java/org/sonar/process/ProcessId.java, line: 29, quote: "COMPUTE_ENGINE(\"ce\", 3, \"ce\", \"Compute Engine\");"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [data, temp, logs]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 459, quote: "# Paths to persistent data files (embedded database and search index) and temporary files."}
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 300, quote: "#sonar.search.port=9001"}
+    - {path: sonar-application/build.gradle, line: 68, quote: "api 'co.elastic.clients:elasticsearch-java'"}
+env:
+  required:
+    - {name: SONAR_JDBC_URL, secret: false, buildTime: false, note: "PostgreSQL JDBC URL; the default is embedded H2"}
+    - {name: SONAR_JDBC_USERNAME, secret: false, buildTime: false, note: "database user"}
+    - {name: SONAR_JDBC_PASSWORD, secret: true, buildTime: false, note: "database password"}
+  optional: [SONAR_WEB_PORT, SONAR_WEB_CONTEXT, SONAR_PATH_DATA, SONAR_SEARCH_JAVAADDITIONALOPTS]
+  buildTime: []
+  evidence:
+    - {path: sonar-application/src/main/assembly/conf/sonar.properties, line: 26, quote: "#sonar.jdbc.password="}
+blockers:
+  expected:
+    - "No Dockerfile exists in the repository; the official image is built elsewhere"
+    - "Embedded Elasticsearch runs as a child process and keeps its index in the local data directory; Elasticsearch is not a supported dependency and Fargate disk is ephemeral"
+    - "Four JVM processes (launcher, search, web, compute engine) start in one container and need several GB of memory"
+  mustNot:
+    - "Port 9000 must not be treated as a failure"
+    - "The embedded H2 database must not be accepted for production"
+    - "Redis must not be reported as required"
+    - "A separate Elasticsearch must not be requested: it is embedded and not configured by the user in the single-server mode"
+vendorQuestions:
+  legitimate:
+    - "Is SonarQube being deployed as a code-analysis server? It needs an embedded search process and local data that Deployz does not provide"
+  unnecessary:
+    - "Which port? (9000)"
+    - "Which database engine? (PostgreSQL)"
+    - "Which Dockerfile? (none exists in the repository)"
+traps:
+  - "The .dockerignore mentions a docker directory, but the repository has no Dockerfile (.dockerignore:2)"
+  - "The launcher JVM, not the web server, is the start command; the web server is a child process (sonar.sh:85)"
+  - "The web port 9000 is also the Elasticsearch-aware status endpoint: status stays STARTING while Elasticsearch is unreachable (StatusAction.java:42)"
+  - "Elasticsearch listens on 9001 on loopback by default and must not be exposed (sonar.properties:300)"
+  - "/api/system/health needs admin rights or a passcode; use /api/system/status for a load balancer check"
+openQuestions:
+  - "Whether Elasticsearch rebuilds its index from the database after a task restart on empty data was not checked"
+  - "Whether the Elasticsearch process starts on a Fargate kernel with vm.max_map_count 65530 was not checked; the properties file says standalone mode only warns (sonar.properties:287)"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "18 citations checked against the pinned commit by script (path, line, quote)"}

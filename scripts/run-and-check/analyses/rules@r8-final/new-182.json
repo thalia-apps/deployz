@@ -1,0 +1,72 @@
+{
+  "id": "new-182",
+  "commit": "f292d165efa8603f2914f34f7c18e6f32fe15fcc",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "foundations/stream",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "foundations/stream/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/stream\"]",
+      "port": 1080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unconfirmed service: the repository declares cockroach (cockroachdb/cockroach:latest-v24.3) in dev/docker-compose.yaml; redpanda (docker.redpanda.com/redpandadata/redpanda:v24.3.6) in dev/docker-compose.yaml; elastic (elasticsearch:7.14.2) in dev/docker-compose.yaml; redis (redis:8.0.2-alpine3.21) in dev/docker-compose.yaml. Deployz did not find how the application uses it."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unconfirmed service: the repository declares cockroach (cockroachdb/cockroach:latest-v24.3) in dev/docker-compose.yaml; redpanda (docker.redpanda.com/redpandadata/redpanda:v24.3.6) in dev/docker-compose.yaml; elastic (elasticsearch:7.14.2) in dev/docker-compose.yaml; redis (redis:8.0.2-alpine3.21) in dev/docker-compose.yaml. Deployz did not find how the application uses it."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES"
+}

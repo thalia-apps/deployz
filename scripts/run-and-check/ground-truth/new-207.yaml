@@ -1,0 +1,119 @@
+id: new-207
+repository: jenkinsci/jenkins
+commit: 923d995f642086940c82e2fa56f4120f4305c313
+summary: >
+  Jenkins is a Java CI/CD automation server (Maven multi-module project; the war module builds jenkins.war, which embeds
+  the Winstone servlet container). It has no relational database and no Redis: all state (jobs, configuration, credentials,
+  secrets, installed plugins, build records, workspaces) is XML and files under JENKINS_HOME on local disk. The repository has
+  no Dockerfile at all (the official image lives in a separate repository). Build agents may connect over a separate TCP
+  inbound agent port or over WebSocket.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Jenkins keeps its whole state in the JENKINS_HOME directory (default $user.home/.jenkins) and has no database option, so
+    it needs a durable data directory that Fargate does not give. Without it every restart loses jobs, credentials and
+    plugins. The repository also has no Dockerfile, and the artefact is a Maven-built war that needs a Java runtime image
+    written from scratch. The JNLP agent port (TCP, set by slaveAgentPort) is a second, non-HTTP port; WebSocket agents can
+    avoid it, but the durable home is the decisive blocker.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: war/pom.xml, line: 35, quote: "<packaging>war</packaging>"}
+    - {path: war/src/main/java/executable/Main.java, line: 312, quote: "Usage: java -jar jenkins.war [--option=value] [--option=value]"}
+runtime: {accept: [java]}
+port:
+  # Winstone default HTTP port; the repository source does not set it (java -jar jenkins.war --httpPort=N).
+  accept: [8080]
+  evidence:
+    - {path: war/pom.xml, line: 123, quote: "<artifactId>winstone</artifactId>"}
+    - {path: core/src/main/java/hudson/TcpSlaveAgentListener.java, line: 81, quote: "public final class TcpSlaveAgentListener extends Thread {"}
+bindAllInterfaces:
+  # Winstone listens on all interfaces by default (httpListenAddress option); not set in this repository.
+  value: true
+  evidence:
+    - {path: war/src/main/java/executable/Main.java, line: 322, quote: "--paramsFromStdIn        = Read parameters from standard input (stdin)"}
+startCommand:
+  source: explicit
+  accept: ["java -jar jenkins.war"]
+  evidence:
+    - {path: war/src/main/java/executable/Main.java, line: 312, quote: "Usage: java -jar jenkins.war [--option=value] [--option=value]"}
+healthPath:
+  # /health is unauthenticated and returns 200 or 503; /whoAmI is also unauthenticated.
+  accept: ["/health", "/whoAmI/api/json"]
+  evidence:
+    - {path: core/src/main/java/jenkins/health/HealthCheckAction.java, line: 62, quote: "return \"health\";"}
+    - {path: core/src/main/java/jenkins/health/HealthCheckAction.java, line: 99, quote: "return new JsonHttpResponse(payload, success ? 200 : 503);"}
+    - {path: core/src/main/java/hudson/security/WhoAmI.java, line: 101, quote: "return \"whoAmI\";"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # No JDBC dependency in the core or war: state is XML files in JENKINS_HOME.
+  evidence:
+    - {path: core/src/main/java/jenkins/model/Jenkins.java, line: 5797, quote: "private static final String DEFAULT_WORKSPACES_DIR = \"${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}\";"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Build executors run inside the controller; remote agents are separate machines or containers, not part of the web service.
+  evidence:
+    - {path: core/src/main/java/hudson/TcpSlaveAgentListener.java, line: 81, quote: "public final class TcpSlaveAgentListener extends Thread {"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [JENKINS_HOME]
+  s3: none
+  s3SelectBy: {}
+  # Home defaults to $user.home/.jenkins; workspaces, plugins and the war are expanded under it.
+  evidence:
+    - {path: core/src/main/java/hudson/WebAppMain.java, line: 439, quote: "private static final String[] HOME_NAMES = {\"JENKINS_HOME\", \"HUDSON_HOME\"};"}
+    - {path: core/src/main/java/hudson/WebAppMain.java, line: 395, quote: "File legacyHome = new File(new File(System.getProperty(\"user.home\")), \".hudson\");"}
+    - {path: core/src/main/java/jenkins/model/Jenkins.java, line: 4523, quote: "* Binds /userContent/... to $JENKINS_HOME/userContent."}
+    - {path: war/src/main/java/executable/Main.java, line: 318, quote: "--pluginroot             = folder where the plugin archives are expanded into. Default is ${JENKINS_HOME}/plugins"}
+env:
+  required:
+    - {name: JENKINS_HOME, secret: false, buildTime: false, note: "data directory; also HUDSON_HOME; must be durable"}
+  optional: []
+  buildTime: []
+  evidence:
+    - {path: core/src/main/java/hudson/WebAppMain.java, line: 439, quote: "private static final String[] HOME_NAMES = {\"JENKINS_HOME\", \"HUDSON_HOME\"};"}
+blockers:
+  expected:
+    - "All Jenkins state lives in JENKINS_HOME on local disk; Fargate task storage is ephemeral and no EFS is provided"
+    - "The repository has no Dockerfile; the artefact is a Maven-built war run with java -jar"
+    - "Inbound agents use a separate TCP agent port (TcpSlaveAgentListener), which is a second non-HTTP port"
+  mustNot:
+    - "A database or Redis must not be reported as required: Jenkins has neither"
+    - "Port 8080 must not be treated as the problem: the durable home is the blocker"
+vendorQuestions:
+  legitimate:
+    - "Can a Jenkins controller that loses all jobs, credentials and plugins on every restart be accepted? It needs a durable home directory"
+  unnecessary:
+    - "Which database engine? (none)"
+    - "Which health path? (/health)"
+traps:
+  - "The repository has no Dockerfile; the official jenkins/jenkins image is built from a different repository"
+  - "The Jenkinsfile in the root is the project's own CI pipeline, not a deployment file"
+  - "The war packaging is run by Winstone; there is no application server to install (war/pom.xml:123)"
+openQuestions:
+  - "The default Winstone port 8080 and bind address come from the Winstone dependency, not from this repository source"
+  - "WebSocket-only agents (no TCP agent port) were not traced"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: no Dockerfile and durable JENKINS_HOME are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "16 citations checked against the pinned commit by script (path, line, quote)"}

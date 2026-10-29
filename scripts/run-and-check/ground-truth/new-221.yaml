@@ -1,0 +1,104 @@
+id: new-221
+repository: postgres/postgres
+commit: 27c844034f827b3910bc8a358780c6609ba87a41
+summary: >
+  PostgreSQL is a C relational database server (autoconf and Meson builds). It is a datastore, not a web application.
+  The postmaster speaks the PostgreSQL wire protocol on TCP 5432 and keeps data in a data directory (-D). The only
+  Dockerfile is src/tools/oss-scanner/Dockerfile, a security-scanner CI build that runs the test suite; it is not a
+  production server image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The repository is the database engine itself. Clients use the PostgreSQL wire protocol on 5432, which is not HTTP,
+    and the server needs a durable data directory that Fargate does not provide. The single Dockerfile builds and tests
+    PostgreSQL for a scanner and does not produce a runnable server image. Deployz provides RDS PostgreSQL for apps
+    that need a database; it does not host the engine.
+dockerfile:
+  accept: []
+  reject:
+    - {path: src/tools/oss-scanner/Dockerfile, reason: "OSS scanner CI image: builds PostgreSQL with Meson and runs meson test; has a $CONTAINER_REPO base and no server start"}
+  target: null
+  context: .
+  evidence:
+    - {path: src/tools/oss-scanner/Dockerfile, line: 28, quote: "FROM $CONTAINER_REPO/$CONTAINER_LINUX_CI"}
+    - {path: src/tools/oss-scanner/Dockerfile, line: 58, quote: "RUN meson setup \\"}
+    - {path: src/tools/oss-scanner/Dockerfile, line: 67, quote: "RUN meson test $MTEST_ARGS --suite setup --logbase setup"}
+runtime: {accept: [c]}
+port:
+  accept: [5432]
+  evidence:
+    - {path: meson_options.txt, line: 33, quote: "option('pgport', type: 'integer', value: 5432,"}
+    - {path: src/backend/utils/misc/postgresql.conf.sample, line: 66, quote: "#port = 5432                            # (change requires restart)"}
+bindAllInterfaces:
+  # The default listen_addresses is localhost.
+  value: false
+  evidence:
+    - {path: src/backend/utils/misc/postgresql.conf.sample, line: 62, quote: "#listen_addresses = 'localhost'         # what IP address(es) to listen on;"}
+startCommand:
+  source: explicit
+  accept: ["postgres -D /var/lib/postgresql/data"]
+  evidence:
+    - {path: src/backend/utils/misc/guc_parameters.dat, line: 585, quote: "{ name => 'data_directory', type => 'string', context => 'PGC_POSTMASTER', group => 'FILE_LOCATIONS',"}
+healthPath:
+  accept: []
+  evidence: []
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # The server is the database; it has no external database dependency.
+  evidence:
+    - {path: README.md, line: 7, quote: "PostgreSQL is an advanced object-relational database management system"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/var/lib/postgresql/data]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: src/backend/utils/misc/guc_parameters.dat, line: 585, quote: "{ name => 'data_directory', type => 'string', context => 'PGC_POSTMASTER', group => 'FILE_LOCATIONS',"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence: []
+blockers:
+  expected:
+    - "The repository is the PostgreSQL database engine; clients use the PostgreSQL wire protocol on 5432, not HTTP"
+    - "The server needs a durable data directory; Fargate task storage is ephemeral"
+    - "The only Dockerfile is a scanner CI build and test image, not a server image"
+  mustNot:
+    - "RDS PostgreSQL 16 must not be offered as a way to deploy this repository: the repository is the engine itself"
+    - "src/tools/oss-scanner/Dockerfile must not be accepted as the app Dockerfile"
+vendorQuestions:
+  legitimate:
+    - "Is PostgreSQL being deployed as a database for another app? Use the managed RDS PostgreSQL in Deployz instead"
+  unnecessary:
+    - "Which port? (5432)"
+    - "Which health path? (the server has no HTTP endpoint)"
+traps:
+  - "The oss-scanner Dockerfile looks like a build image but runs the tests and takes a base image from $CONTAINER_REPO (src/tools/oss-scanner/Dockerfile:28)"
+  - "The default port is a build option (pgport), not a constant in a single source file (meson_options.txt:33)"
+openQuestions:
+  - "None that change the outcome"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "9 citations checked against the pinned commit by script (path, line, quote)"}

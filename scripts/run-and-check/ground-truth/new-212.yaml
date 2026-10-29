@@ -1,0 +1,117 @@
+id: new-212
+repository: moodle/moodle
+commit: 46c042e7da65f8cb2ec7dc19f46566ce61a393e1
+summary: >
+  Moodle is a PHP (>= 8.3) learning management system. This commit is the development branch (6.0dev, alpha) with the web
+  root in public/. It has no Dockerfile. It needs a config.php (written by admin/cli/install.php or the web installer;
+  config-dist.php reads no environment variables), a database (PostgreSQL, MariaDB, MySQL, or SQL Server), and a
+  required "dataroot" directory that holds the uploaded files (filedir), caches, locks, and temporary data. The cron
+  job must run every minute.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    Moodle stores every uploaded course file in $CFG->dataroot/filedir on local disk, and the core file system has no S3
+    backend (only a plugin class can replace it through alternative_file_system_class, and no such plugin is in the
+    repository). Fargate has no durable disk and Deployz provides no EFS. config.php is also written to the source tree by
+    the installer, there is no Dockerfile, and the branch is an alpha development branch.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: public/index.php, line: 1, quote: "<?php"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: config-dist.php, line: 176, quote: "$CFG->wwwroot   = 'http://example.com/moodle';"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  # No image exists; a new Dockerfile would run Apache or nginx with PHP-FPM and public/ as document root.
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: public/index.php, line: 1, quote: "<?php"}
+healthPath:
+  # The site front page; the ALB needs a redirect-tolerant check because wwwroot must match the host name.
+  accept: ["/", "/login/index.php"]
+  evidence:
+    - {path: config-dist.php, line: 176, quote: "$CFG->wwwroot   = 'http://example.com/moodle';"}
+database:
+  status: required
+  engines: [postgres, mysql]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [dbtype, dbhost, dbname, dbuser, dbpass, prefix]
+  # Settings are PHP variables in config.php, not environment variables.
+  evidence:
+    - {path: config-dist.php, line: 41, quote: "$CFG->dbtype    = 'pgsql';"}
+    - {path: config-dist.php, line: 43, quote: "$CFG->dbhost    = 'localhost';"}
+migrations:
+  mode: command
+  accept: ["php admin/cli/install.php --non-interactive --agree-license --allow-unstable", "php admin/cli/upgrade.php"]
+  evidence:
+    - {path: admin/cli/install.php, line: 47, quote: "Command line Moodle installer, creates config.php and initializes database."}
+    - {path: admin/cli/install.php, line: 82, quote: "--non-interactive     No interactive questions, installation fails if any"}
+    - {path: admin/cli/upgrade.php, line: 1, quote: "<?php"}
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: config-dist.php, line: 367, quote: "//      $CFG->session_handler_class = '\\core\\session\\redis';"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: required
+  items: ["php admin/cli/cron.php every minute"]
+  evidence:
+    - {path: admin/cli/cron.php, line: 66, quote: "Execute periodic cron actions."}
+storage:
+  local: required
+  paths: [moodledata, moodledata/filedir]
+  s3: none
+  s3SelectBy: {}
+  # Sessions can use the database or Redis; the file store needs a plugin class that the repository does not contain.
+  evidence:
+    - {path: config-dist.php, line: 191, quote: "$CFG->dataroot  = '/home/example/moodledata';"}
+    - {path: public/lib/filestorage/file_system_filedir.php, line: 28, quote: "File system class used for low level access to real files in filedir."}
+    - {path: config-dist.php, line: 1200, quote: "//      $CFG->alternative_file_system_class = '\\\\local_myfilestorage\\\\file_system';"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  evidence:
+    - {path: config-dist.php, line: 176, quote: "$CFG->wwwroot   = 'http://example.com/moodle';"}
+blockers:
+  expected:
+    - "dataroot (uploaded files in filedir, caches, locks) must be durable local disk; the core file system has no S3 backend and Fargate storage is ephemeral"
+    - "config.php is written into the source tree by the installer and holds all settings as PHP code; no environment-variable configuration exists"
+    - "No Dockerfile in the repository"
+  mustNot:
+    - "Moodle must not be called DEPLOYABLE: the file store is local"
+    - "SQL Server must not be offered; only PostgreSQL or MySQL/MariaDB map to Deployz"
+    - "Redis must not be reported as required; it is only an optional session and cache store"
+vendorQuestions:
+  legitimate:
+    - "Can uploaded course files live on an object store through a plugin? The core code only has local filedir"
+  unnecessary:
+    - "Which database? (PostgreSQL or MySQL/MariaDB)"
+    - "Which web root? (public/)"
+traps:
+  - "The repository root has no web files for requests; the document root is public/ in this layout (public/index.php)"
+  - "config-dist.php lists 'pgsql' first but admin/cli/install.php defaults --dbtype to mysqli (install.php:63)"
+  - "$CFG->wwwroot must equal the public URL; a wrong host redirects every request"
+  - "version.php names this commit 6.0dev alpha, so the installer needs --allow-unstable (public/version.php:35)"
+  - "Large repository: 67 thousand files; the git tree has no Dockerfile at any depth"
+openQuestions:
+  - "The S3 file-system plugin route was not evaluated because no such plugin is in the repository"
+  - "PHP extension list was not read in detail"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: durable moodledata, installer-written config.php and no Dockerfile are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "15 citations checked against the pinned commit by script (path, line, quote)"}

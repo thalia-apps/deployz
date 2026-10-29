@@ -1,0 +1,132 @@
+id: new-195
+repository: chroma-core/chroma
+commit: 52ce8448cb38a498f1660d55ea80df25b78f000a
+summary: >
+  Chroma is an open-source vector database. This repository holds the Python client and server package (chromadb), the
+  Rust workspace (frontend server, CLI, and distributed services), and a Go sysdb. The single-node server listens on
+  port 8000 with an HTTP API (/api/v2) and stores a SQLite file plus HNSW vector indexes in a persist directory (/data in
+  the Rust single-node config, ./chroma by default). The root Dockerfile builds the Python server from source with
+  maturin and uvicorn; rust/Dockerfile builds the Rust server (target cli) that docker-compose.yml uses. There is no
+  separate relational database or Redis to connect for the single-node server.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Chroma is a datastore server: its job is to be a vector database reached by clients over its own API, and it keeps all
+    data (SQLite file and vector indexes) in a persist directory on local disk (/data). Fargate storage is ephemeral and
+    no EFS is provided, so the data is lost at each restart. The distributed mode needs many services and Postgres or
+    Spanner and S3, which is a multi-image stack. A vector database is a dependency that other applications use, not a web
+    application with a database behind it.
+dockerfile:
+  accept: [Dockerfile, rust/Dockerfile]
+  # rust/Dockerfile is a multi-target file: the server stage is "cli"; the last stage is another service (mdac_service),
+  # so a build needs --target cli. The root Dockerfile has one final stage and needs no target.
+  reject:
+    - {path: Dockerfile.windows, reason: "Windows container image (powershell entrypoint); Fargate here runs Linux"}
+    - {path: go/Dockerfile, reason: "builds the distributed sysdb coordinator (Go); not the single-node server"}
+    - {path: go/Dockerfile.migration, reason: "Atlas schema migration image for the distributed sysdb"}
+    - {path: rust/Dockerfile.mdac, reason: "token-bucket service for the Modal deployment; not the server"}
+    - {path: k8s/test/postgres/Dockerfile, reason: "test Postgres image for Kubernetes tests"}
+    - {path: .github/actions/bandit-scan/Dockerfile, reason: "CI action image running the bandit scanner"}
+  target: cli
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 67, quote: "python3 -m maturin build --out /wheels"}
+    - {path: Dockerfile, line: 95, quote: "ENTRYPOINT [\"/docker_entrypoint.sh\"]"}
+    - {path: rust/Dockerfile, line: 158, quote: "FROM runner AS cli"}
+    - {path: docker-compose.yml, line: 13, quote: "target: cli"}
+runtime: {accept: [python, rust]}
+port:
+  accept: [8000]
+  evidence:
+    - {path: Dockerfile, line: 88, quote: "ENV CHROMA_HOST_PORT=8000"}
+    - {path: Dockerfile, line: 93, quote: "EXPOSE 8000"}
+    - {path: rust/frontend/src/config.rs, line: 127, quote: "8000"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: Dockerfile, line: 87, quote: "ENV CHROMA_HOST_ADDR=\"0.0.0.0\""}
+    - {path: rust/frontend/src/config.rs, line: 131, quote: "\"0.0.0.0\".to_string()"}
+startCommand:
+  source: image
+  accept: ["chroma run /config.yaml", "uvicorn chromadb.app:app --host 0.0.0.0 --port 8000"]
+  evidence:
+    - {path: rust/Dockerfile, line: 166, quote: "CMD [ \"run\", \"/config.yaml\" ]"}
+    - {path: bin/docker_entrypoint.sh, line: 14, quote: "exec uvicorn chromadb.app:app $(eval echo \"$args\")"}
+healthPath:
+  accept: ["/api/v2/heartbeat"]
+  evidence:
+    - {path: chromadb/server/fastapi/__init__.py, line: 282, quote: "self.router.add_api_route(\"/api/v2/heartbeat\", self.heartbeat, methods=[\"GET\"])"}
+    - {path: docker-compose.yml, line: 30, quote: "test: [ \"CMD\", \"curl\", \"-f\", \"http://localhost:8000/api/v2/heartbeat\" ]"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  # Chroma is the datastore: SQLite file chroma.sqlite3 and HNSW indexes in the persist directory.
+  evidence:
+    - {path: rust/frontend/src/config.rs, line: 123, quote: "\"chroma.sqlite3\".to_string()"}
+    - {path: rust/frontend/sample_configs/docker_single_node.yaml, line: 1, quote: "persist_path: \"/data\""}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/data, /chroma/chroma]
+  s3: none
+  s3SelectBy: {}
+  # Single-node data (SQLite and vector indexes) is local disk. Distributed mode uses S3 and a log service but needs several services.
+  evidence:
+    - {path: rust/frontend/sample_configs/docker_single_node.yaml, line: 1, quote: "persist_path: \"/data\""}
+    - {path: docker-compose.yml, line: 20, quote: "- chroma-data:/data"}
+    - {path: chromadb/config.py, line: 160, quote: "persist_directory: str = \"./chroma\""}
+    - {path: bin/docker_entrypoint.sh, line: 4, quote: "export IS_PERSISTENT=1"}
+env:
+  required: []
+  optional: [CHROMA_HOST_PORT, CHROMA_HOST_ADDR, CHROMA_WORKERS, CHROMA_LOG_CONFIG, CHROMA_TIMEOUT_KEEP_ALIVE, CHROMA_SERVER_NOFILE, IS_PERSISTENT, PERSIST_DIRECTORY, CHROMA_OPEN_TELEMETRY__ENDPOINT]
+  buildTime: [REBUILD_HNSWLIB, PROTOC_VERSION, RELEASE_MODE]
+  evidence:
+    - {path: Dockerfile, line: 88, quote: "ENV CHROMA_HOST_PORT=8000"}
+    - {path: Dockerfile, line: 2, quote: "ARG REBUILD_HNSWLIB"}
+    - {path: docker-compose.yml, line: 22, quote: "CHROMA_OPEN_TELEMETRY__ENDPOINT"}
+blockers:
+  expected:
+    - "Chroma is a vector database server; its data (SQLite file and HNSW indexes) lives in a persist directory on local disk, which Fargate does not keep"
+    - "The repository is a datastore that other applications depend on, not a web application with a database"
+  mustNot:
+    - "A database or Redis must not be reported as required for the single-node server: Chroma stores its own data"
+    - "Port 8000 must not be treated as a failure: it is the API port; only the storage blocks deployment"
+    - "go/Dockerfile and the other service targets must not be treated as the server image"
+vendorQuestions:
+  legitimate:
+    - "Is Chroma the vector store for another application? It needs durable disk and is better run as a managed vector service"
+  unnecessary:
+    - "Which port? (8000)"
+    - "Which health path? (/api/v2/heartbeat)"
+    - "Is Redis or a database needed? (no, for single node)"
+traps:
+  - "The root Dockerfile default CMD includes --reload, a development flag (Dockerfile:96)"
+  - "The root Dockerfile is the Python server; docker-compose.yml builds rust/Dockerfile target cli instead"
+  - "rust/Dockerfile has many service targets; the last stage is mdac_service, so a build without --target gives the wrong image (rust/Dockerfile:208)"
+  - "The root Dockerfile sets IS_PERSISTENT=1 in the entrypoint and writes to ./chroma under /chroma, with no volume declared (bin/docker_entrypoint.sh:4)"
+  - "The Rust single-node config uses /data as persist_path, while the Python default is ./chroma"
+openQuestions:
+  - "The Rust server environment override names (load_yaml_with_env) were not listed in detail"
+  - "Distributed mode (sysdb, log service, query and compaction services, S3) was not traced beyond the Dockerfile targets"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "22 citations checked against the pinned commit by script (path, line, quote)"}

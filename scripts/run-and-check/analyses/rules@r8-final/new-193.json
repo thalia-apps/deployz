@@ -1,0 +1,84 @@
+{
+  "id": "new-193",
+  "commit": "601492157a7e563b5cd4cdea8c9382302a1ea5f4",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "docker/jvm/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "server.properties",
+        "resources/common-scripts"
+      ]
+    },
+    "web": {
+      "command": "CMD: [\"/etc/kafka/docker/run\"]",
+      "port": 9092
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported repository: docker/jvm/Dockerfile exposes port 9092 (Kafka), so the image is a database or message-broker server that clients reach over its own protocol, not a web application.",
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: docker/jvm/Dockerfile exposes port 9092 (Kafka), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies server.properties, resources/common-scripts, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE"
+}

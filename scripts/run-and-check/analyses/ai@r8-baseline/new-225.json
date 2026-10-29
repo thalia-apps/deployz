@@ -1,0 +1,107 @@
+{
+  "id": "new-225",
+  "commit": "a76a3689a0706dcec7955051e09bdba8dc7cefd8",
+  "analyser": "ai@r8-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.noble"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07014744,
+        "promptTokens": 15929,
+        "completionTokens": 357
+      },
+      "latencyMs": 5578
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 5579,
+    "questions": 2,
+    "generatedAt": "2026-10-29T08:06:33.494Z",
+    "failedChecks": 0,
+    "promptVersion": 18
+  }
+}

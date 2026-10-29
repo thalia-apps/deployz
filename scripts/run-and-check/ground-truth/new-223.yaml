@@ -1,0 +1,114 @@
+id: new-223
+repository: prometheus/prometheus
+commit: d919f8a05a1b1504e7c5e92c3dd00701ff041aba
+summary: >
+  Prometheus is a Go monitoring system and time series database. It is a datastore and scraper, not a web application.
+  The server (UI and HTTP API on 9090) pulls metrics from scrape targets listed in a prometheus.yml file and writes them to
+  a local TSDB directory (--storage.tsdb.path, default data/). Both Dockerfiles copy binaries from .build/ that are built
+  outside Docker by promu and make; nothing builds from source in the Dockerfile. The image declares /prometheus as a
+  volume for the TSDB.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Prometheus is a time series database server. It needs a durable local TSDB directory; Fargate task storage is ephemeral
+    and the TSDB cannot use S3 or a SQL database (remote storage is write and read forwarding only, and agent mode still
+    keeps a local WAL). Both Dockerfiles copy prebuilt binaries from .build/, so no Dockerfile builds the app from the
+    repository source. It also needs a prometheus.yml that lists scrape targets, which are not part of one Deployz service.
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "copies prebuilt .build/${OS}-${ARCH}/prometheus into a busybox image; no build stage"}
+    - {path: Dockerfile.distroless, reason: "same prebuilt binary copy into a distroless image; no build stage"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 17, quote: "COPY .build/${OS}-${ARCH}/prometheus        /bin/prometheus"}
+    - {path: Dockerfile.distroless, line: 22, quote: "COPY .build/${OS}-${ARCH}/prometheus        /bin/prometheus"}
+runtime: {accept: [go]}
+port:
+  accept: [9090]
+  evidence:
+    - {path: Dockerfile, line: 27, quote: "EXPOSE     9090"}
+    - {path: cmd/prometheus/main.go, line: 444, quote: "Default(\"0.0.0.0:9090\").StringsVar(&cfg.web.ListenAddresses)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: cmd/prometheus/main.go, line: 444, quote: "Default(\"0.0.0.0:9090\").StringsVar(&cfg.web.ListenAddresses)"}
+startCommand:
+  source: image
+  accept: ["/bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus"]
+  evidence:
+    - {path: Dockerfile, line: 29, quote: "ENTRYPOINT [ \"/bin/prometheus\" ]"}
+    - {path: Dockerfile, line: 30, quote: "CMD        [ \"--config.file=/etc/prometheus/prometheus.yml\","}
+healthPath:
+  accept: ["/-/healthy", "/-/ready"]
+  evidence:
+    - {path: web/web.go, line: 612, quote: "router.Get(\"/-/healthy\", func(w http.ResponseWriter, _ *http.Request) {"}
+    - {path: web/web.go, line: 619, quote: "router.Get(\"/-/ready\", readyf(func(w http.ResponseWriter, _ *http.Request) {"}
+database:
+  # Prometheus is the database: it embeds its own TSDB.
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: cmd/prometheus/main.go, line: 511, quote: "serverOnlyFlag(a, \"storage.tsdb.path\", \"Base path for metrics storage.\")."}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  # Samples live in the TSDB directory and are lost with the task; S3 is not a TSDB backend.
+  local: required
+  paths: [/prometheus]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: Dockerfile, line: 28, quote: "VOLUME     [ \"/prometheus\" ]"}
+    - {path: cmd/prometheus/main.go, line: 512, quote: "Default(\"data/\").StringVar(&cfg.serverStoragePath)"}
+env:
+  required: []
+  optional: []
+  buildTime: [ARCH, OS]
+  # Prometheus is configured by command-line flags and the config file, not by environment variables.
+  evidence:
+    - {path: Dockerfile, line: 15, quote: "ARG ARCH=\"amd64\""}
+blockers:
+  expected:
+    - "Prometheus is a time series database; the TSDB needs durable local disk and Fargate storage is ephemeral"
+    - "Both Dockerfiles copy binaries prebuilt into .build/; no Dockerfile builds from the repository source"
+    - "The server is useful only with a prometheus.yml listing scrape targets"
+  mustNot:
+    - "A SQL database or Redis must not be reported as required: the TSDB is embedded"
+    - "Port 9090 must not be treated as a failure: it is the server API and UI, only the storage and build block deployment"
+    - "S3 must not be offered as the TSDB store"
+vendorQuestions:
+  legitimate:
+    - "Is Prometheus being deployed as the monitoring backend for other services? It needs durable disk for the TSDB and is better run as a managed Prometheus service"
+  unnecessary:
+    - "Which port? (9090)"
+    - "Which health path? (/-/healthy)"
+    - "Is a database needed? (no, embedded TSDB)"
+traps:
+  - "The Dockerfile is short and looks buildable, but .build/${OS}-${ARCH}/prometheus does not exist in the repository (Dockerfile:17)"
+  - "The image bakes documentation/examples/prometheus.yml, whose only target is localhost:9090 (documentation/examples/prometheus.yml:29)"
+  - "Agent mode (--agent) removes the query UI storage but still writes a local WAL and forwards by remote write (cmd/prometheus/main.go:672)"
+openQuestions:
+  - "The web UI assets are built by make (web/ui) before the binary; not read in detail"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "13 citations checked against the pinned commit by script (path, line, quote)"}

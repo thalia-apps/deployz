@@ -1,0 +1,124 @@
+id: new-210
+repository: matomo-org/matomo
+commit: d1782a5ad5e7151ea609dffbbbfbcb628c808af6
+summary: >
+  Matomo is a PHP (>= 8.1) web analytics platform that uses MySQL or MariaDB. This repository is the development tree: it
+  has no vendor/ folder (composer install is needed), many plugins are git submodules, and its only Dockerfiles are DDEV
+  build snippets. The app reads no environment variables for its database; the web installer asks for the database
+  settings and writes them, with a generated salt, to config/config.ini.php on local disk. Without that file every
+  request redirects back to the installer. Reports need the archiving job (misc/cron/archive.php) on a schedule.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The configuration (database credentials and the security salt) exists only as config/config.ini.php, which the web
+    installer writes to local disk; there is no environment-variable configuration in the source. A Fargate task loses that
+    file on restart or when a second task starts, and the installer would run again. No production Dockerfile exists, and
+    the tree is a dev checkout (no vendor/, submodule plugins). A deployment would need a custom entrypoint that generates
+    config.ini.php and the database schema outside the supported installer, which is not a small safe change.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .ddev/web-build/Dockerfile.fonts, reason: "DDEV development web image snippet that writes font config"}
+    - {path: .ddev/web-build/Dockerfile.zzzFontCacheRenew, reason: "DDEV development web image snippet"}
+    - {path: .ddev/web-build/pre.Dockerfile.aptSourcesContrib, reason: "DDEV development web image snippet that adds apt sources"}
+  target: null
+  context: .
+  evidence:
+    - {path: .ddev/config.yaml, line: 1, quote: "name: matomo"}
+    - {path: .ddev/web-build/Dockerfile.fonts, line: 1, quote: "RUN mkdir -p /etc/fonts && \\"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: .ddev/config.yaml, line: 5, quote: "webserver_type: apache-fpm"}
+bindAllInterfaces:
+  value: true
+  evidence: []
+startCommand:
+  # No image of the app exists; a new Dockerfile would use Apache or nginx with PHP-FPM.
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: .ddev/config.yaml, line: 5, quote: "webserver_type: apache-fpm"}
+healthPath:
+  # matomo.php answers the tracker with a 1x1 GIF and needs no login; "/" redirects to the installer before setup.
+  accept: ["/matomo.php", "/index.php"]
+  evidence:
+    - {path: matomo.php, line: 1, quote: "<?php"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: []
+  # MariaDB also works; PostgreSQL is not supported.
+  evidence:
+    - {path: config/global.ini.php, line: 14, quote: "[database]"}
+    - {path: config/global.ini.php, line: 21, quote: 'adapter = PDO\MYSQL'}
+    - {path: .ddev/config.yaml, line: 10, quote: "type: mysql"}
+migrations:
+  mode: unknown
+  accept: []
+  # The schema is created by the web installer (tablesCreation step); core:update runs later upgrades. There is no start-up command.
+  evidence:
+    - {path: plugins/Installation/Controller.php, line: 178, quote: "public function tablesCreation()"}
+redis:
+  status: optional
+  selectBy: {}
+  evidence:
+    - {path: config/global.ini.php, line: 139, quote: "; available backends are 'file', 'array', 'null', 'redis', 'chained'"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: required
+  items: ["php console core:archive (misc/cron/archive.php) about every hour"]
+  evidence:
+    - {path: misc/cron/archive.php, line: 29, quote: "$console = new Piwik\\Console();"}
+    - {path: config/global.ini.php, line: 398, quote: "enable_browser_archiving_triggering = 1"}
+storage:
+  local: required
+  paths: [config/config.ini.php, tmp]
+  s3: none
+  s3SelectBy: {}
+  # config.ini.php holds the database settings and salt; tmp holds caches and compiled templates (rebuildable).
+  evidence:
+    - {path: core/Config.php, line: 48, quote: "public const DEFAULT_LOCAL_CONFIG_PATH = '/config/config.ini.php';"}
+    - {path: plugins/Installation/Controller.php, line: 626, quote: "$config->forceSave();"}
+    - {path: config/global.ini.php, line: 836, quote: 'tmp_path = "/tmp"'}
+env:
+  required: []
+  optional: [MATOMO_PLUGIN_DIRS]
+  buildTime: []
+  evidence:
+    - {path: core/Plugin/Manager.php, line: 380, quote: "$envDirs = getenv('MATOMO_PLUGIN_DIRS');"}
+    - {path: .ddev/config.yaml, line: 23, quote: "- MATOMO_DATABASE_HOST=db"}
+blockers:
+  expected:
+    - "Configuration lives only in config/config.ini.php written by the web installer; the source reads no environment variables for the database, so the config file is local state that Fargate loses"
+    - "No production Dockerfile; the repository is a development tree without vendor/ and with submodule plugins"
+  mustNot:
+    - "The DDEV Dockerfile snippets must not be chosen as the application Dockerfile"
+    - "MATOMO_DATABASE_* must not be reported as supported application variables: they appear only in the DDEV development config"
+    - "PostgreSQL must not be offered"
+    - "Redis must not be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Is a released Matomo image or archive acceptable? The development tree has no installable build"
+  unnecessary:
+    - "Which database? (MySQL or MariaDB)"
+    - "Which port? (80)"
+traps:
+  - "MATOMO_DATABASE_* names in .ddev/config.yaml:23 are DDEV helper variables; the Matomo core code does not read them"
+  - "Without config/config.ini.php every request redirects to the web installer (plugins/Installation)"
+  - "Browser-triggered archiving is on by default (global.ini.php:398), so the cron job is advised, not forced, for small sites"
+  - "git submodules (.gitmodules) leave plugin folders empty in a plain clone"
+  - "composer.json requires PHP >= 8.1 but vendor/ is not committed (core/bootstrap.php:31 checks for it)"
+openQuestions:
+  - "Whether a custom entrypoint could safely generate config.ini.php and the schema was not tested; the outcome assumes it is out of scope"
+  - "The health path /matomo.php was not exercised; it is the tracker endpoint at the repository root"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: installer-written config and durable local files are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "17 citations checked against the pinned commit by script (path, line, quote)"}

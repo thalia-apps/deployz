@@ -367,6 +367,17 @@ const LIBRARY_COPY: RejectionCopy = {
   suggestedOutcome: 'Connect the repository of an application that uses this project.',
 };
 
+const DATASTORE_SERVER_COPY: RejectionCopy = {
+  ...NO_DOCKERFILE_COPY,
+  id: 'unsupported-datastore-server',
+  title: 'Is a database or message broker, not an application',
+  plainEnglishExplanation:
+    'This repository is a database, cache, search engine, message broker or storage server that other applications connect to and keep their data in.',
+  whyItMatters:
+    'Deployz deploys a web application that serves HTTPS, with stateless containers. It cannot give clients a database or broker endpoint, and the server would lose its data when a container is replaced.',
+  suggestedOutcome: 'Connect the repository of an application that uses this server, and use a managed service for the server itself.',
+};
+
 /** Maps a §10/§11 rejection `dependency` to its blocking-finding copy. */
 function rejectionCopy(dependency: string): RejectionCopy {
   if (dependency === 'redis-unsupported') return REDIS_COPY;
@@ -391,6 +402,7 @@ function rejectionCopy(dependency: string): RejectionCopy {
   if (dependency === 'no-buildable-dockerfile') return NO_DOCKERFILE_COPY;
   if (dependency === 'no-application-source') return NO_SOURCE_COPY;
   if (dependency === 'library-repository') return LIBRARY_COPY;
+  if (dependency === 'datastore-server') return DATASTORE_SERVER_COPY;
   if (
     dependency === 'kubernetes' ||
     dependency === 'serverless' ||
@@ -446,6 +458,7 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'unsupported-architecture': 'CAPABILITY_GAP',
   'unsupported-no-application-source': 'CAPABILITY_GAP',
   'unsupported-library-repository': 'CAPABILITY_GAP',
+  'unsupported-datastore-server': 'CAPABILITY_GAP',
 };
 
 /**

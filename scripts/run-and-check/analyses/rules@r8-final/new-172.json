@@ -1,0 +1,188 @@
+{
+  "id": "new-172",
+  "commit": "80f27153694c92e55b1b970a7af4c11093103341",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "pnpm run -r build",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"-m\", \"phoenix.server.main\", \"serve\"]",
+      "port": 6006
+    },
+    "health": {
+      "path": "/healthz",
+      "mode": "explicit"
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "DANGEROUSLY_READ_README_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in js/packages/phoenix-mcp/src/index.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DAYTONA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/phoenix/server/sandbox/daytona_backend.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "E2B_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/phoenix/server/sandbox/e2b_backend.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOENIX_ENABLE_WEBSOCKETS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in src/phoenix/config.py"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PHOENIX_POSTGRES_AWS_IAM_TOKEN_LIFETIME_SECONDS",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in src/phoenix/config.py"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "XDG_CONFIG_HOME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in js/packages/phoenix-cli/src/settings.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "smtp",
+      "openai",
+      "anthropic"
+    ],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses PostgreSQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "DEPLOYABLE"
+}

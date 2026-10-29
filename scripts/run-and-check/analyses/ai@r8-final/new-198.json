@@ -1,0 +1,120 @@
+{
+  "id": "new-198",
+  "commit": "4b3e63dcc68d6311b69a30a26ea71b906f645996",
+  "analyser": "ai@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": "libs/native-toolchain",
+      "runtime": "jvm",
+      "framework": null,
+      "dockerfilePath": "libs/native-toolchain/Dockerfile.cross-toolchain"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": null
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "port-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "The application port is unknown; Deployz cannot route traffic to a container without it."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "NOT_DEPLOYABLE",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07653492,
+        "promptTokens": 16622,
+        "completionTokens": 541
+      },
+      "latencyMs": 7643
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "port",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": "datastore",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 7645,
+    "questions": 3,
+    "generatedAt": "2026-10-29T09:21:24.916Z",
+    "failedChecks": 0,
+    "promptVersion": 19
+  }
+}

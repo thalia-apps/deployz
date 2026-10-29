@@ -1,0 +1,108 @@
+{
+  "id": "new-214",
+  "commit": "60ce2463711f8c196db6cdfc97039ea4d7e5d72e",
+  "analyser": "rules@r8-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.nightly"
+    },
+    "build": {
+      "command": null,
+      "context": ".",
+      "missingSources": [
+        "nats-server",
+        "nsc",
+        "natscli"
+      ]
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/bin/nats-server\"]",
+      "port": 4222
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": false
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "none"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "NATS_DOCKERIZED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/service_windows.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NATS_STARTUP_DELAY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in server/service_windows.go"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: The only Dockerfile (docker/Dockerfile.nightly) copies nats-server, nsc, natscli, which the repository does not contain. Deployz builds the app from a Dockerfile in the repository.",
+      "Unsupported repository: docker/Dockerfile.nightly exposes port 4222 (NATS), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: The only Dockerfile (docker/Dockerfile.nightly) copies nats-server, nsc, natscli, which the repository does not contain. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported repository: docker/Dockerfile.nightly exposes port 4222 (NATS), so the image is a database or message-broker server that clients reach over its own protocol, not a web application."
+      },
+      {
+        "id": "dockerfile-missing-sources",
+        "category": "container",
+        "severity": "error",
+        "message": "The Dockerfile copies nats-server, nsc, natscli, which the repository does not contain (a build step makes it before docker build). Deployz builds from the repository only. Add a Dockerfile that builds the app from source, or select another Dockerfile."
+      }
+    ]
+  },
+  "vendorQuestions": 1,
+  "outcome": "NOT_DEPLOYABLE"
+}

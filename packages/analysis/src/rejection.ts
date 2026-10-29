@@ -17,6 +17,7 @@ import {
   composeServices,
   detectEnvVarModel,
   detectUnbuildableDockerfile,
+  exposedPorts,
   detectPostgresql,
   DIALECT_AGNOSTIC_DRIVERS,
   extractCmdScriptPaths,
@@ -1102,8 +1103,10 @@ export function checkGpu(tree: FileTree): RejectionFinding {
 }
 
 // Documentation, licence and repository metadata files: none of them is application source.
+// A root dot-file (`.gitmodules`, `.mrconfig`) and a root shell script that updates them are repository
+// tooling: a meta-repository whose code is in git submodules (ONLYOFFICE DocumentServer) has no app here.
 const DOCUMENT_ONLY_PATH_REGEX =
-  /^\.(?:github|gitignore|gitattributes|editorconfig)(?:\/|$)|(?:^|\/)(?:readme|licen[cs]e|copying|notice|changelog|contributing|code_of_conduct|security|authors|funding)(?:\.[\w.-]+)?$|\.(?:md|rst|png|jpe?g|gif|svg|webp)$/i;
+  /^\.(?:github|gitignore|gitattributes|editorconfig)(?:\/|$)|^\.[\w.-]+$|^[\w.-]+\.sh$|(?:^|\/)(?:readme|licen[cs]e|copying|notice|changelog|contributing|code_of_conduct|security|authors|funding|roadmap)(?:\.[\w.-]+)?$|\.(?:md|rst|png|jpe?g|gif|svg|webp)$/i;
 
 // A workspace root only lists packages; examples, templates and cookbooks are not the product.
 const WORKSPACE_ROOT_MANIFEST_REGEX = /"workspaces"\s*:|^\s*\[(?:workspace|tool\.uv\.workspace)\]/m;
@@ -1552,6 +1555,43 @@ export function checkRequiredThirdPartyService(tree: FileTree): RejectionFinding
     };
   }
   return { detected: false, dependency: 'none', reason: 'No required third-party service detected' };
+}
+
+// The well-known client ports of database, cache and message-broker protocols. Clients reach them
+// over raw TCP, not HTTP, and an image that listens on one is that server (EMQX, NATS, a database).
+const DATASTORE_PROTOCOL_PORTS: Readonly<Record<string, string>> = {
+  '1883': 'MQTT',
+  '8883': 'MQTT over TLS',
+  '5671': 'AMQP over TLS',
+  '5672': 'AMQP',
+  '9092': 'Kafka',
+  '4222': 'NATS',
+  '3306': 'MySQL',
+  '5432': 'PostgreSQL',
+  '6379': 'Redis',
+  '27017': 'MongoDB',
+  '9042': 'Cassandra',
+  '7687': 'Neo4j Bolt',
+  '26257': 'CockroachDB',
+};
+
+/**
+ * The repository builds a database or message-broker server: the first port that the production
+ * image exposes is the client port of such a protocol. Deployz routes HTTPS to one web port; it
+ * cannot give clients a database or broker endpoint, and the server's data needs durable disk.
+ * A web app that also exposes a metrics port (focalboard 9092) or bundles a database in an
+ * all-in-one image (Helicone 5432) exposes its web port first.
+ */
+export function checkDatastoreServerImage(tree: FileTree): RejectionFinding {
+  const dockerfile = selectedDockerfile(tree);
+  if (dockerfile === null) return { detected: false, dependency: 'none', reason: 'No Dockerfile to check' };
+  const port = exposedPorts(productionStageText(dockerfile.content))[0];
+  if (port === undefined || DATASTORE_PROTOCOL_PORTS[port] === undefined) return { detected: false, dependency: 'none', reason: 'The image exposes no database or broker port first' };
+  return {
+    detected: true,
+    dependency: 'datastore-server',
+    reason: `Unsupported repository: ${dockerfile.path} exposes port ${port} (${DATASTORE_PROTOCOL_PORTS[port]}), so the image is a database or message-broker server that clients reach over its own protocol, not a web application.`,
+  };
 }
 /** What the rules found for the engines Deployz provides: a declared service of one of them is explained by it. */
 export interface DeclaredServiceContext {

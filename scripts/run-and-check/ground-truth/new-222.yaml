@@ -1,0 +1,123 @@
+id: new-222
+repository: PrestaShop/PrestaShop
+commit: 52a8b2e7d36a4c755c0e876168646b3a2253752b
+summary: >
+  PrestaShop is a PHP (>= 8.1) e-commerce application (Symfony plus a legacy core) with MySQL or MariaDB. The only
+  Dockerfile, .docker/Dockerfile, is a development image on prestashop/base that mounts the source tree; its start script
+  installs node and composer, builds assets, and runs the CLI installer at container start. The installer writes
+  app/config/parameters.php (database settings, cookie_key, secret) into the source tree. Product images, uploads, and
+  installed modules are written to the local img/, upload/, and modules/ folders; the core has no S3 backend.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The shop writes durable data to local disk: product and category images in img/, customer uploads in upload/, and
+    module and theme installs in modules/ and themes/, and the installer writes the settings file parameters.php into the
+    source tree. Fargate storage is ephemeral, Deployz provides no EFS, and the core has no object-storage option. The
+    only Dockerfile is a development image that downloads node and runs composer and the installer at start.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .docker/Dockerfile, reason: "development image on prestashop/base; the compose file mounts the source at /var/www/html; CMD runs docker_run_git.sh which installs node and composer, builds assets, and installs the shop at start; build args are user IDs and xdebug"}
+  target: null
+  context: .
+  evidence:
+    - {path: .docker/Dockerfile, line: 4, quote: "FROM prestashop/base:$VERSION"}
+    - {path: .docker/Dockerfile, line: 46, quote: 'CMD ["/tmp/docker_run_git.sh"]'}
+    - {path: docker-compose.yml, line: 58, quote: "- ./:/var/www/html"}
+    - {path: .docker/docker_run_git.sh, line: 73, quote: "COMPOSER_PROCESS_TIMEOUT=600 COMPOSER_IPRESOLVE=4 php -ddefault_socket_timeout=-1 /usr/local/bin/composer install --ansi --prefer-dist --no-interaction --no-progress"}
+runtime: {accept: [php]}
+port:
+  accept: [80]
+  evidence:
+    - {path: docker-compose.yml, line: 53, quote: '- "${HTTP_HOST_PORT:-8001}:80"'}
+    - {path: .docker/Dockerfile, line: 10, quote: "EXPOSE 443"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: .docker/Dockerfile, line: 4, quote: "FROM prestashop/base:$VERSION"}
+startCommand:
+  source: explicit
+  accept: ["apache2-foreground"]
+  evidence:
+    - {path: .docker/Dockerfile, line: 46, quote: 'CMD ["/tmp/docker_run_git.sh"]'}
+healthPath:
+  accept: ["/"]
+  evidence:
+    - {path: docker-compose.yml, line: 37, quote: "PS_DOMAIN: ${PS_DOMAIN:-localhost:${HTTP_HOST_PORT:-8001}}"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DB_SERVER, DB_NAME, DB_USER, DB_PASSWD, DB_PREFIX]
+  # MariaDB 11.4 is tested too (docker-compose.mariadb.yml); PostgreSQL is not supported.
+  evidence:
+    - {path: docker-compose.yml, line: 6, quote: "image: mysql:8.4"}
+    - {path: docker-compose.mariadb.yml, line: 6, quote: "image: mariadb:11.4"}
+    - {path: app/config/parameters.yml.dist, line: 5, quote: "database_host:     127.0.0.1"}
+migrations:
+  mode: command
+  accept: ["php install-dev/index_cli.php"]
+  # The start script installs only when app/config/parameters.php does not exist; the installer is a CLI script, not an env-driven start.
+  evidence:
+    - {path: .docker/docker_run_git.sh, line: 118, quote: "if [ ! -f ./app/config/parameters.php ]; then"}
+redis:
+  status: optional
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: optional
+  items: ["module cron URLs"]
+  evidence: []
+storage:
+  local: required
+  paths: [img, upload, modules, themes, app/config/parameters.php, var]
+  s3: none
+  s3SelectBy: {}
+  evidence:
+    - {path: config/defines.inc.php, line: 156, quote: "define('_PS_IMG_SOURCE_DIR_', _PS_ROOT_DIR_.'/img/');"}
+    - {path: .docker/docker_run_git.sh, line: 75, quote: "chown -R www-data:www-data vendor modules themes"}
+    - {path: app/config/parameters.yml.dist, line: 26, quote: "cookie_key: ThisTokenIsNotSoSecretChangeIt"}
+env:
+  required:
+    - {name: DB_SERVER, secret: false, buildTime: false, note: "start script variable of the dev image only; the application reads parameters.php"}
+    - {name: DB_PASSWD, secret: true, buildTime: false, note: ""}
+    - {name: PS_DOMAIN, secret: false, buildTime: false, note: "public host name used by the installer"}
+  optional: [DB_NAME, DB_USER, DB_PREFIX, PS_INSTALL_AUTO, PS_DEV_MODE, PS_ENABLE_SSL, ADMIN_MAIL, ADMIN_PASSWD, PS_FOLDER_ADMIN, PS_FOLDER_INSTALL]
+  buildTime: []
+  evidence:
+    - {path: docker-compose.yml, line: 35, quote: "DB_SERVER: ${DB_SERVER:-mysql}"}
+    - {path: docker-compose.yml, line: 47, quote: "ADMIN_PASSWD: ${ADMIN_PASSWD:-Pr3st4Sh0P}"}
+    - {path: app/config/parameters.yml.dist, line: 21, quote: "secret: ThisTokenIsNotSoSecretChangeIt"}
+blockers:
+  expected:
+    - "Product images, uploads, and installed modules and themes live on local disk with no object-storage backend in the core; Fargate storage is ephemeral"
+    - "The installer writes app/config/parameters.php (database settings, cookie_key, secret) into the source tree"
+    - "No production Dockerfile: .docker/Dockerfile is a dev image that mounts the source and builds at start"
+  mustNot:
+    - "The .docker/Dockerfile must not be chosen as the production Dockerfile"
+    - "PostgreSQL must not be offered; only MySQL or MariaDB"
+    - "Redis must not be reported as required"
+vendorQuestions:
+  legitimate:
+    - "Is a catalog with product images needed? Images must survive restarts and need shared durable storage"
+  unnecessary:
+    - "Which database? (MySQL or MariaDB)"
+    - "Which port? (80)"
+traps:
+  - ".docker/Dockerfile only declares EXPOSE 443 but the Apache image also serves 80; the compose file maps 80 (docker-compose.yml:53)"
+  - "The start script downloads node with nvm and runs composer and asset builds on every start (docker_run_git.sh:41-81)"
+  - "The default admin password and the secret tokens in the docker and dist files are public values (docker-compose.yml:47)"
+  - "PS_INSTALL_AUTO=1 with PS_ERASE_DB=1 would drop the database; the compose default is 0"
+  - "The admin folder is admin-dev and the installer folder is install-dev in git; a release renames them"
+openQuestions:
+  - "The upload directory list is from the repository layout (img/, upload/, modules/), not from every code path"
+  - "Scheduled jobs come from modules; none are required by the core"
+crossReview:
+  - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: durable local uploads, installer-written parameters and a dev-only Dockerfile are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "19 citations checked against the pinned commit by script (path, line, quote)"}

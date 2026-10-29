@@ -122,7 +122,16 @@ Repository (GitHub tree, bounded)
   image in another hidden directory ranks with the dev images, and it is
   never selected when it starts nothing (the `.oss-scanner/` build
   environment of medusa and vendure). A production stage `FROM scratch` with no CMD or ENTRYPOINT only
-  exports files (focalboard `Dockerfile.build`) and is never selected. A
+  exports files (focalboard `Dockerfile.build`) and is never selected. These
+  are never selected too: an image whose only command is a shell or a no-op
+  (`CMD ["/bin/bash"]`, `CMD /bin/true`) and that exposes no port (a build
+  toolchain or a file export: MongoDB, GitLab `Dockerfile.assets`); a file of
+  two or more FROM lines and nothing else (an image-pin list, MySQL's
+  vendored `dependencies.Dockerfile`); a Windows image (PowerShell, a `C:\`
+  WORKDIR, a Windows base: Chroma `Dockerfile.windows`); a FROM whose
+  variable no ARG declares (a template that a build tool fills in:
+  OpenSearch `FROM ${base_image}`; the BuildKit platform variables need no
+  ARG); and an image in a `selenium/` directory (browser tests). A
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
   mdBook, Antora, Docsify) ranks with the dev images, below the app image. So
   does an image in a datastore or proxy directory (`hosting/couchdb/`,
@@ -232,7 +241,9 @@ Repository (GitHub tree, bounded)
   source (`COPY <<'EOF' …`) and a generated directory that a build step of
   the Dockerfile can make never reject. A
   repository whose full path list holds only documents (README, licence,
-  Markdown, images, `.github/`) has no application source: it is the
+  Markdown, images, `.github/`), root dot-files and root shell scripts has
+  no application source (a meta-repository whose code is in git submodules,
+  ONLYOFFICE DocumentServer): it is the
   `no-application-source` rejection (finding `unsupported-no-application-source`,
   a `CAPABILITY_GAP`), never a request to add a Dockerfile (a project that moved
   to Codeberg or GitLab). A Dockerfile that copies `.git`, a RUN step that
@@ -419,11 +430,15 @@ is final.
     `database-connection-unverified` case: no binding name is read with
     evidence).
   - The repository kind, when the rules found no Dockerfile that builds the
-    repository (`no-buildable-dockerfile`): an application, or a library,
-    framework, SDK or CLI that others install. "Add a Dockerfile" is the
-    wrong fix for a repository with no server to run (crewAI, agno,
-    superagent, Strapi). The rules decide only the clear case (see
-    `library-repository` below). The other cases go to the model: these
+    repository (`no-buildable-dockerfile`), no port, no start command, or
+    durable local state, and no `datastore-server` rejection: an
+    application, a datastore server, or a library, framework, SDK or CLI
+    that others install. "Add a Dockerfile" is the wrong fix for a
+    repository with no server to run (crewAI, agno, superagent, Strapi), and
+    "move the files to S3" is the wrong fix for a database, cache, search
+    engine, broker or storage server (Valkey, PostgreSQL, Kafka,
+    Prometheus). The rules decide only the clear cases (see
+    `library-repository` and `datastore-server` below). The other cases go to the model: these
     repositories have ports, start scripts and Dockerfiles in examples and
     templates.
   - A repository with no open item makes no model call.
@@ -467,13 +482,16 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 18): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 19): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
     `not_used`;
   - a fact: a value, or `unknown`. The repository kind is `application`,
-    `library`, `framework`, `sdk` or `cli`; when the repository also holds
+    `datastore`, `library`, `framework`, `sdk` or `cli`. A `datastore`
+    builds the server of a database, cache, search engine, vector store,
+    message broker, object store or metrics store; an app that uses or
+    manages a database is an `application`; when the repository also holds
     an app that serves HTTP, or when the model is not sure, it is
     `application`.
   Each answer has a confidence and `{path, line, quote}` evidence. When a
@@ -530,7 +548,11 @@ is final.
     console script entry, `"bin"` or a `"bin"` entry (`"codex":
     "bin/codex.js"`), `"main"`, `"exports"`, `"types"` or
     `"publishConfig"`, a Rust `[lib]` or `[[bin]]`, a Composer `"type":
-    "library"`, a gemspec. A project name or a README line fails.
+    "library"`, a gemspec. A project name or a README line fails. A
+    `datastore` needs a cited production line that names its role (a
+    database server, a key-value store, a search engine, a message broker,
+    a time-series database) or the default client port of a database,
+    cache or broker protocol (`#define CONFIG_DEFAULT_SERVER_PORT 6379`).
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
   rejection; `analyseRepo` re-runs with the dismissed reason and with the
@@ -544,7 +566,17 @@ is final.
   repository kind other than `application` replaces the
   `no-buildable-dockerfile` rejection with `library-repository` (finding
   `unsupported-library-repository`, a `CAPABILITY_GAP`): outcome 3, not
-  deployable, and no "add a Dockerfile" finding. The rules engine gives
+  deployable, and no "add a Dockerfile" finding. A passing `datastore`
+  adds the `datastore-server` rejection (finding
+  `unsupported-datastore-server`, a `CAPABILITY_GAP`) and removes
+  `no-buildable-dockerfile`: outcome 3. The rules engine gives
+  `datastore-server` itself when the first port that the production image
+  exposes is the client port of a database, cache or broker protocol (MQTT 1883/8883, AMQP
+  5671/5672, Kafka 9092, NATS 4222, MySQL 3306, PostgreSQL 5432, Redis 6379,
+  MongoDB 27017, Cassandra 9042, Neo4j 7687, CockroachDB 26257: EMQX). A
+  web app that exposes its web port first and a metrics port or a bundled
+  database after it (focalboard, Helicone) is not one. The
+  rules engine gives
   `library-repository` itself only when every production package manifest
   publishes its code (a `bin`, `exports`, a build backend, console scripts,
   a Rust `[lib]`). A workspace root and the manifests in examples, templates,

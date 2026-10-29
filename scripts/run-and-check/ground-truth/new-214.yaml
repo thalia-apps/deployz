@@ -1,0 +1,112 @@
+id: new-214
+repository: nats-io/nats-server
+commit: 60ce2463711f8c196db6cdfc97039ea4d7e5d72e
+summary: >
+  NATS Server is a Go messaging server. Clients connect with the NATS text protocol over raw TCP on 4222. An optional
+  HTTP monitoring port (8222 by convention) is enabled only with -m/--http_port; it is not the product. Optional JetStream
+  persistence writes to a store directory on disk. The only Dockerfile, docker/Dockerfile.nightly, needs sibling checkouts
+  of nats-server, nsc and natscli in its build context, so it does not build from this repository alone.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    NATS is a messaging server whose clients use the NATS protocol over TCP (4222), not HTTP, so an HTTPS-only ALB cannot
+    serve it. It also uses cluster (6222) and leaf-node ports, and JetStream needs a durable store directory that Fargate
+    does not give a task. There is no HTTP application to deploy. The repository Dockerfile depends on directories outside
+    the repository.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile.nightly, reason: "build context must hold nats-server, nsc and natscli directories side by side; not buildable from this repository alone"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile.nightly, line: 20, quote: "COPY ./nats-server/ /src/nats-server/"}
+    - {path: docker/Dockerfile.nightly, line: 21, quote: "COPY ./nsc/         /src/nsc/"}
+    - {path: docker/Dockerfile.nightly, line: 47, quote: "EXPOSE 4222 8222 6222 5222"}
+runtime: {accept: [go]}
+port:
+  accept: [4222]
+  evidence:
+    - {path: server/const.go, line: 78, quote: "DEFAULT_PORT = 4222"}
+    - {path: main.go, line: 31, quote: "-p, --port <port>                Use port for clients (default: 4222)"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: server/const.go, line: 86, quote: "DEFAULT_HOST = \"0.0.0.0\""}
+startCommand:
+  source: explicit
+  accept: ["nats-server"]
+  evidence:
+    - {path: docker/Dockerfile.nightly, line: 49, quote: "ENTRYPOINT [\"/bin/nats-server\"]"}
+    - {path: main.go, line: 27, quote: "Usage: nats-server [options]"}
+healthPath:
+  # /healthz exists only on the monitoring HTTP port, which is off unless -m is set.
+  accept: ["/healthz"]
+  evidence:
+    - {path: server/server.go, line: 3113, quote: "HealthzPath      = \"/healthz\""}
+    - {path: main.go, line: 35, quote: "-m, --http_port <port>           Use port for http monitoring"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: server/jetstream.go, line: 239, quote: "cfg.StoreDir = filepath.Join(os.TempDir(), JetStreamStoreDir)"}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Core NATS keeps messages in memory; JetStream (-js) writes streams to a store directory, default under the temp dir.
+  evidence:
+    - {path: main.go, line: 59, quote: "-js, --jetstream                 Enable JetStream functionality"}
+    - {path: server/jetstream.go, line: 239, quote: "cfg.StoreDir = filepath.Join(os.TempDir(), JetStreamStoreDir)"}
+env:
+  required: []
+  optional: []
+  buildTime: [VERSION, GIT_COMMIT]
+  evidence:
+    - {path: docker/Dockerfile.nightly, line: 3, quote: "ARG VERSION=\"nightly\""}
+blockers:
+  expected:
+    - "NATS is a messaging server; clients use the NATS protocol over TCP on 4222, not HTTP, so an HTTPS-only ALB cannot serve it"
+    - "JetStream persistence needs a durable store directory; Fargate task storage is ephemeral"
+    - "docker/Dockerfile.nightly needs nats-server, nsc and natscli checkouts next to each other, so it cannot build from this repository"
+  mustNot:
+    - "The monitoring port 8222 must not be treated as the product web port: it is a status page and is off by default"
+    - "A database or Redis must not be reported as required: NATS is the broker"
+    - "Port 4222 must not be reported as an HTTP port"
+vendorQuestions:
+  legitimate:
+    - "Is NATS the message bus for another application? It is better run as a managed or separate NATS service, outside this deployment"
+  unnecessary:
+    - "Which port? (4222 for clients, 8222 for monitoring)"
+    - "Is a database needed? (no)"
+traps:
+  - "docker/Dockerfile.nightly builds a Go binary but its COPY lines name sibling directories outside the repository (docker/Dockerfile.nightly:20-22)"
+  - "The image exposes four ports: 4222 clients, 8222 monitoring, 6222 cluster routes, 5222 (docker/Dockerfile.nightly:47)"
+  - "/healthz is only served when the monitoring port is enabled with -m (main.go:35)"
+  - "JetStream without a store_dir writes to the temp directory and warns that data can be lost (server/jetstream.go:240)"
+openQuestions:
+  - "The 8222 monitoring port default is taken from the Dockerfile EXPOSE line and the project convention; the server has no default and the port is set by -m"
+crossReview:
+  - {field: outcome.accept, change: "none: [NOT_DEPLOYABLE] confirmed against docs/product/mvp-scope.md and the fix-class policy", evidence: "summary and blockers.expected of this file"}
+  - {field: all, change: verified, evidence: "14 citations checked against the pinned commit by script (path, line, quote)"}

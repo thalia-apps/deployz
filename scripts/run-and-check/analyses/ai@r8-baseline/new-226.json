@@ -1,0 +1,171 @@
+{
+  "id": "new-226",
+  "commit": "ec43f4ca00c5d295ba6058aa3d178a53aa848d69",
+  "analyser": "ai@r8-baseline",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "go",
+      "framework": null,
+      "dockerfilePath": "docker/Dockerfile.foundationdb_large"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "ENTRYPOINT: [\"/entrypoint.sh\"]",
+      "port": 18080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "connectionUnverified": true
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": []
+    },
+    "ignoredDeploymentFiles": [
+      "terraform/modules/core/main.tf",
+      "terraform/modules/aws/main.tf",
+      "terraform/modules/security/main.tf"
+    ],
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "NEEDS_CONFIGURATION",
+    "findings": [
+      {
+        "id": "database-connection-unverified",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz did not find which environment variable the app reads for its database connection. In Configuration, set that variable to \"Managed by Deployz\" and choose the database value."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      },
+      {
+        "id": "deployment-files-ignored",
+        "category": "compatibility",
+        "severity": "warning",
+        "message": "Deployz ignores the deployment files in this repository (terraform/modules/core/main.tf, terraform/modules/aws/main.tf, terraform/modules/security/main.tf). It builds the Dockerfile and provisions the infrastructure itself."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.06075828,
+        "promptTokens": 14243,
+        "completionTokens": 220
+      },
+      "latencyMs": 4280
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "databaseVariable",
+        "decision": "rules"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 4281,
+    "questions": 2,
+    "generatedAt": "2026-10-29T08:06:39.611Z",
+    "failedChecks": 0,
+    "promptVersion": 18
+  }
+}
