@@ -34,7 +34,7 @@ bindAllInterfaces:
   # Winstone listens on all interfaces by default (httpListenAddress option); not set in this repository.
   value: true
   evidence:
-    - {path: war/src/main/java/executable/Main.java, line: 322, quote: "\"   --paramsFromStdIn        = Read parameters from standard input (stdin)\n\" +"}
+    - {path: war/src/main/java/executable/Main.java, line: 322, quote: "--paramsFromStdIn        = Read parameters from standard input (stdin)"}
 startCommand:
   source: explicit
   accept: ["java -jar jenkins.war"]
@@ -116,3 +116,4 @@ openQuestions:
   - "WebSocket-only agents (no TCP agent port) were not traced"
 crossReview:
   - {field: outcome.accept, change: "[NOT_DEPLOYABLE] -> [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]: no Dockerfile and durable JENKINS_HOME are CODE_CHANGE by policy (docs/ai-analysis.md fix classes; precedent new-131, new-139)", evidence: "packages/analysis/src/readiness-report.ts FIX_CLASSES"}
+  - {field: all, change: verified, evidence: "16 citations checked against the pinned commit by script (path, line, quote)"}
