@@ -234,6 +234,13 @@ const OTHER_DB_COPY: RejectionCopy = {
     'Move the data layer to PostgreSQL or MySQL, or remove the unsupported dependency if it is not actually used.',
 };
 
+const DATABASE_VERSION_COPY: RejectionCopy = {
+  ...OTHER_DB_COPY,
+  plainEnglishExplanation:
+    'This app needs a newer database version than Deployz provides (PostgreSQL 16, MySQL 8.0), and it does not start on an older one.',
+  suggestedOutcome: 'Use an app version that supports the database version Deployz provides.',
+};
+
 const SQLITE_COPY: RejectionCopy = {
   ...MARIA_DB_COPY,
   id: 'unsupported-database-sqlite',
@@ -293,6 +300,13 @@ const MULTI_SERVICE_COPY: RejectionCopy = {
     "This app's Docker Compose file starts more than one application container, but Deployz runs one container per deployment.",
   suggestedOutcome:
     'Run the app as a single container, or move the extra services out of the deployment.',
+};
+
+const MULTI_IMAGE_COPY: RejectionCopy = {
+  ...MULTI_SERVICE_COPY,
+  plainEnglishExplanation:
+    'This repository builds several component images that run together as one system, but Deployz runs one container per deployment.',
+  suggestedOutcome: 'Deploy the system with its own installer, or connect the repository of one application that runs as a single container.',
 };
 
 const DECLARED_SERVICE_COPY: RejectionCopy = {
@@ -395,6 +409,8 @@ function rejectionCopy(dependency: string): RejectionCopy {
     return MESSAGE_QUEUE_COPY;
   }
   if (dependency === 'docker-compose-multi-service') return MULTI_SERVICE_COPY;
+  if (dependency === 'multi-image-stack') return MULTI_IMAGE_COPY;
+  if (dependency === 'database-version') return DATABASE_VERSION_COPY;
   if (dependency === 'unexplained-declared-service') return DECLARED_SERVICE_COPY;
   if (dependency === 'multi-process-image') return MULTI_PROCESS_COPY;
   if (dependency === 'persistent-volume' || dependency === 'local-filesystem') return STORAGE_COPY;

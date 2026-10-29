@@ -512,7 +512,18 @@ type ApplicationRow = typeof schema.applications.$inferSelect;
 // Dockerfile and a `selenium/` image are not app images; a meta-repository of
 // submodules has no application source. Stored v77 rows can call a database
 // or broker server deployable or build a toolchain image.
-export const ANALYSIS_VERSION = 78;
+// Version 79 (2026-10 Round 8 gaps, AI prompt v20): the repository kind
+// question also reads the top of the root README (never evidence for another
+// answer). The rules add durable state that a Dockerfile VOLUME, a Compose
+// state directory variable or an image configuration names (also next to an
+// S3 SDK), a stack
+// of seven or more component images, a Dockerfile that downloads a released
+// build, an app that downloads the Elasticsearch server, a minimum PostgreSQL
+// or MySQL version above the provided one, and an agent or CLI image ranked
+// after the server image; Terraform of CI directories and module libraries
+// is ignored. Stored v78 rows can call these apps deployable, or reject Vault
+// for its CI Terraform.
+export const ANALYSIS_VERSION = 79;
 
 export interface AnalysisRunnerDeps {
   db: RuntimeDb;

@@ -24,7 +24,7 @@
 import { postgresSemantic } from '../bindings.js';
 import { composeServices, listDockerfileCandidates, productionStageText, type FileTree } from '../detectors.js';
 import type { BlockerAnswer, Confidence, Evidence, FactAnswer, SupportedEngine } from './analyst.js';
-import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
+import { DATASTORE_ROLE, isProductionFile, PACKAGE_MANIFEST, PACKAGE_MARKER, packFiles, ROOT_README, startScripts, type EvidencePack, type Question } from './evidence-pack.js';
 import type { BlockerItem } from './open-items.js';
 
 export interface AnswerCheck {
@@ -479,7 +479,7 @@ function checkRepositoryKind(ctx: CheckContext, id: string, kind: RepositoryKind
   const reasons = confidenceReasons(answer.confidence);
   const supports =
     kind === 'datastore'
-      ? (line: string, path: string) => isProductionFile(path) && DATASTORE_ROLE.test(line)
+      ? (line: string, path: string) => (isProductionFile(path) || ROOT_README.test(path)) && DATASTORE_ROLE.test(line)
       : (line: string, path: string) => PACKAGE_MANIFEST.test(path) && PACKAGE_MARKER.test(line);
   reasons.push(...checkEvidence(ctx.pack, answer.evidence, supports));
   return result(id, reasons);

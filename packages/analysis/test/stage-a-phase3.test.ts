@@ -36,11 +36,15 @@ describe('COMP-024 — local-disk state must be declared, not inferred from writ
   });
 
   it('accepts an object-storage alternative, and a volume that only backs the default embedded database', () => {
+    // An uploads VOLUME of an app with an S3 SDK and a variable that selects it is not local state.
     const s3: FileTree = {
-      Dockerfile: `${APP}VOLUME /app/data\n`,
+      Dockerfile: `${APP}VOLUME /app/uploads\n`,
       'package.json': JSON.stringify({ dependencies: { '@aws-sdk/client-s3': '^3.0.0' } }),
+      'src/storage.ts': "export const provider = process.env.STORAGE_TYPE ?? 'local';\n",
     };
     expect(detectLocalFilesystem(s3)).toMatchObject({ detected: false });
+    // An S3 SDK alone does not replace another VOLUME that the image declares (Vault `/vault/file`, round 8).
+    expect(detectLocalFilesystem({ ...s3, Dockerfile: `${APP}VOLUME /app/data\n` })).toMatchObject({ detected: true, value: ['VOLUME /app/data (Dockerfile)'] });
 
     const sqliteDefault: FileTree = {
       Dockerfile: 'FROM python:3.12\nVOLUME /database\nCMD ["gunicorn", "app:app"]\n',

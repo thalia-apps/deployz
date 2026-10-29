@@ -72,6 +72,8 @@ import {
   checkMultiProcessImage,
   checkRequiredThirdPartyService,
   checkDatastoreServerImage,
+  checkDatabaseVersion,
+  checkMultiImageStack,
   checkUnexplainedDeclaredServices,
   listIgnoredDeploymentFiles,
 } from './rejection.js';
@@ -169,6 +171,8 @@ const REJECTION_CHECKS = [
   checkMultiProcessImage,
   checkRequiredThirdPartyService,
   checkDatastoreServerImage,
+  checkDatabaseVersion,
+  checkMultiImageStack,
 ] as const;
 
 /**

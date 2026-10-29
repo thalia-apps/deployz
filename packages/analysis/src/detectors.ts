@@ -813,8 +813,8 @@ export function detectNoDefaultServerCommand(content: string): string | null {
 // Directories whose Dockerfiles build a test image, a dev container, an
 // example (`docker_example/`) or a project template (payload `templates/blank/`),
 // never the application (a `dev/` build directory still can).
-const NON_APP_DOCKERFILE_DIR_REGEX =
-  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright|selenium|templates?|starters?)(?:\/|$)/i;
+export const NON_APP_DOCKERFILE_DIR_REGEX =
+  /(?:^|\/)(?:\.devcontainer|\.cursor|\.github|\.vscode|\.idea|\.gitpod|[\w-]*tests?(?:ing)?(?:[-_][\w-]+)?|e2e|ci|cypress|[\w-]*examples?|[\w-]*samples?|docs?|benchmarks?|playwright|selenium|templates?|starters?)(?:\/|$)/i;
 
 // A `dev/` build directory or a hidden directory can hold the production Dockerfile; it counts
 // only when the image starts something (a tooling image such as `.oss-scanner/` has no CMD,
@@ -881,6 +881,19 @@ function dockerfileDeclaresPort(content: string): boolean {
   return exposedPorts(stage).length > 0 || DOCKERFILE_ENV_PORT_REGEX.test(stage);
 }
 
+const CLIENT_COMPONENT_REGEX = /(?:^|[/.-])(?:agent|runner|cli|client)(?=[/.-]|$)/i;
+const SERVER_COMPONENT_REGEX = /(?:^|[/.-])server(?=[/.-]|$)/i;
+
+/**
+ * The image of an agent, runner or CLI that connects to the server image of the same repository
+ * (Woodpecker `Dockerfile.agent.multiarch` next to `Dockerfile.server.multiarch.rootless`): a client
+ * component, not the app.
+ */
+export function isClientComponentDockerfile(path: string, tree: FileTree): boolean {
+  if (!CLIENT_COMPONENT_REGEX.test(path) || SERVER_COMPONENT_REGEX.test(path)) return false;
+  return Object.keys(tree).some((other) => isDockerfilePath(other) && SERVER_COMPONENT_REGEX.test(other) && !CLIENT_COMPONENT_REGEX.test(other));
+}
+
 // `tied` keeps the alphabetical tie unresolved, so the caller can see which candidates no signal separates.
 function compareDockerfileCandidates(tree: FileTree, tied = false): (a: string, b: string) => number {
   return (a, b) => {
@@ -891,6 +904,10 @@ function compareDockerfileCandidates(tree: FileTree, tied = false): (a: string, 
     const aDev = DEV_DOCKERFILE_REGEX.test(a) || DOCS_SITE_DOCKERFILE_REGEX.test(tree[a] ?? '');
     const bDev = DEV_DOCKERFILE_REGEX.test(b) || DOCS_SITE_DOCKERFILE_REGEX.test(tree[b] ?? '');
     if (aDev !== bDev) return aDev ? 1 : -1;
+
+    const aClient = isClientComponentDockerfile(a, tree);
+    const bClient = isClientComponentDockerfile(b, tree);
+    if (aClient !== bClient) return aClient ? 1 : -1;
 
     const aVariant = DOCKERFILE_VARIANT_REGEX.test(a);
     const bVariant = DOCKERFILE_VARIANT_REGEX.test(b);
@@ -2622,6 +2639,8 @@ function imageSetupTexts(tree: FileTree, dockerfile: { path: string; content: st
 // draws above). Named volumes whose container path is `/tmp/…`, `…/logs`,
 // `…/cache`, `…/.cache` or a search/index dir are not durable app state.
 // An `/etc/<name>` directory holds configuration the operator provides.
+// A Compose environment entry that names the app's state or data directory (`OPENCLAW_STATE_DIR: /home/node/.openclaw`).
+const STATE_DIR_SETTING_REGEX = /^\s*-?\s*["']?([A-Z][A-Z0-9_]*_(?:STATE|DATA)_DIR)["']?\s*[:=]\s*["']?(\/[^\s"']+)/gm;
 const EPHEMERAL_CONTAINER_PATH_REGEX =
   /^\/(?:tmp|var\/tmp|etc\/[\w.-]+)\b|\/(?:logs?|log|cache|\.cache|search|indexes?|sessions?|run|var\/run)(?:\/|$)/i;
 
@@ -2632,6 +2651,10 @@ const EPHEMERAL_CONTAINER_PATH_REGEX =
  */
 export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
   const detected: string[] = [];
+  // State that the image itself declares: a Dockerfile VOLUME (Vault `/vault/file`), or a Compose mount at the
+  // path that the service's own state or data directory variable names (OpenClaw `OPENCLAW_STATE_DIR`). An S3
+  // SDK in the app does not replace it; only the upload volumes of an S3 option (above) are skipped.
+  const declaredState: string[] = [];
   const hasPostgresDriver = detectPostgresql(tree).detected;
   let objectStorage: boolean | undefined;
   const hasObjectStorageOption = (): boolean => (objectStorage ??= offersObjectStorageOption(tree));
@@ -2660,6 +2683,7 @@ export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
       // transient state, not durable application data.
       if (EPHEMERAL_CONTAINER_PATH_REGEX.test(volume)) continue;
       detected.push(`VOLUME ${volume} (${dockerfile?.path})`);
+      declaredState.push(`VOLUME ${volume} (${dockerfile?.path})`);
     }
   }
 
@@ -2671,7 +2695,12 @@ export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
     // way (a compose-only wrapper image); its volumes are not this image's.
     const built = compose && composeBuildDockerfile(compose.file, service.build);
     if (built && dockerfile && built !== dockerfile.path) continue;
+    const stateDirs = [...service.body.matchAll(STATE_DIR_SETTING_REGEX)].map((match) => match[2]!.replace(/\/+$/, ''));
     for (const volume of service.volumes) {
+      const mounted = /:(\/[^:]*)(?::[a-zA-Z,]+)?$/.exec(volume)?.[1]?.replace(/\/+$/, '');
+      if (mounted !== undefined && stateDirs.includes(mounted) && !NON_STATE_MOUNT_REGEX.test(volume)) {
+        declaredState.push(`volume ${volume} (${compose?.file} ${service.name})`);
+      }
       // The container-side mount target decides what the volume holds — a
       // named volume at `/tmp/…`, `…/logs`, `…/cache` or `…/.cache` is a
       // log/cache volume (transient), not durable app data.
@@ -2710,9 +2739,11 @@ export function detectLocalFilesystem(tree: FileTree): DetectorFinding {
     for (const volume of unresolvedVolumes) detected.push(`VOLUME ${volume} (${dockerfile?.path})`);
   }
 
-  if (detected.length === 0 || detectS3(tree).detected) {
+  const usesS3 = detected.length > 0 && detectS3(tree).detected;
+  if (detected.length === 0 || (usesS3 && declaredState.length === 0)) {
     return { detector: 'local-filesystem', detected: false };
   }
+  if (usesS3) detected.splice(0, detected.length, ...declaredState);
 
   return {
     detector: 'local-filesystem',
@@ -6364,8 +6395,10 @@ function prebuiltArtefactSources(tree: FileTree, dockerfilePath: string): string
     if (COPY_FROM_FLAG_REGEX.test(args)) continue;
     for (const token of copyAddSources(args.replace(/^(?:\s*--\S+)+\s*(?=\[)/, ''))) {
       if (/[*?[]|^[a-z]+:\/\//i.test(token)) continue;
-      const source = token
-        .replace(/\$\{?(\w+)\}?/g, (variable, name: string) => defaults.get(name) ?? variable)
+      const resolved = token.replace(/\$\{?(\w+)\}?/g, (variable, name: string) => defaults.get(name) ?? variable);
+      // A URL in a build argument is a download (`ADD $KEYCLOAK_DIST`), not a build output.
+      if (/^[a-z]+:\/\//i.test(resolved)) continue;
+      const source = resolved
         .replace(/^\/+/, '')
         .replace(/^\.\//, '')
         .replace(/(?:\/\.?)+$/, '');
@@ -6375,6 +6408,39 @@ function prebuiltArtefactSources(tree: FileTree, dockerfilePath: string): string
     }
   }
   return artefacts;
+}
+
+// The URL of a released build: a GitHub release asset or an archive (`…/releases/download/…`, `keycloak-26.0.tar.gz`).
+const RELEASE_ARCHIVE_URL_REGEX = /[a-z]+:\/\/[^\s"']*?(?:\/releases\/download\/[^\s"']+|\.(?:tar\.gz|tgz|tar\.xz|tar\.bz2|zip|jar|war))(?=["'\s]|$)/i;
+// A copied file that is image setup, not application source: a script, a configuration file, a licence.
+const SETUP_FILE_REGEX = /\.(?:sh|bash|conf|cfg|ini|json|ya?ml|xml|properties|toml|env|txt|pem|crt)$|(?:^|\/)(?:LICENSE|NOTICE)[^/]*$/i;
+
+/**
+ * The release archive that a Dockerfile downloads (`ADD $KEYCLOAK_DIST /tmp/` with an ARG default of a
+ * GitHub release tarball, or `curl -L <url>.tar.gz`) when it copies no repository source, only setup
+ * files: the image runs that release, not this commit. Null otherwise.
+ */
+function downloadedReleaseArchive(content: string): string | null {
+  const text = content.replace(/\\\r?\n/g, ' ');
+  const defaults = new Map<string, string>();
+  for (const [, arg, env, value] of text.matchAll(/^[ \t]*(?:ARG[ \t]+(\w+)=|ENV[ \t]+(\w+)(?:=|[ \t]+))["']?([^\s"']+)/gim)) defaults.set((arg ?? env)!, value!);
+  const resolve = (value: string): string => value.replace(/\$\{?(\w+)\}?/g, (variable, name: string) => defaults.get(name) ?? variable);
+  let release: string | null = null;
+  for (const line of text.split(/\r?\n/)) {
+    const copy = /^\s*(?:COPY|ADD)\s+(.+)$/i.exec(line);
+    if (copy?.[1] !== undefined) {
+      if (COPY_FROM_FLAG_REGEX.test(copy[1])) continue;
+      for (const source of copyAddSources(copy[1].replace(/^(?:\s*--\S+)+\s*(?=\[)/, ''))) {
+        const resolved = resolve(source);
+        const url = RELEASE_ARCHIVE_URL_REGEX.exec(resolved)?.[0];
+        if (url !== undefined) release ??= url;
+        else if (!/^[a-z]+:\/\//i.test(resolved) && !SETUP_FILE_REGEX.test(resolved)) return null;
+      }
+    } else if (/^\s*RUN\b.*\b(?:curl|wget)\b/i.test(line)) {
+      release ??= RELEASE_ARCHIVE_URL_REGEX.exec(resolve(line))?.[0] ?? null;
+    }
+  }
+  return release;
 }
 
 /**
@@ -6403,7 +6469,8 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
   const paths = (tree as FileTree & { [TREE_PATHS]?: readonly string[] })[TREE_PATHS];
   if (!paths || paths.includes('.gitmodules')) return null;
   const tracked = paths.filter(isDockerfilePath);
-  if (tracked.some((path) => tree[path] === undefined)) return null;
+  // A Dockerfile of a test or example directory is unusable whatever it holds, so it need not be fetched.
+  if (tracked.some((path) => tree[path] === undefined && !NON_APP_DOCKERFILE_DIR_REGEX.test(path))) return null;
   if (tracked.length === 0) return 'No Dockerfile exists in the repository.';
 
   const buildable = tracked.filter(
@@ -6417,6 +6484,19 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
     ...detectDockerfileMissingCopySources(tree).filter((source) => !GENERATED_DIRECTORY_REGEX.test(source.split('/')[0] ?? '')),
     ...(selectedPath === undefined ? [] : prebuiltArtefactSources(tree, selectedPath)),
   ];
+  const release = selectedPath === undefined ? null : downloadedReleaseArchive(tree[selectedPath] ?? '');
+  if (missing.length === 0 && release !== null) {
+    const fromSource = buildable.some(
+      (path) =>
+        path !== selectedPath &&
+        /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) &&
+        copiesFromContext(tree[path] ?? '') &&
+        downloadedReleaseArchive(tree[path] ?? '') === null &&
+        detectDockerfileMissingCopySources(tree, path).length === 0 &&
+        prebuiltArtefactSources(tree, path).length === 0,
+    );
+    if (!fromSource) return `The Dockerfile (${selectedPath}) downloads a released build (${release}) and copies no source from the repository, so the image runs that release, not this commit.`;
+  }
   // An image that takes nothing from the build context runs code from another image, not
   // from this commit (outline copies build/ and node_modules/ from the floating outline-base image).
   if (missing.length === 0 && selectedPath !== undefined && !copiesFromContext(tree[selectedPath] ?? '')) {
@@ -6438,6 +6518,7 @@ export function detectUnbuildableDockerfile(tree: FileTree): string | null {
     (path) =>
       path !== selected &&
       !DEV_ONLY_DOCKERFILE_REGEX.test(path) &&
+      !isClientComponentDockerfile(path, tree) &&
       /^\s*(?:CMD|ENTRYPOINT)\b/im.test(productionStageText(tree[path] ?? '')) &&
       copiesFromContext(tree[path] ?? '') &&
       detectDockerfileMissingCopySources(tree, path).length === 0 &&

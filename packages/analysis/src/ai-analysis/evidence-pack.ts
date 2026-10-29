@@ -106,9 +106,14 @@ export function isExcludedPath(path: string): boolean {
 
 const TEST_FILE = /\.(?:test|spec|stories|e2e|cy)\.[\w]+$|(?:^|\/)(?:conftest\.py|test_[\w-]+\.py|[\w-]+_test\.(?:py|go|rb))$/i;
 
+/** The root README: evidence for the repository kind question only (what the repository is). */
+export const ROOT_README = /^README(?:\.(?:md|markdown|rst|txt|adoc))?$/i;
+/** The part of the root README that the repository kind question shows, in characters. */
+export const MAX_README_CHARS = 2_000;
+
 /** A file of the production app: not excluded, not a test, example or document, not binary. Scripts and `bin/` count. */
 export function isProductionFile(path: string): boolean {
-  return !isExcludedPath(path) && !NOT_PRODUCTION.test(path) && !BINARY.test(path) && !TEST_FILE.test(path);
+  return !isExcludedPath(path) && !NOT_PRODUCTION.test(path) && !BINARY.test(path) && !TEST_FILE.test(path) && !ROOT_README.test(path);
 }
 
 /** `KEY=value` → `KEY=` per line, so an env sample shows names only and keeps its line numbers. */
@@ -159,7 +164,7 @@ function escape(text: string): string {
  * default client port of a database, cache or broker protocol (`port 6379`, `DEF_PGPORT 5432`).
  */
 export const DATASTORE_ROLE =
-  /\b(?:database server|datastore|data store|key[- ]value (?:store|database)|search engine|vector (?:database|store|search engine)|message broker|event streaming|object stor(?:e|age) server|time[- ]series database)\b|port\b\D{0,30}\b(?:1883|8883|5671|5672|9092|4222|3306|5432|6379|27017|9042|7687|26257)\b/i;
+  /\b(?:database (?:server|management system)|datastore|data store|key[- ]value (?:store|database)|search engine|vector (?:database|store|search engine)|(?:message|messaging|streaming)(?: and streaming)? broker|event streaming|object stor(?:e|age) server|S3 object store|distributed file system|time[- ]series database)\b|port\b\D{0,30}\b(?:1883|8883|5671|5672|9092|4222|3306|5432|6379|27017|9042|7687|26257)\b/i;
 
 /** What each fact question searches the production files for. */
 const FACT_SEARCH: Record<string, RegExp> = {
@@ -299,8 +304,15 @@ function questionWindows(tree: FileTree, item: OpenItem, startPath: ReadonlySet<
       .sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b))
       .slice(0, 6);
     const packaging = hitWindows(Object.fromEntries(manifests.map((path) => [path, tree[path] ?? ''])), PACKAGING, (_path, line) => (PACKAGE_MARKER.test(line) ? 0 : 1), manifests, startPath, MAX_QUESTION_CHARS / 2);
+    // The root README often says what the repository is (a database server, a broker): its first role
+    // line in the introduction and the lines after it (badges above it would use the budget), else its top.
+    const readme = Object.keys(tree).find((path) => ROOT_README.test(path));
+    const role = readme === undefined ? -1 : (tree[readme] ?? '').split(/\r?\n/).slice(0, 60).findIndex((line) => DATASTORE_ROLE.test(line));
+    const introFile = readme === undefined ? null : window(readme, tree[readme] ?? '', role === -1 ? 1 : role, role === -1 ? 40 : role + 1 + WINDOW_RADIUS, MAX_README_CHARS);
+    const intro = introFile === null ? [] : [introFile];
     const skip = new Set([...startPath, ...manifests]);
-    return [...packaging, ...hitWindows(tree, FACT_SEARCH['repositoryKind']!, RANKS['repositoryKind']!, [], skip, MAX_QUESTION_CHARS - packaging.reduce((sum, file) => sum + size(file), 0))];
+    const used = [...packaging, ...intro].reduce((sum, file) => sum + size(file), 0);
+    return [...packaging, ...intro, ...hitWindows(tree, FACT_SEARCH['repositoryKind']!, RANKS['repositoryKind']!, [], skip, MAX_QUESTION_CHARS - used)];
   }
   const scripts = item.fact === 'startCommand' || item.fact === 'migration' ? packageScripts(tree, dockerfile) : [];
   const procfiles = Object.keys(tree).filter((path) => /(?:^|\/)Procfile$/.test(path) && path.split('/').length <= 2);
@@ -339,6 +351,8 @@ export function evidenceFileRequests(tree: FileTree, analysis: AnalysisResult): 
   const missing = paths.filter((path) => !Object.prototype.hasOwnProperty.call(tree, path) && isProductionFile(path) && !BROWSER_FILE.test(path));
   const byDepth = (a: string, b: string) => a.split('/').length - b.split('/').length || a.localeCompare(b);
   const requested = new Set<string>();
+  const readme = paths.filter((path) => ROOT_README.test(path)).sort((a, b) => a.length - b.length)[0];
+  if (readme !== undefined && items.some((item) => item.kind === 'fact' && item.fact === 'repositoryKind')) requested.add(readme);
   for (const item of items) {
     const name = item.kind === 'blocker' ? EVIDENCE_NAME['blocker'] : item.fact === 'dockerfile' ? undefined : EVIDENCE_NAME[item.fact];
     const boot = missing.filter((path) => BOOT_FILE.test(path) && (EVIDENCE_SOURCE.test(path) || path.endsWith('.json'))).sort(byDepth);

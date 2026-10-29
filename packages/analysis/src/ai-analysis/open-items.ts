@@ -96,7 +96,7 @@ function blockerOf(dependency: string, reason: string): BlockerItem | null {
   if (dependency === 'unexplained-declared-service') {
     return { kind: 'blocker', category: 'declared_service', dependency, reason, terms: declaredServiceTerms(reason) };
   }
-  if (/^Unsupported (?:database|search engine)/.test(reason) && !/extension/.test(reason)) {
+  if (/^Unsupported (?:database|search engine)/.test(reason) && !/extension|^Unsupported database version/.test(reason)) {
     return { kind: 'blocker', category: 'datastore', dependency, reason, terms: datastoreTerms(dependency, reason) };
   }
   if (dependency === 'docker-compose-multi-service') {

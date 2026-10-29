@@ -135,7 +135,10 @@ Repository (GitHub tree, bounded)
   documentation site image (Docusaurus, MkDocs, VitePress, VuePress, Sphinx,
   mdBook, Antora, Docsify) ranks with the dev images, below the app image. So
   does an image in a datastore or proxy directory (`hosting/couchdb/`,
-  `docker/nginx/`): it builds a service next to the app. A
+  `docker/nginx/`): it builds a service next to the app. So does the image of
+  an agent, runner, CLI or client when the repository also has a server image
+  (Woodpecker `Dockerfile.agent.multiarch` next to
+  `Dockerfile.server.multiarch.rootless`). A
   Dockerfile named production or prod ranks first. An
   arm or multi-process variant ranks last. When the other signals tie, a
   Dockerfile whose production stage starts something (CMD, ENTRYPOINT or
@@ -230,11 +233,18 @@ Repository (GitHub tree, bounded)
   generated directory that the repository does not contain (shiori's
   `COPY dist/shiori_…`) or a path of build arguments with no default (flipt's
   `COPY $TARGETPLATFORM/$BINARY /`). A goreleaser or other CI job makes these
-  files before `docker build`. A candidate that copies nothing from the
+  files before `docker build`. A selected Dockerfile that downloads a released
+  build (`ADD` or `curl`/`wget` of a release asset or archive, also through an
+  ARG default: Keycloak `ADD $KEYCLOAK_DIST`) and copies only setup files from
+  the repository (scripts, configuration, a licence) is not buildable either:
+  its image runs that release, not the commit. A candidate that copies nothing from the
   repository (a Dockerfile for a mounted checkout, or one whose only `ADD`
-  downloads a URL) and a candidate whose name marks it for development
+  downloads a URL), a candidate that downloads a released build, the image
+  of an agent, runner or CLI next to a server image, and a candidate whose name marks it for development
   (typesense's `development-macos.Dockerfile`) are not another buildable
-  Dockerfile. A capped or partial
+  Dockerfile. A Dockerfile in a test or example directory (also
+  `test-framework/`) is never buildable, so the check does not need its
+  content. A capped or partial
   file list (GitHub cuts the listing of a very large repository and says
   `truncated`; such a listing is not the full path list), a second candidate Dockerfile with a CMD or ENTRYPOINT that
   copies only repository content, a git submodule, `COPY --from=`, a heredoc
@@ -387,7 +397,7 @@ is final.
   - A blocker candidate: a rejection where it is not known if the app needs
     the item. These are an unsupported datastore (MongoDB, Elasticsearch,
     ClickHouse, MariaDB, SQLite, H2 and the other database rejections, but
-    not a missing PostgreSQL extension), durable local state (a declared
+    not a missing PostgreSQL extension or database version), durable local state (a declared
     data directory, a data path in the app's own `config.yaml` or
     `config.toml` such as qdrant `storage_path: ./storage`, a `VOLUME`,
     Compose named volumes), a second
@@ -452,8 +462,9 @@ is final.
   open item, the API also fetches
   up to 40 production files that the tree does not hold: the boot files
   (`Program.cs`, `*Startup.cs`, `*Application.java`, `main.rs`,
-  `application.ex`, `config/runtime.exs`, `index.php`, `appsettings.json`)
-  and the files named after each question (a migration manager or runner,
+  `application.ex`, `config/runtime.exs`, `index.php`, `appsettings.json`),
+  the root README when the repository kind is asked, and the files named
+  after each question (a migration manager or runner,
   `DatabaseManager`, `release_tasks`, an installer; health controllers and
   routes; configuration and storage files). A numbered migration file, a
   test, an example and a browser file are never fetched. The pack and the
@@ -473,7 +484,11 @@ is final.
   first. The repository kind shows the packaging lines of the six
   shallowest package manifests (`package.json`, `pyproject.toml`,
   `setup.py`, `setup.cfg`, `Cargo.toml`, `composer.json`, a gemspec), then
-  the server entrypoints of the code (`.listen(`, uvicorn, `FastAPI(`, a
+  at most 2,000 characters of the root README (its first line in the first 60
+  lines that names a datastore role and the lines after it, else its top: the
+  README often is the only file that says that the repository is a database
+  or broker server; the README is never evidence for another question or
+  check), then the server entrypoints of the code (`.listen(`, uvicorn, `FastAPI(`, a
   `start` script). Start and
   migration questions also get the `scripts` block of `package.json`.
   Limits: 8,000 characters for the start path, 8,000 for each question,
@@ -482,7 +497,7 @@ is final.
   code, tests, examples, hidden folders and browser bundles are never
   included. Secrets are redacted line by line, env sample values are
   removed, and a file with a private key is left out.
-- **Analyst** (`analyst.ts`, prompt version 19): one Claude Opus 5.5 call
+- **Analyst** (`analyst.ts`, prompt version 20): one Claude Opus 5.5 call
   answers every question. Each answer is closed:
   - a blocker: `required`, `optional_by_setting` (the variable, the value,
     and the engine it selects: `postgres`, `mysql`, `redis` or `s3`), or
@@ -549,9 +564,10 @@ is final.
     "bin/codex.js"`), `"main"`, `"exports"`, `"types"` or
     `"publishConfig"`, a Rust `[lib]` or `[[bin]]`, a Composer `"type":
     "library"`, a gemspec. A project name or a README line fails. A
-    `datastore` needs a cited production line that names its role (a
-    database server, a key-value store, a search engine, a message broker,
-    a time-series database) or the default client port of a database,
+    `datastore` needs a cited production line or root README line that
+    names its role (a database server or database management system, a
+    key-value store, a search engine, a message or streaming broker, an S3
+    object store, a distributed file system, a time-series database) or the default client port of a database,
     cache or broker protocol (`#define CONFIG_DEFAULT_SERVER_PORT 6379`).
 - **Merge** (`merge.ts`): `required` or a failed check keeps the rules
   value. A passing `not_used` or `optional_by_setting` dismisses the
@@ -711,7 +727,14 @@ embedded JVM databases; the client needs corroboration: a service of that
 database in the production Compose file, a required connection setting, or
 a production Dockerfile that sets the connection variable, such as
 Rocket.Chat's `ENV MONGO_URL=mongodb://…`, where an image of the database
-itself does not count), `unsupported-redis-setup`,
+itself does not count; a runtime build file that downloads the
+Elasticsearch or OpenSearch server archive needs no corroboration: the app
+runs the server next to itself, SonarQube
+`elasticsearch-${version}-linux-x86_64.tar.gz`; and a runtime source or
+configuration line that states a minimum PostgreSQL or MySQL version above
+the provided one, PostgreSQL 16 and MySQL 8.0: Wiki.js 3 "Requires >= 17".
+A dependency manifest, a lockfile and a document do not count for the
+version. The version rejection asks the AI nothing), `unsupported-redis-setup`,
 `unsupported-architecture`, `unsupported-message-queue` (Kafka or RabbitMQ:
 a broker service in the production Compose file, also a `rabbitmq` service
 that `extends` another file and has no image, or a client such as `pika`,
@@ -728,7 +751,10 @@ that puts a server in the background before the foreground one
 CMD/ENTRYPOINT chain that puts two or more long-running servers in the
 background with `&`, such as Homarr's `redis-server &` and
 `node server.js &`; an nginx, apache, httpd or caddy front end and a
-migration step do not count), `unsupported-persistent-volume`,
+migration step do not count; also a stack of seven or more component images:
+sibling directories that each hold a `Dockerfile`, such as Harbor
+`make/photon/{core,jobservice,registry,…}`, but not in vendored, development,
+hidden, test or tooling directories; this rejection asks the AI nothing), `unsupported-persistent-volume`,
 `unsupported-gpu` (a CUDA image or an NVIDIA GPU runtime library such as
 `nvidia-cudnn-cu12`; a hosted-API client such as `nvidia-riva-client` is not one),
 `local-file-storage`,
@@ -803,7 +829,14 @@ describe the production deployment:
   PostgreSQL can be selected. An upload or files directory under it keeps it
   local state. An uploads, media or attachments volume is not local state when
   the app has an S3 SDK and a variable that selects it (`UPLOAD_PROVIDER`,
-  `ACTIVE_STORAGE_SERVICE`, `STORAGE_TYPE`, an `S3_*_BUCKET` name). A
+  `ACTIVE_STORAGE_SERVICE`, `STORAGE_TYPE`, an `S3_*_BUCKET` name). An S3 SDK
+  in the app removes the other Compose local-state findings too, but not a
+  `VOLUME` of the selected Dockerfile (Vault `/vault/file`) and not a Compose
+  mount at the path that the service's own `*_STATE_DIR` or `*_DATA_DIR`
+  variable names (OpenClaw `OPENCLAW_STATE_DIR: /home/node/.openclaw`). A
+  RUN step of the selected image that writes a `*data_dir`, `*base_dir` or
+  `*storage_dir` setting with a local path into the app's configuration is
+  a declared data directory (SFTPGo `"users_base_dir": "/srv/sftpgo/data"`). A
   `VOLUME $VAR` that only the base image sets is decided from the Compose
   service that runs this image (an application service, or the service whose
   image name equals the Dockerfile's `org.opencontainers.image.title`): it is
@@ -822,7 +855,10 @@ describe the production deployment:
   `app_helm`), do not block. They give the `deployment-files-ignored`
   warning and the manifest field `ignoredDeploymentFiles`. Root-level files,
   files elsewhere, and the manifests of a Go module that imports
-  `client-go` or `controller-runtime` still block. Azure files still block.
+  `client-go` or `controller-runtime` still block. Terraform in a `ci`,
+  `.circleci` or `hack` directory (Vault `enos/ci/`) is test or tooling
+  infrastructure and is ignored, and so are Terraform modules (`modules/`)
+  with no root configuration outside a `modules/` directory. Azure files still block.
   A Dockerfile in one of these directories with a `gcr.io` base image
   (`kubernetes/minikube/Dockerfile`) is not a Google Cloud file.
 
