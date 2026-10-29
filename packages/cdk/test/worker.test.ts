@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { and, eq, inArray } from 'drizzle-orm';
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { applyMigrations, createDb, type Db } from '@deployz/db';
 import * as schema from '@deployz/db/schema';
@@ -1689,6 +1689,51 @@ describe('sweepRelayLiveness', () => {
     expect(byId.get(fresh)).toBe('CONNECTED');
   });
 
+  it('marks a single overdue relay even when no relay reported in the window', async () => {
+    await db.delete(schema.deployments);
+    const id = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 60 });
+    const swept = await sweepRelayLiveness(db);
+    expect(swept).toBe(1);
+    const [row] = await db.select().from(schema.deployments).where(eq(schema.deployments.id, id));
+    expect(row?.relayStatus).toBe('DISCONNECTED');
+  });
+
+  it('marks nothing and warns when several relays are overdue and none reported (control plane down)', async () => {
+    await db.delete(schema.deployments);
+    const a = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 30 });
+    const b = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 45 });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const swept = await sweepRelayLiveness(db);
+      expect(swept).toBe(0);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('watchdog:relay-liveness-skipped');
+    } finally {
+      warn.mockRestore();
+    }
+    const rows = await db
+      .select()
+      .from(schema.deployments)
+      .where(inArray(schema.deployments.id, [a, b]));
+    expect(rows.map((row) => row.relayStatus)).toEqual(['CONNECTED', 'CONNECTED']);
+  });
+
+  it('marks every overdue relay while any relay still reports', async () => {
+    await db.delete(schema.deployments);
+    const a = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 30 });
+    const b = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 45 });
+    const alive = await seedRelay({ relayStatus: 'CONNECTED', lastHealthMinutesAgo: 2 });
+    const swept = await sweepRelayLiveness(db);
+    expect(swept).toBe(2);
+    const rows = await db
+      .select()
+      .from(schema.deployments)
+      .where(inArray(schema.deployments.id, [a, b, alive]));
+    const byId = new Map(rows.map((row) => [row.id, row.relayStatus]));
+    expect(byId.get(a)).toBe('DISCONNECTED');
+    expect(byId.get(b)).toBe('DISCONNECTED');
+    expect(byId.get(alive)).toBe('CONNECTED');
+  });
+
   it('never touches UNKNOWN or already-DISCONNECTED rows', async () => {
     const unknown = await seedRelay({ relayStatus: 'UNKNOWN', lastHealthMinutesAgo: 60 });
     const disconnected = await seedRelay({ relayStatus: 'DISCONNECTED', lastHealthMinutesAgo: 60 });
@@ -1946,6 +1991,42 @@ describe('sweepStuckJobs — Jev UNKNOWN-failure shadow hook', () => {
 
     return { jobId: job!.id, deploymentId: deployment!.id };
   }
+
+  it('one throwing job does not stop the sweep of the others', async () => {
+    const first = await seedExhaustedInstall();
+    const second = await seedExhaustedInstall();
+    // A synchronous throw escapes after the job settled, so the sweep of that
+    // job rejects. The second job must still be swept.
+    const throwing = {
+      run: (): Promise<void> => {
+        throw new Error('shadow exploded');
+      },
+    };
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(sweepStuckJobs(db, new Date(), throwing)).resolves.toBe(0);
+
+      const rows = await db
+        .select()
+        .from(schema.deploymentJobs)
+        .where(inArray(schema.deploymentJobs.id, [first.jobId, second.jobId]));
+      expect(rows.map((row) => row.state)).toEqual(['FAILED', 'FAILED']);
+
+      const logged = errorLog.mock.calls.map((call) => String(call[0]));
+      for (const job of [first, second]) {
+        expect(
+          logged.some(
+            (line) =>
+              line.includes('watchdog:job-sweep-failed') &&
+              line.includes(job.jobId) &&
+              line.includes('shadow exploded'),
+          ),
+        ).toBe(true);
+      }
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
 
   it('records the UNKNOWN evidence input once and changes no job transitions', async () => {
     const withStub = await seedExhaustedInstall();

@@ -6,18 +6,15 @@ export type { BuildPipelineProps } from './build-pipeline.js';
 // the historical @deployz/cdk surface keeps resolving.
 export {
   ECR_PULL_ACTIONS,
-  installationGrantSid,
   buildPullStatement,
   buildRepoPolicyDocument,
-  grantPull,
-  revokePull,
+  syncPullPolicy,
 } from '@deployz/api/ecr-grants';
 export type {
   EcrClient,
   EcrPolicy,
   EcrGrantStatement,
-  GrantResult,
-  RevokeResult,
+  SyncPullPolicyResult,
 } from '@deployz/api/ecr-grants';
 
 export {

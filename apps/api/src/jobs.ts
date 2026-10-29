@@ -10,7 +10,7 @@ import { ApiError } from './errors.js';
 // the same idempotency path.
 
 /** Postgres unique-violation (23505), wherever drizzle/pg nested it. */
-function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): boolean {
   for (let cause: unknown = error; cause; cause = (cause as { cause?: unknown }).cause) {
     if ((cause as { code?: string }).code === '23505') return true;
   }

@@ -15,7 +15,7 @@
  * The Lambda entry point (worker-handler.ts) wires the real seams; this
  * module holds no AWS clients of its own, so the logic stays testable.
  */
-import { and, eq, inArray, isNotNull, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 
 import { reconcileBilling } from '@deployz/api/billing';
 import { markDeploymentLive, syncServingBilling } from '@deployz/api/billing-lifecycle';
@@ -775,92 +775,70 @@ export async function sweepStuckJobs(
 
   let settled = 0;
   for (const { job, deployment } of rows) {
-    const timeout = JOB_TIMEOUTS_MS[job.type];
-    const maxRuntime = JOB_MAX_RUNTIME_MS[job.type];
-    const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
-    const runtimeStart = job.startedAt ?? job.createdAt;
-    const stale = timeout !== undefined && now.getTime() - lastSignal.getTime() > timeout;
-    const inFlight = job.state === 'RUNNING' || job.state === 'WAITING';
-    const overRuntime =
-      maxRuntime !== undefined && inFlight && now.getTime() - runtimeStart.getTime() > maxRuntime;
-
-    const evidence = {
-      jobType: job.type,
-      startedAt: job.startedAt?.toISOString() ?? null,
-      lastProgressAt: job.lastProgressAt?.toISOString() ?? null,
-      relayStatus: deployment.relayStatus,
-      reconcileCount: job.reconcileCount,
-    };
-
-    if (deployment.relayStatus === 'CONNECTED') {
-      if (!stale && !overRuntime) continue;
-
-      if (inFlight && job.reconcileCount < MAX_RECONCILE_REQUEUES) {
-        await db.transaction(async (tx) => {
-          const requeued = await tx
-            .update(schema.deploymentJobs)
-            .set({
-              state: 'REQUESTED',
-              reconcileCount: job.reconcileCount + 1,
-              lastProgressAt: now,
-            })
-            .where(
-              and(
-                eq(schema.deploymentJobs.id, job.id),
-                inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
-              ),
-            )
-            .returning({ id: schema.deploymentJobs.id });
-          // Job already settled (result route won the race) — nothing to requeue.
-          if (requeued.length === 0) return;
-          await tx.insert(schema.eventLogs).values({
-            actorType: 'system',
-            actorId: 'watchdog',
-            organizationId: deployment.organizationId,
-            customerId: deployment.customerId,
-            deploymentId: deployment.id,
-            jobId: job.id,
-            eventType: 'operation.requeued',
-            previousState: deployment.state,
-            requestedState: null,
-            result: 'pending',
-            payload: evidence,
-          });
-        });
-        settled += 1;
-        continue;
-      }
-
-      // Re-offers exhausted (or the relay never claims what it is offered).
-      // DESTROY still never fails from here — force-complete owns it.
-      if (timeout === undefined) continue;
-      await failStuckJob(
-        db,
-        job,
-        deployment,
-        now,
-        job.type === 'CONFIGURE_DOMAIN' || job.type === 'REMOVE_DOMAIN'
-          ? 'DOMAIN_OPERATION_TIMEOUT'
-          : 'UNKNOWN',
-        evidence,
-        failureShadow,
+    // One throwing job must not stop the sweep of the others.
+    try {
+      settled += await sweepStuckJob(db, job, deployment, now, failureShadow);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'watchdog:job-sweep-failed',
+          jobId: job.id,
+          deploymentId: deployment.id,
+          jobType: job.type,
+          error: String(error),
+        }),
       );
-      settled += 1;
-      continue;
     }
+  }
+  return settled;
+}
 
-    // Relay not connected. DESTROY (no timeout entry) is force-complete's.
-    if (timeout === undefined || !stale) continue;
+/** Sweeps one active job. Returns 1 when the sweep changed the job, else 0. */
+async function sweepStuckJob(
+  db: RuntimeDb,
+  job: typeof schema.deploymentJobs.$inferSelect,
+  deployment: typeof schema.deployments.$inferSelect,
+  now: Date,
+  failureShadow?: JevFailureShadowRunner,
+): Promise<number> {
+  const timeout = JOB_TIMEOUTS_MS[job.type];
+  const maxRuntime = JOB_MAX_RUNTIME_MS[job.type];
+  const lastSignal = job.lastProgressAt ?? job.startedAt ?? job.createdAt;
+  const runtimeStart = job.startedAt ?? job.createdAt;
+  const stale = timeout !== undefined && now.getTime() - lastSignal.getTime() > timeout;
+  const inFlight = job.state === 'RUNNING' || job.state === 'WAITING';
+  const overRuntime =
+    maxRuntime !== undefined && inFlight && now.getTime() - runtimeStart.getTime() > maxRuntime;
 
-    if (job.state !== 'WAITING') {
-      // Park, don't fail: the operation may have finished in AWS, and a
-      // returning relay resumes from its checkpoint. lastProgressAt is left
-      // alone so the grace clock keeps measuring real silence.
+  const evidence = {
+    jobType: job.type,
+    startedAt: job.startedAt?.toISOString() ?? null,
+    lastProgressAt: job.lastProgressAt?.toISOString() ?? null,
+    relayStatus: deployment.relayStatus,
+    reconcileCount: job.reconcileCount,
+  };
+
+  if (deployment.relayStatus === 'CONNECTED') {
+    if (!stale && !overRuntime) return 0;
+
+    if (inFlight && job.reconcileCount < MAX_RECONCILE_REQUEUES) {
       await db.transaction(async (tx) => {
-        await tx
+        const requeued = await tx
           .update(schema.deploymentJobs)
-          .set({ state: 'WAITING' })
-          .where(eq(schema.deploymentJobs.id, job.id));
+          .set({
+            state: 'REQUESTED',
+            reconcileCount: job.reconcileCount + 1,
+            lastProgressAt: now,
+          })
+          .where(
+            and(
+              eq(schema.deploymentJobs.id, job.id),
+              inArray(schema.deploymentJobs.state, ['REQUESTED', 'QUEUED', 'WAITING', 'RUNNING']),
+            ),
+          )
+          .returning({ id: schema.deploymentJobs.id });
+        // Job already settled (result route won the race) — nothing to requeue.
+        if (requeued.length === 0) return;
         await tx.insert(schema.eventLogs).values({
           actorType: 'system',
           actorId: 'watchdog',
@@ -868,23 +846,67 @@ export async function sweepStuckJobs(
           customerId: deployment.customerId,
           deploymentId: deployment.id,
           jobId: job.id,
-          eventType: 'operation.waiting_for_relay',
+          eventType: 'operation.requeued',
           previousState: deployment.state,
           requestedState: null,
           result: 'pending',
           payload: evidence,
         });
       });
-      settled += 1;
-      continue;
+      return 1;
     }
 
-    if (now.getTime() - lastSignal.getTime() > timeout + RELAY_WAIT_GRACE_MS) {
-      await failStuckJob(db, job, deployment, now, 'RELAY_DISCONNECTED', evidence, failureShadow);
-      settled += 1;
-    }
+    // Re-offers exhausted (or the relay never claims what it is offered).
+    // DESTROY still never fails from here — force-complete owns it.
+    if (timeout === undefined) return 0;
+    await failStuckJob(
+      db,
+      job,
+      deployment,
+      now,
+      job.type === 'CONFIGURE_DOMAIN' || job.type === 'REMOVE_DOMAIN'
+        ? 'DOMAIN_OPERATION_TIMEOUT'
+        : 'UNKNOWN',
+      evidence,
+      failureShadow,
+    );
+    return 1;
   }
-  return settled;
+
+  // Relay not connected. DESTROY (no timeout entry) is force-complete's.
+  if (timeout === undefined || !stale) return 0;
+
+  if (job.state !== 'WAITING') {
+    // Park, don't fail: the operation may have finished in AWS, and a
+    // returning relay resumes from its checkpoint. lastProgressAt is left
+    // alone so the grace clock keeps measuring real silence.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(schema.deploymentJobs)
+        .set({ state: 'WAITING' })
+        .where(eq(schema.deploymentJobs.id, job.id));
+      await tx.insert(schema.eventLogs).values({
+        actorType: 'system',
+        actorId: 'watchdog',
+        organizationId: deployment.organizationId,
+        customerId: deployment.customerId,
+        deploymentId: deployment.id,
+        jobId: job.id,
+        eventType: 'operation.waiting_for_relay',
+        previousState: deployment.state,
+        requestedState: null,
+        result: 'pending',
+        payload: evidence,
+      });
+    });
+    return 1;
+  }
+
+  if (now.getTime() - lastSignal.getTime() > timeout + RELAY_WAIT_GRACE_MS) {
+    await failStuckJob(db, job, deployment, now, 'RELAY_DISCONNECTED', evidence, failureShadow);
+    return 1;
+  }
+  return 0;
 }
 
 async function failStuckJob(
@@ -1020,12 +1042,18 @@ async function failStuckJob(
  * of lastHealthAt, which would otherwise stay NULL forever and pin the row
  * at CONNECTED. A returning relay needs no help: its heartbeat writes
  * CONNECTED back directly.
+ *
+ * Fleet-wide silence is not relay loss: when several relays are overdue and no
+ * relay at all reported inside the window, the control plane was down, not the
+ * relays. Nothing is marked then (the DISCONNECTED mark pauses billing). One
+ * overdue relay is still marked, because a small fleet cannot tell the two
+ * cases apart and a dead relay must be able to reach force-complete.
  */
 export async function sweepRelayLiveness(db: RuntimeDb, now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - RELAY_STALE_AFTER_MS);
-  const swept = await db
-    .update(schema.deployments)
-    .set({ relayStatus: 'DISCONNECTED' })
+  const overdue = await db
+    .select({ id: schema.deployments.id })
+    .from(schema.deployments)
     .where(
       and(
         eq(schema.deployments.relayStatus, 'CONNECTED'),
@@ -1036,6 +1064,38 @@ export async function sweepRelayLiveness(db: RuntimeDb, now: Date = new Date()):
             isNotNull(schema.deployments.relayBoundAt),
             lt(schema.deployments.relayBoundAt, cutoff),
           ),
+        ),
+      ),
+    );
+  if (overdue.length === 0) return 0;
+
+  if (overdue.length > 1) {
+    const [reporting] = await db
+      .select({ id: schema.deployments.id })
+      .from(schema.deployments)
+      .where(gte(schema.deployments.lastHealthAt, cutoff))
+      .limit(1);
+    if (!reporting) {
+      console.warn(
+        JSON.stringify({
+          event: 'watchdog:relay-liveness-skipped',
+          reason: 'no relay reported inside the liveness window',
+          overdueRelays: overdue.length,
+        }),
+      );
+      return 0;
+    }
+  }
+
+  const swept = await db
+    .update(schema.deployments)
+    .set({ relayStatus: 'DISCONNECTED' })
+    .where(
+      and(
+        eq(schema.deployments.relayStatus, 'CONNECTED'),
+        inArray(
+          schema.deployments.id,
+          overdue.map((row) => row.id),
         ),
       ),
     )
