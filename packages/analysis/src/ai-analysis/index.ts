@@ -15,6 +15,8 @@ import { mergeAiAnswers, type MergeResult } from './merge.js';
 
 export { ANALYST_PROMPT_VERSION } from './analyst.js';
 export { evidenceFileRequests } from './evidence-pack.js';
+export { appliedJudgement, buildJudgePack, decideJudgement, JUDGE_PROMPT_VERSION, judgeFileRequests, runFinalJudge } from './judge.js';
+export type { Judgement, JudgeInput, JudgeOutput, JudgeRecord } from './judge.js';
 export type { AnalystOutput, BlockerAnswer, Evidence, FactAnswer } from './analyst.js';
 export type { AnswerCheck } from './checks.js';
 export type { EvidencePack, Question } from './evidence-pack.js';

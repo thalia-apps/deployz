@@ -31,6 +31,7 @@
  * inside the web process until a worker command is configured).
  */
 
+import { appliedJudgement, type Judgement, type JudgeCategory } from './ai-analysis/judge.js';
 import type { AnalysisResult } from './analyser.js';
 import type { DetectorFinding } from './detectors.js';
 import type { RejectionFinding } from './rejection.js';
@@ -392,6 +393,97 @@ const DATASTORE_SERVER_COPY: RejectionCopy = {
   suggestedOutcome: 'Connect the repository of an application that uses this server, and use a managed service for the server itself.',
 };
 
+/**
+ * The final judge's NOT_DEPLOYABLE copy, by category (`ai-analysis/judge.ts`).
+ * One finding id; the judge's reason and cited lines are the technical evidence.
+ */
+const JUDGE_BLOCK_COPY: Record<JudgeCategory, RejectionCopy> = {
+  unsupported_service: {
+    ...OTHER_DB_COPY,
+    id: 'final-review-unsupported',
+    title: 'Needs a service Deployz cannot host',
+    plainEnglishExplanation: 'This app needs a database, message broker or other server that Deployz does not provide.',
+    suggestedOutcome: 'Deploy on Deployz only if the app can use PostgreSQL, MySQL, Redis or object storage instead.',
+  },
+  several_services: { ...MULTI_IMAGE_COPY, id: 'final-review-unsupported' },
+  local_disk_data: {
+    ...STORAGE_COPY,
+    id: 'final-review-unsupported',
+    title: 'Keeps its core data on local disk',
+    plainEnglishExplanation: 'This app keeps its core data in files on the app server. Deployz runs apps on disks that are wiped on every deploy.',
+    suggestedOutcome: 'Deploy on Deployz only if the app can keep this data in a database or object storage.',
+  },
+  no_application: {
+    ...NO_SOURCE_COPY,
+    id: 'final-review-unsupported',
+    title: 'Has no application to deploy',
+    plainEnglishExplanation: 'This repository has no application that Deployz can build from its source and run.',
+  },
+  not_http: {
+    ...LIBRARY_COPY,
+    id: 'final-review-unsupported',
+    title: 'Is not a web application',
+    plainEnglishExplanation:
+      'This repository is not a web application that serves HTTP (for example a database server, a desktop app or a command-line tool).',
+    suggestedOutcome: 'Connect the repository of a web application.',
+  },
+};
+
+/** The judge's reason and its cited lines, for the collapsed details section. */
+function judgeEvidence(judgement: Judgement): string {
+  const cited = judgement.evidence.map((item) => `${item.path}:${item.line} "${item.quote}"`).join('; ');
+  return `Final review: ${judgement.reason}${cited ? ` Evidence: ${cited}.` : ''}`;
+}
+
+/** The finding the final judge adds, if any. It only ever adds a finding. */
+function judgeFinding(judgement: Judgement): ReadinessFinding | null {
+  if (judgement.decision === 'block' && judgement.category !== null) {
+    const copy = JUDGE_BLOCK_COPY[judgement.category];
+    return {
+      id: copy.id,
+      category: copy.category,
+      title: copy.title,
+      severity: 'required',
+      blocking: true,
+      plainEnglishExplanation: copy.plainEnglishExplanation,
+      whyItMatters: copy.whyItMatters,
+      technicalEvidence: judgeEvidence(judgement),
+      suggestedOutcome: copy.suggestedOutcome,
+      confidence: 'likely',
+    };
+  }
+  if (judgement.decision === 'change') {
+    return {
+      id: 'final-review-changes',
+      category: 'container',
+      title: 'Needs a repository change before it deploys',
+      severity: 'required',
+      blocking: false,
+      plainEnglishExplanation: 'A final review found that this app does not build or start on Deployz without a change to the repository.',
+      whyItMatters: 'Deployz builds and starts the app exactly as the repository defines it. Without the change, every deployment fails.',
+      technicalEvidence: judgeEvidence(judgement),
+      suggestedOutcome: 'Make the change that the technical details name, then analyse the app again.',
+      confidence: 'likely',
+    };
+  }
+  if (judgement.decision === 'question') {
+    return {
+      id: 'final-review-question',
+      category: 'architecture',
+      title: 'Confirm that Deployz can run this app',
+      severity: 'recommended',
+      blocking: false,
+      plainEnglishExplanation: 'A final review found a sign that this app may need something Deployz does not provide.',
+      whyItMatters:
+        'Deployz runs one web container with managed PostgreSQL, MySQL, Redis and object storage. An app that needs more fails after it is deployed.',
+      technicalEvidence: judgeEvidence(judgement),
+      suggestedOutcome: 'Check the technical details. If the app needs only what Deployz provides, deploy it.',
+      confidence: 'needs_confirmation',
+    };
+  }
+  return null;
+}
+
 /** Maps a §10/§11 rejection `dependency` to its blocking-finding copy. */
 function rejectionCopy(dependency: string): RejectionCopy {
   if (dependency === 'redis-unsupported') return REDIS_COPY;
@@ -475,6 +567,8 @@ const FIX_CLASSES: Record<string, FixClass> = {
   'unsupported-no-application-source': 'CAPABILITY_GAP',
   'unsupported-library-repository': 'CAPABILITY_GAP',
   'unsupported-datastore-server': 'CAPABILITY_GAP',
+  'final-review-unsupported': 'CAPABILITY_GAP',
+  'final-review-changes': 'CODE_CHANGE',
 };
 
 /**
@@ -891,6 +985,10 @@ export function buildReadinessReport(
       confidence: 'needs_confirmation',
     });
   }
+
+  const judgement = appliedJudgement(metadata['aiJudge']);
+  const judged = judgement === null ? null : judgeFinding(judgement);
+  if (judged !== null) findings.push(judged);
 
   // ── Passed checks ─────────────────────────────────────────────────────────
   const passed: PassedCheck[] = result.findings

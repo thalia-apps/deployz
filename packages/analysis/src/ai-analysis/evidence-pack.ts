@@ -122,7 +122,7 @@ function stripEnvValue(line: string): string {
 }
 
 /** Lines `from`..`to` (1-based, inclusive) of a file, redacted, inside `budget` characters; null for a file with a private key. */
-function window(path: string, content: string, from: number, to: number, budget: number): PackFile | null {
+export function window(path: string, content: string, from: number, to: number, budget: number): PackFile | null {
   if (PRIVATE_KEY_BLOCK.test(content)) return null;
   const envSample = ENV_SAMPLE.test(path.split('/').pop() ?? path);
   const all = content.split(/\r?\n/);
@@ -400,7 +400,7 @@ export function packFiles(pack: EvidencePack): PackFile[] {
   return [...pack.startPath, ...pack.questions.flatMap((question) => question.windows)];
 }
 
-function renderFile(file: PackFile): string[] {
+export function renderFile(file: PackFile): string[] {
   return [`<<<FILE ${file.path} (lines ${file.start}-${file.start + file.lines.length - 1})`, ...file.lines.map((line, index) => `${file.start + index}| ${line}`), 'FILE>>>'];
 }
 
