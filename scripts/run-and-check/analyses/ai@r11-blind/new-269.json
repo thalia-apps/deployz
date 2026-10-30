@@ -1,0 +1,233 @@
+{
+  "id": "new-269",
+  "commit": "75bdd80a29bb0fb87bfd340efb5e6c4138ede8ec",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "python",
+      "framework": null,
+      "dockerfilePath": "Dockerfile"
+    },
+    "build": {
+      "command": "bun run build:app",
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"label-studio\"]",
+      "port": 8080
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        },
+        {
+          "name": "REDIS_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "REDIS_PORT",
+          "kind": "port"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "startup"
+    },
+    "worker": {
+      "command": null,
+      "needsCommand": true
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/apps/labelstudio/src/config/Sentry.ts",
+            "read in web/libs/core/src/lib/api-proxy/index.ts",
+            "read in web/libs/datamanager/src/utils/api-proxy/index.js"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/libs/editor/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "RELEASE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/apps/labelstudio/src/config/Sentry.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STATIC_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in web/libs/editor/server.mjs"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [
+      "sentry",
+      "openai"
+    ],
+    "unsupported": [
+      "Persistent local filesystem storage is not supported"
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Persistent local filesystem storage is not supported"
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.0912582,
+        "promptTokens": 19220,
+        "completionTokens": 765
+      },
+      "latencyMs": 10547
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "local-filesystem-state",
+        "decision": "rules"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 10548,
+    "questions": 2,
+    "generatedAt": "2026-10-30T12:41:00.855Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02772396,
+      "promptTokens": 6656,
+      "completionTokens": 69
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Label Studio supports PostgreSQL and S3 storage, so moving uploads and the database off local disk is a contained change.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2424,
+    "promptVersion": 4
+  }
+}

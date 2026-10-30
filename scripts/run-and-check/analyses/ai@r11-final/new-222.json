@@ -1,0 +1,284 @@
+{
+  "id": "new-222",
+  "commit": "52a8b2e7d36a4c755c0e876168646b3a2253752b",
+  "analyser": "ai@r11-final",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": ".docker/Dockerfile"
+    },
+    "build": {
+      "command": null,
+      "context": "."
+    },
+    "web": {
+      "command": "CMD: [\"/tmp/docker_run_git.sh\"]",
+      "port": 443
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        }
+      ],
+      "engine": "mysql"
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown"
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "APACHE_RUN_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in install-dev/controllers/http/system.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_NAME"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_PORT"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".docker/docker_run_git.sh declares DB_USER"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "PS_FF_DEFAULT_THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_FF_DEFAULT_THEME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "PS_FF_FRONT_CONTAINER_V2",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_FF_FRONT_CONTAINER_V2",
+            "read in index.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_LOG_MAX_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/config/config.yml",
+            "read in app/config/config_dev.yml",
+            "read in app/config/config_prod.yml",
+            "read in app/config/config_test.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_LOG_OUTPUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/config/config.yml",
+            "read in app/config/config_dev.yml",
+            "read in app/config/config_prod.yml",
+            "read in app/config/config_test.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PS_TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env declares PS_TRUSTED_PROXIES",
+            "read in app/config/config.yml"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": []
+  },
+  "gate": {
+    "state": "READY",
+    "findings": [
+      {
+        "id": "migration-command-missing",
+        "category": "database",
+        "severity": "warning",
+        "message": "This app uses MySQL but has no migration command; schema updates will not run on deploy."
+      }
+    ]
+  },
+  "vendorQuestions": 0,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.05540832,
+        "promptTokens": 12567,
+        "completionTokens": 285
+      },
+      "latencyMs": 5517
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "required",
+        "reasons": [],
+        "subject": "unexplained-declared-service",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 5604,
+    "questions": 1,
+    "generatedAt": "2026-10-30T12:41:49.634Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02594196,
+      "promptTokens": 5436,
+      "completionTokens": 223
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE",
+    "judgement": {
+      "reason": "The selected Dockerfile is a development image: it needs GROUP_ID and USER_ID build arguments that have no default, and it never copies the application source into the image.",
+      "verdict": "needs_changes",
+      "category": null,
+      "decision": "change",
+      "evidence": [
+        {
+          "line": 21,
+          "path": ".docker/Dockerfile",
+          "quote": "RUN groupmod -g $GROUP_ID www-data \\"
+        },
+        {
+          "line": 12,
+          "path": ".docker/Dockerfile",
+          "quote": "ARG GROUP_ID"
+        },
+        {
+          "line": 42,
+          "path": ".docker/Dockerfile",
+          "quote": "COPY --link --chmod=755 .docker/docker_run_git.sh /tmp/"
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 5952,
+    "promptVersion": 4
+  }
+}

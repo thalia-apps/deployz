@@ -1,0 +1,337 @@
+{
+  "id": "new-265",
+  "commit": "c2f8235e1f3ea903ad8b7f61447c4f74164b5c58",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "node",
+      "framework": "next",
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "tsx lib/db/migrate && next build",
+      "context": "."
+    },
+    "web": {
+      "command": "start: next start",
+      "port": 3000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "POSTGRES_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "redis": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "REDIS_URL",
+          "kind": "url"
+        }
+      ]
+    },
+    "storage": {
+      "required": false,
+      "envBindings": []
+    },
+    "migration": {
+      "command": null,
+      "mode": "pre_deploy",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "AI_GATEWAY_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AI_GATEWAY_API_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "AUTH_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares AUTH_SECRET",
+            "read in proxy.ts",
+            "read in app/(auth)/api/auth/guest/route.ts"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "BLOB_READ_WRITE_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares BLOB_READ_WRITE_TOKEN"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "CI_PLAYWRIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/constants.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IS_DEMO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/ai/models.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NEXT_PUBLIC_BASE_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in proxy.ts",
+            "read in app/(auth)/api/auth/guest/route.ts",
+            "read in app/layout.tsx",
+            "read in hooks/use-active-chat.tsx",
+            "read in hooks/use-chat-visibility.ts",
+            "read in components/chat/app-sidebar.tsx",
+            "read in components/chat/artifact.tsx",
+            "read in components/chat/document-preview.tsx",
+            "read in components/chat/message-actions.tsx",
+            "read in components/chat/multimodal-input.tsx",
+            "read in components/chat/shell.tsx",
+            "read in components/chat/sidebar-history.tsx",
+            "read in components/chat/suggested-actions.tsx",
+            "read in components/chat/version-footer.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "NODE_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/constants.ts",
+            "read in components/chat/shell.tsx"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAYWRIGHT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/constants.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLAYWRIGHT_TEST_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in lib/constants.ts"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "POSTGRES_URL",
+          "required": true,
+          "secret": false,
+          "source": [
+            ".env.example declares POSTGRES_URL",
+            "read in lib/db/migrate.ts",
+            "read in lib/db/queries.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REDIS_URL",
+            "read in app/(chat)/api/chat/route.ts",
+            "read in lib/ratelimit.ts"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 2,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.04394412,
+        "promptTokens": 7747,
+        "completionTokens": 670
+      },
+      "latencyMs": 9567
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": {
+          "mode": "pre_deploy",
+          "command": "npx tsx lib/db/migrate.ts"
+        },
+        "answer": "value",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 9569,
+    "questions": 2,
+    "generatedAt": "2026-10-30T12:40:48.510Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.01810116,
+      "promptTokens": 4256,
+      "completionTokens": 63
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "A Next.js app on Postgres and Redis needs only an added Dockerfile, which is a contained change.",
+      "verdict": "keep",
+      "category": null,
+      "decision": "none",
+      "evidence": [],
+      "checkReasons": []
+    },
+    "latencyMs": 2617,
+    "promptVersion": 4
+  }
+}

@@ -1,0 +1,2968 @@
+{
+  "id": "new-279",
+  "commit": "8d4c0a058f05f806120d1cb2fc4c6882dd9084d6",
+  "analyser": "ai@r11-blind",
+  "status": "analysed",
+  "failure": null,
+  "manifest": {
+    "schemaVersion": 1,
+    "application": {
+      "root": ".",
+      "runtime": "php",
+      "framework": null,
+      "dockerfilePath": null
+    },
+    "build": {
+      "command": "vp build && pnpm run build:sw",
+      "context": "."
+    },
+    "web": {
+      "command": null,
+      "port": 8000
+    },
+    "health": {
+      "path": "/",
+      "mode": "root",
+      "redirectsAccepted": true
+    },
+    "database": {
+      "postgres": true,
+      "envBindings": [
+        {
+          "name": "DATABASE_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DATABASE_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DATABASE_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DATABASE_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DATABASE_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_HOST",
+          "kind": "host"
+        },
+        {
+          "name": "DB_PORT",
+          "kind": "port"
+        },
+        {
+          "name": "DB_NAME",
+          "kind": "database"
+        },
+        {
+          "name": "DB_USER",
+          "kind": "username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "kind": "password"
+        },
+        {
+          "name": "DB_DATABASE",
+          "kind": "database"
+        },
+        {
+          "name": "DB_URL",
+          "kind": "url"
+        },
+        {
+          "name": "DB_USERNAME",
+          "kind": "username"
+        }
+      ]
+    },
+    "redis": {
+      "required": false,
+      "envBindings": []
+    },
+    "storage": {
+      "required": true,
+      "envBindings": [
+        {
+          "name": "AWS_S3_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "AWS_BUCKET",
+          "kind": "bucket"
+        },
+        {
+          "name": "IMAGE_STORAGE_BUCKET",
+          "kind": "bucket"
+        }
+      ]
+    },
+    "migration": {
+      "command": null,
+      "mode": "unknown",
+      "needsCommand": true
+    },
+    "worker": {
+      "command": null
+    },
+    "environment": {
+      "variables": [
+        {
+          "key": "ABLY_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AI_PROVIDER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALGOLIA_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALGOLIA_APP_ID",
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ALGOLIA_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares ALGOLIA_SECRET",
+            "read in config/scout.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "ALLOW_DOWNLOAD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ALLOW_DOWNLOAD",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANALYZE_AUDIO_ON_SCAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ANALYZE_AUDIO_ON_SCAN",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ANTHROPIC_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "APP_DEBUG",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_DEBUG",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_ENV",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_ENV",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares APP_KEY",
+            "read in config/app.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "APP_MAX_SCAN_TIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_MAX_SCAN_TIME",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_NAME",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_PREVIOUS_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "APP_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares APP_URL",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "ARTIFACTS_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares ARTIFACTS_PATH",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AUDITING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/audit.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_ACCESS_KEY_ID",
+            "read in config/filesystems.php",
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_BUCKET",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_DEFAULT_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_ENDPOINT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares AWS_REGION",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares AWS_SECRET_ACCESS_KEY",
+            "read in config/filesystems.php",
+            "read in config/queue.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AWS_USE_PATH_STYLE_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "AZURE_OPENAI_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "AZURE_OPENAI_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "BACKUP_ON_DELETE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares BACKUP_ON_DELETE",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BCRYPT_ROUNDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/hashing.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BEANSTALKD_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "BROADCAST_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CACHE_DRIVER",
+            "read in config/cache.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CACHE_STORE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CDN_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CDN_URL",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "CLEAN_URLS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares CLEAN_URLS_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "COHERE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DATABASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DATABASE_URL",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_CHARSET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_COLLATION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_CONNECTION",
+          "required": true,
+          "secret": false,
+          "source": [
+            "engine selector: default \"mysql\" is not the managed PostgreSQL engine — set \"pgsql\" or \"postgres\" to use the managed PostgreSQL database",
+            ".env.example declares DB_CONNECTION",
+            "read in config/database.php",
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DB_DATABASE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_DATABASE",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_FOREIGN_KEYS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_HOST",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DB_PASSWORD",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_PORT",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_QUEUE_TABLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_SOCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "DB_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DB_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares DB_USERNAME",
+            "read in config/database.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "deployz_managed"
+        },
+        {
+          "key": "DEEPSEEK_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "DROPBOX_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DROPBOX_APP_KEY",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DROPBOX_APP_SECRET",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "DROPBOX_REFRESH_TOKEN",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares DROPBOX_REFRESH_TOKEN",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "ELEVENLABS_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "EMBED_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares EMBED_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FFMPEG_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FFMPEG_PATH",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "FILESYSTEM_DISK",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FILESYSTEM_DISK"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "FORCE_HTTPS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares FORCE_HTTPS",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GEMINI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "GRAVATAR_DEFAULT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GRAVATAR_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "GROQ_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "IGNITION_EDITOR",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_ENABLE_RUNNABLE_SOLUTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_LOCAL_SITES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_REMOTE_SITES_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_SHARING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNITION_THEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IGNORE_DOT_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IGNORE_DOT_FILES",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_DRIVER",
+            "read in config/images.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_STORAGE_BUCKET",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_STORAGE_BUCKET",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_STORAGE_DIR",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_STORAGE_DIR",
+            "read in config/filesystems.php",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IMAGE_STORAGE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set \"s3\" to use the managed S3 bucket",
+            ".env.example declares IMAGE_STORAGE_DRIVER",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "IMAGE_STORAGE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares IMAGE_STORAGE_URL",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "IPINFO_TOKEN",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares IPINFO_TOKEN",
+            "read in config/koel.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "customer_required"
+        },
+        {
+          "key": "JINA_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "KOEL_DEMO",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LASTFM_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares LASTFM_API_KEY",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "LASTFM_API_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares LASTFM_API_SECRET",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "LISTENBRAINZ_API_ENDPOINT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares LISTENBRAINZ_API_ENDPOINT",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "LOG_SLACK_WEBHOOK_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/logging.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAILGUN_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_EHLO_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_ENCRYPTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_ENCRYPTION",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_ADDRESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_ADDRESS",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_FROM_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_FROM_NAME",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_HOST",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_LOG_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_MAILER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_MAILER",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MAIL_PASSWORD",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_PORT",
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_SENDMAIL_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/mail.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MAIL_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MAIL_USERNAME",
+            "read in config/mail.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "MANDRILL_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "MEDIA_BROWSER_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEDIA_BROWSER_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEDIA_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEDIA_PATH",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MEILISEARCH_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEILISEARCH_HOST"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MEILISEARCH_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares MEILISEARCH_KEY"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "MEMORY_LIMIT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MEMORY_LIMIT",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MISTRAL_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "MUSICBRAINZ_USER_AGENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MUSICBRAINZ_USER_AGENT",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "MYSQL_ATTR_SSL_CA",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares MYSQL_ATTR_SSL_CA",
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_API_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "OLLAMA_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "OPENAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OPENROUTER_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "OUTPUT_BIT_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PLUS_PRODUCT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/lemonsqueezy.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PODCASTS_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PODCASTS_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PREVIEWS_ON_SCAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PREVIEWS_ON_SCAN",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_AUTH_ALLOW_LIST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY_AUTH_ALLOW_LIST",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_AUTH_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY_AUTH_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_AUTH_PREFERRED_NAME_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY_AUTH_PREFERRED_NAME_HEADER",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PROXY_AUTH_USER_HEADER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PROXY_AUTH_USER_HEADER",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUSHER_APP_CLUSTER",
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares PUSHER_APP_ID",
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_APP_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PUSHER_APP_KEY",
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "PUSHER_APP_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares PUSHER_APP_SECRET",
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "PUSHER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "PUSHER_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/broadcasting.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares QUEUE_CONNECTION",
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "QUEUE_FAILED_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "RADIO_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares RADIO_ENABLED",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CACHE_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLIENT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_CLUSTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_DB",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PASSWORD",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "REDIS_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_CONNECTION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_QUEUE_RETRY_AFTER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "REDIS_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/database.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REGISTER_IGNITION_COMMANDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/ignition.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_ACCEPT_CLIENT_EVENTS_FROM",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_ACTIVITY_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REVERB_APP_ID",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares REVERB_APP_KEY",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "REVERB_APP_MAX_CONNECTIONS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_MAX_MESSAGE_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_PING_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_RATE_LIMITING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_RATE_LIMIT_DECAY_SECONDS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_RATE_LIMIT_MAX_ATTEMPTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_RATE_LIMIT_TERMINATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_APP_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares REVERB_APP_SECRET",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "generatable": true,
+          "classification": "deployz_generated"
+        },
+        {
+          "key": "REVERB_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REVERB_HOST",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_MAX_REQUEST_SIZE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REVERB_PORT",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_PULSE_INGEST_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SCALING_CHANNEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SCALING_ENABLED",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SCHEME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares REVERB_SCHEME",
+            "read in config/broadcasting.php",
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SERVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SERVER_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SERVER_PATH",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_SERVER_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "REVERB_TELESCOPE_INGEST_INTERVAL",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/reverb.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCAN_JOBS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCAN_JOBS",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCAN_LOG_MAX_FILES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCAN_LOG_MAX_FILES",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SCOUT_DRIVER",
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_IDENTIFY",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SCOUT_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SENTRY_LARAVEL_DSN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SENTRY_LARAVEL_DSN"
+          ],
+          "purpose": "infrastructure_binding",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SESSION_DRIVER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_DRIVER",
+            "read in config/session.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SESSION_LIFETIME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SESSION_LIFETIME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SES_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SES_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_HOST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SFTP_HOST",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_PASSPHRASE",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SFTP_PASSPHRASE",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SFTP_PASSWORD",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_PORT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SFTP_PORT"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SFTP_PRIVATE_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SFTP_PRIVATE_KEY",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_ROOT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SFTP_ROOT",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SFTP_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SFTP_USERNAME",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SPOTIFY_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SPOTIFY_CLIENT_ID",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SPOTIFY_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SPOTIFY_CLIENT_SECRET",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_PUBLIC_KEY",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SQS_PUBLIC_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SQS_QUEUE",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SQS_QUEUE_NAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SQS_QUEUE_NAME"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SQS_QUEUE_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SQS_QUEUE_PREFIX"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SQS_QUEUE_REGION",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SQS_QUEUE_REGION"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "unknown"
+        },
+        {
+          "key": "SQS_SECRET_KEY",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SQS_SECRET_KEY"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "unknown"
+        },
+        {
+          "key": "SQS_SUFFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/queue.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_DEFAULT_ROLE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_DEFAULT_ROLE",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_GOOGLE_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_GOOGLE_CLIENT_ID",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_GOOGLE_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SSO_GOOGLE_CLIENT_SECRET",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_GOOGLE_HOSTED_DOMAIN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_GOOGLE_HOSTED_DOMAIN",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_OIDC_BUTTON_LABEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_OIDC_BUTTON_LABEL",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_OIDC_CLIENT_ID",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_OIDC_CLIENT_ID",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_OIDC_CLIENT_SECRET",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares SSO_OIDC_CLIENT_SECRET",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "SSO_OIDC_ISSUER",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SSO_OIDC_ISSUER",
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "optional"
+        },
+        {
+          "key": "STORAGE_DRIVER",
+          "required": true,
+          "secret": false,
+          "source": [
+            "storage selector: default \"local\" stores files on the container disk — set a value that stores files outside the container",
+            ".env.example declares STORAGE_DRIVER",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STREAMING_METHOD",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares STREAMING_METHOD",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "STRIPE_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "STRIPE_SECRET",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/services.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "SYNC_LOG_LEVEL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares SYNC_LOG_LEVEL",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TICKETMASTER_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares TICKETMASTER_API_KEY",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "TICKETMASTER_DEFAULT_COUNTRY_CODE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TICKETMASTER_DEFAULT_COUNTRY_CODE",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TNTSEARCH_BOOLEAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TNTSEARCH_FUZZINESS",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/scout.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCODE_AAC_FAST",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRANSCODE_AAC_FAST",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCODE_BIT_RATE",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRANSCODE_BIT_RATE",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCODE_FLAC",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRANSCODE_FLAC",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCODE_ON_SCAN",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRANSCODE_ON_SCAN",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRANSCODE_TIMEOUT",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRANSCODE_TIMEOUT",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_HOSTS",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUSTED_HOSTS",
+            "read in config/app.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "TRUSTED_PROXIES",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares TRUSTED_PROXIES",
+            "read in config/trustedproxy.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_ITUNES",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "USE_MUSICBRAINZ",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares USE_MUSICBRAINZ",
+            "read in config/koel.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "VOYAGEAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "WEBDAV_BASE_URL",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEBDAV_BASE_URL",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBDAV_PASSWORD",
+          "required": false,
+          "secret": true,
+          "source": [
+            ".env.example declares WEBDAV_PASSWORD",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "internal_secret",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBDAV_PATH_PREFIX",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEBDAV_PATH_PREFIX",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "WEBDAV_USERNAME",
+          "required": false,
+          "secret": false,
+          "source": [
+            ".env.example declares WEBDAV_USERNAME",
+            "read in config/filesystems.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "XAI_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            "read in config/ai.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        },
+        {
+          "key": "X_API_VERSION",
+          "required": false,
+          "secret": false,
+          "source": [
+            "read in app/Providers/RouteServiceProvider.php"
+          ],
+          "purpose": "optional_configuration",
+          "confidence": "medium",
+          "classification": "optional"
+        },
+        {
+          "key": "YOUTUBE_API_KEY",
+          "required": true,
+          "secret": true,
+          "source": [
+            ".env.example declares YOUTUBE_API_KEY",
+            "read in config/koel.php"
+          ],
+          "purpose": "external_credential",
+          "confidence": "high",
+          "classification": "customer_required"
+        }
+      ]
+    },
+    "externalServices": [],
+    "unsupported": [
+      "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+    ]
+  },
+  "gate": {
+    "state": "NOT_COMPATIBLE",
+    "findings": [
+      {
+        "id": "unsupported",
+        "category": "compatibility",
+        "severity": "error",
+        "message": "Unsupported container setup: No Dockerfile exists in the repository. Deployz builds the app from a Dockerfile in the repository."
+      },
+      {
+        "id": "dockerfile-missing",
+        "category": "container",
+        "severity": "error",
+        "message": "No Dockerfile was found; Deployz cannot build an image without container instructions."
+      },
+      {
+        "id": "start-command-missing",
+        "category": "application",
+        "severity": "error",
+        "message": "No start command was found; the container would boot with nothing to run."
+      },
+      {
+        "id": "required-env-vars-missing",
+        "category": "configuration",
+        "severity": "error",
+        "message": "This app requires environment variables that have no value yet: ANTHROPIC_API_KEY, AZURE_OPENAI_API_KEY, COHERE_API_KEY, DB_CONNECTION, DEEPSEEK_API_KEY, and 18 more. Set them in the application's Configuration screen before deploying."
+      },
+      {
+        "id": "migration-command-needs-input",
+        "category": "database",
+        "severity": "error",
+        "message": "Deployz cannot confirm that the built image can run the detected migration script. Enter a migration command or choose \"No separate migration\" in the application settings before deploying."
+      }
+    ]
+  },
+  "vendorQuestions": 25,
+  "outcome": "DEPLOYABLE_WITH_CHANGES",
+  "ai": {
+    "status": "ok",
+    "analyst": {
+      "model": "anthropic/claude-opus-5.5",
+      "usage": {
+        "costUsd": 0.07082064,
+        "promptTokens": 13844,
+        "completionTokens": 808
+      },
+      "latencyMs": 14724
+    },
+    "answers": [
+      {
+        "id": "q1",
+        "value": null,
+        "answer": "not_used",
+        "reasons": [],
+        "subject": "unexplained-declared-service",
+        "decision": "ai"
+      },
+      {
+        "id": "q2",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "startCommand",
+        "decision": "rules"
+      },
+      {
+        "id": "q3",
+        "value": null,
+        "answer": "unknown",
+        "reasons": [],
+        "subject": "migration",
+        "decision": "rules"
+      },
+      {
+        "id": "q4",
+        "value": "application",
+        "answer": "value",
+        "reasons": [],
+        "subject": "repositoryKind",
+        "decision": "ai"
+      }
+    ],
+    "settings": [],
+    "latencyMs": 14848,
+    "questions": 4,
+    "generatedAt": "2026-10-30T12:42:23.992Z",
+    "failedChecks": 0,
+    "promptVersion": 20
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-5.5",
+    "usage": {
+      "costUsd": 0.02926836,
+      "promptTokens": 5061,
+      "completionTokens": 466
+    },
+    "status": "ok",
+    "outcome": "DEPLOYABLE_WITH_CHANGES",
+    "judgement": {
+      "reason": "Koel's core data is a music library it scans from local disk, and the README says cloud storage drivers belong to the premium Koel Plus, so Deployz's empty-disk containers may not be able to hold the library without a paid feature.",
+      "verdict": "not_sure",
+      "category": "local_disk_data",
+      "decision": "question",
+      "evidence": [
+        {
+          "line": 10,
+          "path": "README.md",
+          "quote": "Built on [Laravel](https://laravel.com/) and [Vue](https://vuejs.org/), it scans your music library and "
+        },
+        {
+          "line": 15,
+          "path": "README.md",
+          "quote": "The premium Koel Plus adds multi-user libraries, collaboration, SSO, cloud storage drivers, custom themes, "
+        }
+      ],
+      "checkReasons": []
+    },
+    "latencyMs": 8074,
+    "promptVersion": 4
+  }
+}
