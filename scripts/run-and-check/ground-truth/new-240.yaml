@@ -1,0 +1,151 @@
+id: new-240
+repository: huginn/huginn
+commit: 2b1eb20cb657b86ca52378c75fc4176a3815c524
+summary: >
+  Huginn is a Rails app (Ruby 4, Puma) for agents that watch the web and act on events. There is no root Dockerfile.
+  docker/single-process/Dockerfile builds the app from the repository root (bundle install, npm install, assets:precompile)
+  and runs /scripts/init, which writes a .env from the environment, runs db:create, db:migrate and db:seed, then starts
+  Puma on 0.0.0.0:3000. The same image runs the agent worker with `/scripts/init bin/threaded.rb` (or WORKER_CMD). The
+  database is MySQL (default, mysql2 gem in the image) or PostgreSQL, chosen by DATABASE_URL or DATABASE_ADAPTER and
+  DATABASE_HOST. docker/multi-process/Dockerfile is an all-in-one image with MySQL and supervisord.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    docker/single-process/Dockerfile builds the app from source with the repository root as context, and the image serves
+    one web process on port 3000. The agent worker is the same image with another command, which Deployz runs as a worker.
+    The database is RDS MySQL (the image default) through DATABASE_URL, and migrations run in the start script. Only
+    settings are needed (DATABASE_URL, APP_SECRET_TOKEN, DOMAIN, the worker command), as new-1.
+dockerfile:
+  accept: [docker/single-process/Dockerfile]
+  reject:
+    - {path: docker/multi-process/Dockerfile, reason: "all-in-one image: supervisord runs MySQL, Puma, the worker and foreman in one container with data on local disk"}
+    - {path: docker/test/Dockerfile, reason: "test image for the spec suite"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/single-process/Dockerfile, line: 49, quote: "COPY --chown=\"$UID:0\" ./ /app/"}
+    - {path: docker/single-process/Dockerfile, line: 54, quote: "RUN APP_SECRET_TOKEN=secret DATABASE_ADAPTER=mysql2 ON_HEROKU=true bundle exec rake assets:clean assets:precompile"}
+    - {path: docker/single-process/Dockerfile, line: 59, quote: "CMD [\"/scripts/init\"]"}
+    - {path: docker/single-process/README.md, line: 141, quote: "docker build --rm=true --tag={yourname}/huginn -f docker/single-process/Dockerfile ."}
+    - {path: docker/multi-process/scripts/supervisord.conf, line: 1, quote: "[unix_http_server]"}
+runtime: {accept: [ruby]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: docker/single-process/Dockerfile, line: 56, quote: "EXPOSE 3000"}
+    - {path: docker/scripts/setup_env, line: 63, quote: "PORT=${HUGINN_PORT:-${PORT:-3000}}"}
+    - {path: config/puma.rb, line: 30, quote: "bind \"tcp://#{ENV.fetch(\"IP\", \"0.0.0.0\")}:#{ENV.fetch(\"PORT\", 3000)}\""}
+bindAllInterfaces:
+  value: true
+  # setup_env writes IP=0.0.0.0 and PORT into /app/.env, which the Gemfile loads, so Puma binds TCP and not the unix socket.
+  evidence:
+    - {path: docker/scripts/setup_env, line: 62, quote: "IP=\"${IP:-0.0.0.0}\""}
+    - {path: config/puma.rb, line: 27, quote: "if environment_name == \"production\" && ENV[\"IP\"].blank? && ENV[\"PORT\"].blank?"}
+startCommand:
+  source: image
+  accept: ["/scripts/init", "bundle exec puma -C config/puma.rb"]
+  evidence:
+    - {path: docker/single-process/Dockerfile, line: 59, quote: "CMD [\"/scripts/init\"]"}
+    - {path: docker/single-process/scripts/init, line: 39, quote: "exec bundle exec puma -C config/puma.rb"}
+healthPath:
+  accept: ["/", "/users/sign_in"]
+  # The home page skips authentication and returns 200.
+  evidence:
+    - {path: config/routes.rb, line: 115, quote: "root :to => \"home#index\""}
+    - {path: app/controllers/home_controller.rb, line: 2, quote: "skip_before_action :authenticate_user!"}
+database:
+  status: required
+  engines: [mysql, postgres]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {DATABASE_URL: "mysql://<user>:<password>@<host>:3306/<db>"}
+  connectionVars: [DATABASE_URL, DATABASE_ADAPTER, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWORD]
+  # The image is built with DATABASE_ADAPTER=mysql2, so only the mysql2 gem is installed. PostgreSQL works too, but then the
+  # start script's bundle install must download the pg gem at every container start. Without a DB host the script sets
+  # START_MYSQL=true and expects a local socket, which fails.
+  evidence:
+    - {path: docker/scripts/setup_env, line: 14, quote: "if [[ -n \"$DATABASE_URL\" ]]; then"}
+    - {path: docker/scripts/setup_env, line: 17, quote: "DATABASE_ADAPTER=mysql2"}
+    - {path: docker/scripts/setup_env, line: 20, quote: "DATABASE_ADAPTER=postgresql ;;"}
+    - {path: docker/scripts/setup_env, line: 43, quote: "START_MYSQL=${START_MYSQL:-true}"}
+    - {path: Gemfile, line: 204, quote: "if_true(ENV['DATABASE_ADAPTER'].strip == 'postgresql') do"}
+    - {path: docker/single-process/Dockerfile, line: 47, quote: "RUN APP_SECRET_TOKEN=secret DATABASE_ADAPTER=mysql2 ON_HEROKU=true bundle install"}
+migrations:
+  mode: startup
+  accept: ["bundle exec rake db:migrate"]
+  # The web start (no argument) runs db:create, db:migrate and db:seed. Worker starts wait for pending migrations.
+  evidence:
+    - {path: docker/single-process/scripts/init, line: 18, quote: "bundle exec rake db:create RAILS_ENV=${RAILS_ENV}"}
+    - {path: docker/single-process/scripts/init, line: 22, quote: "bundle exec rake db:migrate RAILS_ENV=${RAILS_ENV}"}
+    - {path: docker/single-process/scripts/init, line: 34, quote: "bundle exec rake db:seed RAILS_ENV=${RAILS_ENV}"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: independent
+  commands: ["/scripts/init bin/threaded.rb"]
+  # Agents run only in the worker (AgentRunner with the scheduler and delayed_job threads). The web process does not run them.
+  evidence:
+    - {path: docker/single-process/docker-compose.yml, line: 33, quote: "command: /scripts/init bin/threaded.rb"}
+    - {path: docker/single-process/scripts/init, line: 41, quote: "exec bundle exec rails runner \"$@\" RAILS_ENV=${RAILS_ENV}"}
+    - {path: bin/threaded.rb, line: 13, quote: "agent_runner.run"}
+    - {path: Procfile, line: 7, quote: "jobs: bundle exec rails runner bin/threaded.rb"}
+scheduledJobs:
+  status: embedded
+  items: [agent schedules run by AgentRunner in the threaded worker]
+  evidence:
+    - {path: bin/threaded.rb, line: 5, quote: "agent_runner = AgentRunner.new"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Logs go to stdout and data is in the database. tmp/ holds only pids and sockets.
+  evidence:
+    - {path: docker/scripts/setup_env, line: 60, quote: "RAILS_LOG_TO_STDOUT=${RAILS_LOG_TO_STDOUT:-true}"}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "mysql://user:pass@host:3306/db (setup_env turns mysql into mysql2); without a DB host the script tries a local MySQL socket"}
+    - {name: APP_SECRET_TOKEN, secret: true, buildTime: false, note: "Rails secret; if unset a random one is made per container, so sessions end on every restart"}
+    - {name: DOMAIN, secret: false, buildTime: false, note: "public host of the instance, used in links and web request URLs; default localhost:3000"}
+  optional: [SEED_USERNAME, SEED_PASSWORD, SEED_EMAIL, INVITATION_CODE, SKIP_INVITATION_CODE, REQUIRE_CONFIRMED_EMAIL, FORCE_SSL, TIMEZONE, SMTP_DOMAIN, SMTP_USER_NAME, SMTP_PASSWORD, SMTP_SERVER, SMTP_PORT, EMAIL_FROM_ADDRESS, ENABLE_INSECURE_AGENTS, ENABLE_SMOKESCREEN, START_SMOKESCREEN, DO_NOT_CREATE_DATABASE, DO_NOT_SEED, WORKER_CMD, WEB_CONCURRENCY, RAILS_MAX_THREADS, DATABASE_ADAPTER, DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USERNAME, DATABASE_PASSWORD, ADDITIONAL_GEMS]
+  buildTime: [ADDITIONAL_GEMS, UID]
+  evidence:
+    - {path: .env.example, line: 4, quote: "APP_SECRET_TOKEN=REPLACE_ME_NOW!"}
+    - {path: .env.example, line: 9, quote: "DOMAIN=localhost:3000"}
+    - {path: .env.example, line: 57, quote: "INVITATION_CODE=try-huginn"}
+    - {path: docker/scripts/setup_env, line: 81, quote: "echo 'Generating random APP_SECRET_TOKEN.'"}
+    - {path: docker/single-process/README.md, line: 41, quote: "If ``SEED_PASSWORD`` is not set, a random password is generated and printed once in the container log; note it down."}
+blockers:
+  expected: []
+  mustNot:
+    - "docker/multi-process/Dockerfile (supervisord with MySQL) must not decide the outcome: the single-process image is the deployable one"
+    - "The worker must not count as a second image: it is the same image with `/scripts/init bin/threaded.rb`"
+    - "The optional Smokescreen proxy started in the background (ENABLE_SMOKESCREEN) must not count as a multi-process image: it is off by default"
+    - "Missing root Dockerfile must not make the app need a change: docker/single-process/Dockerfile builds from the root context"
+    - "Redis must not be required: delayed_job uses the database"
+vendorQuestions:
+  legitimate:
+    - "Which admin user and password should the seed create (SEED_USERNAME, SEED_PASSWORD), or is the random password in the log acceptable?"
+    - "Should public sign-up stay open with the default INVITATION_CODE try-huginn?"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Which database? (MySQL by default, DATABASE_URL)"
+    - "Is a migration command needed? (the start script runs db:migrate)"
+    - "Which worker command? (`/scripts/init bin/threaded.rb`)"
+traps:
+  - "No root Dockerfile; the production image is docker/single-process/Dockerfile with context . (docker/single-process/README.md:141)"
+  - "Without DATABASE_URL or DATABASE_HOST the start script sets START_MYSQL=true and points at a local socket (docker/scripts/setup_env:43, :136)"
+  - "The image is built with only the mysql2 gem; PostgreSQL makes the start script download the pg gem at each start (docker/single-process/Dockerfile:47, Gemfile:204, docker/scripts/setup_env:160)"
+  - "INVITATION_CODE defaults to the public value try-huginn, so anyone with the URL can sign up (.env.example:57)"
+  - "Agents do not run without the threaded worker; the web container only serves the UI (docker/single-process/docker-compose.yml:33)"
+  - "puma.rb binds a unix socket in production when IP and PORT are blank; the start script sets both (config/puma.rb:27, docker/scripts/setup_env:62-63)"
+openQuestions:
+  - "Whether the ca-certificates version check in the Dockerfile passes on the current Ubuntu noble mirror at build time (docker/single-process/Dockerfile:17)"
+crossReview:
+  - {field: "dockerfile.accept", change: "none: docker/single-process/Dockerfile uses the repository root as context (COPY ./ /app/, COPY docker/scripts/...), and its README builds it with -f and context .", evidence: "docker/single-process/Dockerfile:13,34-37,49,58; docker/single-process/README.md:141"}
+  - {field: "database", change: "none: DATABASE_URL with mysql:// sets the mysql2 adapter, which is the gem the image installs", evidence: "docker/scripts/setup_env:14-18; docker/single-process/Dockerfile:47"}
+  - {field: "workers / migrations", change: "none: the web start runs db:create, db:migrate and db:seed; a worker start waits for pending migrations and runs rails runner with the given script", evidence: "docker/single-process/scripts/init:17-41"}
+  - {field: "blockers (multi-process)", change: "none: Smokescreen runs in the background only when ENABLE_SMOKESCREEN or START_SMOKESCREEN is true", evidence: "docker/single-process/scripts/init:12-15"}
+  - {field: "all", change: "verified", evidence: "34 citations checked"}

@@ -1,0 +1,141 @@
+id: new-250
+repository: shadcn-ui/taxonomy
+commit: 298a8857c7128a0d121e7f699dfd729f23b3966d
+summary: >
+  Taxonomy is an archived Next.js 13 (App Router, canary) example app with a blog and docs from Contentlayer, NextAuth
+  (GitHub OAuth and Postmark email sign-in), a post editor, and Stripe subscriptions. Prisma talks to MySQL through
+  DATABASE_URL (the README names PlanetScale) and two SQL migrations are committed. `pnpm build` runs `contentlayer
+  build && next build`, and `next start` serves the app on port 3000. The repository has no Dockerfile and was made for
+  Vercel. env.mjs validates 13 server variables and NEXT_PUBLIC_APP_URL; next.config.mjs imports it, so the build also
+  needs them.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz: one Next.js process on port 3000, RDS MySQL through DATABASE_URL, Prisma migrations as a
+    separate command, no Redis, no worker and no local files. But the repository has no Dockerfile of any kind, so a
+    repository change (a multi-stage Dockerfile with pnpm install, pnpm build and next start) is needed. The full file
+    list proves that there is none, as new-156. The archive note ("not recommended for use in production") is not a
+    capability blocker.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 11, quote: "\"build\": \"contentlayer build && next build\","}
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: .env.example, line: 4, quote: "NEXT_PUBLIC_APP_URL=http://localhost:3000"}
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+bindAllInterfaces:
+  value: true
+  # next start listens on all interfaces by default.
+  evidence:
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+startCommand:
+  source: explicit
+  accept: ["next start", "pnpm start", "npm start", "npm run start", "pnpm run start"]
+  evidence:
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+healthPath:
+  accept: ["/", "/login", "/blog", "/pricing"]
+  # The middleware guards only /dashboard and /editor; / is the public marketing page (its GitHub star fetch fails softly).
+  evidence:
+    - {path: middleware.ts, line: 45, quote: "matcher: [\"/dashboard/:path*\", \"/editor/:path*\", \"/login\", \"/register\"],"}
+    - {path: "app/(marketing)/page.tsx", line: 30, quote: "} catch (error) {"}
+database:
+  status: required
+  engines: [mysql]
+  default: mysql
+  deployzEngine: mysql
+  selectBy: {}
+  connectionVars: [DATABASE_URL]
+  evidence:
+    - {path: prisma/schema.prisma, line: 9, quote: "provider = \"mysql\""}
+    - {path: prisma/schema.prisma, line: 10, quote: "url      = env(\"DATABASE_URL\")"}
+    - {path: prisma/migrations/migration_lock.toml, line: 3, quote: "provider = \"mysql\""}
+    - {path: .env.example, line: 19, quote: "DATABASE_URL=\"mysql://root:root@localhost:3306/taxonomy?schema=public\""}
+migrations:
+  mode: command
+  accept: ["npx prisma migrate deploy", "pnpm prisma migrate deploy", "pnpm exec prisma migrate deploy", "prisma migrate deploy"]
+  # No script runs migrations; the two committed migrations need prisma migrate deploy before the first start.
+  evidence:
+    - {path: prisma/migrations/20221021182747_init/migration.sql, line: 1, quote: "-- CreateTable"}
+    - {path: package.json, line: 111, quote: "\"prisma\": \"^4.13.0\","}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: package.json, line: 13, quote: "\"start\": \"next start\","}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Blog and docs content is compiled from content/ at build time by Contentlayer; posts are stored in MySQL.
+  evidence:
+    - {path: package.json, line: 11, quote: "\"build\": \"contentlayer build && next build\","}
+env:
+  required:
+    - {name: DATABASE_URL, secret: true, buildTime: false, note: "mysql://user:pass@host:3306/taxonomy; env.mjs also checks it at build time"}
+    - {name: NEXTAUTH_SECRET, secret: true, buildTime: false, note: "NextAuth secret; required by env.mjs"}
+    - {name: NEXTAUTH_URL, secret: false, buildTime: false, note: "public HTTPS URL; optional in env.mjs but NextAuth needs it outside Vercel"}
+    - {name: NEXT_PUBLIC_APP_URL, secret: false, buildTime: true, note: "public HTTPS URL; inlined into the client bundle at build time"}
+    - {name: GITHUB_CLIENT_ID, secret: false, buildTime: false, note: "GitHub OAuth app id; required by env.mjs"}
+    - {name: GITHUB_CLIENT_SECRET, secret: true, buildTime: false, note: "GitHub OAuth secret; required by env.mjs"}
+    - {name: GITHUB_ACCESS_TOKEN, secret: true, buildTime: false, note: "used only for the star count on the home page, but env.mjs requires it"}
+    - {name: SMTP_FROM, secret: false, buildTime: false, note: "sender for email sign-in; required by env.mjs"}
+    - {name: POSTMARK_API_TOKEN, secret: true, buildTime: false, note: "Postmark client for sign-in email; required by env.mjs"}
+    - {name: POSTMARK_SIGN_IN_TEMPLATE, secret: false, buildTime: false, note: "Postmark template id; required by env.mjs"}
+    - {name: POSTMARK_ACTIVATION_TEMPLATE, secret: false, buildTime: false, note: "Postmark template id; required by env.mjs"}
+    - {name: STRIPE_API_KEY, secret: true, buildTime: false, note: "Stripe secret key; required by env.mjs"}
+    - {name: STRIPE_WEBHOOK_SECRET, secret: true, buildTime: false, note: "Stripe webhook signing secret; required by env.mjs"}
+    - {name: STRIPE_PRO_MONTHLY_PLAN_ID, secret: false, buildTime: false, note: "Stripe price id; required by env.mjs"}
+  optional: []
+  buildTime: [NEXT_PUBLIC_APP_URL]
+  evidence:
+    - {path: env.mjs, line: 9, quote: "NEXTAUTH_SECRET: z.string().min(1),"}
+    - {path: env.mjs, line: 23, quote: "NEXT_PUBLIC_APP_URL: z.string().min(1),"}
+    - {path: next.config.mjs, line: 3, quote: "import \"./env.mjs\""}
+    - {path: lib/auth.ts, line: 11, quote: "const postmarkClient = new Client(env.POSTMARK_API_TOKEN)"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: a production image (pnpm install, contentlayer and next build, next start) must be added"
+  mustNot:
+    - "MySQL must not be called unsupported or PlanetScale-only: Prisma uses a standard mysql URL, which RDS MySQL serves"
+    - "The archive note in the README must not be a NOT_DEPLOYABLE reason by itself"
+    - "Contentlayer content must not be read as local disk state: it is compiled at build time"
+    - "Stripe, Postmark and GitHub OAuth must not be blockers: they are external SaaS APIs set by env values"
+vendorQuestions:
+  legitimate:
+    - "Which production Dockerfile should Deployz use? The repo has none (Vercel project)"
+    - "Which values do the build use? next.config.mjs imports env.mjs, so next build fails unless all 14 validated variables are present"
+    - "Which GitHub OAuth app, Postmark account and Stripe plan should the deploy use?"
+  unnecessary:
+    - "Which database? (MySQL through DATABASE_URL)"
+    - "Which port? (3000)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "env.mjs is imported by next.config.mjs, so the zod validation runs during next build, not only at start (next.config.mjs:3, env.mjs:4)"
+  - "app/api/auth/[...nextauth]/_route.ts is disabled by its _ prefix; the live auth route is pages/api/auth/[...nextauth].ts"
+  - ".nvmrc pins Node 16.18.0 and next is a 13.3 canary; a newer Node base image may not build it (.nvmrc:1, package.json:70)"
+  - "The README says the project is archived and not recommended for production (README.md:2, :7)"
+  - "postinstall runs prisma generate, so the schema must be in the build context before pnpm install (package.json:16)"
+openQuestions:
+  - "Whether the canary Next.js 13.3 build still succeeds with a current pnpm and Node image"
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file', evidence: trees/new-250.txt}
+  - {field: env.required buildTime, change: 'none: env.mjs validates only presence (z.string().min(1)), so next build needs values but not real secrets; only NEXT_PUBLIC_APP_URL is inlined into the bundle', evidence: 'env.mjs:9-23; next.config.mjs:3'}
+  - {field: outcome, change: 'none: one Next.js process with MySQL through Prisma; only the missing Dockerfile needs a change; analog new-156', evidence: 'prisma/schema.prisma:9-10'}
+  - {field: all, change: verified, evidence: 20 citations checked}

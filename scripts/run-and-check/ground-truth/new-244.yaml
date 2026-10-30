@@ -1,0 +1,131 @@
+id: new-244
+repository: nextjs/saas-starter
+commit: 6e33e58b1e553a41fe22e6b941a7229a002de361
+summary: >
+  Next.js SaaS Starter is a Next.js 15 (canary) template with email and password auth (JWT cookie signed with
+  AUTH_SECRET), PostgreSQL through Drizzle ORM (POSTGRES_URL) and Stripe subscriptions (checkout, customer portal and
+  a webhook route). The repository has no Dockerfile; the README deploys to Vercel. Migrations are Drizzle SQL files run
+  with `drizzle-kit migrate`, and an optional seed creates a test user and two Stripe products. No Redis, no worker,
+  no file storage.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz (one Next.js web process on port 3000, PostgreSQL, no Redis, no worker, no local
+    data). But the full file list has no Dockerfile, so the vendor must add one (pnpm install, next build, next start).
+    That is the "no Dockerfile" repository change, as new-156. The build also needs POSTGRES_URL and STRIPE_SECRET_KEY,
+    because the root layout imports the database module (it throws when POSTGRES_URL is not set) and the pricing page is
+    prerendered with Stripe API calls.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 5, quote: "\"build\": \"next build\","}
+    - {path: README.md, line: 95, quote: "### Deploy to Vercel"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # next start listens on 3000 by default; no other port is in the repo.
+  evidence:
+    - {path: .env.example, line: 6, quote: "BASE_URL=http://localhost:3000"}
+    - {path: package.json, line: 6, quote: "\"start\": \"next start\","}
+bindAllInterfaces:
+  value: true
+  # next start binds all interfaces by default.
+  evidence:
+    - {path: package.json, line: 6, quote: "\"start\": \"next start\","}
+startCommand:
+  source: explicit
+  accept: ["pnpm start", "next start", "npx next start", "pnpm next start"]
+  evidence:
+    - {path: package.json, line: 6, quote: "\"start\": \"next start\","}
+healthPath:
+  accept: ["/", "/sign-in", "/api/user"]
+  # No health route. `/` is a static marketing page; /api/user returns JSON (null when not signed in).
+  evidence:
+    - {path: app/(dashboard)/page.tsx, line: 5, quote: "export default function HomePage() {"}
+    - {path: middleware.ts, line: 5, quote: "const protectedRoutes = '/dashboard';"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {POSTGRES_URL: "postgresql://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [POSTGRES_URL]
+  evidence:
+    - {path: lib/db/drizzle.ts, line: 8, quote: "if (!process.env.POSTGRES_URL) {"}
+    - {path: lib/db/drizzle.ts, line: 12, quote: "export const client = postgres(process.env.POSTGRES_URL);"}
+    - {path: drizzle.config.ts, line: 6, quote: "dialect: 'postgresql',"}
+migrations:
+  mode: command
+  accept: ["pnpm db:migrate", "npx drizzle-kit migrate", "drizzle-kit migrate"]
+  evidence:
+    - {path: package.json, line: 10, quote: "\"db:migrate\": \"drizzle-kit migrate\","}
+    - {path: drizzle.config.ts, line: 5, quote: "out: './lib/db/migrations',"}
+    - {path: README.md, line: 52, quote: "pnpm db:migrate"}
+redis:
+  status: none
+  selectBy: {}
+  evidence:
+    - {path: package.json, line: 29, quote: "\"postgres\": \"^3.4.5\","}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: package.json, line: 6, quote: "\"start\": \"next start\","}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: POSTGRES_URL, secret: true, buildTime: true, note: "PostgreSQL URL; lib/db/drizzle.ts throws at import when it is missing, and the root layout imports it, so next build needs it too"}
+    - {name: AUTH_SECRET, secret: true, buildTime: false, note: "HS256 key for the session JWT; with no value the key is empty"}
+    - {name: STRIPE_SECRET_KEY, secret: true, buildTime: true, note: "Stripe API key; the pricing page lists Stripe prices and products when it is prerendered at build and every hour"}
+    - {name: STRIPE_WEBHOOK_SECRET, secret: true, buildTime: false, note: "signing secret of the Stripe webhook that points to /api/stripe/webhook"}
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public HTTPS URL; used in Stripe checkout and portal return URLs"}
+  optional: []
+  buildTime: [POSTGRES_URL, STRIPE_SECRET_KEY]
+  evidence:
+    - {path: .env.example, line: 3, quote: "POSTGRES_URL=postgresql://***"}
+    - {path: .env.example, line: 4, quote: "STRIPE_SECRET_KEY=sk_test_***"}
+    - {path: .env.example, line: 5, quote: "STRIPE_WEBHOOK_SECRET=whsec_***"}
+    - {path: .env.example, line: 6, quote: "BASE_URL=http://localhost:3000"}
+    - {path: .env.example, line: 7, quote: "AUTH_SECRET=***"}
+    - {path: lib/auth/session.ts, line: 6, quote: "const key = new TextEncoder().encode(process.env.AUTH_SECRET);"}
+    - {path: lib/payments/stripe.ts, line: 10, quote: "export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {"}
+    - {path: app/(dashboard)/pricing/page.tsx, line: 7, quote: "export const revalidate = 3600;"}
+    - {path: app/layout.tsx, line: 4, quote: "import { getUser, getTeamForUser } from '@/lib/db/queries';"}
+blockers:
+  expected:
+    - "No Dockerfile: the vendor must add a production Dockerfile (pnpm install, next build, next start on port 3000)"
+  mustNot:
+    - "Vercel deployment instructions must not block: the app is a normal Next.js server"
+    - "Stripe must not block: it is an external API reached with keys"
+    - "Redis, workers or S3 must not be required"
+vendorQuestions:
+  legitimate:
+    - "How does the image get POSTGRES_URL and STRIPE_SECRET_KEY at build time? (next build imports the database module and prerenders the pricing page with Stripe calls)"
+    - "Run the seed? (pnpm db:seed creates the user test@test.com with password admin123 and Stripe products)"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is a worker or Redis needed? (no)"
+traps:
+  - "lib/db/setup.ts is an interactive local setup script (Stripe CLI login, local Docker Postgres) that writes .env; it is not a migration or start step (lib/db/setup.ts:42)"
+  - "The seed creates a known login test@test.com / admin123; a public instance must not keep it (lib/db/seed.ts:43, :44)"
+  - "next is a canary version (15.6.0-canary.59) with experimental ppr; the build can depend on that exact version (package.json:27, next.config.ts:5)"
+  - "next build needs a reachable Stripe key and a POSTGRES_URL value; an empty build environment fails"
+  - "drizzle-kit is in dependencies, so the runtime image can run the migration if node_modules is kept"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile or compose file of any kind', evidence: trees/new-244.txt}
+  - {field: env.required buildTime, change: 'none: app/layout.tsx imports lib/db/queries, and lib/db/drizzle.ts throws at import without POSTGRES_URL', evidence: 'app/layout.tsx:4; lib/db/drizzle.ts:8-9'}
+  - {field: outcome, change: 'none: one Next.js process with PostgreSQL and no other datastore; only the missing Dockerfile needs a change; analog new-156 (no Dockerfile at all, DWC only)', evidence: 'package.json:5-6; drizzle.config.ts:6'}
+  - {field: all, change: verified, evidence: 25 citations checked}

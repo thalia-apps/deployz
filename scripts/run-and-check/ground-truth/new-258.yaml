@@ -1,0 +1,130 @@
+id: new-258
+repository: thomiceli/opengist
+commit: 2acf3dae87f9c3d536e0a870787941bbd06d0b46
+summary: >
+  Opengist is a self-hosted pastebin (a GitHub Gist clone) written in Go with a Vite front end. Every gist is a bare Git
+  repository on local disk under $OG_OPENGIST_HOME/repos/<user>/<gist>. The metadata database is SQLite by default
+  (opengist.db in the home directory), and PostgreSQL or MySQL work through OG_DB_URI. The root Dockerfile builds the app
+  from source (last stage prod), declares VOLUME /opengist, listens on HTTP 6157 and starts a built-in SSH server on 2222
+  by default. The schema is migrated at start (GORM AutoMigrate). The default code index is Bleve, a local index directory.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The core data (the Git repository of each gist) is durable only on a local disk path ($OG_OPENGIST_HOME/repos), with
+    no object-store or database backend. Deployz has no persistent volume or EFS, so every gist would be lost at the next
+    task restart or deploy. A PostgreSQL database keeps only the metadata. This is the same case as new-59 (Gitea).
+dockerfile:
+  accept: [Dockerfile]
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 21, quote: "COPY . ."}
+    - {path: Dockerfile, line: 46, quote: "RUN make"}
+    - {path: Dockerfile, line: 49, quote: "FROM alpine:3.24 AS prod"}
+    - {path: Dockerfile, line: 71, quote: "ENTRYPOINT [\"./docker/entrypoint.sh\"]"}
+runtime: {accept: [go]}
+port:
+  accept: [6157]
+  evidence:
+    - {path: config.yml, line: 57, quote: "http.port: 6157"}
+    - {path: internal/config/config.go, line: 151, quote: "c.HttpPort = \"6157\""}
+    - {path: Dockerfile, line: 68, quote: "EXPOSE 6157 6158 2222"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: config.yml, line: 54, quote: "http.host: 0.0.0.0"}
+    - {path: internal/config/config.go, line: 150, quote: "c.HttpHost = \"0.0.0.0\""}
+startCommand:
+  source: image
+  accept: ["./docker/entrypoint.sh", "/app/opengist/opengist --config /config.yml"]
+  evidence:
+    - {path: Dockerfile, line: 71, quote: "ENTRYPOINT [\"./docker/entrypoint.sh\"]"}
+    - {path: docker/entrypoint.sh, line: 27, quote: "exec su $USER -c \"OG_OPENGIST_HOME=/opengist /app/opengist/opengist --config /config.yml\""}
+healthPath:
+  accept: ["/healthcheck"]
+  # Returns 200 with a JSON body when the database answers a ping, 503 otherwise. No login is needed.
+  evidence:
+    - {path: internal/web/server/router.go, line: 41, quote: "r.GET(\"/healthcheck\", health.Healthcheck)"}
+    - {path: internal/web/handlers/health/healthcheck.go, line: 22, quote: "httpStatus = 503"}
+    - {path: Dockerfile, line: 70, quote: "HEALTHCHECK --interval=60s --timeout=30s --start-period=15s --retries=3 CMD curl -f http://localhost:6157/healthcheck || exit 1"}
+database:
+  status: optional
+  engines: [sqlite, postgres, mysql]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {OG_DB_URI: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [OG_DB_URI]
+  evidence:
+    - {path: config.yml, line: 27, quote: "db-uri: opengist.db"}
+    - {path: config.yml, line: 25, quote: "# PostgreSQL:    postgres://user:password@host:port/database"}
+    - {path: internal/config/config.go, line: 48, quote: "DBUri      string `yaml:\"db-uri\" env:\"OG_DB_URI\"`"}
+    - {path: internal/db/db.go, line: 73, quote: "case \"postgres\", \"postgresql\":"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: internal/db/db.go, line: 169, quote: "if err = db.AutoMigrate(&User{}, &Gist{}, &SSHKey{}, &AdminSetting{}, &Invitation{}, &WebAuthnCredential{}, &TOTP{}, &GistTopic{}, &GistLanguage{}, &GistInitQueue{}, &AccessToken{}, &ActionLock{}); err != nil {"}
+    - {path: internal/cli/main.go, line: 131, quote: "if err := db.Setup(config.C.DBUri); err != nil {"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: internal/cli/main.go, line: 45, quote: "stopCron := actions.StartCron()"}
+scheduledJobs:
+  status: embedded
+  items: [in-process cron actions (actions.StartCron) in the web process]
+  evidence:
+    - {path: internal/cli/main.go, line: 45, quote: "stopCron := actions.StartCron()"}
+storage:
+  local: required
+  paths: [/opengist/repos, /opengist/opengist.db, /opengist/opengist.index, /opengist/custom]
+  s3: none
+  s3SelectBy: {}
+  # Gists are bare Git repositories on local disk. No S3 or database backend exists for them.
+  evidence:
+    - {path: internal/git/commands.go, line: 23, quote: "ReposDirectory = \"repos\""}
+    - {path: internal/git/commands.go, line: 37, quote: "return filepath.Join(config.GetHomeDir(), ReposDirectory, strings.ToLower(user), gist)"}
+    - {path: Dockerfile, line: 69, quote: "VOLUME /opengist"}
+    - {path: docs/installation/docker.md, line: 25, quote: "- \"$HOME/.opengist:/opengist\""}
+env:
+  required:
+    - {name: OG_DB_URI, secret: true, buildTime: false, note: "postgres://user:password@host:5432/db; the default is SQLite in the home directory. Contains the DB password"}
+    - {name: OG_SECRET_KEY, secret: true, buildTime: false, note: "session and MFA encryption key; without it the app writes a random key to a file in the home directory, which is lost on restart"}
+    - {name: OG_EXTERNAL_URL, secret: false, buildTime: false, note: "public HTTPS URL; used for clone URLs and WebAuthn"}
+  optional: [OG_SSH_GIT_ENABLED, OG_HTTP_GIT_ENABLED, OG_INDEX, OG_LOG_LEVEL, OG_METRICS_ENABLED, OG_GITHUB_CLIENT_KEY, OG_GITHUB_SECRET, OG_OIDC_CLIENT_KEY, OG_OIDC_SECRET, OG_OIDC_DISCOVERY_URL]
+  buildTime: []
+  evidence:
+    - {path: internal/config/config.go, line: 40, quote: "SecretKey string `yaml:\"secret-key\" env:\"OG_SECRET_KEY\"`"}
+    - {path: internal/config/config.go, line: 45, quote: "ExternalUrl  string `yaml:\"external-url\" env:\"OG_EXTERNAL_URL\"`"}
+    - {path: internal/config/config.go, line: 321, quote: "SecretKey, _ = session.GenerateSecretKey(path)"}
+blockers:
+  expected:
+    - "Gist data is Git repositories on local disk ($OG_OPENGIST_HOME/repos, VOLUME /opengist) with no S3 or database backend; Fargate disk is ephemeral"
+  mustNot:
+    - "SQLite default must not be the only reason: PostgreSQL and MySQL work through OG_DB_URI"
+    - "The Dockerfile must not be called unbuildable: the prod stage builds from source with make"
+    - "Redis must not be required"
+vendorQuestions:
+  legitimate:
+    - "Where must gist Git repositories live durably? (local disk only; no S3 option)"
+  unnecessary:
+    - "Which port? (6157)"
+    - "Health path? (/healthcheck)"
+    - "Who runs migrations? (AutoMigrate at start)"
+traps:
+  - "OG_DB_URI moves only the metadata to PostgreSQL; the gists themselves stay as Git repositories on disk (internal/git/commands.go:37)"
+  - "The image starts a built-in SSH server on 2222 by default; an ALB cannot serve it, so OG_SSH_GIT_ENABLED=disabled is needed (config.yml:84, internal/cli/main.go:44)"
+  - "The Dockerfile has a dev stage (make watch, VOLUME) before the prod stage; the default last stage prod is the right one (Dockerfile:24, :49)"
+  - "Without OG_SECRET_KEY the key is generated and stored in the home directory, so sessions and MFA data break after a restart (internal/config/config.go:319-321)"
+  - "The Bleve code index is a local directory; meilisearch is the only external option (config.yml:30)"
+  - "The Helm chart uses PVCs (helm/opengist/templates/pvc.yaml), which confirms the durable disk need"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.accept, change: "none: the prod stage copies /config.yml, the binary and docker/ from the build stage that runs make on the full source", evidence: "Dockerfile:44-46,49,62-64"}
+  - {field: outcome.accept, change: "none: gists are bare Git repositories under the home directory with no object-store backend; same case as new-59 (Gitea)", evidence: "internal/git/commands.go:23,37; reasons.txt new-59"}
+  - {field: all, change: verified, evidence: "29 citations checked"}

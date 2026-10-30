@@ -1,0 +1,118 @@
+id: new-242
+repository: lissy93/web-check
+commit: bea963c2d07284897e8fa6315ccb730a4ec19add
+summary: >
+  Web-Check is an OSINT tool that analyses a website. One Express server (server.js) serves the API (one handler per file in
+  api/) and the Astro GUI built to dist/ (node adapter, middleware mode). The root Dockerfile is multi-stage: it installs
+  with yarn, runs `yarn build --production`, and the slim final stage adds system Chromium, traceroute and tini, then runs
+  `node server.js` on PORT (default 3000). /healthz returns 200 JSON. There is no database, cache, worker or storage. All
+  external API keys are optional. render.yaml and fly.toml deploy the prebuilt image or the same Dockerfile.
+outcome:
+  accept: [DEPLOYABLE]
+  reason: >
+    The root Dockerfile builds the app from source, and the image runs one Node process on one HTTP port (3000) with an
+    unauthenticated /healthz route. Chromium runs inside the same process tree for screenshots, not as a separate server.
+    No datastore is needed, so only settings are needed (TRUST_PROXY, optional API keys), as new-141.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker-compose.yml, reason: "uses the prebuilt image lissy93/web-check; no build"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 38, quote: "RUN yarn build --production"}
+    - {path: Dockerfile, line: 52, quote: "apt-get install -y --no-install-recommends chromium traceroute tini && \\"}
+    - {path: Dockerfile, line: 56, quote: "RUN node --input-type=module -e \"await import('/app/dist/server/entry.mjs');\""}
+    - {path: Dockerfile, line: 78, quote: "CMD [\"node\", \"server.js\"]"}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  evidence:
+    - {path: server.js, line: 36, quote: "const port = process.env.PORT || 3000; // The port to run the server on"}
+    - {path: Dockerfile, line: 59, quote: "EXPOSE 3000"}
+    - {path: fly.toml, line: 7, quote: "internal_port = 3000"}
+bindAllInterfaces:
+  value: true
+  # app.listen(port) with no host binds all interfaces.
+  evidence:
+    - {path: server.js, line: 264, quote: "app.listen(port, () => {"}
+startCommand:
+  source: image
+  accept: ["node server.js"]
+  evidence:
+    - {path: Dockerfile, line: 76, quote: "ENTRYPOINT [\"/usr/bin/tini\", \"--\"]"}
+    - {path: Dockerfile, line: 78, quote: "CMD [\"node\", \"server.js\"]"}
+healthPath:
+  accept: ["/healthz", "/check"]
+  # /healthz is registered before the GUI and always returns 200 JSON. A bare / answers 302 to /check.
+  evidence:
+    - {path: server.js, line: 57, quote: "app.get('/healthz', (req, res) => {"}
+    - {path: server.js, line: 59, quote: "res.status(200).json({"}
+    - {path: server.js, line: 196, quote: "return res.redirect(302, '/check');"}
+    - {path: render.yaml, line: 22, quote: "healthCheckPath: /healthz"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [TRUST_PROXY, PORT, GOOGLE_CLOUD_API_KEY, TRANCO_USERNAME, TRANCO_API_KEY, CLOUDMERSIVE_API_KEY, SHODAN_API_KEY, GITHUB_TOKEN, CERTSPOTTER_TOKEN, CHROME_PATH, DISABLE_GUI, PUBLIC_API_TIMEOUT_LIMIT, API_CORS_ORIGIN, API_ENABLE_RATE_LIMIT, API_DISABLED_CHECKS, API_ENABLED_CHECKS, API_BLOCKED_HOSTS, PUBLIC_API_ENDPOINT, ENABLE_ANALYTICS, BOSS_SERVER]
+  buildTime: [PLATFORM, OUTPUT, PUBLIC_API_ENDPOINT]
+  # Behind the ALB, TRUST_PROXY=1 makes the rate limiter see client IPs (render.yaml sets it).
+  evidence:
+    - {path: .env.sample, line: 3, quote: "# Everything is optional, but some features won't work without external API access"}
+    - {path: .env.sample, line: 30, quote: "# TRUST_PROXY='1'                 # Set if running behind a reverse proxy (Traefik, nginx, etc)."}
+    - {path: render.yaml, line: 27, quote: "- key: TRUST_PROXY"}
+    - {path: astro.config.mjs, line: 30, quote: "const deployTarget = unwrapEnvVar('PLATFORM', guessPlatform()).toLowerCase();"}
+blockers:
+  expected: []
+  mustNot:
+    - "Chromium must not be reported as a second server or image: it is installed in the same image and launched by the API handlers"
+    - "vercel.json, netlify.toml, fly.toml and render.yaml must not be read as a required platform: the Dockerfile builds a node target by default"
+    - "render.yaml must not provision a schedule or worker: it has one web service with runtime image"
+    - "Missing database, Redis, workers or S3 must not be reported: none are used"
+    - "Optional external API keys must not be required: the app runs without them and skips those checks"
+vendorQuestions:
+  legitimate:
+    - "The tool scans any host, including port scans and traceroute; should API_BLOCKED_HOSTS or API_DISABLED_CHECKS limit it on a public deployment?"
+  unnecessary:
+    - "Which port? (3000)"
+    - "Health path? (/healthz)"
+    - "Database, Redis, worker or storage? (none)"
+traps:
+  - "The comment says EXPOSE cannot follow PORT; the real port is PORT, default 3000 (Dockerfile:58-59, server.js:36)"
+  - "/ answers 302 to /check for self-hosted users, so a health check on / without redirect support fails (server.js:195-196)"
+  - "Chromium for screenshots and Lighthouse needs memory; the Small size (512 MiB) may be too small, fly.toml uses 1 GB (fly.toml:15)"
+  - "astro.config.mjs imports the Vercel and Netlify adapters; they are dev dependencies used only at build, and the default target is node (astro.config.mjs:11-12, :26)"
+  - "@sparticuz/chromium and puppeteer are in dependencies, but the image uses the system Chromium through CHROME_PATH (Dockerfile:62-63)"
+openQuestions: []
+crossReview:
+  - {field: "dockerfile.accept", change: "none: package.json and yarn.lock are in git; .dockerignore excludes only node_modules, dist and platform caches; the build stage checks that the compiled server loads", evidence: "Dockerfile:14,31,36-38,56; .dockerignore:2-10"}
+  - {field: "healthPath", change: "none: /healthz returns 200 JSON; / answers 302 to /check unless BOSS_SERVER or DISABLE_GUI is set", evidence: "server.js:57-59,194-196"}
+  - {field: "all", change: "verified", evidence: "18 citations checked"}

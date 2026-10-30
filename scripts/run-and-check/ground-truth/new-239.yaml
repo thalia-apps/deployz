@@ -1,0 +1,140 @@
+id: new-239
+repository: arp242/goatcounter
+commit: c031008a8d28c85b36708824f23b28957e7ed262
+summary: >
+  GoatCounter is a Go web analytics server. Templates and static files are embedded in the one binary. The root
+  Dockerfile builds the binary with CGO (for SQLite) in golang:latest and runs it on alpine with ENTRYPOINT goatcounter and
+  CMD `serve -automigrate`, listening on :8080 over plain HTTP. The database is chosen by the -db flag or GOATCOUNTER_DB:
+  SQLite in ./goatcounter-data (default) or PostgreSQL ("postgresql+<connect>"). Migrations and schema creation run at
+  start. Pageview persistence and stats run as in-process cron goroutines. No Redis, no S3, no separate worker. The first
+  site and user are made with the web wizard on / or the `goatcounter db create site` CLI.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The root Dockerfile builds the app from source, and the image runs one process on one HTTP port (8080). A Deployz deploy
+    sets GOATCOUNTER_DB to the RDS PostgreSQL connection; this is a setting only. Without it the app uses SQLite in a
+    VOLUME directory on ephemeral disk. The Dockerfile uses the BuildKit labs syntax (copy --exclude) and a heredoc RUN,
+    which is a build risk on a builder without BuildKit; a read that counts this, or the SQLite default, as a needed change
+    also accepts DEPLOYABLE_WITH_CHANGES (as new-121).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: compose.yaml, reason: "local example: a tuned postgres:18 service with a volume, and two goatcounter profiles that build the same root Dockerfile"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 1, quote: "# syntax=docker/dockerfile:1-labs"}
+    - {path: Dockerfile, line: 7, quote: "copy --exclude=goatcounter-data --exclude=Dockerfile . /goatcounter"}
+    - {path: Dockerfile, line: 10, quote: "run go build -trimpath -ldflags='-s -w -extldflags=-static' \\"}
+    - {path: Dockerfile, line: 17, quote: "run <<EOF"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 202, quote: "listen       = f.String(\":8080\", \"listen\")"}
+    - {path: Dockerfile, line: 27, quote: "expose     80 443 8080"}
+    - {path: compose.yaml, line: 46, quote: "ports:      ['127.0.0.1:8080:8080']"}
+bindAllInterfaces:
+  value: true
+  # ":8080" has no host part, so Go listens on all interfaces.
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 202, quote: "listen       = f.String(\":8080\", \"listen\")"}
+startCommand:
+  source: image
+  accept: ["goatcounter serve -automigrate", "serve -automigrate"]
+  evidence:
+    - {path: Dockerfile, line: 31, quote: "entrypoint [\"goatcounter\"]"}
+    - {path: Dockerfile, line: 32, quote: "cmd        [\"serve\", \"-automigrate\"]"}
+healthPath:
+  accept: ["/robots.txt", "/"]
+  # Every backend route loads the site from the Host header. With no site, / shows the new-site wizard (200) and other paths
+  # answer 307 to /. With one site, any Host is served and /robots.txt returns 200 text. A bare / then needs a login.
+  evidence:
+    - {path: handlers/backend.go, line: 92, quote: "rr.Get(\"/robots.txt\", zhttp.HandlerRobots([][]string{{\"User-agent: *\", \"Disallow: /\"}}))"}
+    - {path: handlers/mw.go, line: 184, quote: "if err2 == nil && len(sites) == 1 {"}
+    - {path: handlers/mw.go, line: 229, quote: "w.WriteHeader(307)"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {GOATCOUNTER_DB: "postgresql+postgres://<user>:<password>@<host>:5432/<db>?sslmode=require"}
+  connectionVars: [GOATCOUNTER_DB]
+  # All serve flags take defaults from GOATCOUNTER_<FLAG>. PG* libpq variables also work with -db postgresql.
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 197, quote: "dbConnect    = f.String(defaultDB(), \"db\")"}
+    - {path: cmd/goatcounter/serve.go, line: 217, quote: "if err := f.Parse(zli.FromEnv(\"GOATCOUNTER\")); err != nil {"}
+    - {path: cmd/goatcounter/serve.go, line: 411, quote: "return \"sqlite+./goatcounter-data/db.sqlite3\""}
+    - {path: cmd/goatcounter/db.go, line: 247, quote: "\"postgresql+[..]\" (or \"postgres+[..]\") for PostgreSQL."}
+    - {path: README.md, line: 177, quote: "-e GOATCOUNTER_DB='postgresql+postgresql://goatcounter:goatcounter@postgres:5432/goatcounter?sslmode=disable' \\"}
+migrations:
+  mode: startup
+  accept: []
+  # -automigrate in the image CMD runs all pending migrations; the schema is created at first connect.
+  evidence:
+    - {path: Dockerfile, line: 32, quote: "cmd        [\"serve\", \"-automigrate\"]"}
+    - {path: cmd/goatcounter/serve.go, line: 251, quote: "map[bool][]string{true: {\"all\"}, false: {\"pending\"}}[automigrate.Bool()],"}
+    - {path: README.md, line: 128, quote: "The database will be created automatically if possible; if you want to create it"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # Background tasks (persist pageviews, stats, email reports) run as goroutines in the serve process.
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 275, quote: "cron.Start(context.WithoutCancel(ctx))"}
+scheduledJobs:
+  status: embedded
+  items: [persist pageviews every 10 seconds, stats and email reports in cron/]
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 244, quote: "cron.SetPersistInterval(time.Duration(storeEvery.Int()) * time.Second)"}
+    - {path: cmd/goatcounter/serve.go, line: 275, quote: "cron.Start(context.WithoutCancel(ctx))"}
+storage:
+  local: conditional
+  paths: [/home/goatcounter/goatcounter-data]
+  s3: none
+  s3SelectBy: {}
+  # Only the SQLite default (and an optional MaxMind download) uses goatcounter-data. With PostgreSQL nothing durable stays on disk.
+  evidence:
+    - {path: Dockerfile, line: 30, quote: "volume     [\"/home/goatcounter/goatcounter-data\"]"}
+    - {path: cmd/goatcounter/serve.go, line: 411, quote: "return \"sqlite+./goatcounter-data/db.sqlite3\""}
+env:
+  required:
+    - {name: GOATCOUNTER_DB, secret: true, buildTime: false, note: "postgresql+postgres://user:pass@host:5432/db?sslmode=require; without it the app uses SQLite on ephemeral disk"}
+  optional: [GOATCOUNTER_LISTEN, GOATCOUNTER_TLS, GOATCOUNTER_SMTP, GOATCOUNTER_EMAIL_FROM, GOATCOUNTER_ERRORS, GOATCOUNTER_GEODB, GOATCOUNTER_BASE_PATH, GOATCOUNTER_STATIC, GOATCOUNTER_RATELIMIT, GOATCOUNTER_STORE_EVERY, GOATCOUNTER_DBCONN, GOATCOUNTER_API_MAX, GOATCOUNTER_JSON, GOATCOUNTER_DEBUG, GOATCOUNTER_TMPDIR, PGHOST, PGDATABASE, PGUSER, PGPASSWORD]
+  buildTime: []
+  evidence:
+    - {path: cmd/goatcounter/serve.go, line: 57, quote: "All of the flags take the defaults from $GOATCOUNTER_«FLAG», where «FLAG» is"}
+    - {path: cmd/goatcounter/serve.go, line: 203, quote: "smtp         = f.String(\"stdout\", \"smtp\")"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL is selected by GOATCOUNTER_DB"
+    - "The VOLUME line must not count as a durable volume requirement: it holds only the SQLite default and optional GeoIP files"
+    - "EXPOSE 80 443 must not make the port ambiguous or require TLS: the default -tls is http and -listen is :8080"
+    - "compose.yaml postgres service must not count as a second application service"
+    - "The cron goroutines must not be reported as a separate worker or a scheduled job to provision"
+vendorQuestions:
+  legitimate:
+    - "How is the first site and user created? (the wizard on / of the public URL, or `goatcounter db create site -vhost=.. -user.email=..` from the same image)"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Which database? (PostgreSQL through GOATCOUNTER_DB)"
+    - "Is a migration command needed? (-automigrate is in the image CMD)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "EXPOSE lists 80, 443 and 8080; only 8080 is the default listen port (Dockerfile:27, cmd/goatcounter/serve.go:202)"
+  - "The PostgreSQL value needs the engine prefix: postgresql+postgres://..., not a plain postgres:// URL (cmd/goatcounter/db.go:247)"
+  - "Until a site exists, every path except / answers 307 to /, and / shows a public new-site wizard; the first visitor can claim the instance (handlers/mw.go:203, :229)"
+  - "Sites are matched by Host; with one site any Host is served, but a second site needs its configured vhost (handlers/mw.go:178-185)"
+  - "README production example uses -listen=:443 -tls=tls,rdr,acme; behind an ALB the default plain HTTP on 8080 is correct (README.md:113)"
+  - "The labs syntax and heredoc RUN need BuildKit (Dockerfile:1, :17)"
+openQuestions:
+  - "Whether the Deployz builder supports the dockerfile:1-labs frontend for copy --exclude"
+crossReview:
+  - {field: "outcome.accept", change: "none: the SQLite default with GOATCOUNTER_DB for PostgreSQL is the same pair as new-121", evidence: "cmd/goatcounter/serve.go:197,217,411; reasons.txt new-121"}
+  - {field: "port / bindAllInterfaces", change: "none: -listen defaults to :8080 and -tls to http, so plain HTTP on all interfaces", evidence: "cmd/goatcounter/serve.go:202,204"}
+  - {field: "healthPath", change: "none: with no site, paths other than / answer 307 to /, and / shows the wizard; with one site any Host is served", evidence: "handlers/mw.go:181-205,226-229"}
+  - {field: "all", change: "verified", evidence: "28 citations checked"}

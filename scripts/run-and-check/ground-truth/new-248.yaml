@@ -1,0 +1,147 @@
+id: new-248
+repository: jhipster/jhipster-sample-app
+commit: 6b000b5d23a36c45e01472471b84a44fa2464044
+summary: >
+  The JHipster sample app is a Spring Boot (Java 21, Maven) monolith with an Angular client that Maven builds through the
+  frontend plugin. One JVM process serves the REST API, the Angular UI and the Spring Boot actuator on HTTP port 8080.
+  The `prod` Maven profile adds the PostgreSQL driver and activates the `prod` Spring profile; the default Maven profile is
+  `dev` (H2 and Spring Docker Compose support). Liquibase applies the schema when the app starts. The container image is
+  made with the Jib Maven plugin (`npm run java:docker`), not with a Dockerfile. The only Dockerfile in the repository is
+  the VS Code devcontainer image.
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The architecture fits Deployz (one web process on port 8080, PostgreSQL through SPRING_DATASOURCE_*, Liquibase at start,
+    /management/health without login, no Redis, no worker). But no Dockerfile builds a production image: the image comes
+    from the Jib Maven plugin, and the only Dockerfile is a devcontainer image with no application code. A deploy needs a
+    new multi-stage Dockerfile (`./mvnw -Pprod -DskipTests package`, then `java -jar` on a JRE image). This is the "no
+    production Dockerfile, only a development one" case, as new-130 and new-156. new-134 also accepts NOT_DEPLOYABLE
+    only because its Dockerfiles copy CI artefacts; that strict read does not apply here.
+dockerfile:
+  accept: []
+  reject:
+    - {path: .devcontainer/Dockerfile, reason: "VS Code devcontainer base image (mcr.microsoft.com/vscode/devcontainers/java) with optional Maven, Gradle and Node; it copies no application code, builds nothing and has no start command"}
+  target: null
+  context: .
+  evidence:
+    - {path: .devcontainer/Dockerfile, line: 5, quote: "FROM mcr.microsoft.com/vscode/devcontainers/java:0-${VARIANT}"}
+    - {path: package.json, line: 49, quote: "\"java:docker\": \"./mvnw -ntp verify -DskipTests -Pprod jib:dockerBuild\","}
+    - {path: pom.xml, line: 48, quote: "<jib-maven-plugin.image>eclipse-temurin:25-jre-noble</jib-maven-plugin.image>"}
+    - {path: README.md, line: 116, quote: "./mvnw -Pprod clean verify"}
+runtime: {accept: [java]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: src/main/resources/config/application-prod.yml, line: 69, quote: "port: 8080"}
+    - {path: pom.xml, line: 649, quote: "<port>8080</port>"}
+    - {path: src/main/docker/app.yml, line: 15, quote: "- 127.0.0.1:8080:8080"}
+bindAllInterfaces:
+  value: true
+  # Spring Boot binds all interfaces when server.address is not set; no server.address exists in the config.
+  evidence:
+    - {path: src/main/resources/config/application-prod.yml, line: 69, quote: "port: 8080"}
+startCommand:
+  source: explicit
+  # A vendor-written Dockerfile must set it. The Jib image runs /entrypoint.sh (java -cp ...); the README runs the jar.
+  accept: ["java -jar", "/entrypoint.sh"]
+  evidence:
+    - {path: README.md, line: 123, quote: "java -jar target/*.jar"}
+    - {path: src/main/docker/jib/entrypoint.sh, line: 40, quote: "exec java ${JAVA_OPTS} -noverify -XX:+AlwaysPreTouch -cp /app/resources/:/app/classes/:/app/libs/* \"io.github.jhipster.sample.JhipsterSampleApplicationApp\"  \"$@\""}
+healthPath:
+  accept: ["/management/health", "/management/health/liveness", "/management/health/readiness"]
+  # The health group includes the db check; mail health is disabled. / serves the Angular index.html and is also anonymous.
+  evidence:
+    - {path: src/main/java/io/github/jhipster/sample/config/SecurityConfiguration.java, line: 77, quote: ".requestMatchers(\"/management/health\").permitAll()"}
+    - {path: src/main/java/io/github/jhipster/sample/config/SecurityConfiguration.java, line: 78, quote: ".requestMatchers(\"/management/health/**\").permitAll()"}
+    - {path: src/main/resources/config/application.yml, line: 30, quote: "base-path: /management"}
+    - {path: src/main/docker/app.yml, line: 20, quote: "/management/health HTTP/1.0"}
+database:
+  status: required
+  engines: [postgres, h2]
+  default: postgres
+  deployzEngine: postgres
+  # The prod build (Maven -Pprod) has only the PostgreSQL driver and points at localhost:5432 until SPRING_DATASOURCE_URL is set.
+  # H2 is only in the dev Maven profile.
+  selectBy: {SPRING_DATASOURCE_URL: "jdbc:postgresql://<host>:5432/<db>"}
+  connectionVars: [SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD]
+  evidence:
+    - {path: src/main/resources/config/application-prod.yml, line: 36, quote: "url: jdbc:postgresql://localhost:5432/jhipsterSampleApplication"}
+    - {path: pom.xml, line: 1020, quote: "<artifactId>postgresql</artifactId>"}
+    - {path: src/main/docker/app.yml, line: 10, quote: "- SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/jhipsterSampleApplication"}
+    - {path: src/main/docker/jib/entrypoint.sh, line: 32, quote: "file_env 'SPRING_DATASOURCE_URL'"}
+migrations:
+  mode: startup
+  accept: []
+  # Liquibase runs inside the app at start (LiquibaseConfiguration) unless the no-liquibase profile is active.
+  evidence:
+    - {path: src/main/java/io/github/jhipster/sample/config/LiquibaseConfiguration.java, line: 33, quote: "public SpringLiquibase liquibase("}
+    - {path: src/main/resources/config/application-prod.yml, line: 42, quote: "contexts: prod"}
+    - {path: src/main/resources/config/liquibase/master.xml, line: 1, quote: "<?xml version=\"1.0\" encoding=\"utf-8\"?>"}
+redis:
+  status: none
+  selectBy: {}
+  # The cache is in-process Ehcache.
+  evidence:
+    - {path: pom.xml, line: 245, quote: "<artifactId>ehcache</artifactId>"}
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: src/main/docker/jib/entrypoint.sh, line: 40, quote: "\"io.github.jhipster.sample.JhipsterSampleApplicationApp\""}
+scheduledJobs:
+  status: embedded
+  items: [Spring task scheduling inside the web process]
+  evidence:
+    - {path: src/main/resources/config/application.yml, line: 160, quote: "scheduling:"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: SPRING_DATASOURCE_URL, secret: false, buildTime: false, note: "jdbc:postgresql://<host>:5432/<db>; the prod default is localhost:5432. JDBC form, not a postgres:// URL"}
+    - {name: SPRING_DATASOURCE_USERNAME, secret: false, buildTime: false, note: "database user; the prod config sets none"}
+    - {name: SPRING_DATASOURCE_PASSWORD, secret: true, buildTime: false, note: "database password"}
+    - {name: JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET, secret: true, buildTime: false, note: "base64 JWT signing key; the @Value has no default and the sample value is only in the secret-samples profile, which prod does not load, so the app fails to start without it"}
+  optional: [SPRING_PROFILES_ACTIVE, SPRING_LIQUIBASE_URL, SPRING_LIQUIBASE_USER, SPRING_LIQUIBASE_PASSWORD, SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD, JHIPSTER_MAIL_BASE_URL, JHIPSTER_MAIL_FROM, JAVA_OPTS, _JAVA_OPTIONS, JHIPSTER_SLEEP]
+  buildTime: []
+  evidence:
+    - {path: src/main/java/io/github/jhipster/sample/config/SecurityJwtConfiguration.java, line: 25, quote: "@Value(\"${jhipster.security.authentication.jwt.base64-secret}\")"}
+    - {path: src/main/resources/config/application-secret-samples.yml, line: 11, quote: "# Samples for required secrets to be used in development and ci using prod profile."}
+    - {path: src/main/docker/app.yml, line: 8, quote: "- SPRING_PROFILES_ACTIVE=prod,api-docs,secret-samples"}
+    - {path: src/main/resources/config/application-prod.yml, line: 97, quote: "base-url: http://my-server-url-to-change # Modify according to your server's URL"}
+blockers:
+  expected:
+    - "No production Dockerfile: the image is built by the Jib Maven plugin (jib:dockerBuild), and the only Dockerfile is the devcontainer image (.devcontainer/Dockerfile)"
+  mustNot:
+    - "The devcontainer Dockerfile must not be chosen as the app image"
+    - "H2 must not be reported as the production database: it exists only in the dev Maven profile"
+    - "Spring Docker Compose support must not be a blocker: spring-boot-docker-compose is an optional dependency of the dev profile"
+    - "Redis, a worker or S3 must not be reported: the cache is in-process Ehcache and no file storage exists"
+    - "A separate migration command must not be required: Liquibase runs at start"
+    - "The JHipster Control Center, Sonar, Prometheus and Grafana compose files must not count as app services"
+vendorQuestions:
+  legitimate:
+    - "Which production image should Deployz build? The repo has only a Jib Maven setup and a devcontainer Dockerfile (a vendor Dockerfile needs ./mvnw -Pprod package and java -jar)"
+    - "Which SMTP server sends account activation and password reset email? (spring.mail.host defaults to localhost:25)"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/management/health)"
+    - "Who runs migrations? (Liquibase at start)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "Jib, not a Dockerfile, makes the image (pom.xml:627-676, package.json:49); Deployz CodeBuild needs a Dockerfile"
+  - "The default Maven profile is dev (pom.xml:856-859), which adds H2, devtools and Docker Compose support; a plain ./mvnw package does not build the prod app with the PostgreSQL driver"
+  - "The JWT secret sample is in application-secret-samples.yml, which src/main/docker/app.yml activates; a real deploy must not use that sample and must set its own secret (application-secret-samples.yml:20)"
+  - "Liquibase loads users admin/admin and user/user from config/liquibase/data/user.csv; the default admin password must be changed at once (user.csv:2)"
+  - "The datasource URL is JDBC (jdbc:postgresql://...), not a postgres:// DATABASE_URL"
+  - "src/main/docker holds many compose files (services, monitoring, sonar, control center); only app.yml plus postgresql.yml describe the app"
+openQuestions:
+  - "Which JRE base image a vendor Dockerfile should use (Jib uses eclipse-temurin:25-jre-noble while pom.xml compiles for Java 21)"
+crossReview:
+  - {field: dockerfile, change: 'none: the only Dockerfile is the devcontainer; the image comes from Jib', evidence: 'trees/new-248.txt; package.json:49'}
+  - {field: env.required JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET, change: 'none: application-prod.yml sets only the token validity under jhipster.security.authentication.jwt, no base64-secret', evidence: 'src/main/resources/config/application-prod.yml:90-95; SecurityJwtConfiguration.java:25'}
+  - {field: outcome, change: 'none: fitting Spring Boot monolith with no production Dockerfile; analogs new-130 and new-156', evidence: 'src/main/resources/config/application-prod.yml:36,69'}
+  - {field: all, change: verified, evidence: 28 citations checked}

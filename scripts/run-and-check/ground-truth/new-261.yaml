@@ -1,0 +1,121 @@
+id: new-261
+repository: LemmyNet/lemmy
+commit: 75a7b061d14cf7e500b94d48506b11578f0b1005
+summary: >
+  Lemmy is the Rust (actix-web, Diesel) back end of a federated link aggregator. It serves only the HTTP API and
+  ActivityPub on port 8536; the browser UI is lemmy-ui, a separate repository and image, and image hosting is pict-rs,
+  another separate service. docker/Dockerfile builds lemmy_server from source with the repository root as context, but
+  crates/email/build.rs reads translations/backend/ from the git submodule crates/email/translations, which a repository
+  archive does not contain. The server reads a required HJSON config file (config/config.hjson or LEMMY_CONFIG_LOCATION)
+  that must set the hostname; compose mounts it into the container. PostgreSQL is required and migrations run at start.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    No Dockerfile builds the server from the repository archive: the email crate build script reads the translation
+    files of a git submodule that the archive does not include (as new-114). The product also needs a second application
+    image (lemmy-ui) for the browser UI and the pict-rs service for images, and the server expects a mounted HJSON config
+    file with the hostname. Deployz runs one image and does not mount configuration files.
+dockerfile:
+  accept: []
+  reject:
+    - {path: docker/Dockerfile, reason: "builds from the repository root, but crates/email/build.rs reads translations/backend/ from the submodule crates/email/translations, which a repository archive does not contain; the default RUST_RELEASE_MODE is debug"}
+  target: null
+  context: .
+  evidence:
+    - {path: .gitmodules, line: 2, quote: "path = crates/email/translations"}
+    - {path: crates/email/build.rs, line: 6, quote: "for path in read_dir(\"translations/backend/\")? {"}
+    - {path: docker/Dockerfile, line: 4, quote: "ARG RUST_RELEASE_MODE=debug"}
+    - {path: docker/docker-compose.yml, line: 27, quote: "dockerfile: docker/Dockerfile"}
+runtime: {accept: [rust]}
+port:
+  accept: [8536]
+  evidence:
+    - {path: crates/utils/src/settings/structs.rs, line: 35, quote: "#[default(8536)]"}
+    - {path: docker/Dockerfile, line: 74, quote: "EXPOSE 8536"}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: crates/utils/src/settings/structs.rs, line: 31, quote: "#[default(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)))]"}
+startCommand:
+  source: image
+  accept: ["lemmy_server"]
+  evidence:
+    - {path: docker/Dockerfile, line: 73, quote: "ENTRYPOINT [\"lemmy_server\"]"}
+healthPath:
+  accept: ["/nodeinfo/2.1", "/api/v4/site", "/api/v3/site"]
+  # No dedicated health route; nodeinfo is public. The server returns 503 while migrations run.
+  evidence:
+    - {path: crates/routes/src/nodeinfo.rs, line: 19, quote: "\"/nodeinfo/2.1\","}
+    - {path: crates/server/src/lib.rs, line: 173, quote: "// return error 503 while running db migrations and startup tasks"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {}
+  connectionVars: [LEMMY_DATABASE_URL]
+  evidence:
+    - {path: crates/utils/src/settings/mod.rs, line: 50, quote: "if let Ok(url) = env::var(\"LEMMY_DATABASE_URL\") {"}
+    - {path: docker/Dockerfile, line: 56, quote: "RUN apt update && apt install -y libssl-dev libpq-dev ca-certificates curl git"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: crates/diesel_utils/src/connection.rs, line: 164, quote: "crate::schema_setup::run(crate::schema_setup::Options::default().run(), &db_url)?;"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence:
+    - {path: crates/server/src/lib.rs, line: 249, quote: "let _scheduled_tasks = tokio::task::spawn(scheduled_tasks::setup(request_data.clone()));"}
+scheduledJobs:
+  status: embedded
+  items: [in-process scheduled tasks (scheduled_tasks::setup) in the server]
+  evidence:
+    - {path: crates/server/src/lib.rs, line: 247, quote: "if !args.disable_scheduled_tasks {"}
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  # Image uploads go to the separate pict-rs service, which keeps its own data volume.
+  evidence:
+    - {path: docker/docker-compose.yml, line: 64, quote: "image: asonix/pictrs:0.5"}
+    - {path: docker/docker-compose.yml, line: 79, quote: "- ./volumes/pictrs:/mnt:Z"}
+env:
+  required:
+    - {name: LEMMY_DATABASE_URL, secret: true, buildTime: false, note: "PostgreSQL URL; overrides database.connection in the config file"}
+    - {name: LEMMY_CONFIG_LOCATION, secret: false, buildTime: false, note: "path of the HJSON config file that sets the hostname; the default config/config.hjson is not in the image"}
+  optional: [LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS, LEMMY_DISABLE_SCHEDULED_TASKS, LEMMY_DISABLE_ACTIVITY_SENDING, RUST_LOG]
+  buildTime: []
+  evidence:
+    - {path: crates/utils/src/settings/mod.rs, line: 39, quote: "env::var(\"LEMMY_CONFIG_LOCATION\").unwrap_or_else(|_| DEFAULT_CONFIG_FILE.to_string());"}
+    - {path: crates/utils/src/settings/mod.rs, line: 43, quote: "Err(anyhow!(\"Hostname variable is not set!\").into())"}
+    - {path: docker/docker-compose.yml, line: 34, quote: "- ./lemmy.hjson:/config/config.hjson:Z"}
+blockers:
+  expected:
+    - "docker/Dockerfile cannot build from the archive: crates/email/build.rs reads translations/backend/ from the git submodule crates/email/translations"
+    - "The browser UI is a second application image (lemmy-ui) and image hosting needs the separate pict-rs service"
+    - "The server expects a mounted HJSON config file that sets the hostname"
+  mustNot:
+    - "PostgreSQL must not be a blocker: it is supported"
+    - "Redis must not be required"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8536)"
+    - "Who runs migrations? (at start, in build_db_pool)"
+traps:
+  - "The Dockerfile looks like a clean multi-stage source build, but the email crate needs submodule files at compile time (crates/email/build.rs:6, .gitmodules:2)"
+  - "The default RUST_RELEASE_MODE is debug, so a plain build gives a debug binary (docker/Dockerfile:4)"
+  - "LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS skips the file, but the hostname then stays at its default 'unset' and has no env variable (crates/utils/src/settings/mod.rs:18, structs.rs:27)"
+  - "This repository is the API only; compose pulls dessalines/lemmy-ui for the web UI (docker/docker-compose.yml:43)"
+  - "docker/federation/ holds a multi-instance federation test setup, not a deploy recipe"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.reject, change: "none: build.rs fails with ? when translations/backend/ is missing, and the tree has no file under crates/email/translations (submodule)", evidence: "crates/email/build.rs:6; tree listing"}
+  - {field: env.required, change: "none: without LEMMY_INITIALIZE_WITH_DEFAULT_SETTINGS the server reads the config file and fails when hostname is unset; no env sets the hostname", evidence: "crates/utils/src/settings/mod.rs:18-28,38-46"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

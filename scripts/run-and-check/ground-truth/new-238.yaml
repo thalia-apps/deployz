@@ -1,0 +1,140 @@
+id: new-238
+repository: usefathom/fathom
+commit: 2d895d8299d31c9957c806aa24720271668f3f09
+summary: >
+  Fathom Lite is a Go web analytics server (one binary, `fathom server`) with a Preact dashboard that gulp builds and packr2
+  embeds in the binary. The root Dockerfile is multi-stage: node builds the assets, golang builds the binary with packr2,
+  and alpine runs `./fathom server` on port 8080. The database is chosen by environment: SQLite (default, ./fathom.db),
+  MySQL or PostgreSQL (FATHOM_DATABASE_DRIVER or FATHOM_DATABASE_URL). Migrations run at start. The aggregator runs as a
+  goroutine in the web process. No Redis, no S3, no separate worker. The admin user is created with the `fathom user add` CLI.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The root Dockerfile builds the app from source, and the image runs one process on one port (8080) with an
+    unauthenticated /health route. A Deployz deploy must set FATHOM_DATABASE_URL to PostgreSQL (or the MySQL parts) and
+    FATHOM_SECRET; these are settings only. Without them the app uses SQLite on ephemeral disk and a random secret at each
+    start. A read that treats the SQLite default plus the env switch as a needed change also accepts DEPLOYABLE_WITH_CHANGES
+    (as new-41 and new-121).
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: docker-compose.yml, reason: "uses the prebuilt image usefathom/fathom:latest and a MySQL service with a local volume; not a build file"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 6, quote: "RUN npm install && NODE_ENV=production ./node_modules/gulp/bin/gulp.js"}
+    - {path: Dockerfile, line: 15, quote: "RUN make ARCH=${GOARCH} OS=${GOOS} docker"}
+    - {path: Dockerfile, line: 23, quote: "CMD [\"./fathom\", \"server\"]"}
+    - {path: Makefile, line: 22, quote: "GOOS=$(OS) GOARCH=$(ARCH) $(GOPATH)/bin/packr2 build -v -ldflags '-w $(LDFLAGS)' -o $(EXECUTABLE) $(MAIN_PKG)"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 18, quote: "EXPOSE 8080"}
+    - {path: pkg/cli/server.go, line: 23, quote: "EnvVar: \"FATHOM_SERVER_ADDR,PORT\","}
+    - {path: pkg/cli/server.go, line: 26, quote: "Value:  \":8080\","}
+bindAllInterfaces:
+  value: true
+  # The address ":8080" has no host part, so Go listens on all interfaces.
+  evidence:
+    - {path: pkg/cli/server.go, line: 26, quote: "Value:  \":8080\","}
+startCommand:
+  source: image
+  accept: ["./fathom server"]
+  evidence:
+    - {path: Dockerfile, line: 23, quote: "CMD [\"./fathom\", \"server\"]"}
+healthPath:
+  accept: ["/health", "/"]
+  # /health pings the database and returns 200 or 503; no authentication. / serves the embedded index.html.
+  evidence:
+    - {path: pkg/api/routes.go, line: 34, quote: "r.Handle(\"/health\", HandlerFunc(api.Health)).Methods(http.MethodGet)"}
+    - {path: pkg/api/health.go, line: 12, quote: "w.WriteHeader(http.StatusOK)"}
+    - {path: Dockerfile, line: 19, quote: "HEALTHCHECK --retries=10 CMD [\"wget\", \"-qO-\", \"http://localhost:8080/health\"]"}
+    - {path: pkg/api/routes.go, line: 39, quote: "r.Path(\"/\").Handler(serveFileHandler(box, \"index.html\"))"}
+database:
+  status: optional
+  engines: [sqlite, mysql, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {FATHOM_DATABASE_URL: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [FATHOM_DATABASE_URL, FATHOM_DATABASE_DRIVER, FATHOM_DATABASE_HOST, FATHOM_DATABASE_NAME, FATHOM_DATABASE_USER, FATHOM_DATABASE_PASSWORD, FATHOM_DATABASE_SSLMODE]
+  # The driver becomes postgres only when the URL scheme is exactly "postgres" (not "postgresql"). Otherwise set
+  # FATHOM_DATABASE_DRIVER=postgres with the separate parts. lib/pq defaults to sslmode=require, which RDS accepts.
+  evidence:
+    - {path: pkg/datastore/sqlstore/config.go, line: 11, quote: "Driver   string `default:\"sqlite3\"`"}
+    - {path: pkg/config/config.go, line: 61, quote: "if u.Scheme == \"postgres\" {"}
+    - {path: pkg/datastore/sqlstore/config.go, line: 25, quote: "if c.URL != \"\" {"}
+    - {path: docs/Configuration.md, line: 34, quote: "| FATHOM_DATABASE_DRIVER | `sqlite3` | The database driver to use: `mysql`, `postgres` or `sqlite3`"}
+    - {path: docker-compose.yml, line: 11, quote: "- \"FATHOM_DATABASE_DRIVER=mysql\""}
+migrations:
+  mode: startup
+  accept: []
+  # sql-migrate applies the embedded migrations for the selected driver when the datastore opens.
+  evidence:
+    - {path: pkg/datastore/sqlstore/sqlstore.go, line: 52, quote: "db.Migrate()"}
+    - {path: pkg/datastore/sqlstore/sqlstore.go, line: 73, quote: "n, err := migrate.Exec(db.DB.DB, db.Config.Driver, migrationSource, migrate.Up)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # The pageview buffer worker and the aggregator are goroutines started by the /collect handler in the web process.
+  evidence:
+    - {path: pkg/api/collect.go, line: 42, quote: "go c.aggregate()"}
+    - {path: pkg/api/collect.go, line: 43, quote: "go c.worker(bufferCap, bufferTimeout)"}
+scheduledJobs:
+  status: embedded
+  items: [aggregation of pageviews every minute]
+  evidence:
+    - {path: pkg/api/collect.go, line: 112, quote: "timeout := 1 * time.Minute"}
+storage:
+  local: conditional
+  paths: [/app/fathom.db]
+  s3: none
+  s3SelectBy: {}
+  # Only the SQLite default writes to local disk. With PostgreSQL or MySQL no local state remains.
+  evidence:
+    - {path: pkg/datastore/sqlstore/config.go, line: 16, quote: "Name     string `default:\"fathom.db\"`"}
+    - {path: docs/Configuration.md, line: 3, quote: "If you supply no configuration values then Fathom will default to using a SQLite database in the current working directory."}
+env:
+  required:
+    - {name: FATHOM_DATABASE_URL, secret: true, buildTime: false, note: "postgres://user:pass@host:5432/db (scheme must be postgres); without it the app uses SQLite on ephemeral disk"}
+    - {name: FATHOM_SECRET, secret: true, buildTime: false, note: "signs session cookies; if empty a random value is made at each start, so logins end on every restart"}
+  optional: [FATHOM_DATABASE_DRIVER, FATHOM_DATABASE_HOST, FATHOM_DATABASE_NAME, FATHOM_DATABASE_USER, FATHOM_DATABASE_PASSWORD, FATHOM_DATABASE_SSLMODE, FATHOM_SERVER_ADDR, PORT, FATHOM_GZIP, FATHOM_DEBUG, FATHOM_LETS_ENCRYPT, FATHOM_HOSTNAME]
+  buildTime: []
+  evidence:
+    - {path: pkg/config/config.go, line: 77, quote: "if cfg.Secret == \"\" {"}
+    - {path: pkg/config/config.go, line: 78, quote: "cfg.Secret = randomString(40)"}
+    - {path: .env.example, line: 8, quote: "FATHOM_SECRET=\"abcdefghijklmnopqrstuvwxyz1234567890\""}
+    - {path: docs/Configuration.md, line: 40, quote: "| FATHOM_DATABASE_URL | | Can be used to specify the connection string for your database, as an alternative to the previous 5 settings. "}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: PostgreSQL and MySQL are selected by FATHOM_DATABASE_URL or FATHOM_DATABASE_DRIVER"
+    - "docker-compose.yml MySQL service with a local volume must not count as a second application service or a volume requirement"
+    - "The aggregator must not be reported as a separate worker: it is a goroutine in the web process"
+    - "FATHOM_LETS_ENCRYPT (autocert on 443) must not be required: it is off by default"
+    - "Missing Redis, S3 or queue must not be reported: none are used"
+vendorQuestions:
+  legitimate:
+    - "How is the first admin user created? (`./fathom user add --email --password` from the same image; with zero users the dashboard is public)"
+  unnecessary:
+    - "Which port? (8080 in EXPOSE and the server flag)"
+    - "Which database? (PostgreSQL through FATHOM_DATABASE_URL)"
+    - "Health path? (/health)"
+    - "Is a worker needed? (no, the aggregator runs in process)"
+traps:
+  - "With zero users in the database the dashboard is public (pkg/api/auth.go:34-36); a user must be added with the CLI (docs/Installation instructions.md:55)"
+  - "The URL scheme must be postgres; postgresql:// keeps the default sqlite3 driver and fails to connect (pkg/config/config.go:61)"
+  - "docker-compose.yml uses MySQL 5 and the prebuilt image; it is an example, not the build (docker-compose.yml:4, :23)"
+  - "The installation doc says port 9000, but the code default and the Dockerfile use 8080 (docs/Installation instructions.md:44, pkg/cli/server.go:26)"
+  - "The Makefile LDFLAGS call git describe; a source archive has no .git, so the version string is empty but the build does not fail (Makefile:2)"
+openQuestions:
+  - "The build uses floating base images (node:alpine, golang:latest, packr2@latest) and gulp 4 with browserify 16; a very new Node or Go may break the build"
+crossReview:
+  - {field: "outcome.accept", change: "none: the SQLite default with an env switch to PostgreSQL or MySQL is the DEPLOYABLE plus DEPLOYABLE_WITH_CHANGES pair of new-41 and new-121", evidence: "pkg/config/config.go:56-64; reasons.txt new-41, new-121"}
+  - {field: "dockerfile.accept", change: "none: package-lock.json, go.sum and assets/ are in git; the Makefile installs packr2 with go install, which works on current Go; a missing .git only empties the version string", evidence: "Dockerfile:3-15; Makefile:2,21-25"}
+  - {field: "env.required", change: "none: a missing config file only logs a warning; an empty FATHOM_SECRET becomes a random value at each start", evidence: "pkg/config/config.go:32-35,77-78"}
+  - {field: "all", change: "verified", evidence: "29 citations checked"}

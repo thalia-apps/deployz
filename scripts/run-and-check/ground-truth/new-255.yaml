@@ -1,0 +1,126 @@
+id: new-255
+repository: wekan/wekan
+commit: 696a1a2c8af22c04996a34690ed99904e7bc2753
+summary: >
+  WeKan is a Meteor (Node.js) kanban board. The database is MongoDB through MONGO_URL. The alternative is FerretDB, a
+  MongoDB-compatible server: either a separate container (on SQLite, PostgreSQL or the FerretDB DocumentDB PostgreSQL
+  image), or a FerretDB binary that the entrypoint starts in the background in the same container with SQLite files under
+  /data/files/db. The root Dockerfile does not build from source: it downloads a release zip
+  (wekan-<version>-<arch>.zip) from GitHub releases and copies the prebuilt bundle. The app listens on 8080. Attachments
+  and avatars go to WRITABLE_PATH (/data/files) or to S3 through the S3 JSON setting.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    The only datastore is MongoDB (MONGO_URL), which is outside the MVP. The FerretDB options do not help: a separate
+    FerretDB container is an extra service, the FerretDB v2 PostgreSQL mode needs the DocumentDB extension image (not RDS),
+    and the bundled FerretDB runs as a second background process with SQLite on local disk. Also no Dockerfile builds the
+    app from the repository: the root Dockerfile downloads a prebuilt release bundle. Same case as new-183 (Rocket.Chat:
+    Meteor, MongoDB, prebuilt bundle).
+dockerfile:
+  accept: []
+  reject:
+    - {path: Dockerfile, reason: "downloads the prebuilt release zip wekan-${VERSION}-${WEKAN_ARCH}.zip from GitHub releases; it does not build the repository source"}
+    - {path: .devcontainer/Dockerfile, reason: "development container"}
+    - {path: .gitpod.Dockerfile, reason: "Gitpod development workspace image"}
+  target: null
+  context: .
+  evidence:
+    - {path: Dockerfile, line: 96, quote: "WEKAN_ZIP=\"wekan-${VERSION}-${WEKAN_ARCH}.zip\""}
+    - {path: Dockerfile, line: 97, quote: "WEKAN_ZIP_URL=\"https://github.com/wekan/wekan/releases/download/v${VERSION}/${WEKAN_ZIP}\""}
+    - {path: Dockerfile, line: 133, quote: "mv bundle /out/build"}
+runtime: {accept: [node]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 432, quote: "ENV PORT=8080"}
+    - {path: Dockerfile, line: 433, quote: "EXPOSE $PORT"}
+bindAllInterfaces:
+  value: true
+  # Meteor binds all interfaces by default; the compose file maps 80:8080.
+  evidence:
+    - {path: docker-compose.yml, line: 191, quote: "- 80:8080"}
+startCommand:
+  source: image
+  accept: ["bash /build/wekan-entrypoint.sh"]
+  evidence:
+    - {path: Dockerfile, line: 437, quote: "CMD [\"bash\", \"/build/wekan-entrypoint.sh\"]"}
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 319, quote: "exec node /build/main.js"}
+healthPath:
+  accept: ["/"]
+  # No dedicated health route was found; Meteor serves the app shell at /.
+  evidence: []
+database:
+  status: required
+  engines: [mongodb]
+  default: mongodb
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [MONGO_URL, MONGO_URL_FILE, MONGO_OPLOG_URL]
+  evidence:
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 9, quote: "#   WEKAN_DB=mongodb   -> never start FerretDB; use external MONGO_URL (a mongod"}
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 112, quote: "export MONGO_URL=\"${MONGO_URL:-mongodb://$FERRETDB_LISTEN_ADDR/wekan}\""}
+    - {path: docker-compose.yml, line: 218, quote: "- MONGO_URL=mongodb://ferretdb:27017/wekan?directConnection=true"}
+    - {path: docker-compose-ferretdb-v2-postgresql.yml, line: 24, quote: "image: ghcr.io/ferretdb/postgres-documentdb:17"}
+migrations:
+  mode: unknown
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: embedded
+  commands: []
+  # With WEKAN_DB=ferretdb the entrypoint starts FerretDB in the background and then runs node in the foreground.
+  evidence:
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 11, quote: "#   WEKAN_DB=ferretdb  -> start the bundled FerretDB (SQLite) on 127.0.0.1:27017"}
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 218, quote: "--log-level=error &"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: conditional
+  paths: [/data/files/attachments, /data/files/avatars, /data/files/db]
+  s3: native
+  s3SelectBy: {S3: "{\"s3\":{\"key\":\"<key>\",\"secret\":\"<secret>\",\"bucket\":\"<bucket>\",\"region\":\"<region>\"}}"}
+  evidence:
+    - {path: Dockerfile, line: 372, quote: "WRITABLE_PATH=/data \\"}
+    - {path: server/initializeDirs.js, line: 12, quote: "// - On Docker (WRITABLE_PATH=/data): /data/files/attachments, /data/files/avatars"}
+    - {path: releases/ferretdb/wekan-entrypoint.sh, line: 93, quote: "FERRETDB_SQLITE_DIR=\"${FERRETDB_SQLITE_DIR:-$_files/db}\""}
+    - {path: docker-compose.yml, line: 211, quote: "#- S3='{\"s3\":{\"key\": \"xxx\", \"secret\": \"xxx\", \"bucket\": \"xxx\", \"region\": \"xxx\"}}'"}
+env:
+  required:
+    - {name: MONGO_URL, secret: true, buildTime: false, note: "MongoDB (or FerretDB) connection URL; Deployz cannot provide MongoDB"}
+    - {name: ROOT_URL, secret: false, buildTime: false, note: "public URL of the app; the compose default is http://localhost"}
+  optional: [MONGO_URL_FILE, MONGO_OPLOG_URL, WEKAN_DB, WRITABLE_PATH, S3, S3_SECRET_KEY_FILE, MAIL_URL, MAIL_FROM, WITH_API, PORT, OAUTH2_ENABLED, LDAP_ENABLE, TRUSTED_URL, BROWSER_POLICY_ENABLED]
+  buildTime: [VERSION]
+  evidence:
+    - {path: docker-compose.yml, line: 232, quote: "- ROOT_URL=http://localhost  #   <=== using only at same laptop/desktop where Wekan is installed"}
+    - {path: Dockerfile, line: 41, quote: "ARG VERSION=12.74"}
+blockers:
+  expected:
+    - "MongoDB is the required database (MONGO_URL); Deployz supports only PostgreSQL and MySQL"
+    - "No Dockerfile builds the app from the repository: the root Dockerfile downloads a prebuilt release bundle from GitHub releases"
+  mustNot:
+    - "The FerretDB PostgreSQL compose files must not be read as PostgreSQL support: FerretDB is a separate MongoDB-compatible server, and v2 needs the DocumentDB PostgreSQL image"
+    - "The bundled FerretDB with SQLite must not be read as a supported embedded database: it is a second background process with SQLite on ephemeral local disk"
+    - "Attachments must not be the main blocker: S3 is supported through the S3 setting"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (8080)"
+    - "Is Redis needed? (no)"
+traps:
+  - "docker-compose-ferretdb-v1-postgresql.yml and docker-compose-ferretdb-v2-postgresql.yml mention PostgreSQL, but WeKan still speaks only the MongoDB protocol through a FerretDB service (docker-compose-ferretdb-v2-postgresql.yml:24)"
+  - "The root Dockerfile looks like a normal app image but its first stage downloads the release zip (Dockerfile:97)"
+  - "The entrypoint can start FerretDB in the background in the same container (releases/ferretdb/wekan-entrypoint.sh:218), which is a multi-process image with SQLite on local disk"
+  - "The repository has many platform files (snapcraft.yaml, sandstorm-pkgdef.capnp, scalingo.json, app.json) that are not build recipes for Deployz"
+  - "A CLAUDE.md and AGENTS.md in the repository are contributor notes, not deployment instructions"
+openQuestions:
+  - "No dedicated HTTP health route was confirmed; / is assumed"
+crossReview:
+  - {field: dockerfile.reject, change: "none: the bundle stage downloads and checksums the release zip, and the final stage copies only that bundle and the entrypoint scripts", evidence: "Dockerfile:96-104,408,415"}
+  - {field: outcome.accept, change: "none: MongoDB through MONGO_URL with only FerretDB alternatives, plus a prebuilt bundle; same case as new-183", evidence: "releases/ferretdb/wekan-entrypoint.sh:9-11,112; reasons.txt new-183"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

@@ -1,0 +1,125 @@
+id: new-254
+repository: glanceapp/glance
+commit: 8958aa827275cf81c01f3d5afe7180354a200cc6
+summary: >
+  Glance is a self-hosted dashboard (feeds, widgets) written in Go. One binary serves HTML pages and a small JSON API on
+  port 8080. The root Dockerfile builds it from source. The binary reads all its configuration (pages, widgets, theme,
+  optional users and auth secret, server host and port) from one YAML file. The image starts with
+  `--config /app/config/glance.yml`, but no config file is in the image: the README tells the user to mount ./config on
+  /app/config, and .dockerignore leaves docs/glance.yml out of the build context. There is no database, no Redis, no
+  worker and no file storage. The config is not set by environment variables (they can only be referenced from inside
+  the YAML file).
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The image expects a configuration file to be mounted at /app/config/glance.yml and exits with "reading
+    /app/config/glance.yml" when it is absent. A mounted configuration file is an explicit MVP non-goal, so
+    NOT_DEPLOYABLE as the repository stands. DEPLOYABLE_WITH_CHANGES is also fair, as new-216: a small repository change
+    can bake a glance.yml into the image (add the file, allow it in .dockerignore, COPY it to /app/config); after that the
+    app is one stateless process on one port with /api/healthz.
+dockerfile:
+  accept: [Dockerfile]
+  reject:
+    - {path: Dockerfile.goreleaser, reason: "copies a prebuilt glance binary from GoReleaser; not a source build"}
+  target: null
+  context: .
+  # Dockerfile builds from source, but the image alone does not start without a mounted config file.
+  evidence:
+    - {path: Dockerfile, line: 5, quote: "RUN CGO_ENABLED=0 go build ."}
+    - {path: Dockerfile, line: 13, quote: "ENTRYPOINT [\"/app/glance\", \"--config\", \"/app/config/glance.yml\"]"}
+    - {path: Dockerfile.goreleaser, line: 4, quote: "COPY glance ."}
+    - {path: .dockerignore, line: 3, quote: "*"}
+runtime: {accept: [go]}
+port:
+  accept: [8080]
+  evidence:
+    - {path: Dockerfile, line: 12, quote: "EXPOSE 8080/tcp"}
+    - {path: internal/glance/config.go, line: 101, quote: "config.Server.Port = 8080"}
+bindAllInterfaces:
+  value: true
+  # server.host is empty by default, so the listen address is ":8080".
+  evidence:
+    - {path: internal/glance/glance.go, line: 501, quote: "Addr:              fmt.Sprintf(\"%s:%d\", a.Config.Server.Host, a.Config.Server.Port),"}
+startCommand:
+  source: image
+  accept: ["/app/glance --config /app/config/glance.yml"]
+  evidence:
+    - {path: Dockerfile, line: 13, quote: "ENTRYPOINT [\"/app/glance\", \"--config\", \"/app/config/glance.yml\"]"}
+healthPath:
+  accept: ["/api/healthz"]
+  # Registered before the auth routes; it answers 200 with no session.
+  evidence:
+    - {path: internal/glance/glance.go, line: 458, quote: "mux.HandleFunc(\"GET /api/healthz\", func(w http.ResponseWriter, _ *http.Request) {"}
+    - {path: internal/glance/glance.go, line: 459, quote: "w.WriteHeader(http.StatusOK)"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: required
+  paths: [/app/config/glance.yml]
+  s3: none
+  s3SelectBy: {}
+  # The only local state is the config file (and files it includes). It is read-only input, not data the app writes,
+  # but the image has no copy of it and the README mounts it as a volume.
+  evidence:
+    - {path: internal/glance/config.go, line: 251, quote: "mainFileContents, err := os.ReadFile(mainFilePath)"}
+    - {path: internal/glance/config.go, line: 253, quote: "return nil, nil, fmt.Errorf(\"reading %s: %w\", mainFilePath, err)"}
+    - {path: README.md, line: 210, quote: "- ./config:/app/config"}
+    - {path: README.md, line: 218, quote: "mkdir config && wget -O config/glance.yml https://raw.githubusercontent.com/glanceapp/glance/refs/heads/main/docs/glance.yml"}
+env:
+  required: []
+  optional: []
+  buildTime: []
+  # No environment variable configures the app. The YAML file may reference ${VAR}, ${secret:NAME} and
+  # ${readFileFromEnv:VAR} values, so env names depend on the vendor's config file.
+  evidence:
+    - {path: internal/glance/config.go, line: 138, quote: "// ${readFileFromEnv:PATH_TO_SECRET}    - value gets loaded from the file path specified in the environment variable PATH_TO_SECRET"}
+    - {path: internal/glance/cli.go, line: 60, quote: "configPath := flags.String(\"config\", \"glance.yml\", \"Set config path\")"}
+blockers:
+  expected:
+    - "The image expects the configuration file /app/config/glance.yml to be mounted (README ./config:/app/config); it is not in the image and the app exits without it. A mounted configuration file is outside the MVP"
+  mustNot:
+    - "A database, Redis, worker or S3 must not be reported: the app has none"
+    - "The Docker containers and server stats widgets must not block: they are optional widgets that the config may leave out (they need the Docker socket or host mounts only when used)"
+    - "Dockerfile.goreleaser must not be chosen as the build file"
+vendorQuestions:
+  legitimate:
+    - "Which glance.yml (pages and widgets) should be baked into the image, given that Deployz cannot mount a config file?"
+    - "Should the dashboard be public, or should the config enable auth with users and a secret key?"
+  unnecessary:
+    - "Which port? (8080)"
+    - "Health path? (/api/healthz)"
+    - "Which database? (none)"
+traps:
+  - "docs/glance.yml looks like a default config, but .dockerignore excludes it from the build context and the image does not copy it (.dockerignore:3)"
+  - "With no config the app does not start a setup page; it prints a read error and exits 1 (internal/glance/config.go:253, internal/glance/main.go:31)"
+  - "Config values can reference environment variables, but only from inside the YAML file; there is no env-only mode (internal/glance/config.go:138)"
+  - "The docker-containers widget suggests a Docker socket need; it is optional and only used when configured (internal/glance/widget-docker-containers.go)"
+  - "The default binary config path is glance.yml in the working directory, but the image overrides it with --config /app/config/glance.yml (internal/glance/cli.go:60, Dockerfile:13)"
+openQuestions:
+  - "Whether golang:1.27.1-alpine3.24.1 is a pullable tag at build time was not checked"
+crossReview:
+  - {field: outcome.accept, change: "none: no config file is in the image (.dockerignore allows only build/, internal/, pkg/, go.mod, go.sum, main.go) and the app exits 1 when /app/config/glance.yml is missing; the v0.7 notice page only serves when a glance.yml sits in the working directory", evidence: ".dockerignore:3-11; internal/glance/main.go:27-34,183-195"}
+  - {field: dockerfile.reject, change: "none: the tree has only Dockerfile and Dockerfile.goreleaser", evidence: "tree listing"}
+  - {field: all, change: verified, evidence: "16 citations checked"}

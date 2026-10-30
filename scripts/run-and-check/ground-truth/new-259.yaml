@@ -1,0 +1,116 @@
+id: new-259
+repository: janeczku/calibre-web
+commit: 6e840acbda8d62fdd159bf3855c01872d629a914
+summary: >
+  Calibre-Web is a Python (Flask, gevent) web app to browse, read and download e-books from an existing Calibre library.
+  The library is a folder on local disk: the Calibre SQLite database metadata.db plus the book files. The app keeps its own
+  settings and users in a second SQLite file (app.db in CALIBRE_DBPATH). It listens on 8083 and is started with
+  `python cps.py` or the `cps` console script from PyPI. The repository has no Dockerfile; the README points to the
+  external LinuxServer image.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    Both databases are SQLite files on local disk (the Calibre metadata.db and the app.db settings file), and the e-book
+    files sit in the library folder next to metadata.db. There is no PostgreSQL, MySQL or S3 option. Deployz does not
+    support SQLite and Fargate disk is ephemeral, so the library, users and settings would be lost at each restart. There
+    is also no Dockerfile in the repository. This is the same case as new-144 (Grocy).
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: README.md, line: 127, quote: "- **Docker Hub**: [linuxserver/calibre-web](https://hub.docker.com/r/linuxserver/calibre-web)"}
+    - {path: README.md, line: 72, quote: "pip install calibreweb"}
+runtime: {accept: [python]}
+port:
+  accept: [8083]
+  evidence:
+    - {path: cps/constants.py, line: 141, quote: "DEFAULT_PORT        = 8083"}
+    - {path: cps/constants.py, line: 142, quote: "env_CALIBRE_PORT = os.environ.get(\"CALIBRE_PORT\", DEFAULT_PORT)"}
+bindAllInterfaces:
+  value: true
+  # With no listen address set, the server binds the IPv6 wildcard '::' (dual stack).
+  evidence:
+    - {path: cps/server.py, line: 142, quote: "address = ('::', self.listen_port)"}
+startCommand:
+  source: explicit
+  accept: ["python cps.py", "python3 cps.py", "cps"]
+  evidence:
+    - {path: pyproject.toml, line: 124, quote: "cps = \"calibreweb.__main__:main\""}
+    - {path: cps.py, line: 52, quote: "main()"}
+healthPath:
+  accept: ["/login"]
+  # No health route exists; /login answers 200 without a session.
+  evidence:
+    - {path: cps/web.py, line: 1380, quote: "@web.route('/login', methods=['GET'])"}
+database:
+  status: required
+  engines: [sqlite]
+  default: sqlite
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: [CALIBRE_DBPATH]
+  evidence:
+    - {path: cps/db.py, line: 691, quote: "dbpath = os.path.join(config_calibre_dir, \"metadata.db\")"}
+    - {path: cps/db.py, line: 697, quote: "engine = create_engine('sqlite://',"}
+    - {path: cps/ub.py, line: 695, quote: "engine = create_engine('sqlite:///{0}'.format(app_DB_path), echo=False)"}
+    - {path: cps/constants.py, line: 58, quote: "DEFAULT_SETTINGS_FILE = \"app.db\""}
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  # Background tasks (conversion, mail, thumbnails) run in threads of the web process.
+  evidence:
+    - {path: cps/services/worker.py, line: 67, quote: "class WorkerThread(threading.Thread):"}
+scheduledJobs:
+  status: embedded
+  items: [in-process background scheduler (cps/services/background_scheduler.py)]
+  evidence:
+    - {path: cps/schedule.py, line: 39, quote: "if config.schedule_metadata_backup:"}
+storage:
+  local: required
+  paths: ["<calibre library>/metadata.db", "<calibre library>/<book files>", "$CALIBRE_DBPATH/app.db"]
+  s3: none
+  s3SelectBy: {}
+  # The library folder holds metadata.db and the book files; uploads are written into it. Google Drive mode still keeps a local copy and gdrive.db.
+  evidence:
+    - {path: cps/db.py, line: 640, quote: "dbpath = os.path.join(config_calibre_dir, \"metadata.db\")"}
+    - {path: cps/constants.py, line: 51, quote: "CONFIG_DIR = os.environ.get('CALIBRE_DBPATH', home_dir)"}
+    - {path: README.md, line: 110, quote: "set the `Location of Calibre database` to the path of the folder containing your Calibre library (where `metadata.db` is located)"}
+env:
+  required: []
+  optional: [CALIBRE_DBPATH, CALIBRE_PORT]
+  buildTime: []
+  evidence:
+    - {path: cps/constants.py, line: 51, quote: "CONFIG_DIR = os.environ.get('CALIBRE_DBPATH', home_dir)"}
+    - {path: cps/constants.py, line: 142, quote: "env_CALIBRE_PORT = os.environ.get(\"CALIBRE_PORT\", DEFAULT_PORT)"}
+blockers:
+  expected:
+    - "SQLite is the only database (Calibre metadata.db and app.db) and the e-book files are on local disk; no PostgreSQL, MySQL or S3 option"
+    - "No Dockerfile in the repository"
+  mustNot:
+    - "The analysis must not offer PostgreSQL or MySQL as a switch: the SQLAlchemy engines are fixed to sqlite"
+    - "Redis must not be required"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which database URL? (none exists; SQLite only)"
+    - "Which port? (8083)"
+traps:
+  - "SQLAlchemy is used, which suggests a portable database, but every engine is created with a sqlite:// URL (cps/db.py:697, cps/ub.py:695)"
+  - "The README names a Docker image, but it is the external LinuxServer image, not a Dockerfile in this repository (README.md:127)"
+  - "Google Drive mode moves book files off the server but still needs a local metadata.db and gdrive.db (cps/constants.py:59)"
+  - "The first login uses the default admin / admin123 account (README.md:104)"
+openQuestions: []
+crossReview:
+  - {field: dockerfile.accept, change: "none: the full tree has no Dockerfile, compose file or Procfile", evidence: "tree listing"}
+  - {field: outcome.accept, change: "none: both databases are fixed sqlite engines and the library is a local folder; same case as new-144", evidence: "cps/db.py:697; cps/ub.py:695; reasons.txt new-144"}
+  - {field: all, change: verified, evidence: "19 citations checked"}

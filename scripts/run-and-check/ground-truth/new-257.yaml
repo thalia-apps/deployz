@@ -1,0 +1,124 @@
+id: new-257
+repository: rybbit-io/rybbit
+commit: 877e3c6b9020a4d4b19181cd5034ad73b3a9ce46
+summary: >
+  Rybbit is a web analytics product in a pnpm monorepo. It has two application images: the backend (server/Dockerfile,
+  Fastify on port 3001, node dist/cluster.js) and the Next.js dashboard (client/Dockerfile, port 3002). Both build from
+  source with the repository root as context. The root has no Dockerfile. docker-compose.yml also runs ClickHouse (event
+  and analytics store), PostgreSQL (users, sites, auth through Drizzle), Redis and Caddy, which routes /api/* to the
+  backend and everything else to the client. The backend entrypoint waits for PostgreSQL and runs drizzle-kit migrate
+  before it starts.
+outcome:
+  accept: [NOT_DEPLOYABLE]
+  reason: >
+    ClickHouse is a required analytics store (CLICKHOUSE_HOST in the backend; all events and stats queries use it), and
+    ClickHouse is outside the MVP. The product also needs two application images (backend and Next.js client) behind one
+    path-routing proxy, and Deployz runs one image per deployment. Same case as new-170 (Langfuse: ClickHouse plus a
+    second image).
+dockerfile:
+  accept: []
+  reject:
+    - {path: server/Dockerfile, reason: "backend API only; the dashboard UI is a second image (client/Dockerfile)"}
+    - {path: client/Dockerfile, reason: "Next.js dashboard only; it calls the backend API through NEXT_PUBLIC_BACKEND_URL"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker-compose.yml, line: 111, quote: "dockerfile: ./server/Dockerfile"}
+    - {path: docker-compose.yml, line: 164, quote: "dockerfile: ./client/Dockerfile"}
+    - {path: Caddyfile, line: 26, quote: "reverse_proxy backend:3001"}
+    - {path: Caddyfile, line: 40, quote: "reverse_proxy client:3002"}
+runtime: {accept: [node]}
+port:
+  accept: [3001, 3002]
+  evidence:
+    - {path: server/Dockerfile, line: 52, quote: "EXPOSE 3001"}
+    - {path: client/Dockerfile, line: 62, quote: "EXPOSE 3002"}
+bindAllInterfaces:
+  value: null
+  evidence: []
+startCommand:
+  source: image
+  accept: ["node dist/cluster.js", "node client/server.js"]
+  evidence:
+    - {path: server/Dockerfile, line: 56, quote: "CMD [\"node\", \"dist/cluster.js\"]"}
+    - {path: client/Dockerfile, line: 67, quote: "CMD [\"node\", \"client/server.js\"]"}
+healthPath:
+  accept: ["/api/health"]
+  # Backend health check from the compose file.
+  evidence:
+    - {path: docker-compose.yml, line: 147, quote: "test: [\"CMD\", \"wget\", \"--no-verbose\", \"--tries=1\", \"--spider\", \"http://127.0.0.1:3001/api/health\"]"}
+database:
+  status: required
+  engines: [postgres, clickhouse]
+  default: postgres
+  deployzEngine: postgres
+  selectBy: {POSTGRES_HOST: "<host>", POSTGRES_PORT: "5432", POSTGRES_DB: "<db>", POSTGRES_USER: "<user>", POSTGRES_PASSWORD: "<password>"}
+  connectionVars: [POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, CLICKHOUSE_HOST, CLICKHOUSE_DB, CLICKHOUSE_PASSWORD]
+  # PostgreSQL fits Deployz, but ClickHouse is also required and is outside the MVP.
+  evidence:
+    - {path: docker-compose.yml, line: 25, quote: "image: clickhouse/clickhouse-server:26.3.17.4"}
+    - {path: docker-compose.yml, line: 116, quote: "- CLICKHOUSE_HOST=http://clickhouse:8123"}
+    - {path: docker-compose.yml, line: 120, quote: "- POSTGRES_HOST=postgres"}
+migrations:
+  mode: startup
+  accept: ["./node_modules/.bin/drizzle-kit migrate --config=drizzle.config.ts"]
+  evidence:
+    - {path: server/docker-entrypoint.sh, line: 13, quote: "./node_modules/.bin/drizzle-kit migrate --config=drizzle.config.ts"}
+    - {path: server/Dockerfile, line: 55, quote: "ENTRYPOINT [\"/app/docker-entrypoint.sh\"]"}
+redis:
+  status: required
+  selectBy: {REDIS_HOST: "<host>", REDIS_PORT: "6379", REDIS_PASSWORD: "<password>"}
+  # The compose backend waits for Redis to be healthy. Deployz Valkey has no password, so REDIS_PASSWORD would need to be empty.
+  evidence:
+    - {path: docker-compose.yml, line: 125, quote: "- REDIS_HOST=redis"}
+    - {path: docker-compose.yml, line: 127, quote: "- REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}"}
+workers:
+  status: embedded
+  commands: []
+  # dist/cluster.js forks CLUSTER_WORKERS Node processes inside the backend container.
+  evidence:
+    - {path: docker-compose.yml, line: 133, quote: "- CLUSTER_WORKERS=${CLUSTER_WORKERS:-4}"}
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required:
+    - {name: BETTER_AUTH_SECRET, secret: true, buildTime: false, note: "auth secret; .env.example holds insecure-secret"}
+    - {name: BASE_URL, secret: false, buildTime: false, note: "public URL of the install"}
+    - {name: CLICKHOUSE_HOST, secret: false, buildTime: false, note: "ClickHouse HTTP URL; Deployz cannot provide ClickHouse"}
+    - {name: CLICKHOUSE_PASSWORD, secret: true, buildTime: false, note: "ClickHouse password"}
+    - {name: POSTGRES_PASSWORD, secret: true, buildTime: false, note: "PostgreSQL password, with POSTGRES_HOST, POSTGRES_DB and POSTGRES_USER"}
+    - {name: NEXT_PUBLIC_BACKEND_URL, secret: false, buildTime: true, note: "client build arg, the public backend URL (BASE_URL in compose)"}
+  optional: [DISABLE_SIGNUP, DISABLE_TELEMETRY, MAPBOX_TOKEN, CLUSTER_WORKERS, REDIS_PASSWORD, CLICKHOUSE_DB, CLICKHOUSE_QUERY_PASSWORD]
+  buildTime: [NEXT_PUBLIC_BACKEND_URL, NEXT_PUBLIC_DISABLE_SIGNUP, NEXT_PUBLIC_CLOUD]
+  evidence:
+    - {path: .env.example, line: 6, quote: "BETTER_AUTH_SECRET=insecure-secret"}
+    - {path: .env.example, line: 3, quote: "BASE_URL=\"https://${DOMAIN_NAME}\""}
+    - {path: client/Dockerfile, line: 27, quote: "ARG NEXT_PUBLIC_BACKEND_URL"}
+blockers:
+  expected:
+    - "ClickHouse is a required analytics store (CLICKHOUSE_HOST); Deployz does not provide ClickHouse"
+    - "The product needs two application images (server/Dockerfile backend and client/Dockerfile Next.js dashboard) routed by path through Caddy; Deployz runs one image"
+  mustNot:
+    - "PostgreSQL and Redis must not be raised as blockers by themselves: Deployz provides both"
+    - "Caddy must not be counted as an app service to deploy: Deployz provides HTTPS through the ALB"
+vendorQuestions:
+  legitimate: []
+  unnecessary:
+    - "Which port? (3001 backend, 3002 client; not useful while ClickHouse is required)"
+traps:
+  - "PostgreSQL is in the stack, but it holds only users, sites and auth; events and stats are in ClickHouse (docker-compose.yml:116)"
+  - "The root has no Dockerfile; server/Dockerfile and client/Dockerfile both build with the repository root as context (docker-compose.yml:110)"
+  - "clickhouse/docker-compose.clickhouse.yml and ops/backups are operator tooling, not app services"
+  - "CLAUDE.md, CONTEXT.md and DESIGN.md in the repository are contributor notes, not deployment instructions"
+openQuestions: []
+crossReview:
+  - {field: outcome.accept, change: "none: the compose backend sets CLICKHOUSE_HOST and waits for a healthy ClickHouse, and server/src/db/clickhouse holds the client; the client is a second image; same case as new-170", evidence: "docker-compose.yml:116,139-141,164; reasons.txt new-170"}
+  - {field: all, change: verified, evidence: "20 citations checked"}

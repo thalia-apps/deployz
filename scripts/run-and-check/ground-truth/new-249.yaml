@@ -1,0 +1,142 @@
+id: new-249
+repository: netbox-community/netbox
+commit: 7a680440671192aecd2562efacbdb4e19e07fffc
+summary: >
+  NetBox is a Django (Python 3.12+) network source-of-truth app. The documented install is a host install: gunicorn on
+  127.0.0.1:8001 behind nginx or Apache (which also serves /static/), a systemd rqworker service, PostgreSQL and Redis
+  (two Redis databases, tasks and caching). All settings come from a Python file, netbox/netbox/configuration.py, which
+  the operator copies from configuration_example.py and edits; it is gitignored, and settings.py reads no other settings
+  from the environment. The repository has no Dockerfile (the official image is in a separate netbox-docker project).
+  Uploaded media go to MEDIA_ROOT on local disk by default; django-storages can move them to S3 through STORAGES in
+  configuration.py.
+outcome:
+  accept: [NOT_DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    No Dockerfile exists, so Deployz has nothing to build. The app also cannot start without configuration.py, a Python
+    file that the operator writes on the host (gitignored, no environment variable fallback for SECRET_KEY, DATABASES,
+    REDIS or ALLOWED_HOSTS); this is a configuration file the image expects to be provided, so the plain answer is
+    NOT_DEPLOYABLE. DEPLOYABLE_WITH_CHANGES is also fair, as new-75 and new-219: PostgreSQL, Redis, one rqworker from the
+    same image, a migrate command and S3 media through django-storages all fit, once the vendor adds a Dockerfile, a
+    committed configuration.py that reads environment variables, and static file serving without nginx.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: contrib/netbox.service, line: 16, quote: "ExecStart=/opt/netbox/venv/bin/gunicorn --pid /var/tmp/netbox.pid --pythonpath /opt/netbox/netbox --config /opt/netbox/gunicorn.py netbox.wsgi"}
+    - {path: upgrade.sh, line: 77, quote: "COMMAND=\"pip install -r requirements.txt\""}
+runtime: {accept: [python]}
+port:
+  accept: [8001, 8000, 8080]
+  # Only the host install port exists (gunicorn 127.0.0.1:8001 behind nginx on 80). A vendor image picks the port.
+  evidence:
+    - {path: contrib/gunicorn.py, line: 2, quote: "bind = '127.0.0.1:8001'"}
+    - {path: contrib/nginx.conf, line: 18, quote: "proxy_pass http://127.0.0.1:8001;"}
+bindAllInterfaces:
+  value: false
+  evidence:
+    - {path: contrib/gunicorn.py, line: 2, quote: "bind = '127.0.0.1:8001'"}
+startCommand:
+  source: explicit
+  accept: ["gunicorn", "netbox.wsgi"]
+  evidence:
+    - {path: contrib/netbox.service, line: 16, quote: "--config /opt/netbox/gunicorn.py netbox.wsgi"}
+healthPath:
+  accept: ["/login/"]
+  # LOGIN_REQUIRED is True by default, so / redirects to /login/ and /api/status/ needs a token or a session.
+  evidence:
+    - {path: netbox/netbox/urls.py, line: 21, quote: "path('login/', LoginView.as_view(), name='login'),"}
+    - {path: netbox/netbox/settings.py, line: 168, quote: "LOGIN_REQUIRED = getattr(configuration, 'LOGIN_REQUIRED', True)"}
+    - {path: netbox/netbox/api/views.py, line: 52, quote: "permission_classes = [IsAuthenticatedOrLoginNotRequired]"}
+database:
+  status: required
+  engines: [postgres]
+  default: postgres
+  deployzEngine: postgres
+  # DATABASES is a Python dict in configuration.py, not an environment variable.
+  selectBy: {}
+  connectionVars: []
+  evidence:
+    - {path: netbox/netbox/settings.py, line: 77, quote: "raise ImproperlyConfigured(\"The database configuration must be defined using DATABASE or DATABASES.\")"}
+    - {path: netbox/netbox/configuration_example.py, line: 17, quote: "'ENGINE': 'django.db.backends.postgresql',  # Database engine"}
+    - {path: requirements.txt, line: 31, quote: "psycopg[c,pool]==3.3.6"}
+migrations:
+  mode: command
+  accept: ["python3 netbox/manage.py migrate", "python netbox/manage.py migrate", "python3 manage.py migrate", "python manage.py migrate"]
+  evidence:
+    - {path: upgrade.sh, line: 97, quote: "COMMAND=\"python3 netbox/manage.py migrate\""}
+redis:
+  status: required
+  selectBy: {}
+  # REDIS (tasks and caching) is a required parameter of configuration.py; settings.py raises ImproperlyConfigured without it.
+  evidence:
+    - {path: netbox/netbox/settings.py, line: 73, quote: "for parameter in ('ALLOWED_HOSTS', 'SECRET_KEY', 'REDIS'):"}
+    - {path: netbox/netbox/configuration_example.py, line: 30, quote: "REDIS = {"}
+    - {path: requirements.txt, line: 12, quote: "django-rq==4.2.0"}
+workers:
+  status: independent
+  commands: ["python3 netbox/manage.py rqworker high default low", "python netbox/manage.py rqworker"]
+  # Webhooks, event rules, scripts, reports and data source syncs run as RQ jobs; the installation docs install netbox-rq.service.
+  evidence:
+    - {path: contrib/netbox-rq.service, line: 14, quote: "ExecStart=/opt/netbox/venv/bin/python3 /opt/netbox/netbox/manage.py rqworker high default low"}
+    - {path: netbox/core/management/commands/rqworker.py, line: 1, quote: "import logging"}
+scheduledJobs:
+  status: embedded
+  items: [system jobs scheduled by the RQ worker (housekeeping)]
+  evidence:
+    - {path: contrib/netbox-rq.service, line: 14, quote: "manage.py rqworker high default low"}
+storage:
+  local: conditional
+  paths: [/opt/netbox/netbox/media, /opt/netbox/netbox/scripts, /opt/netbox/netbox/reports]
+  s3: native
+  s3SelectBy: {STORAGES: "configuration.py: default backend storages.backends.s3.S3Storage with a bucket"}
+  # Image attachments and uploaded scripts are on local disk by default. django-storages is installed; the S3 switch is a
+  # Python setting in configuration.py, not an environment variable.
+  evidence:
+    - {path: netbox/netbox/settings.py, line: 172, quote: "MEDIA_ROOT = getattr(configuration, 'MEDIA_ROOT', os.path.join(NETBOX_ROOT, 'media')).rstrip('/')"}
+    - {path: netbox/netbox/settings.py, line: 225, quote: "STORAGES = getattr(configuration, 'STORAGES', {})"}
+    - {path: netbox/netbox/settings.py, line: 334, quote: "\"BACKEND\": \"django.core.files.storage.FileSystemStorage\","}
+    - {path: requirements.txt, line: 13, quote: "django-storages==1.14.6"}
+env:
+  required: []
+  optional: [NETBOX_CONFIGURATION, NETBOX_ROOT]
+  buildTime: []
+  # Every required value (SECRET_KEY, ALLOWED_HOSTS, DATABASES, REDIS, API_TOKEN_PEPPERS) is a Python constant in configuration.py.
+  # A vendor configuration.py would read them from the environment.
+  evidence:
+    - {path: netbox/netbox/settings_utils.py, line: 202, quote: "explicit = environ.get('NETBOX_CONFIGURATION')"}
+    - {path: netbox/netbox/configuration_example.py, line: 69, quote: "SECRET_KEY = ''"}
+    - {path: netbox/netbox/configuration_example.py, line: 11, quote: "ALLOWED_HOSTS = []"}
+    - {path: contrib/netbox.env, line: 3, quote: "NETBOX_ROOT=/opt/netbox"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository; the documented install is a host install with systemd units (contrib/netbox.service, contrib/netbox-rq.service)"
+    - "The app needs netbox/netbox/configuration.py, a gitignored Python file the operator writes; settings.py raises ImproperlyConfigured without it and reads no settings from the environment"
+  mustNot:
+    - "Redis must not be called unsupported: it is plain Redis (two database numbers), which ElastiCache provides"
+    - "The RQ worker must not count as a second application image: it is manage.py rqworker from the same code"
+    - "The apache.conf, nginx.conf and uwsgi.ini examples in contrib/ must not be read as required extra services of the app"
+    - "Local media must not block by itself: django-storages can put it in S3"
+vendorQuestions:
+  legitimate:
+    - "Which Dockerfile and configuration.py should Deployz use? The repo has none (the official image lives in the netbox-docker project)"
+    - "How are static files served without nginx (for example whitenoise or a static root in the image)?"
+    - "How is the first superuser created (manage.py createsuperuser is interactive)?"
+  unnecessary:
+    - "Which database? (PostgreSQL only)"
+    - "Is Redis needed? (yes, REDIS is a required parameter)"
+traps:
+  - "configuration_example.py looks like a settings file but has empty SECRET_KEY and ALLOWED_HOSTS and reads no environment variables (configuration_example.py:11, :69)"
+  - "gunicorn binds 127.0.0.1:8001 for an nginx front end; a container must bind 0.0.0.0 (contrib/gunicorn.py:2)"
+  - "Static files are collected to NETBOX_ROOT/static and served by nginx /static/ in the docs; Django does not serve them with DEBUG off (settings.py:625, contrib/nginx.conf:12)"
+  - "/api/status/ is not anonymous when LOGIN_REQUIRED is True (api/views.py:52); use /login/"
+  - "Two Redis databases (tasks 0 and caching 1) are configured; one ElastiCache node serves both"
+  - "The .claude/skills, AGENTS.md and CLAUDE.md files are contributor tooling, not deployment instructions"
+openQuestions:
+  - "Whether a committed configuration.py that reads environment variables counts as a small catalogue fix or a larger repository change"
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile; configuration.py is gitignored', evidence: 'trees/new-249.txt; .gitignore:24'}
+  - {field: redis, change: 'none: REDIS is a required configuration parameter', evidence: 'netbox/netbox/settings.py:73'}
+  - {field: outcome, change: 'none: no Dockerfile and a required operator-written Python config file; the pair NOT + DWC matches new-75 (no Dockerfile) and new-210 (installer-written config file)', evidence: 'netbox/netbox/settings.py:73,77'}
+  - {field: all, change: verified, evidence: 27 citations checked}

@@ -1,0 +1,153 @@
+id: new-253
+repository: pocket-id/pocket-id
+commit: 87ddbf712a099230659d476cad9559bea0c2e1fc
+summary: >
+  Pocket ID is an OpenID Connect provider with passkey sign-in. One Go binary (gin) serves the API and the embedded
+  SvelteKit frontend on port 1411. docker/Dockerfile builds the frontend and the backend from source with the repository
+  root as context; the root has no Dockerfile. The database is SQLite by default (data/pocket-id.db) and PostgreSQL when
+  DB_CONNECTION_STRING starts with postgres://. Migrations run at startup. Uploaded files (logos, profile pictures) go to
+  the filesystem by default, or to the database or S3 by FILE_BACKEND. Signing keys are stored in the database. Cleanup
+  cron jobs run in the same process (embedded Francis actor runtime). No Redis and no separate worker.
+outcome:
+  accept: [DEPLOYABLE, DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    One web process from docker/Dockerfile (a source build), one HTTP port (1411), /healthz, startup migrations and an env
+    switch to PostgreSQL (DB_CONNECTION_STRING) and to database or S3 file storage (FILE_BACKEND). Only settings are
+    needed: ENCRYPTION_KEY, APP_URL, DB_CONNECTION_STRING and FILE_BACKEND=database (or s3 with static keys). The SQLite and
+    local-file default with an env switch is the same pair as new-41 (DEPLOYABLE primary, DEPLOYABLE_WITH_CHANGES accepted).
+dockerfile:
+  accept: [docker/Dockerfile]
+  reject:
+    - {path: docker/Dockerfile-prebuilt, reason: "copies a GoReleaser binary linux/${TARGETARCH}/${TARGETVARIANT}/pocket-id that is not in git; not a source build"}
+    - {path: docker/Dockerfile-distroless, reason: "copies a GoReleaser binary and .tmp/frontend.cdx.json that are not in git; not a source build"}
+    - {path: tests/setup/Dockerfile, reason: "test LDAP server (lldap) with seed data, not the app"}
+    - {path: .oss-scanner/Dockerfile, reason: "image for an offline dependency scanner, not the production app image"}
+  target: null
+  context: .
+  evidence:
+    - {path: docker/Dockerfile, line: 3, quote: "# This file uses multi-stage builds to build the application from source, including the front-end"}
+    - {path: docker/Dockerfile, line: 32, quote: "COPY ./backend ./"}
+    - {path: docker/Dockerfile, line: 33, quote: "COPY --from=frontend-builder /app/frontend/dist ./frontend/dist"}
+    - {path: docker/Dockerfile-prebuilt, line: 14, quote: "COPY linux/${TARGETARCH}/${TARGETVARIANT}/pocket-id /app/pocket-id"}
+runtime: {accept: [go]}
+port:
+  accept: [1411]
+  evidence:
+    - {path: docker/Dockerfile, line: 61, quote: "EXPOSE 1411"}
+    - {path: backend/internal/common/env_config.go, line: 181, quote: "Port:                      \"1411\","}
+bindAllInterfaces:
+  value: true
+  evidence:
+    - {path: backend/internal/common/env_config.go, line: 182, quote: "Host:                      \"0.0.0.0\","}
+startCommand:
+  source: image
+  accept: ["/app/pocket-id", "sh /app/docker/entrypoint.sh /app/pocket-id"]
+  # The entrypoint fixes /app/data ownership and drops to PUID/PGID with su-exec, then runs the binary.
+  evidence:
+    - {path: docker/Dockerfile, line: 66, quote: "ENTRYPOINT [\"sh\", \"/app/docker/entrypoint.sh\"]"}
+    - {path: docker/Dockerfile, line: 67, quote: "CMD [\"/app/pocket-id\"]"}
+    - {path: scripts/docker/entrypoint.sh, line: 35, quote: "exec su-exec \"$PUID:$PGID\" \"$@\""}
+healthPath:
+  accept: ["/healthz"]
+  # Registered on the root router, outside the /api group. The image HEALTHCHECK calls the same path.
+  evidence:
+    - {path: backend/internal/controller/healthz_controller.go, line: 18, quote: "r.GET(\"/healthz\", hc.healthzHandler)"}
+    - {path: backend/internal/bootstrap/router_bootstrap.go, line: 201, quote: "controller.NewHealthzController(r)"}
+    - {path: backend/internal/cmds/healthcheck.go, line: 91, quote: "url := strings.TrimRight(flags.Endpoint, \"/\") + \"/healthz\""}
+    - {path: docker/Dockerfile, line: 64, quote: "HEALTHCHECK --interval=90s --timeout=5s --start-period=10s --retries=3 CMD [ \"/app/pocket-id\", \"healthcheck\" ]"}
+database:
+  status: optional
+  engines: [sqlite, postgres]
+  default: sqlite
+  deployzEngine: postgres
+  selectBy: {DB_CONNECTION_STRING: "postgres://<user>:<password>@<host>:5432/<db>"}
+  connectionVars: [DB_CONNECTION_STRING]
+  # The provider is derived from the prefix of DB_CONNECTION_STRING; there is no separate DB_PROVIDER variable.
+  evidence:
+    - {path: backend/internal/common/env_config.go, line: 43, quote: "defaultSqliteConnString string     = \"data/pocket-id.db\""}
+    - {path: backend/internal/common/env_config.go, line: 63, quote: "DbConnectionString        string           `env:\"DB_CONNECTION_STRING\" options:\"file\"`"}
+    - {path: backend/internal/common/env_config.go, line: 299, quote: "case strings.HasPrefix(config.DbConnectionString, \"postgres://\") || strings.HasPrefix(config.DbConnectionString, \"postgresql://\"):"}
+    - {path: backend/internal/common/env_config.go, line: 300, quote: "config.DbProvider = DbProviderPostgres"}
+migrations:
+  mode: startup
+  accept: []
+  evidence:
+    - {path: backend/internal/bootstrap/db_bootstrap.go, line: 44, quote: "// Run migrations"}
+    - {path: backend/internal/bootstrap/db_bootstrap.go, line: 45, quote: "err = utils.MigrateDatabase(ctx, sqlDb)"}
+redis:
+  status: none
+  selectBy: {}
+  evidence: []
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: embedded
+  items: [OIDC cleanup, audit log cleanup, user signup cleanup, WebAuthn cleanup, API key expiry, file cleanup, analytics]
+  # Cron jobs are actors of the Francis runtime, which is embedded in the Pocket ID process by default.
+  evidence:
+    - {path: backend/internal/oidc/cleanup_job.go, line: 25, quote: "func newCleanupJobs(db *gorm.DB) ([]*cronjob.CronJob, error) {"}
+    - {path: backend/internal/common/env_config.go, line: 185, quote: "FrancisHost:               FrancisHostEmbedded,"}
+storage:
+  local: conditional
+  paths: [/app/data]
+  s3: native
+  s3SelectBy: {FILE_BACKEND: s3, S3_BUCKET: "<bucket>", S3_REGION: "<region>", S3_ACCESS_KEY_ID: "<key id>", S3_SECRET_ACCESS_KEY: "<secret>"}
+  # /app/data holds the SQLite file, uploads (default FILE_BACKEND=filesystem) and the GeoLite database. With PostgreSQL
+  # and FILE_BACKEND=database (or s3) no durable local state is left. The S3 client uses static keys only
+  # (NewStaticCredentialsProvider), so the task role alone is not enough; FILE_BACKEND=database is the simpler choice.
+  evidence:
+    - {path: backend/internal/common/env_config.go, line: 44, quote: "defaultFsUploadPath     string     = \"data/uploads\""}
+    - {path: backend/internal/common/env_config.go, line: 177, quote: "FileBackend:               \"filesystem\","}
+    - {path: backend/internal/common/env_config.go, line: 449, quote: "case \"s3\", \"database\":"}
+    - {path: backend/internal/storage/s3.go, line: 38, quote: "creds := credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, \"\")"}
+    - {path: docker-compose.yml, line: 9, quote: "- \"./data:/app/data\""}
+env:
+  required:
+    - {name: ENCRYPTION_KEY, secret: true, buildTime: false, note: "at least 16 bytes (openssl rand -base64 32); the app exits at start without it. It encrypts data in the database, so keep it fixed"}
+    - {name: APP_URL, secret: false, buildTime: false, note: "public HTTPS URL with no path; passkeys and OIDC issuer URLs use it. Default http://localhost:1411"}
+    - {name: DB_CONNECTION_STRING, secret: true, buildTime: false, note: "postgres://user:pass@host:5432/db; without it the app uses SQLite in data/pocket-id.db on ephemeral disk"}
+    - {name: FILE_BACKEND, secret: false, buildTime: false, note: "database (or s3 with S3_BUCKET, S3_REGION and static keys); the default filesystem keeps uploads on ephemeral disk"}
+    - {name: TRUST_PROXY, secret: false, buildTime: false, note: "true behind the ALB so that client IPs (rate limits, audit log) come from X-Forwarded-For; default false"}
+  optional: [S3_BUCKET, S3_REGION, S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_FORCE_PATH_STYLE, UPLOAD_PATH, PORT, HOST, MAXMIND_LICENSE_KEY, ANALYTICS_DISABLED, VERSION_CHECK_DISABLED, UI_CONFIG_DISABLED, STATIC_API_KEY, AUDIT_LOG_RETENTION_DAYS, LOG_LEVEL, LOG_JSON, ICON_LIBRARY_URL, INTERNAL_APP_URL, PUID, PGID, DISMISS_SQLITE_STORAGE_WARNING]
+  buildTime: []
+  evidence:
+    - {path: backend/internal/common/env_config.go, line: 231, quote: "if len(config.EncryptionKey) < 16 {"}
+    - {path: backend/internal/common/env_config.go, line: 232, quote: "return errors.New(\"ENCRYPTION_KEY must be at least 16 bytes long\")"}
+    - {path: .env.example, line: 4, quote: "APP_URL=https://your-pocket-id-domain.com"}
+    - {path: .env.example, line: 9, quote: "ENCRYPTION_KEY="}
+    - {path: .env.example, line: 15, quote: "TRUST_PROXY=false"}
+    - {path: backend/internal/common/env_config.go, line: 631, quote: "*config = TrustProxyConfig{\"0.0.0.0/0\", \"::/0\"}"}
+blockers:
+  expected: []
+  mustNot:
+    - "SQLite default must not block: DB_CONNECTION_STRING with a postgres:// URL selects PostgreSQL"
+    - "Local uploads must not block: FILE_BACKEND=database or s3 moves them off the disk"
+    - "The embedded Francis actor runtime (ACTORS_PORT 1414) must not count as a second service: it runs inside the same process by default"
+    - "The prebuilt and distroless Dockerfiles must not be chosen: they need GoReleaser output"
+    - "Redis or a worker must not be required: none is used"
+vendorQuestions:
+  legitimate:
+    - "Store uploaded logos and profile pictures in the database (FILE_BACKEND=database) or in S3 with static access keys?"
+    - "Which public URL (APP_URL)? Passkeys are bound to it, so changing it later breaks registered passkeys"
+  unnecessary:
+    - "Which port? (1411)"
+    - "Health path? (/healthz)"
+    - "How to run migrations? (at startup)"
+    - "Is Redis or a worker needed? (no)"
+traps:
+  - "The root has no Dockerfile; docker/Dockerfile builds with the repository root as context (docker/Dockerfile:32)"
+  - "docker/Dockerfile-prebuilt and docker/Dockerfile-distroless look like app images but copy GoReleaser binaries (docker/Dockerfile-prebuilt:14)"
+  - "There is no DB_PROVIDER variable; PostgreSQL is chosen by the postgres:// prefix of DB_CONNECTION_STRING (backend/internal/common/env_config.go:299)"
+  - "FILE_BACKEND=s3 does not use the task role: the S3 client uses static keys only (backend/internal/storage/s3.go:38)"
+  - "docker-compose.yml pulls the published image pocketid/pocket-id:v2 and mounts ./data; it is not a build recipe (docker-compose.yml:3)"
+  - "The health path is /healthz at the root, not under /api (backend/internal/bootstrap/router_bootstrap.go:201)"
+openQuestions:
+  - "Whether golang:1.27.3-alpine and ghcr.io/voidzero-dev/vite-plus:1.4.0 base images are pullable at build time was not checked"
+crossReview:
+  - {field: dockerfile.accept, change: "none: every COPY source of docker/Dockerfile (package.json, pnpm-workspace.yaml, pnpm-lock.yaml, .node-version, .version, frontend/, backend/, scripts/docker) is in git and not in .dockerignore; context is the root", evidence: "docker/Dockerfile:13-14,32-34,56; .dockerignore:1-22"}
+  - {field: database.selectBy, change: "none: an empty DB_CONNECTION_STRING gives SQLite, a postgres:// or postgresql:// prefix gives PostgreSQL", evidence: "backend/internal/common/env_config.go:294-303"}
+  - {field: storage.s3SelectBy, change: "none: FILE_BACKEND accepts filesystem, database or s3; filesystem is the default", evidence: "backend/internal/common/env_config.go:177,447-458"}
+  - {field: outcome.accept, change: "none: SQLite and local-file defaults with an env switch, same pair as new-41 (directus)", evidence: "reasons.txt new-41"}
+  - {field: all, change: verified, evidence: "33 citations checked"}

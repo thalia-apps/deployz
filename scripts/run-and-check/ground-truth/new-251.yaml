@@ -1,0 +1,115 @@
+id: new-251
+repository: nuxt/movies
+commit: 4d05739da559360e91214815d97dd2cfa37154ce
+summary: >
+  Nuxt Movies is a Nuxt 4 (nightly) server-rendered demo app that shows movies and TV data from The Movie Database (TMDB).
+  `nuxt build` makes a Nitro server in .output/, and `node .output/server/index.mjs` serves it (port 3000 by default).
+  The app fetches all data and images through a hosted proxy, https://movies-proxy.vercel.app, which is hard-coded in
+  nuxt.config.ts and app/composables/tmdb.ts. The proxy source is in proxy/ (a separate Nitro app that needs
+  TMDB_API_KEY) but the main app does not need it to run. No database, no Redis, no worker, no local files. The
+  repository has no Dockerfile (Vercel project).
+outcome:
+  accept: [DEPLOYABLE_WITH_CHANGES]
+  reason: >
+    The app is one stateless Node web process on one HTTP port with no datastore, which fits Deployz. But the repository
+    has no Dockerfile of any kind, so a repository change (a Dockerfile with pnpm install, nuxt build and node
+    .output/server/index.mjs) is needed. The full file list proves that there is none, as new-156. The proxy/ app is
+    optional because the main app calls the hosted proxy.
+dockerfile:
+  accept: []
+  reject: []
+  target: null
+  context: .
+  evidence:
+    - {path: package.json, line: 17, quote: "\"build\": \"nuxt build\","}
+    - {path: package.json, line: 23, quote: "\"start\": \"node .output/server/index.mjs\","}
+runtime: {accept: [node]}
+port:
+  accept: [3000]
+  # Nitro's node server listens on PORT or NITRO_PORT, default 3000.
+  evidence:
+    - {path: .env.example, line: 1, quote: "BASE_URL=http://localhost:3000"}
+    - {path: README.md, line: 32, quote: "# Start dev server with hot reload at localhost:3000"}
+bindAllInterfaces:
+  value: true
+  # The Nitro node-server preset binds all interfaces unless HOST is set.
+  evidence:
+    - {path: package.json, line: 23, quote: "\"start\": \"node .output/server/index.mjs\","}
+startCommand:
+  source: explicit
+  accept: ["node .output/server/index.mjs", "pnpm start", "npm start", "npm run start", "pnpm run start"]
+  evidence:
+    - {path: package.json, line: 23, quote: "\"start\": \"node .output/server/index.mjs\","}
+healthPath:
+  accept: ["/api", "/"]
+  # /api returns a fixed string with no outside call. / renders the home page and calls the TMDB proxy during SSR.
+  evidence:
+    - {path: server/api/index.ts, line: 1, quote: "export default defineEventHandler(() => 'Nuxt Movies API')"}
+    - {path: app/pages/index.vue, line: 12, quote: "const list = await listMedia(type, queries[0].query, 1)"}
+database:
+  status: none
+  engines: []
+  default: null
+  deployzEngine: null
+  selectBy: {}
+  connectionVars: []
+  evidence: []
+migrations:
+  mode: none
+  accept: []
+  evidence: []
+redis:
+  status: none
+  selectBy: {}
+  # The cache is an in-process LRU cache.
+  evidence:
+    - {path: app/composables/tmdb.ts, line: 8, quote: "const promiseCache = new LRUCache<string, any>({"}
+workers:
+  status: none
+  commands: []
+  evidence: []
+scheduledJobs:
+  status: none
+  items: []
+  evidence: []
+storage:
+  local: none
+  paths: []
+  s3: none
+  s3SelectBy: {}
+  evidence: []
+env:
+  required: []
+  optional: [PORT, NITRO_PORT, HOST, BASE_URL]
+  buildTime: []
+  # The proxy URL is a constant in the source, not runtime config that an env value can change in tmdb.ts.
+  evidence:
+    - {path: nuxt.config.ts, line: 2, quote: "const apiBaseUrl = 'https://movies-proxy.vercel.app'"}
+    - {path: app/composables/tmdb.ts, line: 6, quote: "const apiBaseUrl = 'https://movies-proxy.vercel.app'"}
+    - {path: .env.example, line: 1, quote: "BASE_URL=http://localhost:3000"}
+blockers:
+  expected:
+    - "No Dockerfile in the repository: a production image (pnpm install, nuxt build, node .output/server/index.mjs) must be added"
+  mustNot:
+    - "proxy/ must not count as a second required service: the main app calls the hosted proxy at movies-proxy.vercel.app"
+    - "TMDB_API_KEY must not be required for the main app: only proxy/ reads it"
+    - "No database, Redis, worker or S3 must be reported"
+vendorQuestions:
+  legitimate:
+    - "Which production Dockerfile should Deployz use? The repo has none (Vercel project)"
+    - "Is the app allowed to depend on the public hosted proxy movies-proxy.vercel.app, or must the vendor host the proxy (TMDB_API_KEY) too?"
+  unnecessary:
+    - "Which database? (none)"
+    - "Which port? (3000)"
+    - "Is TMDB_API_KEY needed? (only by proxy/)"
+traps:
+  - "proxy/ is a workspace package with its own package.json, .env.example and vercel.json; it is not the app (pnpm-workspace.yaml:6)"
+  - "The proxy base URL is hard-coded twice; NUXT_PUBLIC_API_BASE_URL changes runtimeConfig but not app/composables/tmdb.ts (nuxt.config.ts:2, app/composables/tmdb.ts:6)"
+  - "All dependencies, nuxt included, are devDependencies, so a production Dockerfile must install dev dependencies for the build (package.json:36)"
+  - "nuxt is pinned to a nightly build (npm:nuxt-nightly@4.6.0-...) and devEngines asks for Node 24 and pnpm 11 (package.json:7, :12, :57)"
+  - "The home page awaits TMDB data during SSR, so / fails when the outside proxy is down; /api has no outside call"
+openQuestions: []
+crossReview:
+  - {field: dockerfile, change: 'none: the full tree has no Dockerfile; nuxt.config.ts sets no Nitro preset, so outside Vercel the build gives the node server in .output/', evidence: 'trees/new-251.txt; nuxt.config.ts:4-158'}
+  - {field: outcome, change: 'none: one stateless Node process with no datastore; only the missing Dockerfile needs a change; analog new-156', evidence: 'package.json:17,23'}
+  - {field: all, change: verified, evidence: 12 citations checked}
